@@ -1,6 +1,6 @@
 # SPEC.md
 
-# Seorchable — System Specification
+# oxenn — System Specification
 
 ## 0. Document Purpose
 
@@ -55,7 +55,7 @@ In particular:
 
 # 2. Product Definition
 
-Seorchable is a multi-tenant SaaS platform for analyzing and improving the visibility, discoverability, representation, and competitive position of websites, brands, entities, content, and related digital properties across search engines and AI-powered answer systems.
+oxenn is a multi-tenant SaaS platform for analyzing and improving the visibility, discoverability, representation, and competitive position of websites, brands, entities, content, and related digital properties across search engines and AI-powered answer systems.
 
 The product combines conventional SEO intelligence with AI visibility, answer-engine optimization, entity intelligence, competitive intelligence, content intelligence, and related analysis workflows.
 
