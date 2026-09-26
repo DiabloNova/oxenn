@@ -1,0 +1,1913 @@
+{
+  "components/live-analytics/CanvasRenderer.ts": [
+    "components/live-analytics/GraphEngine.ts",
+    "components/live-analytics/types.ts"
+  ],
+  "components/live-analytics/DataAdapter.ts": [
+    "components/live-analytics/animation.ts",
+    "components/live-analytics/types.ts"
+  ],
+  "components/live-analytics/GraphEngine.ts": [
+    "components/live-analytics/types.ts"
+  ],
+  "components/live-analytics/Legend.tsx": [
+    "components/live-analytics/types.ts"
+  ],
+  "components/live-analytics/LiveAnalyticsGraph.tsx": [
+    "components/live-analytics/CanvasRenderer.ts",
+    "components/live-analytics/DataAdapter.ts",
+    "components/live-analytics/GraphEngine.ts",
+    "components/live-analytics/Legend.tsx",
+    "components/live-analytics/Tooltip.tsx",
+    "components/live-analytics/types.ts"
+  ],
+  "components/live-analytics/Tooltip.tsx": [
+    "components/live-analytics/types.ts"
+  ],
+  "components/live-analytics/animation.ts": [],
+  "components/live-analytics/types.ts": [],
+  "components/navigation/FloatingSidebar.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/marketing/SeorchableLogo.tsx"
+  ],
+  "components/ui/button.tsx": [
+    "lib/utils.ts"
+  ],
+  "database/schema/admin/index.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/aeo-content-intelligence.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/ai-visibility-audit.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/api-keys.ts": [
+    "database/schema/index.ts"
+  ],
+  "database/schema/brand-intelligence.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/brand.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/citation-intelligence.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/citation.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/competitive-seo-finding.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/competitor-change.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/competitor.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/diagnostic.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/entity.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/index.ts": [],
+  "database/schema/keyword.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/kg.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/metric.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/observation.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/organization.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/page.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/premium-audit.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/prompt-intelligence.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/prompt.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/recommendation.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/topic.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/types.ts": [],
+  "database/schema/visibility.ts": [
+    "database/schema/types.ts"
+  ],
+  "database/schema/website.ts": [
+    "database/schema/types.ts"
+  ],
+  "lib/utils.ts": [],
+  "scripts/crawl-worker.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/acquisition/application/orchestrator.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/index.ts"
+  ],
+  "scripts/database/db-push-guard.ts": [],
+  "scripts/generate-docs-data.ts": [],
+  "scripts/test-domain.ts": [
+    "src/features/ai-intelligence/domain/entities/brand-entity.ts",
+    "src/features/ai-intelligence/domain/events/index.ts",
+    "src/features/ai-intelligence/domain/models/observation-aggregate.ts",
+    "src/features/ai-intelligence/index.ts"
+  ],
+  "src/app/[locale]/about/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/blog/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/contact/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/dashboard/aeo/audits/page.tsx": [
+    "src/app/actions/ai-visibility-audit.ts",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/app/[locale]/dashboard/aeo/content/page.tsx": [
+    "src/app/actions/aeo-content-intelligence.ts",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/app/[locale]/dashboard/aeo/playground/page.tsx": [
+    "src/app/actions/ai-visibility-audit.ts",
+    "src/app/actions/prompt-intelligence.ts",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/app/[locale]/dashboard/analytics/llm-bias/page.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/analytics/llm/page.tsx": [
+    "src/components/GlassCard.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/analytics/LlmAnalyticsPanel.tsx"
+  ],
+  "src/app/[locale]/dashboard/analytics/page.tsx": [
+    "src/components/Breadcrumb.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/audit/free/page.tsx": [
+    "src/components/GlassCard.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/audit/FreeAuditPanel.tsx"
+  ],
+  "src/app/[locale]/dashboard/audit/premium/page.tsx": [
+    "src/components/GlassCard.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/audit/PremiumAuditPanel.tsx"
+  ],
+  "src/app/[locale]/dashboard/audits/[id]/page.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/audits/page.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Dialog.tsx",
+    "src/components/Input.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/billing/page.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/brand-monitoring/page.tsx": [
+    "src/app/actions/brand-intelligence.ts",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/app/[locale]/dashboard/brand/citations/page.tsx": [
+    "src/app/actions/citation-intelligence.ts",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/app/[locale]/dashboard/competitive/page.tsx": [
+    "src/components/Breadcrumb.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/analysis/CompetitiveAnalysisPanel.tsx"
+  ],
+  "src/app/[locale]/dashboard/competitors/page.tsx": [
+    "src/app/[locale]/dashboard/competitive/page.tsx"
+  ],
+  "src/app/[locale]/dashboard/competitors/radar/page.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/content/ingestion/page.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/content/page.tsx": [
+    "src/components/GlassCard.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/content/ContentStudio.tsx"
+  ],
+  "src/app/[locale]/dashboard/content/studio/page.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/entities/graph/page.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/entities/page.tsx": [
+    "src/components/Breadcrumb.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/graph/page.tsx": [
+    "src/app/[locale]/dashboard/entities/page.tsx"
+  ],
+  "src/app/[locale]/dashboard/ingest/page.tsx": [
+    "src/app/[locale]/dashboard/ingestion/page.tsx"
+  ],
+  "src/app/[locale]/dashboard/ingestion/page.tsx": [
+    "src/app/actions/ingestion.ts",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/intelligence/layout.tsx": [
+    "src/components/Breadcrumb.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/intelligence/page.tsx": [
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Tabs.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/layout.tsx": [
+    "src/components/ProtectedRoute.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/navigation/DashboardSidebar.tsx",
+    "src/components/navigation/DashboardTopbar.tsx"
+  ],
+  "src/app/[locale]/dashboard/optimization/technical/page.tsx": [
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/optimization/TechnicalOptimizationPanel.tsx"
+  ],
+  "src/app/[locale]/dashboard/page.tsx": [
+    "src/components/features/dashboard-home/DashboardHomeClient.tsx",
+    "src/services/auth/session.ts",
+    "src/services/dashboard-home/index.ts"
+  ],
+  "src/app/[locale]/dashboard/query/page.tsx": [
+    "src/app/actions/query.ts",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/rag/page.tsx": [
+    "src/app/[locale]/dashboard/query/page.tsx"
+  ],
+  "src/app/[locale]/dashboard/reports/page.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/seo/schema/page.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/seo/technical/page.tsx": [
+    "src/app/actions/technical-seo.ts",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/dashboard/services/page.tsx": [
+    "src/components/features/dashboard-services/ServiceMarketplaceClient.tsx",
+    "src/services/auth/session.ts",
+    "src/services/dashboard-services/index.ts"
+  ],
+  "src/app/[locale]/dashboard/settings/page.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Input.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/docs/[slug]/page.tsx": [
+    "src/lib/docsIndex.ts"
+  ],
+  "src/app/[locale]/docs/layout.tsx": [
+    "src/components/ThemeProvider.tsx",
+    "src/components/marketing/SeorchableLogo.tsx",
+    "src/lib/docsIndex.ts"
+  ],
+  "src/app/[locale]/docs/page.tsx": [
+    "src/lib/docsIndex.ts"
+  ],
+  "src/app/[locale]/features/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/forgot-password/page.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Input.tsx",
+    "src/components/marketing/SeorchableLogo.tsx"
+  ],
+  "src/app/[locale]/industries/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/invoice/page.tsx": [
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/layout.tsx": [
+    "components/navigation/FloatingSidebar.tsx",
+    "src/app/globals.css",
+    "src/components/AuthProvider.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/navigation/GlobalNavigationControls.tsx",
+    "src/config/fonts.ts",
+    "src/config/site.ts"
+  ],
+  "src/app/[locale]/login/page.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Input.tsx",
+    "src/components/marketing/SeorchableLogo.tsx"
+  ],
+  "src/app/[locale]/page.tsx": [
+    "src/components/features/audit/FreeAuditPanel.tsx",
+    "src/components/features/graph/LiveKnowledgeGraph.tsx",
+    "src/components/features/graph/RadialPolarGraph.tsx",
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx"
+  ],
+  "src/app/[locale]/pricing/page.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Dialog.tsx",
+    "src/components/Input.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/privacy/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/profile/page.tsx": [
+    "src/components/GlassCard.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/register/page.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Input.tsx",
+    "src/components/marketing/SeorchableLogo.tsx"
+  ],
+  "src/app/[locale]/resources/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/settings/page.tsx": [
+    "src/components/GlassCard.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/app/[locale]/solutions/aeo/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/solutions/geo/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/solutions/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/solutions/protection/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/solutions/radar/page.tsx": [
+    "src/components/marketing/LandingFooter.tsx",
+    "src/components/marketing/LandingHeader.tsx",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/app/[locale]/verify-email/page.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Input.tsx",
+    "src/components/marketing/SeorchableLogo.tsx"
+  ],
+  "src/app/actions/aeo-content-intelligence.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/aeo-content-intelligence-service.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/actions/ai-visibility-audit.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/ai-visibility-audit-engine.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/actions/auth.ts": [
+    "database/schema/index.ts",
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/services/auth/session.ts",
+    "src/types/auth.ts"
+  ],
+  "src/app/actions/brand-intelligence.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/brand-intelligence-service.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/actions/citation-intelligence.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/citation-intelligence-service.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/actions/ingestion.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts",
+    "src/services/ingestion/document-ingestion.ts"
+  ],
+  "src/app/actions/keyword-intelligence.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/keyword-intelligence-service.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/actions/prompt-intelligence.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/prompt-intelligence-service.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/actions/query.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts",
+    "src/services/rag/query-service.ts"
+  ],
+  "src/app/actions/site-architecture.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/site-architecture-analyzer-service.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/actions/technical-seo.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts",
+    "src/services/diagnostic-engine/index.ts",
+    "src/services/technical-seo-analyzer.ts",
+    "src/types/seo-signals.ts"
+  ],
+  "src/app/actions/workspace.ts": [
+    "database/schema/index.ts",
+    "src/core/database/tenant-context/index.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts",
+    "src/types/auth.ts"
+  ],
+  "src/app/api/inngest/route.ts": [
+    "src/lib/inngest/client.ts",
+    "src/lib/inngest/functions.ts"
+  ],
+  "src/app/api/v1/ai/chunk/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/ai/text-chunker.ts"
+  ],
+  "src/app/api/v1/ai/sentiment/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/ai/sentiment-analysis.ts"
+  ],
+  "src/app/api/v1/analysis/competitive/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/index.ts",
+    "src/lib/firecrawl.ts",
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/app/api/v1/analytics/llm/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/app/api/v1/analytics/summary/route.ts": [
+    "src/core/database/tenant-context/index.ts"
+  ],
+  "src/app/api/v1/audit/aeo-insight/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/app/api/v1/audit/engine/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/lib/audit-engine/builder.ts"
+  ],
+  "src/app/api/v1/audit/free/route.ts": [
+    "src/lib/firecrawl.ts"
+  ],
+  "src/app/api/v1/audit/premium/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/lib/firecrawl.ts",
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/app/api/v1/content/studio/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/lib/firecrawl.ts",
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/app/api/v1/crawl/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/acquisition/application/orchestrator.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/index.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/api/v1/crawler/start/route.ts": [
+    "src/services/crawler/crawler-orchestrator.ts"
+  ],
+  "src/app/api/v1/dashboard/summary/route.ts": [
+    "src/services/auth/authorization.ts",
+    "src/services/dashboard-home/index.ts"
+  ],
+  "src/app/api/v1/docs/route.ts": [],
+  "src/app/api/v1/ingest/document/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/ingestion/document-ingestion.ts"
+  ],
+  "src/app/api/v1/knowledge-graph/query/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/services/entity-service.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/app/api/v1/optimization/technical/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/lib/firecrawl.ts"
+  ],
+  "src/app/api/v1/rag/query/route.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/rag/query-service.ts"
+  ],
+  "src/app/globals.css": [],
+  "src/components/AuthProvider.tsx": [
+    "src/app/actions/auth.ts",
+    "src/types/auth.ts"
+  ],
+  "src/components/Badge.tsx": [],
+  "src/components/Breadcrumb.tsx": [],
+  "src/components/Button.tsx": [],
+  "src/components/Card.tsx": [
+    "src/components/GlassCard.tsx"
+  ],
+  "src/components/DashboardShell.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Dropdown.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/Dialog.tsx": [
+    "src/components/Button.tsx"
+  ],
+  "src/components/Dropdown.tsx": [],
+  "src/components/GlassCard.tsx": [],
+  "src/components/Input.tsx": [],
+  "src/components/ProtectedRoute.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/types/auth.ts"
+  ],
+  "src/components/Tabs.tsx": [],
+  "src/components/ThemeProvider.tsx": [],
+  "src/components/features/analysis/CompetitiveAnalysisPanel.tsx": [
+    "src/app/api/v1/analysis/competitive/route.ts",
+    "src/components/AuthProvider.tsx",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/GlassCard.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/analytics/KPICard.tsx": [
+    "src/components/Badge.tsx",
+    "src/components/Card.tsx"
+  ],
+  "src/components/features/analytics/LlmAnalyticsPanel.tsx": [
+    "src/app/api/v1/analytics/llm/route.ts",
+    "src/components/AuthProvider.tsx",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/analytics/SentimentTrendChart.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/analytics/TopEntitiesList.tsx": [
+    "src/components/Badge.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/audit/AeoAuditPanel.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/audit/FreeAuditPanel.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Input.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/services/auditService.ts",
+    "src/types/audit.ts"
+  ],
+  "src/components/features/audit/PremiumAuditPanel.tsx": [
+    "src/app/api/v1/audit/premium/route.ts",
+    "src/components/AuthProvider.tsx",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/content/ContentStudio.tsx": [
+    "src/app/api/v1/content/studio/route.ts",
+    "src/components/AuthProvider.tsx",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/dashboard-home/CriticalIssuesPanel.tsx": [
+    "src/components/Badge.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/dashboard-home/DashboardHomeClient.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Dialog.tsx",
+    "src/components/Input.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/dashboard-home/CriticalIssuesPanel.tsx",
+    "src/components/features/dashboard-home/DashboardKpiGrid.tsx",
+    "src/components/features/dashboard-home/RecentActivityPanel.tsx",
+    "src/components/features/dashboard-home/RecentAuditsPanel.tsx",
+    "src/components/features/dashboard-home/RecommendedActionsPanel.tsx",
+    "src/components/features/dashboard-home/VisibilityTrendChart.tsx",
+    "src/services/dashboard-home/index.ts"
+  ],
+  "src/components/features/dashboard-home/DashboardKpiGrid.tsx": [
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/analytics/KPICard.tsx"
+  ],
+  "src/components/features/dashboard-home/RecentActivityPanel.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/dashboard-home/RecentAuditsPanel.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/dashboard-home/RecommendedActionsPanel.tsx": [
+    "src/components/Badge.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/dashboard-home/VisibilityTrendChart.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/dashboard-services/ServiceCard.tsx": [
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/services/dashboard-services/index.ts"
+  ],
+  "src/components/features/dashboard-services/ServiceMarketplaceClient.tsx": [
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/features/dashboard-services/ServiceCard.tsx",
+    "src/components/features/dashboard-services/ServicePreviewModal.tsx",
+    "src/services/dashboard-services/index.ts"
+  ],
+  "src/components/features/dashboard-services/ServicePreviewModal.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Dialog.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/services/dashboard-services/index.ts"
+  ],
+  "src/components/features/graph/KnowledgeGraphExplorer.tsx": [
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/graph/LiveKnowledgeGraph.tsx": [
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/graph/RadialPolarGraph.tsx": [
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/ingestion/IngestionForm.tsx": [
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/Input.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/optimization/TechnicalOptimizationPanel.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/GlassCard.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/features/rag/BrandIntelligenceChat.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Badge.tsx",
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/marketing/BrandLogo.tsx": [],
+  "src/components/marketing/CTASection.tsx": [
+    "src/components/Button.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/marketing/FeaturesSection.tsx": [
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/marketing/HeroSection.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Input.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/marketing/LandingFooter.tsx": [
+    "src/components/ThemeProvider.tsx",
+    "src/components/marketing/SeorchableLogo.tsx",
+    "src/components/marketing/content.ts"
+  ],
+  "src/components/marketing/LandingHeader.tsx": [
+    "src/components/Dropdown.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/marketing/SeorchableLogo.tsx",
+    "src/components/marketing/content.ts",
+    "src/components/navigation/AppSidebar.tsx"
+  ],
+  "src/components/marketing/MetricsSection.tsx": [
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/marketing/PlatformsSection.tsx": [
+    "src/components/ThemeProvider.tsx",
+    "src/components/marketing/BrandLogo.tsx"
+  ],
+  "src/components/marketing/ProcessSection.tsx": [
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/marketing/SeorchableLogo.tsx": [],
+  "src/components/marketing/content.ts": [],
+  "src/components/navigation/AppSidebar.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/marketing/SeorchableLogo.tsx"
+  ],
+  "src/components/navigation/DashboardSidebar.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/ThemeProvider.tsx",
+    "src/components/marketing/SeorchableLogo.tsx",
+    "src/config/dashboardNavigation.ts"
+  ],
+  "src/components/navigation/DashboardTopbar.tsx": [
+    "src/components/AuthProvider.tsx",
+    "src/components/Button.tsx",
+    "src/components/Dropdown.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/navigation/GlobalNavigationControls.tsx": [
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/visualization/AnalyticalVisualizations.tsx": [
+    "src/components/ThemeProvider.tsx",
+    "src/components/visualization/Charts.tsx",
+    "src/components/visualization/contracts.ts"
+  ],
+  "src/components/visualization/Charts.tsx": [
+    "src/components/ThemeProvider.tsx",
+    "src/components/visualization/contracts.ts"
+  ],
+  "src/components/visualization/ScorecardsAndTimelines.tsx": [
+    "src/components/ThemeProvider.tsx",
+    "src/components/visualization/contracts.ts"
+  ],
+  "src/components/visualization/VisualizationContainer.tsx": [
+    "src/components/Button.tsx",
+    "src/components/Card.tsx",
+    "src/components/ThemeProvider.tsx"
+  ],
+  "src/components/visualization/contracts.ts": [],
+  "src/config/ai.ts": [],
+  "src/config/dashboardNavigation.ts": [],
+  "src/config/env.ts": [],
+  "src/config/fonts.ts": [],
+  "src/config/site.ts": [],
+  "src/core/cache/index.ts": [],
+  "src/core/config/index.ts": [],
+  "src/core/container/index.ts": [
+    "src/core/events/index.ts",
+    "src/features/admin/api/v1/admin/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/admin/infrastructure/persistence/uow.ts"
+  ],
+  "src/core/database/migrator.ts": [],
+  "src/core/database/tenant-context/index.ts": [
+    "src/features/admin/infrastructure/persistence/postgres/index.ts"
+  ],
+  "src/core/database/unit-of-work/index.ts": [
+    "src/core/events/index.ts"
+  ],
+  "src/core/events/index.ts": [],
+  "src/features/acquisition/application/orchestrator.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/core/events/index.ts",
+    "src/features/acquisition/application/provider-router.ts",
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/identity.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/crawl-job-repository.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/index.ts",
+    "src/features/acquisition/infrastructure/providers/firecrawl/firecrawl-crawl-provider.ts",
+    "src/features/acquisition/infrastructure/providers/http-crawl-provider.ts",
+    "src/features/acquisition/infrastructure/security/ssrf-guard.ts"
+  ],
+  "src/features/acquisition/application/provider-router.ts": [
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/services/jobs/retry.ts",
+    "src/services/jobs/types.ts"
+  ],
+  "src/features/acquisition/domain/contracts.ts": [
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts"
+  ],
+  "src/features/acquisition/domain/errors.ts": [],
+  "src/features/acquisition/domain/identity.ts": [
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts"
+  ],
+  "src/features/acquisition/domain/job-state-machine.ts": [
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts"
+  ],
+  "src/features/acquisition/domain/policy.ts": [
+    "src/features/acquisition/domain/errors.ts"
+  ],
+  "src/features/acquisition/domain/url/normalizer.ts": [
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/url/tracking-params.ts"
+  ],
+  "src/features/acquisition/domain/url/tracking-params.ts": [],
+  "src/features/acquisition/infrastructure/http/safe-fetcher.ts": [
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts",
+    "src/features/acquisition/infrastructure/security/ssrf-guard.ts"
+  ],
+  "src/features/acquisition/infrastructure/persistence/postgres/crawl-cache-repository.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/identity.ts"
+  ],
+  "src/features/acquisition/infrastructure/persistence/postgres/crawl-job-repository.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/identity.ts",
+    "src/features/acquisition/domain/job-state-machine.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts"
+  ],
+  "src/features/acquisition/infrastructure/persistence/postgres/crawl-result-repository.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/acquisition/domain/contracts.ts"
+  ],
+  "src/features/acquisition/infrastructure/persistence/postgres/dispatcher-repository.ts": [
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/job-state-machine.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/crawl-job-repository.ts"
+  ],
+  "src/features/acquisition/infrastructure/persistence/postgres/index.ts": [
+    "src/features/acquisition/infrastructure/persistence/postgres/crawl-cache-repository.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/crawl-job-repository.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/crawl-result-repository.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/dispatcher-repository.ts"
+  ],
+  "src/features/acquisition/infrastructure/providers/firecrawl/firecrawl-crawl-provider.ts": [
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/policy.ts"
+  ],
+  "src/features/acquisition/infrastructure/providers/http-crawl-provider.ts": [
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts",
+    "src/features/acquisition/infrastructure/http/safe-fetcher.ts",
+    "src/features/acquisition/infrastructure/security/ssrf-guard.ts"
+  ],
+  "src/features/acquisition/infrastructure/security/ssrf-guard.ts": [
+    "src/features/acquisition/domain/errors.ts"
+  ],
+  "src/features/admin/ai-management/index.ts": [
+    "src/features/admin/domain/types.ts",
+    "src/features/admin/infrastructure/mock-db.ts"
+  ],
+  "src/features/admin/analytics/index.ts": [
+    "src/features/admin/infrastructure/mock-db.ts"
+  ],
+  "src/features/admin/api/v1/admin/index.ts": [
+    "src/features/admin/application/dto.ts",
+    "src/features/admin/application/handlers.ts",
+    "src/features/admin/domain/types.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/ai-intelligence/api/index.ts"
+  ],
+  "src/features/admin/application/commands.ts": [
+    "src/features/admin/domain/types.ts"
+  ],
+  "src/features/admin/application/dto.ts": [
+    "src/features/admin/domain/types.ts"
+  ],
+  "src/features/admin/application/handlers.ts": [
+    "src/features/admin/application/commands.ts",
+    "src/features/admin/application/dto.ts",
+    "src/features/admin/application/mappers.ts",
+    "src/features/admin/application/queries.ts",
+    "src/features/admin/domain/entities.ts",
+    "src/features/admin/domain/events/index.ts",
+    "src/features/admin/domain/types.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/admin/infrastructure/persistence/uow.ts",
+    "src/features/ai-intelligence/domain/events/index.ts"
+  ],
+  "src/features/admin/application/mappers.ts": [
+    "src/features/admin/application/dto.ts",
+    "src/features/admin/domain/types.ts"
+  ],
+  "src/features/admin/application/queries.ts": [],
+  "src/features/admin/crawler-management/index.ts": [],
+  "src/features/admin/domain/entities.ts": [
+    "src/features/admin/domain/types.ts"
+  ],
+  "src/features/admin/domain/events/index.ts": [
+    "src/features/admin/domain/types.ts"
+  ],
+  "src/features/admin/domain/repositories/index.ts": [
+    "src/features/admin/domain/types.ts"
+  ],
+  "src/features/admin/domain/types.ts": [],
+  "src/features/admin/index.ts": [
+    "src/features/admin/ai-management/index.ts",
+    "src/features/admin/analytics/index.ts",
+    "src/features/admin/api/v1/admin/index.ts",
+    "src/features/admin/application/commands.ts",
+    "src/features/admin/application/dto.ts",
+    "src/features/admin/application/handlers.ts",
+    "src/features/admin/application/mappers.ts",
+    "src/features/admin/application/queries.ts",
+    "src/features/admin/crawler-management/index.ts",
+    "src/features/admin/domain/entities.ts",
+    "src/features/admin/domain/events/index.ts",
+    "src/features/admin/domain/types.ts",
+    "src/features/admin/infrastructure/mock-db.ts",
+    "src/features/admin/prompt-management/index.ts",
+    "src/features/admin/security/index.ts",
+    "src/features/admin/system/index.ts"
+  ],
+  "src/features/admin/infrastructure/mock-db.ts": [
+    "src/features/admin/domain/types.ts"
+  ],
+  "src/features/admin/infrastructure/persistence/postgres/index.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/domain/repositories/index.ts",
+    "src/features/admin/domain/types.ts",
+    "src/features/admin/infrastructure/persistence/uow.ts"
+  ],
+  "src/features/admin/infrastructure/persistence/uow.ts": [
+    "src/core/database/unit-of-work/index.ts",
+    "src/core/events/index.ts"
+  ],
+  "src/features/admin/prompt-management/index.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/admin/security/index.ts": [
+    "src/features/admin/domain/types.ts"
+  ],
+  "src/features/admin/system/index.ts": [
+    "src/features/ai-intelligence/observability/index.ts"
+  ],
+  "src/features/ai-intelligence/api/index.ts": [],
+  "src/features/ai-intelligence/application/commands/index.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/application/dto/index.ts": [],
+  "src/features/ai-intelligence/application/handlers/index.ts": [
+    "src/features/ai-intelligence/application/commands/index.ts",
+    "src/features/ai-intelligence/application/dto/index.ts",
+    "src/features/ai-intelligence/application/mappers/index.ts",
+    "src/features/ai-intelligence/application/queries/index.ts",
+    "src/features/ai-intelligence/domain/events/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts",
+    "src/features/ai-intelligence/services/index.ts"
+  ],
+  "src/features/ai-intelligence/application/mappers/index.ts": [
+    "src/features/ai-intelligence/application/dto/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/application/queries/index.ts": [],
+  "src/features/ai-intelligence/domain/entities/brand-entity.ts": [
+    "src/features/ai-intelligence/domain/schemas/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/domain/events/event-bus.ts": [
+    "src/features/ai-intelligence/domain/events/index.ts"
+  ],
+  "src/features/ai-intelligence/domain/events/index.ts": [
+    "src/features/ai-intelligence/domain/events/event-bus.ts"
+  ],
+  "src/features/ai-intelligence/domain/models/observation-aggregate.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/domain/schemas/index.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/domain/services/aeo-score-engine.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/domain/types/index.ts": [],
+  "src/features/ai-intelligence/index.ts": [
+    "src/features/ai-intelligence/api/index.ts",
+    "src/features/ai-intelligence/application/commands/index.ts",
+    "src/features/ai-intelligence/application/dto/index.ts",
+    "src/features/ai-intelligence/application/handlers/index.ts",
+    "src/features/ai-intelligence/application/mappers/index.ts",
+    "src/features/ai-intelligence/application/queries/index.ts",
+    "src/features/ai-intelligence/domain/entities/brand-entity.ts",
+    "src/features/ai-intelligence/domain/events/event-bus.ts",
+    "src/features/ai-intelligence/domain/events/index.ts",
+    "src/features/ai-intelligence/domain/models/observation-aggregate.ts",
+    "src/features/ai-intelligence/domain/schemas/index.ts",
+    "src/features/ai-intelligence/domain/services/aeo-score-engine.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/knowledge-graph/index.ts",
+    "src/features/ai-intelligence/observability/index.ts",
+    "src/features/ai-intelligence/pipeline/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts",
+    "src/features/ai-intelligence/security/index.ts",
+    "src/features/ai-intelligence/services/citation-service.ts",
+    "src/features/ai-intelligence/services/entity-service.ts",
+    "src/features/ai-intelligence/services/observation-service.ts",
+    "src/features/ai-intelligence/services/visibility-service.ts"
+  ],
+  "src/features/ai-intelligence/knowledge-graph/index.ts": [],
+  "src/features/ai-intelligence/observability/index.ts": [],
+  "src/features/ai-intelligence/pipeline/index.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/repositories/index.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/repositories/interfaces.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/security/index.ts": [],
+  "src/features/ai-intelligence/services/aeo-content-intelligence-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts"
+  ],
+  "src/features/ai-intelligence/services/ai-visibility-audit-engine.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/services/ai/ai-visibility-provider.ts"
+  ],
+  "src/features/ai-intelligence/services/brand-intelligence-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts"
+  ],
+  "src/features/ai-intelligence/services/citation-intelligence-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts"
+  ],
+  "src/features/ai-intelligence/services/citation-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/competitive-ai-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/competitive-radar-service.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/competitive-seo-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/competitor-classification-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/services/competitor-discovery-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/competitor-monitoring-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/entity-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/index.ts": [
+    "src/features/ai-intelligence/services/aeo-content-intelligence-service.ts",
+    "src/features/ai-intelligence/services/ai-visibility-audit-engine.ts",
+    "src/features/ai-intelligence/services/brand-intelligence-service.ts",
+    "src/features/ai-intelligence/services/citation-intelligence-service.ts",
+    "src/features/ai-intelligence/services/citation-service.ts",
+    "src/features/ai-intelligence/services/competitive-ai-service.ts",
+    "src/features/ai-intelligence/services/competitive-radar-service.ts",
+    "src/features/ai-intelligence/services/competitive-seo-service.ts",
+    "src/features/ai-intelligence/services/competitor-classification-service.ts",
+    "src/features/ai-intelligence/services/competitor-discovery-service.ts",
+    "src/features/ai-intelligence/services/competitor-monitoring-service.ts",
+    "src/features/ai-intelligence/services/entity-service.ts",
+    "src/features/ai-intelligence/services/keyword-intelligence-service.ts",
+    "src/features/ai-intelligence/services/llm-analytics-service.ts",
+    "src/features/ai-intelligence/services/observation-service.ts",
+    "src/features/ai-intelligence/services/prompt-intelligence-service.ts",
+    "src/features/ai-intelligence/services/site-architecture-analyzer-service.ts",
+    "src/features/ai-intelligence/services/visibility-service.ts"
+  ],
+  "src/features/ai-intelligence/services/keyword-intelligence-service.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/llm-analytics-service.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/services/observation-service.ts": [
+    "src/features/ai-intelligence/domain/models/observation-aggregate.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/ai-intelligence/services/prompt-intelligence-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/ai-visibility-audit-engine.ts",
+    "src/services/ai/ai-visibility-provider.ts"
+  ],
+  "src/features/ai-intelligence/services/site-architecture-analyzer-service.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/features/ai-intelligence/services/visibility-service.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/repositories/interfaces.ts"
+  ],
+  "src/features/billing/domain/plans.ts": [
+    "src/features/billing/domain/types.ts"
+  ],
+  "src/features/billing/domain/types.ts": [],
+  "src/features/billing/services/subscription-service.ts": [
+    "database/schema/index.ts",
+    "src/core/database/tenant-context/index.ts",
+    "src/features/billing/domain/plans.ts",
+    "src/features/billing/domain/types.ts"
+  ],
+  "src/features/monitoring/domain/types/index.ts": [
+    "src/features/acquisition/domain/policy.ts"
+  ],
+  "src/features/monitoring/repositories/crawl-snapshot-repository.ts": [
+    "database/schema/index.ts",
+    "src/core/database/tenant-context/index.ts",
+    "src/features/monitoring/domain/types/index.ts"
+  ],
+  "src/features/monitoring/repositories/index.ts": [
+    "src/features/monitoring/repositories/crawl-snapshot-repository.ts",
+    "src/features/monitoring/repositories/monitoring-alert-repository.ts",
+    "src/features/monitoring/repositories/monitoring-config-repository.ts"
+  ],
+  "src/features/monitoring/repositories/monitoring-alert-repository.ts": [
+    "database/schema/index.ts",
+    "src/core/database/tenant-context/index.ts",
+    "src/features/monitoring/domain/types/index.ts"
+  ],
+  "src/features/monitoring/repositories/monitoring-config-repository.ts": [
+    "database/schema/index.ts",
+    "src/core/database/tenant-context/index.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/monitoring/domain/types/index.ts"
+  ],
+  "src/features/monitoring/services/change-detection-service.ts": [
+    "src/features/monitoring/domain/types/index.ts"
+  ],
+  "src/features/monitoring/services/index.ts": [
+    "src/features/monitoring/services/change-detection-service.ts",
+    "src/features/monitoring/services/regression-detection-service.ts"
+  ],
+  "src/features/monitoring/services/regression-detection-service.ts": [
+    "src/features/monitoring/domain/types/index.ts"
+  ],
+  "src/features/public-api/domain/types/index.ts": [],
+  "src/features/public-api/index.ts": [
+    "src/features/public-api/domain/types/index.ts",
+    "src/features/public-api/middleware/api-middleware.ts",
+    "src/features/public-api/repositories/api-key-repository.ts",
+    "src/features/public-api/services/api-quota-service.ts",
+    "src/features/public-api/services/api-service.ts"
+  ],
+  "src/features/public-api/middleware/api-middleware.ts": [
+    "src/features/public-api/services/api-quota-service.ts",
+    "src/features/public-api/services/api-service.ts"
+  ],
+  "src/features/public-api/repositories/api-key-repository.ts": [
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/public-api/domain/types/index.ts"
+  ],
+  "src/features/public-api/services/api-quota-service.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/services/cache/store.ts"
+  ],
+  "src/features/public-api/services/api-service.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/public-api/domain/types/index.ts",
+    "src/features/public-api/repositories/api-key-repository.ts"
+  ],
+  "src/lib/audit-engine/builder.ts": [
+    "src/lib/audit-engine/crawler.ts",
+    "src/lib/audit-engine/extractor.ts",
+    "src/lib/audit-engine/logger.ts",
+    "src/lib/audit-engine/normalizer.ts",
+    "src/lib/audit-engine/recommendations.ts",
+    "src/lib/audit-engine/scorer.ts",
+    "src/lib/audit-engine/seo-extractor.ts",
+    "src/lib/audit-engine/url-validator.ts",
+    "src/types/audit.ts"
+  ],
+  "src/lib/audit-engine/crawler.ts": [
+    "src/lib/audit-engine/logger.ts",
+    "src/lib/audit-engine/url-validator.ts",
+    "src/types/audit.ts"
+  ],
+  "src/lib/audit-engine/extractor.ts": [
+    "src/lib/audit-engine/logger.ts",
+    "src/lib/audit-engine/url-validator.ts",
+    "src/types/audit.ts"
+  ],
+  "src/lib/audit-engine/logger.ts": [],
+  "src/lib/audit-engine/normalizer.ts": [
+    "src/types/audit.ts"
+  ],
+  "src/lib/audit-engine/recommendations.ts": [
+    "src/types/audit.ts"
+  ],
+  "src/lib/audit-engine/scorer.ts": [
+    "src/types/audit.ts"
+  ],
+  "src/lib/audit-engine/seo-extractor.ts": [
+    "src/lib/audit-engine/url-validator.ts",
+    "src/types/audit.ts",
+    "src/types/seo-signals.ts"
+  ],
+  "src/lib/audit-engine/url-validator.ts": [
+    "src/types/audit.ts"
+  ],
+  "src/lib/docsData.ts": [],
+  "src/lib/docsIndex.ts": [],
+  "src/lib/firecrawl.ts": [],
+  "src/lib/inngest/client.ts": [],
+  "src/lib/inngest/functions.ts": [
+    "src/lib/inngest/client.ts"
+  ],
+  "src/proxy.ts": [],
+  "src/schemas/intelligence.ts": [],
+  "src/services/ai/ai-visibility-provider.ts": [
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/services/ai/embed-client.ts": [
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/services/ai/graph-extraction.ts": [
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/services/ai/llm-client.ts": [
+    "src/config/ai.ts"
+  ],
+  "src/services/ai/query-embedding.ts": [],
+  "src/services/ai/sentiment-analysis.ts": [
+    "src/services/ai/llm-client.ts"
+  ],
+  "src/services/ai/text-chunker.ts": [],
+  "src/services/analytics/index.ts": [],
+  "src/services/api/client.ts": [
+    "src/config/env.ts"
+  ],
+  "src/services/auditService.ts": [
+    "src/types/audit.ts"
+  ],
+  "src/services/auth/authorization.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/auth/session.ts",
+    "src/types/auth.ts"
+  ],
+  "src/services/auth/index.ts": [
+    "src/types/auth.ts"
+  ],
+  "src/services/auth/session.ts": [
+    "src/types/auth.ts"
+  ],
+  "src/services/cache/deduplication.ts": [],
+  "src/services/cache/service.ts": [
+    "src/services/auth/session.ts",
+    "src/services/cache/types.ts"
+  ],
+  "src/services/cache/store.ts": [
+    "src/services/cache/types.ts"
+  ],
+  "src/services/cache/types.ts": [],
+  "src/services/cost-control/budget.ts": [
+    "src/services/auth/session.ts",
+    "src/services/cost-control/pricing.ts",
+    "src/services/cost-control/types.ts"
+  ],
+  "src/services/cost-control/pricing.ts": [
+    "src/services/cost-control/types.ts"
+  ],
+  "src/services/cost-control/types.ts": [],
+  "src/services/crawler/crawler-orchestrator.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/crawler/link-discovery.ts",
+    "src/services/crawler/web-crawler.ts",
+    "src/services/ingestion/document-ingestion.ts"
+  ],
+  "src/services/crawler/link-discovery.ts": [],
+  "src/services/crawler/web-crawler.ts": [],
+  "src/services/dashboard-home/index.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/services/auth/session.ts"
+  ],
+  "src/services/dashboard-services/index.ts": [],
+  "src/services/diagnostic-engine/index.ts": [
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/types/seo-signals.ts"
+  ],
+  "src/services/ingestion/document-ingestion.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/ai/embed-client.ts",
+    "src/services/ai/graph-extraction.ts",
+    "src/services/ai/sentiment-analysis.ts",
+    "src/services/ai/text-chunker.ts",
+    "src/services/knowledge-graph/graph-store.ts",
+    "src/services/knowledge-graph/vector-store.ts"
+  ],
+  "src/services/intelligence/index.ts": [
+    "src/schemas/intelligence.ts"
+  ],
+  "src/services/jobs/contracts.ts": [],
+  "src/services/jobs/executor.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/jobs/queue.ts",
+    "src/services/jobs/retry.ts",
+    "src/services/jobs/service.ts",
+    "src/services/jobs/types.ts"
+  ],
+  "src/services/jobs/queue.ts": [
+    "src/services/jobs/types.ts"
+  ],
+  "src/services/jobs/repository.ts": [
+    "src/services/jobs/types.ts"
+  ],
+  "src/services/jobs/retry.ts": [
+    "src/services/jobs/types.ts"
+  ],
+  "src/services/jobs/service.ts": [
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts",
+    "src/services/jobs/repository.ts",
+    "src/services/jobs/types.ts"
+  ],
+  "src/services/jobs/types.ts": [
+    "src/types/auth.ts"
+  ],
+  "src/services/knowledge-graph/graph-store.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/services/ai/graph-extraction.ts"
+  ],
+  "src/services/knowledge-graph/vector-store.ts": [
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts"
+  ],
+  "src/services/observability/context.ts": [
+    "src/services/observability/types.ts"
+  ],
+  "src/services/observability/tracker.ts": [
+    "src/services/observability/context.ts",
+    "src/services/observability/types.ts"
+  ],
+  "src/services/observability/types.ts": [],
+  "src/services/rag/context-retrieval.ts": [
+    "src/services/knowledge-graph/vector-store.ts"
+  ],
+  "src/services/rag/query-service.ts": [
+    "src/services/ai/llm-client.ts",
+    "src/services/ai/query-embedding.ts",
+    "src/services/rag/context-retrieval.ts"
+  ],
+  "src/services/storage/index.ts": [],
+  "src/services/technical-seo-analyzer.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/types/seo-signals.ts"
+  ],
+  "src/types/audit.ts": [
+    "src/types/seo-signals.ts"
+  ],
+  "src/types/auth.ts": [],
+  "src/types/seo-signals.ts": [],
+  "tests/api/v1/analytics/llm.test.ts": [
+    "src/app/api/v1/analytics/llm/route.ts"
+  ],
+  "tests/features/acquisition/fetcher.test.ts": [
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/infrastructure/http/safe-fetcher.ts"
+  ],
+  "tests/features/acquisition/http-provider.test.ts": [
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts",
+    "src/features/acquisition/infrastructure/providers/http-crawl-provider.ts",
+    "src/features/acquisition/infrastructure/security/ssrf-guard.ts"
+  ],
+  "tests/features/acquisition/integration/run-all.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/acquisition/application/orchestrator.ts",
+    "src/features/acquisition/application/provider-router.ts",
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts",
+    "src/features/acquisition/infrastructure/persistence/postgres/index.ts",
+    "src/features/acquisition/infrastructure/providers/http-crawl-provider.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts"
+  ],
+  "tests/features/acquisition/policy-identity.test.ts": [
+    "src/features/acquisition/domain/identity.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts"
+  ],
+  "tests/features/acquisition/providers.test.ts": [
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts",
+    "src/features/acquisition/infrastructure/providers/firecrawl/firecrawl-crawl-provider.ts"
+  ],
+  "tests/features/acquisition/router.test.ts": [
+    "src/features/acquisition/application/provider-router.ts",
+    "src/features/acquisition/domain/contracts.ts",
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/policy.ts",
+    "src/features/acquisition/domain/url/normalizer.ts"
+  ],
+  "tests/features/acquisition/run-all.ts": [
+    "tests/features/acquisition/fetcher.test.ts",
+    "tests/features/acquisition/http-provider.test.ts",
+    "tests/features/acquisition/policy-identity.test.ts",
+    "tests/features/acquisition/providers.test.ts",
+    "tests/features/acquisition/router.test.ts",
+    "tests/features/acquisition/security.test.ts",
+    "tests/features/acquisition/state-machine.test.ts",
+    "tests/features/acquisition/url.test.ts"
+  ],
+  "tests/features/acquisition/security.test.ts": [
+    "src/features/acquisition/infrastructure/security/ssrf-guard.ts"
+  ],
+  "tests/features/acquisition/state-machine.test.ts": [
+    "src/features/acquisition/domain/errors.ts",
+    "src/features/acquisition/domain/job-state-machine.ts"
+  ],
+  "tests/features/acquisition/url.test.ts": [
+    "src/features/acquisition/domain/url/normalizer.ts"
+  ],
+  "tests/features/admin/cqrs.test.ts": [
+    "src/features/admin/application/handlers.ts",
+    "src/features/admin/infrastructure/mock-db.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts"
+  ],
+  "tests/features/admin/domain.test.ts": [
+    "src/features/admin/domain/entities.ts",
+    "src/features/admin/domain/types.ts"
+  ],
+  "tests/features/admin/infrastructure/persistence.test.ts": [
+    "src/core/events/index.ts",
+    "src/features/admin/domain/types.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/admin/infrastructure/persistence/uow.ts"
+  ],
+  "tests/features/admin/infrastructure/postgres-integration.test.ts": [
+    "src/features/admin/domain/types.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts"
+  ],
+  "tests/features/admin/run-all.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "tests/features/admin/cqrs.test.ts",
+    "tests/features/admin/domain.test.ts",
+    "tests/features/admin/infrastructure/persistence.test.ts",
+    "tests/features/admin/infrastructure/postgres-integration.test.ts",
+    "tests/features/admin/security.test.ts"
+  ],
+  "tests/features/admin/security.test.ts": [
+    "src/features/admin/domain/types.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/features/admin/security/index.ts"
+  ],
+  "tests/features/admin/tenant-isolation-behavior.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts"
+  ],
+  "tests/features/ai-intelligence/application.test.ts": [
+    "src/features/ai-intelligence/index.ts"
+  ],
+  "tests/features/ai-intelligence/domain.test.ts": [
+    "src/features/ai-intelligence/domain/entities/brand-entity.ts",
+    "src/features/ai-intelligence/domain/models/observation-aggregate.ts",
+    "src/features/ai-intelligence/domain/services/aeo-score-engine.ts"
+  ],
+  "tests/features/ai-intelligence/events.test.ts": [
+    "src/features/ai-intelligence/index.ts"
+  ],
+  "tests/features/ai-intelligence/run-all.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "tests/features/ai-intelligence/application.test.ts",
+    "tests/features/ai-intelligence/domain.test.ts",
+    "tests/features/ai-intelligence/events.test.ts",
+    "tests/features/ai-intelligence/security.test.ts",
+    "tests/features/ai-intelligence/tenant-pipeline.test.ts",
+    "tests/features/ai-intelligence/vector-store.test.ts",
+    "tests/services/ingestion/document-ingestion.test.ts",
+    "tests/services/rag/query-service.test.ts"
+  ],
+  "tests/features/ai-intelligence/security.test.ts": [
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/security/index.ts"
+  ],
+  "tests/features/ai-intelligence/tenant-pipeline.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts"
+  ],
+  "tests/features/ai-intelligence/vector-store.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/knowledge-graph/vector-store.ts"
+  ],
+  "tests/features/analysis/competitive.test.ts": [
+    "src/app/api/v1/analysis/competitive/route.ts",
+    "src/lib/firecrawl.ts"
+  ],
+  "tests/features/analytics/llm-analytics.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/services/llm-analytics-service.ts"
+  ],
+  "tests/features/audit/aeo-insight.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts"
+  ],
+  "tests/features/audit/free-audit.test.ts": [
+    "src/app/api/v1/audit/free/route.ts",
+    "src/lib/firecrawl.ts"
+  ],
+  "tests/features/audit/premium-audit.test.ts": [
+    "src/app/api/v1/audit/premium/route.ts",
+    "src/lib/firecrawl.ts"
+  ],
+  "tests/features/billing/subscription.test.ts": [
+    "src/features/billing/domain/plans.ts",
+    "src/features/billing/services/subscription-service.ts"
+  ],
+  "tests/features/content/studio.test.ts": [
+    "src/app/api/v1/content/studio/route.ts"
+  ],
+  "tests/features/optimization/technical.test.ts": [
+    "src/app/api/v1/optimization/technical/route.ts",
+    "src/lib/firecrawl.ts"
+  ],
+  "tests/features/public-api/public-api.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/public-api/index.ts"
+  ],
+  "tests/inngest/inngest-integration.test.ts": [
+    "src/app/api/inngest/route.ts",
+    "src/lib/inngest/client.ts",
+    "src/lib/inngest/functions.ts"
+  ],
+  "tests/scripts/database/db-push-guard.test.ts": [
+    "scripts/database/db-push-guard.ts"
+  ],
+  "tests/services/ai/ai.test.ts": [
+    "src/services/ai/llm-client.ts",
+    "src/services/ai/sentiment-analysis.ts",
+    "src/services/ai/text-chunker.ts"
+  ],
+  "tests/services/ai/graph-extraction.test.ts": [
+    "src/services/ai/graph-extraction.ts"
+  ],
+  "tests/services/audit-engine/aeo-content-intelligence.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/aeo-content-intelligence-service.ts"
+  ],
+  "tests/services/audit-engine/ai-visibility.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/ai-visibility-audit-engine.ts"
+  ],
+  "tests/services/audit-engine/brand-intelligence.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/brand-intelligence-service.ts"
+  ],
+  "tests/services/audit-engine/citation-intelligence.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/citation-intelligence-service.ts"
+  ],
+  "tests/services/audit-engine/competitive-ai.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/competitive-ai-service.ts"
+  ],
+  "tests/services/audit-engine/competitive-radar.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/competitive-radar-service.ts"
+  ],
+  "tests/services/audit-engine/competitive-seo.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/competitive-seo-service.ts"
+  ],
+  "tests/services/audit-engine/competitor-discovery.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/competitor-classification-service.ts",
+    "src/features/ai-intelligence/services/competitor-discovery-service.ts",
+    "src/features/ai-intelligence/services/competitor-monitoring-service.ts"
+  ],
+  "tests/services/audit-engine/diagnostic-engine.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/services/diagnostic-engine/index.ts",
+    "src/types/seo-signals.ts"
+  ],
+  "tests/services/audit-engine/engine.test.ts": [
+    "src/lib/audit-engine/builder.ts",
+    "src/lib/audit-engine/logger.ts",
+    "src/lib/audit-engine/normalizer.ts",
+    "src/lib/audit-engine/scorer.ts",
+    "src/lib/audit-engine/url-validator.ts"
+  ],
+  "tests/services/audit-engine/intelligence-model.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts"
+  ],
+  "tests/services/audit-engine/keyword-intelligence.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/keyword-intelligence-service.ts"
+  ],
+  "tests/services/audit-engine/prompt-intelligence.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/prompt-intelligence-service.ts"
+  ],
+  "tests/services/audit-engine/seo-extractor.test.ts": [
+    "src/lib/audit-engine/seo-extractor.ts",
+    "src/types/audit.ts"
+  ],
+  "tests/services/audit-engine/site-architecture.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/services/site-architecture-analyzer-service.ts"
+  ],
+  "tests/services/audit-engine/technical-seo-analyzer.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/technical-seo-analyzer.ts",
+    "src/types/seo-signals.ts"
+  ],
+  "tests/services/auth/session.test.ts": [
+    "src/app/actions/ingestion.ts",
+    "src/app/actions/query.ts",
+    "src/core/database/tenant-context/index.ts",
+    "src/services/auth/authorization.ts",
+    "src/services/auth/session.ts",
+    "src/types/auth.ts"
+  ],
+  "tests/services/cache/cache.test.ts": [
+    "src/services/auth/session.ts",
+    "src/services/cache/deduplication.ts",
+    "src/services/cache/service.ts",
+    "src/services/cache/store.ts",
+    "src/types/auth.ts"
+  ],
+  "tests/services/cost-control/cost-control.test.ts": [
+    "src/services/auth/session.ts",
+    "src/services/cost-control/budget.ts",
+    "src/services/cost-control/pricing.ts",
+    "src/services/cost-control/types.ts",
+    "src/types/auth.ts"
+  ],
+  "tests/services/crawler/web-crawler.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/crawler/crawler-orchestrator.ts",
+    "src/services/crawler/link-discovery.ts",
+    "src/services/crawler/web-crawler.ts",
+    "src/services/knowledge-graph/vector-store.ts"
+  ],
+  "tests/services/dashboard-home.test.ts": [
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/services/auth/session.ts",
+    "src/services/dashboard-home/index.ts",
+    "src/types/auth.ts"
+  ],
+  "tests/services/dashboard-services.test.ts": [
+    "src/services/dashboard-services/index.ts"
+  ],
+  "tests/services/dashboard-shell.test.ts": [
+    "src/config/dashboardNavigation.ts",
+    "src/types/auth.ts"
+  ],
+  "tests/services/ingestion/document-ingestion.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/services/ingestion/document-ingestion.ts",
+    "src/services/knowledge-graph/vector-store.ts"
+  ],
+  "tests/services/jobs/jobs.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/auth/session.ts",
+    "src/services/jobs/contracts.ts",
+    "src/services/jobs/executor.ts",
+    "src/services/jobs/queue.ts",
+    "src/services/jobs/repository.ts",
+    "src/services/jobs/retry.ts",
+    "src/services/jobs/service.ts",
+    "src/services/jobs/types.ts",
+    "src/types/auth.ts"
+  ],
+  "tests/services/knowledge-graph/graph-store.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/admin/infrastructure/persistence/postgres/index.ts",
+    "src/services/knowledge-graph/graph-store.ts"
+  ],
+  "tests/services/knowledge-graph/knowledge-graph-foundation.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/features/ai-intelligence/domain/types/index.ts",
+    "src/features/ai-intelligence/repositories/index.ts",
+    "src/features/ai-intelligence/services/entity-service.ts"
+  ],
+  "tests/services/monitoring/repository.test.ts": [
+    "src/core/database/tenant-context/index.ts"
+  ],
+  "tests/services/monitoring/run-all.ts": [
+    "tests/services/monitoring/repository.test.ts",
+    "tests/services/monitoring/tenant-isolation.test.ts",
+    "tests/services/monitoring/website-monitoring.test.ts"
+  ],
+  "tests/services/monitoring/tenant-isolation.test.ts": [
+    "src/core/database/tenant-context/index.ts"
+  ],
+  "tests/services/monitoring/website-monitoring.test.ts": [
+    "src/features/monitoring/domain/types/index.ts",
+    "src/features/monitoring/services/change-detection-service.ts",
+    "src/features/monitoring/services/regression-detection-service.ts"
+  ],
+  "tests/services/observability/observability.test.ts": [
+    "src/services/observability/context.ts",
+    "src/services/observability/tracker.ts",
+    "src/services/observability/types.ts"
+  ],
+  "tests/services/rag/query-service.test.ts": [
+    "src/core/database/tenant-context/index.ts",
+    "src/services/ai/query-embedding.ts",
+    "src/services/knowledge-graph/vector-store.ts",
+    "src/services/rag/context-retrieval.ts",
+    "src/services/rag/query-service.ts"
+  ],
+  "tests/services/workspace/workspace.test.ts": []
+}
