@@ -1,0 +1,441 @@
+=== INSTALLED EXTENSIONS ===
+ extname | extversion
+---------+------------
+ plpgsql | 1.0
+ vector  | 0.6.0
+(2 rows)
+
+
+=== TABLES & RLS FLAGS ===
+            table_name            | rls_enabled | rls_forced
+----------------------------------+-------------+------------
+ __drizzle_migrations             | f           | f
+ admin_users                      | f           | f
+ aeo_analyses                     | t           | f
+ ai_engines                       | f           | f
+ ai_observations                  | t           | f
+ ai_provider_configs              | f           | f
+ ai_visibility_audits             | t           | f
+ audit_prompts                    | t           | f
+ audit_records                    | f           | f
+ brand_associations               | t           | f
+ brand_mentions                   | t           | f
+ brands                           | t           | f
+ citation_occurrences             | t           | f
+ citation_sources                 | t           | f
+ citations                        | t           | f
+ competitive_analyses             | t           | f
+ competitive_seo_findings         | t           | f
+ competitor_changes               | t           | f
+ competitors                      | t           | f
+ crawl_cache                      | t           | f
+ crawl_jobs                       | t           | f
+ crawl_results                    | t           | f
+ credit_transactions              | t           | f
+ diagnostic_finding_relationships | t           | f
+ diagnostic_findings              | t           | f
+ document_embeddings              | t           | f
+ entities                         | t           | f
+ entity_relationships             | t           | f
+ faq_opportunities                | t           | f
+ feature_flags                    | f           | f
+ historical_metrics               | t           | f
+ keywords                         | t           | f
+ keywords_topics                  | f           | f
+ kg_alignments                    | t           | f
+ kg_entities                      | t           | f
+ kg_relationships                 | t           | f
+ organization_invitations         | t           | f
+ organization_members             | t           | f
+ organizations                    | t           | f
+ pages                            | t           | f
+ pages_entities                   | f           | f
+ pages_keywords                   | f           | f
+ pages_topics                     | f           | f
+ permissions                      | f           | f
+ position_observations            | t           | f
+ premium_audits                   | t           | f
+ prompt_definitions               | t           | f
+ prompt_executions                | t           | f
+ prompt_schedules                 | t           | f
+ prompts                          | t           | f
+ recommendation_observations      | t           | f
+ recommendations                  | t           | f
+ roles                            | f           | f
+ system_configurations            | f           | f
+ technical_audits                 | t           | f
+ tenant_quotas                    | t           | f
+ tenant_subscriptions             | t           | f
+ topics                           | t           | f
+ topics_entities                  | f           | f
+ users                            | f           | f
+ visibility_scores                | t           | f
+ websites                         | t           | f
+(62 rows)
+
+
+=== RLS POLICIES ===
+            tablename             |               policyname                | permissive |  roles   |  cmd   |                                                qual                                                |                                             with_check
+----------------------------------+-----------------------------------------+------------+----------+--------+----------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------
+ aeo_analyses                     | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ aeo_analyses                     | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ aeo_analyses                     | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ aeo_analyses                     | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ ai_observations                  | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ ai_observations                  | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ ai_observations                  | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ ai_observations                  | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ ai_visibility_audits             | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ ai_visibility_audits             | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ ai_visibility_audits             | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ ai_visibility_audits             | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ audit_prompts                    | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ audit_prompts                    | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ audit_prompts                    | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ audit_prompts                    | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ brand_associations               | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ brand_associations               | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ brand_associations               | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ brand_associations               | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ brand_mentions                   | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ brand_mentions                   | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ brand_mentions                   | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ brand_mentions                   | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ brands                           | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ brands                           | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ brands                           | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ brands                           | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ citation_occurrences             | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ citation_occurrences             | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ citation_occurrences             | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ citation_occurrences             | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ citation_sources                 | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ citation_sources                 | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ citation_sources                 | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ citation_sources                 | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ citations                        | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ citations                        | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ citations                        | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ citations                        | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ competitive_analyses             | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ competitive_analyses             | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ competitive_analyses             | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ competitive_analyses             | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ competitive_seo_findings         | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ competitive_seo_findings         | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ competitive_seo_findings         | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ competitive_seo_findings         | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ competitor_changes               | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ competitor_changes               | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ competitor_changes               | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ competitor_changes               | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ competitors                      | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ competitors                      | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ competitors                      | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ competitors                      | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ crawl_cache                      | crawl_tenant_policy                     | PERMISSIVE | {public} | ALL    | (tenant_id = NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))               | (tenant_id = NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))
+ crawl_jobs                       | crawl_tenant_policy                     | PERMISSIVE | {public} | ALL    | (tenant_id = NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))               | (tenant_id = NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))
+ crawl_results                    | crawl_tenant_policy                     | PERMISSIVE | {public} | ALL    | (tenant_id = NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))               | (tenant_id = NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))
+ credit_transactions              | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ credit_transactions              | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ credit_transactions              | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ credit_transactions              | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ diagnostic_finding_relationships | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ diagnostic_finding_relationships | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ diagnostic_finding_relationships | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ diagnostic_finding_relationships | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ diagnostic_findings              | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ diagnostic_findings              | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ diagnostic_findings              | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ diagnostic_findings              | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ document_embeddings              | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ document_embeddings              | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ document_embeddings              | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ document_embeddings              | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ entities                         | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ entities                         | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ entities                         | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ entities                         | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ entity_relationships             | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ entity_relationships             | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ entity_relationships             | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ entity_relationships             | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ faq_opportunities                | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ faq_opportunities                | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ faq_opportunities                | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ faq_opportunities                | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ historical_metrics               | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ historical_metrics               | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ historical_metrics               | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ historical_metrics               | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ keywords                         | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ keywords                         | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ keywords                         | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ keywords                         | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ kg_alignments                    | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ kg_alignments                    | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ kg_alignments                    | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ kg_alignments                    | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ kg_entities                      | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ kg_entities                      | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ kg_entities                      | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ kg_entities                      | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ kg_relationships                 | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ kg_relationships                 | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ kg_relationships                 | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ kg_relationships                 | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ organization_invitations         | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ organization_invitations         | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ organization_invitations         | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ organization_invitations         | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ organization_members             | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ organization_members             | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ organization_members             | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ organization_members             | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ organizations                    | delete_org_isolation_policy             | PERMISSIVE | {public} | DELETE | (id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)              |
+ organizations                    | insert_org_isolation_policy             | PERMISSIVE | {public} | INSERT |                                                                                                    | (id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ organizations                    | select_org_isolation_policy             | PERMISSIVE | {public} | SELECT | (id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)              |
+ organizations                    | update_org_isolation_policy             | PERMISSIVE | {public} | UPDATE | (id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)              | (id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ pages                            | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ pages                            | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ pages                            | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ pages                            | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ position_observations            | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ position_observations            | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ position_observations            | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ position_observations            | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ premium_audits                   | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ premium_audits                   | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ premium_audits                   | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ premium_audits                   | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ prompt_definitions               | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ prompt_definitions               | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ prompt_definitions               | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ prompt_definitions               | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ prompt_executions                | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ prompt_executions                | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ prompt_executions                | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ prompt_executions                | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ prompt_schedules                 | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ prompt_schedules                 | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ prompt_schedules                 | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ prompt_schedules                 | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ prompts                          | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ prompts                          | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ prompts                          | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ prompts                          | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ recommendation_observations      | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ recommendation_observations      | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ recommendation_observations      | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ recommendation_observations      | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ recommendations                  | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ recommendations                  | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ recommendations                  | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ recommendations                  | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ technical_audits                 | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ technical_audits                 | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ technical_audits                 | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ technical_audits                 | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ tenant_quotas                    | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ tenant_quotas                    | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ tenant_quotas                    | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ tenant_quotas                    | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ tenant_subscriptions             | delete_tenant_id_isolation_policy       | PERMISSIVE | {public} | DELETE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ tenant_subscriptions             | insert_tenant_id_isolation_policy       | PERMISSIVE | {public} | INSERT |                                                                                                    | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ tenant_subscriptions             | select_tenant_id_isolation_policy       | PERMISSIVE | {public} | SELECT | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       |
+ tenant_subscriptions             | update_tenant_id_isolation_policy       | PERMISSIVE | {public} | UPDATE | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)       | (tenant_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ topics                           | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ topics                           | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ topics                           | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ topics                           | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ visibility_scores                | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ visibility_scores                | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ visibility_scores                | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ visibility_scores                | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ websites                         | delete_organization_id_isolation_policy | PERMISSIVE | {public} | DELETE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ websites                         | insert_organization_id_isolation_policy | PERMISSIVE | {public} | INSERT |                                                                                                    | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+ websites                         | select_organization_id_isolation_policy | PERMISSIVE | {public} | SELECT | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) |
+ websites                         | update_organization_id_isolation_policy | PERMISSIVE | {public} | UPDATE | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid) | (organization_id = (NULLIF(current_setting('app.current_tenant_id'::text, true), ''::text))::uuid)
+(179 rows)
+
+
+=== INDEXES ===
+            tablename             |               indexname                |                                                                                        indexdef
+----------------------------------+----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ __drizzle_migrations             | __drizzle_migrations_pkey              | CREATE UNIQUE INDEX __drizzle_migrations_pkey ON public.__drizzle_migrations USING btree (id)
+ admin_users                      | admin_users_email_unique               | CREATE UNIQUE INDEX admin_users_email_unique ON public.admin_users USING btree (email)
+ admin_users                      | admin_users_pkey                       | CREATE UNIQUE INDEX admin_users_pkey ON public.admin_users USING btree (id)
+ admin_users                      | idx_admin_users_deleted_at             | CREATE INDEX idx_admin_users_deleted_at ON public.admin_users USING btree (deleted_at) WHERE (deleted_at IS NULL)
+ admin_users                      | idx_admin_users_email                  | CREATE INDEX idx_admin_users_email ON public.admin_users USING btree (email)
+ aeo_analyses                     | aeo_analyses_pkey                      | CREATE UNIQUE INDEX aeo_analyses_pkey ON public.aeo_analyses USING btree (id)
+ aeo_analyses                     | idx_aeo_analyses_tenant                | CREATE INDEX idx_aeo_analyses_tenant ON public.aeo_analyses USING btree (tenant_id)
+ aeo_analyses                     | idx_aeo_analyses_url                   | CREATE INDEX idx_aeo_analyses_url ON public.aeo_analyses USING btree (url)
+ ai_engines                       | ai_engines_pkey                        | CREATE UNIQUE INDEX ai_engines_pkey ON public.ai_engines USING btree (id)
+ ai_observations                  | ai_observations_pkey                   | CREATE UNIQUE INDEX ai_observations_pkey ON public.ai_observations USING btree (id)
+ ai_observations                  | idx_ai_observations_engine             | CREATE INDEX idx_ai_observations_engine ON public.ai_observations USING btree (engine_id)
+ ai_observations                  | idx_ai_observations_organization       | CREATE INDEX idx_ai_observations_organization ON public.ai_observations USING btree (organization_id)
+ ai_observations                  | idx_ai_observations_prompt             | CREATE INDEX idx_ai_observations_prompt ON public.ai_observations USING btree (prompt_id)
+ ai_provider_configs              | ai_provider_configs_pkey               | CREATE UNIQUE INDEX ai_provider_configs_pkey ON public.ai_provider_configs USING btree (id)
+ ai_provider_configs              | idx_ai_provider_configs_active         | CREATE INDEX idx_ai_provider_configs_active ON public.ai_provider_configs USING btree (is_active)
+ ai_visibility_audits             | ai_visibility_audits_pkey              | CREATE UNIQUE INDEX ai_visibility_audits_pkey ON public.ai_visibility_audits USING btree (id)
+ ai_visibility_audits             | idx_ai_vis_audits_brand                | CREATE INDEX idx_ai_vis_audits_brand ON public.ai_visibility_audits USING btree (target_brand_name)
+ ai_visibility_audits             | idx_ai_vis_audits_org                  | CREATE INDEX idx_ai_vis_audits_org ON public.ai_visibility_audits USING btree (organization_id)
+ ai_visibility_audits             | idx_ai_vis_audits_status               | CREATE INDEX idx_ai_vis_audits_status ON public.ai_visibility_audits USING btree (status)
+ audit_prompts                    | audit_prompts_pkey                     | CREATE UNIQUE INDEX audit_prompts_pkey ON public.audit_prompts USING btree (id)
+ audit_prompts                    | idx_audit_prompts_audit                | CREATE INDEX idx_audit_prompts_audit ON public.audit_prompts USING btree (audit_id)
+ audit_prompts                    | idx_audit_prompts_org                  | CREATE INDEX idx_audit_prompts_org ON public.audit_prompts USING btree (organization_id)
+ audit_records                    | audit_records_pkey                     | CREATE UNIQUE INDEX audit_records_pkey ON public.audit_records USING btree (id)
+ audit_records                    | idx_audit_records_actor                | CREATE INDEX idx_audit_records_actor ON public.audit_records USING btree (actor_id)
+ audit_records                    | idx_audit_records_resource             | CREATE INDEX idx_audit_records_resource ON public.audit_records USING btree (resource_type, resource_id)
+ audit_records                    | idx_audit_records_timestamp            | CREATE INDEX idx_audit_records_timestamp ON public.audit_records USING btree ("timestamp")
+ brand_associations               | brand_associations_pkey                | CREATE UNIQUE INDEX brand_associations_pkey ON public.brand_associations USING btree (id)
+ brand_associations               | idx_brand_associations_brand           | CREATE INDEX idx_brand_associations_brand ON public.brand_associations USING btree (brand_id)
+ brand_associations               | idx_brand_associations_tenant          | CREATE INDEX idx_brand_associations_tenant ON public.brand_associations USING btree (organization_id)
+ brand_mentions                   | brand_mentions_pkey                    | CREATE UNIQUE INDEX brand_mentions_pkey ON public.brand_mentions USING btree (id)
+ brand_mentions                   | idx_brand_mentions_brand               | CREATE INDEX idx_brand_mentions_brand ON public.brand_mentions USING btree (brand_id)
+ brand_mentions                   | idx_brand_mentions_organization        | CREATE INDEX idx_brand_mentions_organization ON public.brand_mentions USING btree (organization_id)
+ brands                           | brands_pkey                            | CREATE UNIQUE INDEX brands_pkey ON public.brands USING btree (id)
+ brands                           | idx_brands_domain                      | CREATE INDEX idx_brands_domain ON public.brands USING btree (canonical_domain)
+ brands                           | idx_brands_organization                | CREATE INDEX idx_brands_organization ON public.brands USING btree (organization_id)
+ citation_occurrences             | citation_occurrences_pkey              | CREATE UNIQUE INDEX citation_occurrences_pkey ON public.citation_occurrences USING btree (id)
+ citation_occurrences             | idx_citation_occurrences_source        | CREATE INDEX idx_citation_occurrences_source ON public.citation_occurrences USING btree (source_id)
+ citation_occurrences             | idx_citation_occurrences_tenant        | CREATE INDEX idx_citation_occurrences_tenant ON public.citation_occurrences USING btree (organization_id)
+ citation_sources                 | citation_sources_pkey                  | CREATE UNIQUE INDEX citation_sources_pkey ON public.citation_sources USING btree (id)
+ citation_sources                 | idx_citation_sources_tenant            | CREATE INDEX idx_citation_sources_tenant ON public.citation_sources USING btree (organization_id)
+ citation_sources                 | idx_citation_sources_url_org           | CREATE UNIQUE INDEX idx_citation_sources_url_org ON public.citation_sources USING btree (organization_id, url)
+ citations                        | citations_pkey                         | CREATE UNIQUE INDEX citations_pkey ON public.citations USING btree (id)
+ citations                        | idx_citations_domain                   | CREATE INDEX idx_citations_domain ON public.citations USING btree (domain)
+ citations                        | idx_citations_observation              | CREATE INDEX idx_citations_observation ON public.citations USING btree (observation_id)
+ citations                        | idx_citations_organization             | CREATE INDEX idx_citations_organization ON public.citations USING btree (organization_id)
+ competitive_analyses             | competitive_analyses_pkey              | CREATE UNIQUE INDEX competitive_analyses_pkey ON public.competitive_analyses USING btree (id)
+ competitive_seo_findings         | competitive_seo_findings_pkey          | CREATE UNIQUE INDEX competitive_seo_findings_pkey ON public.competitive_seo_findings USING btree (id)
+ competitive_seo_findings         | idx_comp_seo_findings_comp             | CREATE INDEX idx_comp_seo_findings_comp ON public.competitive_seo_findings USING btree (competitor_id)
+ competitive_seo_findings         | idx_comp_seo_findings_tenant           | CREATE INDEX idx_comp_seo_findings_tenant ON public.competitive_seo_findings USING btree (tenant_id)
+ competitive_seo_findings         | idx_comp_seo_findings_type             | CREATE INDEX idx_comp_seo_findings_type ON public.competitive_seo_findings USING btree (finding_type)
+ competitor_changes               | competitor_changes_pkey                | CREATE UNIQUE INDEX competitor_changes_pkey ON public.competitor_changes USING btree (id)
+ competitor_changes               | idx_competitor_changes_comp            | CREATE INDEX idx_competitor_changes_comp ON public.competitor_changes USING btree (competitor_id)
+ competitor_changes               | idx_competitor_changes_tenant          | CREATE INDEX idx_competitor_changes_tenant ON public.competitor_changes USING btree (tenant_id)
+ competitor_changes               | idx_competitor_changes_type            | CREATE INDEX idx_competitor_changes_type ON public.competitor_changes USING btree (change_type)
+ competitors                      | competitors_pkey                       | CREATE UNIQUE INDEX competitors_pkey ON public.competitors USING btree (id)
+ competitors                      | idx_competitors_domain_org             | CREATE UNIQUE INDEX idx_competitors_domain_org ON public.competitors USING btree (organization_id, domain) WHERE (deleted_at IS NULL)
+ competitors                      | idx_competitors_organization           | CREATE INDEX idx_competitors_organization ON public.competitors USING btree (organization_id)
+ crawl_cache                      | crawl_cache_pkey                       | CREATE UNIQUE INDEX crawl_cache_pkey ON public.crawl_cache USING btree (id)
+ crawl_cache                      | idx_crawl_cache_key                    | CREATE UNIQUE INDEX idx_crawl_cache_key ON public.crawl_cache USING btree (tenant_id, cache_scope, cache_key)
+ crawl_jobs                       | crawl_jobs_pkey                        | CREATE UNIQUE INDEX crawl_jobs_pkey ON public.crawl_jobs USING btree (id)
+ crawl_jobs                       | idx_crawl_jobs_active_dedup            | CREATE UNIQUE INDEX idx_crawl_jobs_active_dedup ON public.crawl_jobs USING btree (tenant_id, dedup_key) WHERE (status = ANY (ARRAY['PENDING'::text, 'QUEUED'::text, 'RUNNING'::text]))
+ crawl_jobs                       | idx_crawl_jobs_provider_job_id         | CREATE INDEX idx_crawl_jobs_provider_job_id ON public.crawl_jobs USING btree (provider_job_id)
+ crawl_jobs                       | idx_crawl_jobs_status_scheduled        | CREATE INDEX idx_crawl_jobs_status_scheduled ON public.crawl_jobs USING btree (status, scheduled_for) WHERE (status = 'QUEUED'::text)
+ crawl_jobs                       | idx_crawl_jobs_tenant_created          | CREATE INDEX idx_crawl_jobs_tenant_created ON public.crawl_jobs USING btree (tenant_id, created_at)
+ crawl_jobs                       | idx_crawl_jobs_tenant_status           | CREATE INDEX idx_crawl_jobs_tenant_status ON public.crawl_jobs USING btree (tenant_id, status)
+ crawl_results                    | crawl_results_job_unique               | CREATE UNIQUE INDEX crawl_results_job_unique ON public.crawl_results USING btree (job_id)
+ crawl_results                    | crawl_results_pkey                     | CREATE UNIQUE INDEX crawl_results_pkey ON public.crawl_results USING btree (id)
+ crawl_results                    | crawl_results_tenant_job_unique        | CREATE UNIQUE INDEX crawl_results_tenant_job_unique ON public.crawl_results USING btree (tenant_id, job_id)
+ credit_transactions              | credit_transactions_pkey               | CREATE UNIQUE INDEX credit_transactions_pkey ON public.credit_transactions USING btree (id)
+ credit_transactions              | idx_credit_transactions_tenant         | CREATE INDEX idx_credit_transactions_tenant ON public.credit_transactions USING btree (tenant_id)
+ diagnostic_finding_relationships | diagnostic_finding_relationships_pkey  | CREATE UNIQUE INDEX diagnostic_finding_relationships_pkey ON public.diagnostic_finding_relationships USING btree (id)
+ diagnostic_finding_relationships | idx_diagnostic_rel_child               | CREATE INDEX idx_diagnostic_rel_child ON public.diagnostic_finding_relationships USING btree (child_finding_id)
+ diagnostic_finding_relationships | idx_diagnostic_rel_org                 | CREATE INDEX idx_diagnostic_rel_org ON public.diagnostic_finding_relationships USING btree (organization_id)
+ diagnostic_finding_relationships | idx_diagnostic_rel_parent              | CREATE INDEX idx_diagnostic_rel_parent ON public.diagnostic_finding_relationships USING btree (parent_finding_id)
+ diagnostic_findings              | diagnostic_findings_pkey               | CREATE UNIQUE INDEX diagnostic_findings_pkey ON public.diagnostic_findings USING btree (id)
+ diagnostic_findings              | idx_diagnostic_findings_domain         | CREATE INDEX idx_diagnostic_findings_domain ON public.diagnostic_findings USING btree (domain)
+ diagnostic_findings              | idx_diagnostic_findings_org            | CREATE INDEX idx_diagnostic_findings_org ON public.diagnostic_findings USING btree (organization_id)
+ diagnostic_findings              | idx_diagnostic_findings_status         | CREATE INDEX idx_diagnostic_findings_status ON public.diagnostic_findings USING btree (status)
+ document_embeddings              | document_embeddings_pkey               | CREATE UNIQUE INDEX document_embeddings_pkey ON public.document_embeddings USING btree (id)
+ document_embeddings              | idx_document_embeddings_tenant         | CREATE INDEX idx_document_embeddings_tenant ON public.document_embeddings USING btree (tenant_id)
+ entities                         | entities_pkey                          | CREATE UNIQUE INDEX entities_pkey ON public.entities USING btree (id)
+ entities                         | idx_entities_organization              | CREATE INDEX idx_entities_organization ON public.entities USING btree (organization_id)
+ entities                         | idx_entities_type                      | CREATE INDEX idx_entities_type ON public.entities USING btree (entity_type)
+ entity_relationships             | entity_relationships_pkey              | CREATE UNIQUE INDEX entity_relationships_pkey ON public.entity_relationships USING btree (id)
+ entity_relationships             | idx_entity_relationships_org           | CREATE INDEX idx_entity_relationships_org ON public.entity_relationships USING btree (organization_id)
+ entity_relationships             | idx_entity_relationships_source        | CREATE INDEX idx_entity_relationships_source ON public.entity_relationships USING btree (source_entity_id)
+ entity_relationships             | idx_entity_relationships_target        | CREATE INDEX idx_entity_relationships_target ON public.entity_relationships USING btree (target_entity_id)
+ faq_opportunities                | faq_opportunities_pkey                 | CREATE UNIQUE INDEX faq_opportunities_pkey ON public.faq_opportunities USING btree (id)
+ faq_opportunities                | idx_faq_opps_analysis                  | CREATE INDEX idx_faq_opps_analysis ON public.faq_opportunities USING btree (aeo_analysis_id)
+ faq_opportunities                | idx_faq_opps_tenant                    | CREATE INDEX idx_faq_opps_tenant ON public.faq_opportunities USING btree (tenant_id)
+ feature_flags                    | feature_flags_key_unique               | CREATE UNIQUE INDEX feature_flags_key_unique ON public.feature_flags USING btree (key)
+ feature_flags                    | feature_flags_pkey                     | CREATE UNIQUE INDEX feature_flags_pkey ON public.feature_flags USING btree (id)
+ feature_flags                    | idx_feature_flags_key                  | CREATE INDEX idx_feature_flags_key ON public.feature_flags USING btree (key)
+ historical_metrics               | historical_metrics_pkey                | CREATE UNIQUE INDEX historical_metrics_pkey ON public.historical_metrics USING btree (id)
+ historical_metrics               | idx_historical_metrics_lookup          | CREATE INDEX idx_historical_metrics_lookup ON public.historical_metrics USING btree (organization_id, entity_type, entity_id, metric_name)
+ historical_metrics               | idx_historical_metrics_time            | CREATE INDEX idx_historical_metrics_time ON public.historical_metrics USING btree (recorded_at)
+ keywords                         | idx_keywords_organization              | CREATE INDEX idx_keywords_organization ON public.keywords USING btree (organization_id)
+ keywords                         | idx_keywords_term_org                  | CREATE UNIQUE INDEX idx_keywords_term_org ON public.keywords USING btree (organization_id, normalized_term) WHERE (deleted_at IS NULL)
+ keywords                         | keywords_pkey                          | CREATE UNIQUE INDEX keywords_pkey ON public.keywords USING btree (id)
+ keywords_topics                  | idx_keywords_topics_org                | CREATE INDEX idx_keywords_topics_org ON public.keywords_topics USING btree (organization_id)
+ keywords_topics                  | keywords_topics_keyword_id_topic_id_pk | CREATE UNIQUE INDEX keywords_topics_keyword_id_topic_id_pk ON public.keywords_topics USING btree (keyword_id, topic_id)
+ kg_alignments                    | idx_kg_alignments_analysis             | CREATE INDEX idx_kg_alignments_analysis ON public.kg_alignments USING btree (aeo_analysis_id)
+ kg_alignments                    | idx_kg_alignments_tenant               | CREATE INDEX idx_kg_alignments_tenant ON public.kg_alignments USING btree (tenant_id)
+ kg_alignments                    | kg_alignments_pkey                     | CREATE UNIQUE INDEX kg_alignments_pkey ON public.kg_alignments USING btree (id)
+ kg_entities                      | idx_kg_entities_name                   | CREATE INDEX idx_kg_entities_name ON public.kg_entities USING btree (name)
+ kg_entities                      | idx_kg_entities_tenant                 | CREATE INDEX idx_kg_entities_tenant ON public.kg_entities USING btree (tenant_id)
+ kg_entities                      | kg_entities_pkey                       | CREATE UNIQUE INDEX kg_entities_pkey ON public.kg_entities USING btree (id)
+ kg_relationships                 | idx_kg_relationships_source            | CREATE INDEX idx_kg_relationships_source ON public.kg_relationships USING btree (source_entity_id)
+ kg_relationships                 | idx_kg_relationships_target            | CREATE INDEX idx_kg_relationships_target ON public.kg_relationships USING btree (target_entity_id)
+ kg_relationships                 | idx_kg_relationships_tenant            | CREATE INDEX idx_kg_relationships_tenant ON public.kg_relationships USING btree (tenant_id)
+ kg_relationships                 | kg_relationships_pkey                  | CREATE UNIQUE INDEX kg_relationships_pkey ON public.kg_relationships USING btree (id)
+ organization_invitations         | idx_org_invitations_email              | CREATE INDEX idx_org_invitations_email ON public.organization_invitations USING btree (email)
+ organization_invitations         | idx_org_invitations_token              | CREATE INDEX idx_org_invitations_token ON public.organization_invitations USING btree (token_hash)
+ organization_invitations         | organization_invitations_pkey          | CREATE UNIQUE INDEX organization_invitations_pkey ON public.organization_invitations USING btree (id)
+ organization_members             | idx_org_members_user_id                | CREATE INDEX idx_org_members_user_id ON public.organization_members USING btree (user_id)
+ organization_members             | idx_org_members_user_org               | CREATE UNIQUE INDEX idx_org_members_user_org ON public.organization_members USING btree (organization_id, user_id)
+ organization_members             | organization_members_pkey              | CREATE UNIQUE INDEX organization_members_pkey ON public.organization_members USING btree (id)
+ organizations                    | idx_organizations_slug                 | CREATE UNIQUE INDEX idx_organizations_slug ON public.organizations USING btree (slug) WHERE (deleted_at IS NULL)
+ organizations                    | organizations_pkey                     | CREATE UNIQUE INDEX organizations_pkey ON public.organizations USING btree (id)
+ organizations                    | organizations_slug_unique              | CREATE UNIQUE INDEX organizations_slug_unique ON public.organizations USING btree (slug)
+ pages                            | idx_pages_organization                 | CREATE INDEX idx_pages_organization ON public.pages USING btree (organization_id)
+ pages                            | idx_pages_url_org                      | CREATE UNIQUE INDEX idx_pages_url_org ON public.pages USING btree (organization_id, normalized_url) WHERE (deleted_at IS NULL)
+ pages                            | idx_pages_website                      | CREATE INDEX idx_pages_website ON public.pages USING btree (website_id)
+ pages                            | pages_pkey                             | CREATE UNIQUE INDEX pages_pkey ON public.pages USING btree (id)
+ pages_entities                   | idx_pages_entities_org                 | CREATE INDEX idx_pages_entities_org ON public.pages_entities USING btree (organization_id)
+ pages_entities                   | pages_entities_page_id_entity_id_pk    | CREATE UNIQUE INDEX pages_entities_page_id_entity_id_pk ON public.pages_entities USING btree (page_id, entity_id)
+ pages_keywords                   | idx_pages_keywords_org                 | CREATE INDEX idx_pages_keywords_org ON public.pages_keywords USING btree (organization_id)
+ pages_keywords                   | pages_keywords_page_id_keyword_id_pk   | CREATE UNIQUE INDEX pages_keywords_page_id_keyword_id_pk ON public.pages_keywords USING btree (page_id, keyword_id)
+ pages_topics                     | idx_pages_topics_org                   | CREATE INDEX idx_pages_topics_org ON public.pages_topics USING btree (organization_id)
+ pages_topics                     | pages_topics_page_id_topic_id_pk       | CREATE UNIQUE INDEX pages_topics_page_id_topic_id_pk ON public.pages_topics USING btree (page_id, topic_id)
+ permissions                      | idx_permissions_role_id                | CREATE INDEX idx_permissions_role_id ON public.permissions USING btree (role_id)
+ permissions                      | permissions_pkey                       | CREATE UNIQUE INDEX permissions_pkey ON public.permissions USING btree (id)
+ position_observations            | idx_position_obs_tenant                | CREATE INDEX idx_position_obs_tenant ON public.position_observations USING btree (organization_id)
+ position_observations            | position_observations_pkey             | CREATE UNIQUE INDEX position_observations_pkey ON public.position_observations USING btree (id)
+ premium_audits                   | idx_premium_audits_organization        | CREATE INDEX idx_premium_audits_organization ON public.premium_audits USING btree (organization_id)
+ premium_audits                   | premium_audits_pkey                    | CREATE UNIQUE INDEX premium_audits_pkey ON public.premium_audits USING btree (id)
+ prompt_definitions               | idx_prompt_definitions_tenant          | CREATE INDEX idx_prompt_definitions_tenant ON public.prompt_definitions USING btree (organization_id)
+ prompt_definitions               | prompt_definitions_pkey                | CREATE UNIQUE INDEX prompt_definitions_pkey ON public.prompt_definitions USING btree (id)
+ prompt_executions                | idx_prompt_executions_status           | CREATE INDEX idx_prompt_executions_status ON public.prompt_executions USING btree (status)
+ prompt_executions                | idx_prompt_executions_tenant           | CREATE INDEX idx_prompt_executions_tenant ON public.prompt_executions USING btree (organization_id)
+ prompt_executions                | prompt_executions_pkey                 | CREATE UNIQUE INDEX prompt_executions_pkey ON public.prompt_executions USING btree (id)
+ prompt_schedules                 | idx_prompt_schedules_tenant            | CREATE INDEX idx_prompt_schedules_tenant ON public.prompt_schedules USING btree (organization_id)
+ prompt_schedules                 | prompt_schedules_pkey                  | CREATE UNIQUE INDEX prompt_schedules_pkey ON public.prompt_schedules USING btree (id)
+ prompts                          | idx_prompts_brand                      | CREATE INDEX idx_prompts_brand ON public.prompts USING btree (brand_id)
+ prompts                          | idx_prompts_organization               | CREATE INDEX idx_prompts_organization ON public.prompts USING btree (organization_id)
+ prompts                          | prompts_pkey                           | CREATE UNIQUE INDEX prompts_pkey ON public.prompts USING btree (id)
+ recommendation_observations      | idx_recommendation_obs_brand           | CREATE INDEX idx_recommendation_obs_brand ON public.recommendation_observations USING btree (brand_id)
+ recommendation_observations      | idx_recommendation_obs_tenant          | CREATE INDEX idx_recommendation_obs_tenant ON public.recommendation_observations USING btree (organization_id)
+ recommendation_observations      | recommendation_observations_pkey       | CREATE UNIQUE INDEX recommendation_observations_pkey ON public.recommendation_observations USING btree (id)
+ recommendations                  | idx_recommendations_brand              | CREATE INDEX idx_recommendations_brand ON public.recommendations USING btree (brand_id)
+ recommendations                  | idx_recommendations_organization       | CREATE INDEX idx_recommendations_organization ON public.recommendations USING btree (organization_id)
+ recommendations                  | recommendations_pkey                   | CREATE UNIQUE INDEX recommendations_pkey ON public.recommendations USING btree (id)
+ roles                            | idx_roles_name                         | CREATE INDEX idx_roles_name ON public.roles USING btree (name)
+ roles                            | roles_name_unique                      | CREATE UNIQUE INDEX roles_name_unique ON public.roles USING btree (name)
+ roles                            | roles_pkey                             | CREATE UNIQUE INDEX roles_pkey ON public.roles USING btree (id)
+ system_configurations            | idx_system_configurations_key          | CREATE INDEX idx_system_configurations_key ON public.system_configurations USING btree (key)
+ system_configurations            | system_configurations_key_unique       | CREATE UNIQUE INDEX system_configurations_key_unique ON public.system_configurations USING btree (key)
+ system_configurations            | system_configurations_pkey             | CREATE UNIQUE INDEX system_configurations_pkey ON public.system_configurations USING btree (id)
+ technical_audits                 | technical_audits_pkey                  | CREATE UNIQUE INDEX technical_audits_pkey ON public.technical_audits USING btree (id)
+ tenant_quotas                    | idx_tenant_quotas_tenant               | CREATE INDEX idx_tenant_quotas_tenant ON public.tenant_quotas USING btree (tenant_id)
+ tenant_quotas                    | tenant_quotas_pkey                     | CREATE UNIQUE INDEX tenant_quotas_pkey ON public.tenant_quotas USING btree (id)
+ tenant_subscriptions             | idx_tenant_subscriptions_tenant        | CREATE INDEX idx_tenant_subscriptions_tenant ON public.tenant_subscriptions USING btree (tenant_id)
+ tenant_subscriptions             | tenant_subscriptions_pkey              | CREATE UNIQUE INDEX tenant_subscriptions_pkey ON public.tenant_subscriptions USING btree (id)
+ topics                           | idx_topics_name_org                    | CREATE UNIQUE INDEX idx_topics_name_org ON public.topics USING btree (organization_id, name) WHERE (deleted_at IS NULL)
+ topics                           | idx_topics_organization                | CREATE INDEX idx_topics_organization ON public.topics USING btree (organization_id)
+ topics                           | topics_pkey                            | CREATE UNIQUE INDEX topics_pkey ON public.topics USING btree (id)
+ topics_entities                  | idx_topics_entities_org                | CREATE INDEX idx_topics_entities_org ON public.topics_entities USING btree (organization_id)
+ topics_entities                  | topics_entities_topic_id_entity_id_pk  | CREATE UNIQUE INDEX topics_entities_topic_id_entity_id_pk ON public.topics_entities USING btree (topic_id, entity_id)
+ users                            | users_email_unique                     | CREATE UNIQUE INDEX users_email_unique ON public.users USING btree (email)
+ users                            | users_pkey                             | CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)
+ visibility_scores                | idx_visibility_scores_brand            | CREATE INDEX idx_visibility_scores_brand ON public.visibility_scores USING btree (brand_id)
+ visibility_scores                | idx_visibility_scores_organization     | CREATE INDEX idx_visibility_scores_organization ON public.visibility_scores USING btree (organization_id)
+ visibility_scores                | visibility_scores_pkey                 | CREATE UNIQUE INDEX visibility_scores_pkey ON public.visibility_scores USING btree (id)
+ websites                         | idx_websites_domain_org                | CREATE UNIQUE INDEX idx_websites_domain_org ON public.websites USING btree (organization_id, domain) WHERE (deleted_at IS NULL)
+ websites                         | idx_websites_organization              | CREATE INDEX idx_websites_organization ON public.websites USING btree (organization_id)
+ websites                         | websites_pkey                          | CREATE UNIQUE INDEX websites_pkey ON public.websites USING btree (id)
+(176 rows)
