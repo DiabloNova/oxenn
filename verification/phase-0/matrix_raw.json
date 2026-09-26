@@ -1,0 +1,1202 @@
+[
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"document_embeddings_forced\""
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"document_embeddings_forced\""
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_owner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"brands\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"document_embeddings\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"document_embeddings_forced\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"crawl_jobs\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"websites\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "unset",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"brands\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "brands",
+    "familyDesc": "ENABLE-only generated (`organization_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"document_embeddings\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings",
+    "familyDesc": "ENABLE-only generated (`tenant_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"document_embeddings_forced\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "document_embeddings_forced",
+    "familyDesc": "FORCED RLS variant (`tenant_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"crawl_jobs\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "crawl_jobs",
+    "familyDesc": "ENABLE-only text tenant policy (`tenant_id` text)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "INSERT org=B",
+    "status": "DENIED",
+    "rowsCount": 0,
+    "detail": "ERR 42501: new row violates row-level security policy for table \"websites\""
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "websites",
+    "familyDesc": "ENABLE-only non-whitelisted (`organization_id` uuid)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 0,
+    "detail": "rows_affected=0"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "SELECT all",
+    "status": "ALLOWED",
+    "rowsCount": 2,
+    "detail": "rows=2"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "SELECT WHERE org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "INSERT org=B",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "UPDATE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  },
+  {
+    "role": "r_nonowner",
+    "tenantState": "set to A",
+    "table": "users",
+    "familyDesc": "No RLS (`users` table)",
+    "op": "DELETE B-row",
+    "status": "ALLOWED",
+    "rowsCount": 1,
+    "detail": "rows_affected=1"
+  }
+]
