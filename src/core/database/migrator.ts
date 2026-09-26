@@ -4,9 +4,9 @@ import { Pool } from "pg";
 import path from "path";
 
 export async function runMigrations(databaseUrl?: string) {
-  const connectionString = databaseUrl || process.env.DATABASE_URL;
+  const connectionString = databaseUrl || process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL environment variable is required to run migrations.");
+    throw new Error("MIGRATION_DATABASE_URL or DATABASE_URL environment variable is required to run migrations.");
   }
 
   const pool = new Pool({

@@ -12,8 +12,9 @@
     "start": "next start",
     "lint": "eslint",
     "test:acquisition": "tsx tests/features/acquisition/run-all.ts",
+    "env:check": "tsx scripts/env-check.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/core/database/migrator.ts",
+    "db:migrate": "pnpm env:check migrate && tsx src/core/database/migrator.ts",
     "db:push": "tsx scripts/database/db-push-guard.ts && drizzle-kit push"
   },
   "dependencies": {
