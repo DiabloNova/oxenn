@@ -14,6 +14,7 @@ __v0_jsx-dev-runtime.ts
 
 # Dependencies
 node_modules/
+package-lock.json
 
 # Next.js / Build
 .next/
