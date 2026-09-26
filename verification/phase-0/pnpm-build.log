@@ -1,0 +1,47 @@
+$ npx tsx scripts/generate-docs-data.ts && next build
+Generated docs index metadata with content snippets.
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+▲ Next.js 16.2.11 (Turbopack)
+
+  Creating an optimized production build ...
+Turbopack build encountered 1 warnings:
+./next.config.ts
+Encountered unexpected file in NFT list
+A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+- filesystem operations (like path.join, path.resolve or fs.readFile), or
+- very dynamic requires (like require('./' + foo)).
+To resolve this, you can
+- remove them if possible, or
+- only use them in development, or
+- make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+- add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+
+Import trace:
+  App Route:
+    ./next.config.ts
+    ./src/app/api/v1/docs/route.ts
+
+
+✓ Compiled successfully in 17.6s
+  Running TypeScript ...
+Failed to type check.
+
+./src/app/actions/citation-intelligence.ts:110:33
+Type error: Argument of type '{ id: string; organizationId: string; domain: string; classification: string; qualityScore: number; authorityScore: number; occurrenceCount: number; firstSeenAt: string; lastSeenAt: string; createdAt: string; updatedAt: string; }' is not assignable to parameter of type 'CitationSource'.
+  Types of property 'classification' are incompatible.
+    Type 'string' is not assignable to type 'CitationSourceClassification'.
+
+  [90m108 |[0m
+  [90m109 |[0m         [36mfor[0m ([36mconst[0m s [36mof[0m seedSources) {
+[31m[1m>[0m [90m110 |[0m           [36mawait[0m repo.saveSource(s);
+  [90m    |[0m                                 [31m[1m^[0m
+  [90m111 |[0m
+  [90m112 |[0m           [90m// Save mock occurrences[0m
+  [90m113 |[0m           [36mfor[0m ([36mlet[0m i = [35m0[0m; i < s.occurrenceCount; i++) {
+Next.js build worker exited with code: 1 and signal: null
+[ELIFECYCLE] Command failed with exit code 1.
+EXIT_CODE: 1
