@@ -29,7 +29,8 @@ describe("Empty State Validation for Actions", () => {
         // Since TenantContextManager fails closed and returns an object `{ success: false, error: ... }` when the DB is unavailable,
         // we can test that it fails gracefully rather than crashing.
         expect(result.success).toBe(false);
-        expect((result as any).error).toContain("ServiceUnavailable");
+        // Using a mapped type interface to assert the error string presence since the explicit union return type '{ success: false; error: string }' does not expose .error when discriminated by .success === false strictly in this context
+        expect((result as unknown as { error: string }).error).toContain("ServiceUnavailable");
     });
 
     it("CitationIntelligence returns well-typed empty state (PARTIAL)", async () => {
@@ -38,6 +39,7 @@ describe("Empty State Validation for Actions", () => {
 
         const result = await getCitationsDashboardDataAction();
         expect(result.success).toBe(false);
-        expect((result as any).error).toContain("ServiceUnavailable");
+        // Using a mapped type interface to assert the error string presence since the explicit union return type '{ success: false; error: string }' does not expose .error when discriminated by .success === false strictly in this context
+        expect((result as unknown as { error: string }).error).toContain("ServiceUnavailable");
     });
 });
