@@ -10,17 +10,13 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { LlmAnalyticsResponse } from "@/app/api/v1/analytics/llm/route";
 import {
   Sparkles,
-  Search,
-  CheckCircle2,
   AlertCircle,
   HelpCircle,
   TrendingUp,
   BrainCircuit,
   MessageSquare,
   ShieldCheck,
-  ChevronLeft,
   Flame,
-  ArrowRight,
   Plus,
   X,
   PieChartIcon,
@@ -28,7 +24,7 @@ import {
 } from "lucide-react";
 
 export const LlmAnalyticsPanel: React.FC = () => {
-  const { language, direction } = useTheme();
+  const { language } = useTheme();
   const { session } = useAuth();
   const isRtl = language === "fa";
 
@@ -68,15 +64,12 @@ export const LlmAnalyticsPanel: React.FC = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isPending) {
-      setLoadingStep(0);
       interval = setInterval(() => {
         setLoadingStep((prev) => {
           if (prev < 2) return prev + 1;
           return prev;
         });
       }, 3500);
-    } else {
-      setLoadingStep(0);
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -94,8 +87,8 @@ export const LlmAnalyticsPanel: React.FC = () => {
       let start = 0;
       const end = result.sentimentScore;
       if (start === end) {
-        setAnimatedScore(end);
-        return;
+        const timer = setTimeout(() => setAnimatedScore(end), 0);
+        return () => clearTimeout(timer);
       }
       const duration = 1000;
       const increment = end / (duration / 16);
@@ -116,7 +109,8 @@ export const LlmAnalyticsPanel: React.FC = () => {
         if (interval) clearInterval(interval);
       };
     } else {
-      setAnimatedScore(0);
+      const timer = setTimeout(() => setAnimatedScore(0), 0);
+      return () => clearTimeout(timer);
     }
   }, [result]);
 
@@ -148,10 +142,6 @@ export const LlmAnalyticsPanel: React.FC = () => {
       setSelectedTemplates([...selectedTemplates, trimmed]);
       setCustomQuery("");
     }
-  };
-
-  const removeTemplate = (tpl: string) => {
-    setSelectedTemplates(selectedTemplates.filter((t) => t !== tpl));
   };
 
   const handleStartAnalysis = () => {

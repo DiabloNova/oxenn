@@ -68,10 +68,10 @@ export interface CompetitiveAnalysisResponse {
   };
   radar?: {
     snapshot: CompetitiveRadarSnapshot;
-    benchmarks: any;
+    benchmarks: unknown;
     insights: CompetitiveInsight[];
-    score: any;
-    historical?: any;
+    score: unknown;
+    historical?: unknown;
   };
 }
 
@@ -113,15 +113,15 @@ export async function POST(req: NextRequest) {
         const apiKey = process.env.FIRECRAWL_API_KEY || "";
         const isMockMode = !apiKey || apiKey === "" || apiKey.includes("your-api-key") || apiKey.startsWith("fc-your-");
 
-        let userPageCountHeuristic = 120;
-        let userFreshnessHeuristic = 85;
+        let _userPageCountHeuristic = 120;
+        const _userFreshnessHeuristic = 85;
 
         if (!isMockMode) {
           try {
             const userScrape = await firecrawlApp.scrapeUrl(userUrl, { formats: ["markdown"] });
             if (userScrape && 'markdown' in userScrape) {
               const md = userScrape.markdown || "";
-              userPageCountHeuristic = Math.min(250, md.split("\n").length / 10 + 20);
+              _userPageCountHeuristic = Math.min(250, md.split("\n").length / 10 + 20);
             }
           } catch (e) {
             console.warn("[Competitive API] User crawl failed, using simulated data.", e);

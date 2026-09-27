@@ -6,6 +6,7 @@ import { requireSession } from "@/services/auth/session";
 import { requireWorkspaceMembership } from "@/services/auth/authorization";
 import { CitationIntelligenceService } from "@/features/ai-intelligence/services/citation-intelligence-service";
 import { CitationIntelligenceRepository } from "@/features/ai-intelligence/repositories";
+import { CitationSource } from "@/features/ai-intelligence/domain/types";
 
 /**
  * Exposes aggregated citation intelligence and trends metrics for the active workspace.
@@ -64,7 +65,7 @@ export async function getCitationsDashboardDataAction() {
         const secureSiteId = crypto.randomUUID();
         const compSiteId = crypto.randomUUID();
 
-        const seedSources = [
+        const seedSources: CitationSource[] = [
           {
             id: wikipediaId,
             organizationId: tenantId,

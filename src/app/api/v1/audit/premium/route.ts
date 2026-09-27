@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       const apiKey = process.env.FIRECRAWL_API_KEY || "";
       const isMockMode = !apiKey || apiKey === "" || apiKey.includes("your-api-key") || apiKey.startsWith("fc-your-");
 
-      let crawlResults: any[] = [];
+      let crawlResults: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }> = [];
 
       // 3. Firecrawl entire site crawl simulation/execution
       if (isMockMode) {
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
           });
 
           if (crawlResponse && 'success' in crawlResponse && crawlResponse.success && 'data' in crawlResponse) {
-            crawlResults = (crawlResponse as any).data || [];
+            crawlResults = (crawlResponse as unknown as { data: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }> }).data || [];
           } else {
             // Fallback to simulation if crawl API response is incomplete or pending
             crawlResults = [
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
       else if (score >= 60) grade = "D";
 
       // Build Issues List
-      const issues: any[] = [];
+      const issues: Array<{ severity: "critical" | "warning" | "info"; category: "technical" | "content" | "structure"; description: string; recommendation: string }> = [];
       if (!isHttps) {
         issues.push({
           severity: "critical",
@@ -291,7 +291,7 @@ export async function POST(req: NextRequest) {
         pagesAnalyzed,
         metrics,
         issues,
-        recommendations: recommendations.map((r: any) => ({
+        recommendations: recommendations.map((r: { priority: string; insight: string; estimatedImpact: string }) => ({
           priority: r.priority as "high" | "medium" | "low",
           insight: r.insight,
           estimatedImpact: r.estimatedImpact

@@ -5,7 +5,6 @@
  */
 
 import { normalizeUrl, isSafeUrl } from "../../../src/lib/audit-engine/url-validator";
-import { calculateScores } from "../../../src/lib/audit-engine/scorer";
 import { normalizeFeatures } from "../../../src/lib/audit-engine/normalizer";
 import { executeAudit } from "../../../src/lib/audit-engine/builder";
 import { AuditLogger } from "../../../src/lib/audit-engine/logger";
@@ -270,9 +269,10 @@ export async function testAuditEngineSuite() {
     try {
       await executeAudit("https://ssrf-redirect-site.com");
       throw new Error("SSRF Redirect Protection Failure: Allowed redirecting to private loopback IP address.");
-    } catch (err: any) {
-      if (!err.message.includes("SSRF Protection")) {
-        throw new Error(`SSRF Redirect Protection Failure: Unexpected error message: ${err.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (!error.message.includes("SSRF Protection")) {
+        throw new Error(`SSRF Redirect Protection Failure: Unexpected error message: ${error.message}`);
       }
     }
 
@@ -280,9 +280,10 @@ export async function testAuditEngineSuite() {
     try {
       await executeAudit("https://loop-redirect-1.com");
       throw new Error("Redirect Loop Failure: Allowed infinite redirect loop.");
-    } catch (err: any) {
-      if (!err.message.includes("Maximum redirect depth")) {
-        throw new Error(`Redirect Loop Failure: Unexpected error message: ${err.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (!error.message.includes("Maximum redirect depth")) {
+        throw new Error(`Redirect Loop Failure: Unexpected error message: ${error.message}`);
       }
     }
     console.log("    ✅ Redirect security mechanisms validated.");
@@ -294,9 +295,10 @@ export async function testAuditEngineSuite() {
     try {
       await executeAudit("https://huge-payload-site.com");
       throw new Error("Resource Protection Failure: Allowed massive body download (>2MB) without aborting.");
-    } catch (err: any) {
-      if (!err.message.includes("size limit exceeded")) {
-        throw new Error(`Resource Protection Failure: Unexpected error message: ${err.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (!error.message.includes("size limit exceeded")) {
+        throw new Error(`Resource Protection Failure: Unexpected error message: ${error.message}`);
       }
     }
     console.log("    ✅ Payload size protection validated.");
@@ -308,9 +310,10 @@ export async function testAuditEngineSuite() {
     try {
       await executeAudit("https://slow-site.com");
       throw new Error("Timeout Protection Failure: Hanging request did not abort.");
-    } catch (err: any) {
-      if (!err.message.includes("timed out") && !err.message.includes("aborted")) {
-        throw new Error(`Timeout Protection Failure: Unexpected error message: ${err.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (!error.message.includes("timed out") && !error.message.includes("aborted")) {
+        throw new Error(`Timeout Protection Failure: Unexpected error message: ${error.message}`);
       }
     }
     console.log("    ✅ Timeout handling validated.");
@@ -320,14 +323,14 @@ export async function testAuditEngineSuite() {
     // ----------------------------------------------------
     console.log("  * Testing JSON-LD Schema extraction & validation...");
     const auditSecure = await executeAudit("https://secure-site.com");
-    const signalsSecure = auditSecure.data.technicalOptimisation.signals;
+    const _signalsSecure = auditSecure.data.technicalOptimisation.signals;
 
     const auditMalformed = await executeAudit("https://malformed-schema-site.com");
-    const signalsMalformed = auditMalformed.data.technicalOptimisation.signals;
+    const _signalsMalformed = auditMalformed.data.technicalOptimisation.signals;
 
     // Wait! In executeAudit, rawSignals.structuredData.isValidSchema is mapped. Let's make sure our features are also generated properly.
     // Let's call the extractor and normalizer manually to inspect their outputs!
-    const testLogger = new AuditLogger("test-run");
+    const _testLogger = new AuditLogger("test-run");
     const signalsRaw1 = await normalizeFeatures({
       technical: { statusCode: 200, isHttps: true, hasCanonical: true, robotsTxtAllowed: true, sitemapAvailable: true, responseTimeMs: 100, headers: {} },
       metadata: {},

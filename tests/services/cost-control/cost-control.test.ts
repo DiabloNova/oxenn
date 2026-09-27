@@ -1,16 +1,15 @@
 import { BudgetService } from "../../../src/services/cost-control/budget";
 import { CostCalculator, pricingCatalog } from "../../../src/services/cost-control/pricing";
 import { UsageRecord, RequestBudget } from "../../../src/services/cost-control/types";
-import { createSession, setCookiesMock } from "../../../src/services/auth/session";
-import { User } from "../../../src/types/auth";
+import { setCookiesMock } from "../../../src/services/auth/session";
 
 // Mock cookie store for session resolution during cost/budget tests
 const mockCookieStore = {
-  store: new Map<string, any>(),
+  store: new Map<string, unknown>(),
   get(name: string) {
     return this.store.get(name);
   },
-  set(name: string, value: any, options: any) {
+  set(name: string, value: unknown, options?: Record<string, unknown>) {
     this.store.set(name, { value, name, ...options });
   },
   delete(name: string) {
@@ -30,7 +29,7 @@ export async function runCostControlTests() {
 
   const budgetService = new BudgetService();
   const tenantA = "ws-tenant-a";
-  const tenantB = "ws-tenant-b";
+  const _tenantB = "ws-tenant-b";
 
   // ----------------------------------------------------
   // COST-001: Paid Model calculates cost correctly

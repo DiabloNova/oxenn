@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { useTheme } from "@/components/ThemeProvider";
-import { Sparkles, TrendingUp, HelpCircle } from "lucide-react";
+import { Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/Button";
 import { useRouter } from "next/navigation";
 
@@ -34,7 +34,7 @@ interface CustomTooltipProps {
   isRtl?: boolean;
 }
 
-const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, isRtl }) => {
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-[var(--card)] backdrop-blur-md border border-[var(--glass-border)] p-3 rounded-xl shadow-lg text-xs space-y-1.5 text-start">
@@ -65,7 +65,7 @@ export const VisibilityTrendChart: React.FC<VisibilityTrendChartProps> = ({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
   const isRtl = language === "fa";

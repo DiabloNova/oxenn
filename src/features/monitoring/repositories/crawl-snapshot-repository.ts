@@ -8,6 +8,7 @@ export class CrawlSnapshotRepository {
   public async getPreviousSnapshot(monitoringConfigId: string): Promise<CrawlSnapshot | null> {
     const tenantId = TenantContextManager.getRequiredTenantId();
     const ctx = TenantContextManager.getContext();
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- fallback global pg client */
     const db = drizzle(ctx?.dbClient || (global as any).pgClient);
 
     const rows = await db
@@ -38,6 +39,7 @@ export class CrawlSnapshotRepository {
   public async create(snapshot: Omit<CrawlSnapshot, "id" | "organizationId" | "capturedAt">): Promise<CrawlSnapshot> {
     const tenantId = TenantContextManager.getRequiredTenantId();
     const ctx = TenantContextManager.getContext();
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- fallback global pg client */
     const db = drizzle(ctx?.dbClient || (global as any).pgClient);
 
     const rows = await db

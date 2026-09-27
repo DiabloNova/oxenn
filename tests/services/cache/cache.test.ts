@@ -6,11 +6,11 @@ import { User } from "../../../src/types/auth";
 
 // Mock cookie store for session resolution during cache secure context tests
 const mockCookieStore = {
-  store: new Map<string, any>(),
+  store: new Map<string, unknown>(),
   get(name: string) {
     return this.store.get(name);
   },
-  set(name: string, value: any, options: any) {
+  set(name: string, value: unknown, options?: Record<string, unknown>) {
     this.store.set(name, { value, name, ...options });
   },
   delete(name: string) {
@@ -39,7 +39,7 @@ export async function runCacheTests() {
     id: "usr-1",
     name: "Alice",
     email: "alice@test.com",
-    role: "workspace_member",
+    role: "viewer",
     workspaceId: tenantA
   };
 
@@ -47,9 +47,10 @@ export async function runCacheTests() {
     id: "usr-2",
     name: "Bob",
     email: "bob@test.com",
-    role: "workspace_member",
+    role: "viewer",
     workspaceId: tenantB
   };
+  void mockUserB;
 
   // Set active session to Tenant A
   await createSession(mockUserA);
@@ -132,8 +133,9 @@ export async function runCacheTests() {
   try {
     await service.set(tenantB, keyTenantB, "Hacker Data", "llm");
     throw new Error("CACHE-SEC-002 Failed: Tenant A allowed to write to Tenant B cache!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Security Violation")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Security Violation")) {
       // Correct!
     } else {
       throw err;
@@ -144,8 +146,9 @@ export async function runCacheTests() {
   try {
     await service.get(tenantA, keyTenantB);
     throw new Error("CACHE-SEC-001 Failed: Tenant A allowed to query Tenant B key prefix!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Security Violation")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Security Violation")) {
       // Correct!
     } else {
       throw err;
@@ -161,8 +164,9 @@ export async function runCacheTests() {
   try {
     await service.invalidateKey(tenantB, keyTenantB);
     throw new Error("CACHE-SEC-003 Failed: Allowed unauthorized single key invalidation.");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Security Violation")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Security Violation")) {
       // Correct!
     } else {
       throw err;
@@ -172,8 +176,9 @@ export async function runCacheTests() {
   try {
     await service.invalidateTenantNamespace(tenantB);
     throw new Error("CACHE-SEC-003 Failed: Allowed unauthorized tenant namespace invalidation.");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Security Violation")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Security Violation")) {
       // Correct!
     } else {
       throw err;
@@ -189,8 +194,9 @@ export async function runCacheTests() {
   try {
     await service.set(tenantB, keyTenantB, "Hacked", "llm");
     throw new Error("CACHE-SEC-004 Failed: Forged tenant context was trusted!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Security Violation")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Security Violation")) {
       console.log("  ✅ Spoofed client tenant context correctly blocked.");
     } else {
       throw err;
@@ -273,6 +279,7 @@ export async function runCacheTests() {
     failedRunCount++;
     throw new Error("Simulation Fail");
   };
+  void failingOperation;
 
   const failKey = "ws-tenant-a:compute-fail";
   try {
@@ -292,6 +299,7 @@ export async function runCacheTests() {
   console.log("=========================================================================");
 }
 
+/* eslint-disable-next-line @typescript-eslint/no-require-imports -- required for direct script execution */
 if (require.main === module) {
   runCacheTests().catch((err) => {
     console.error("❌ Test Suite Failed with Error:", err);

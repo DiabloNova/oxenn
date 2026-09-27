@@ -13,7 +13,7 @@ import {
   calculateEntityCompleteness,
   projectNeighborhoodForVisualization
 } from "../../../src/features/ai-intelligence/services/entity-service";
-import { Entity, EntityRelationship, RelationshipType, AuditMetadata } from "../../../src/features/ai-intelligence/domain/types";
+import { Entity, AuditMetadata } from "../../../src/features/ai-intelligence/domain/types";
 import * as assert from "assert";
 
 function createAudit(createdBy = "test-system"): AuditMetadata {

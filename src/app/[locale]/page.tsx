@@ -261,7 +261,7 @@ export default function MarketingLandingPage({ params }: { params: Promise<{ loc
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveDashboardTab(tab.id as any)}
+                    onClick={() => setActiveDashboardTab(tab.id as "visibility" | "authority" | "citation" | "competitor" | "graph" | "timeline")}
                     className={`w-full px-4 py-3 rounded-xl text-xs font-bold text-start flex items-center gap-3 transition-all ${
                       activeDashboardTab === tab.id
                         ? "bg-gradient-to-r from-[#38bdf8]/20 to-[#f97316]/10 text-[var(--text-primary)] border border-[#38bdf8]/40 shadow-sm"

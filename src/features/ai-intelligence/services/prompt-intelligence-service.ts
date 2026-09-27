@@ -251,7 +251,7 @@ export class PromptIntelligenceService {
     promptDefinitionId: string,
     values: Record<string, string>,
     modelName: string,
-    actorId = "system",
+    _actorId = "system",
     scheduledFor?: Date | string
   ): Promise<PromptExecution> {
     const definition = await this.repo.findDefinitionById(organizationId, promptDefinitionId);
@@ -359,9 +359,6 @@ export class PromptIntelligenceService {
     const text = execution.responseText || "";
     if (!text) return;
 
-    // Instantiate Visibility Engine to reuse lexical and citation matchers
-    const visEngine = new AIVisibilityAuditEngine();
-
     // Analyze target brand first
     const brandAliases = [brand.name, "رشا گستر", "رشا", "rasha"];
     const brandObservation = this.extractEntityPosition(text, brand.id, brand.name, brandAliases, execution.id, organizationId);
@@ -419,7 +416,7 @@ export class PromptIntelligenceService {
       // 1. Numbered List Analysis (e.g. "1. Rasha Gostar" or "1- Rasha Gostar" or "1 - رشا گستر")
       const numberedRegex = /(?:^|\n)\s*(\d+)[\.\-\)]\s*([^?\n]+)/gi;
       let match;
-      let listIndex = 1;
+      const _listIndex = 1;
       let matchedInList = false;
 
       while ((match = numberedRegex.exec(text)) !== null) {
@@ -493,7 +490,7 @@ export class PromptIntelligenceService {
     promptId: string,
     cronExpression: string,
     timezone = "UTC",
-    actorId = "system"
+    _actorId = "system"
   ): Promise<PromptSchedule> {
     const existing = await this.repo.findScheduleByPromptId(organizationId, promptId);
 

@@ -11,6 +11,7 @@
     "build": "npx tsx scripts/generate-docs-data.ts && next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test:acquisition": "tsx tests/features/acquisition/run-all.ts",
     "env:check": "tsx scripts/env-check.ts",
     "db:generate": "drizzle-kit generate",

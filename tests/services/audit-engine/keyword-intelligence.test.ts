@@ -115,6 +115,7 @@ export async function runKeywordIntelligenceTests() {
         description: "Leading platform for technical SEO and conversational AI visibility.",
         audit: { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy: userId, updatedBy: userId, version: 1 }
       });
+      void page1;
 
       // Seed Competitor & Gap Finding
       const comp = await competitorRepo.save({

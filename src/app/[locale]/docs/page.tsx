@@ -18,7 +18,7 @@ export default function DocsIndexPage({ params }: { params: Promise<{ locale: st
 
   const categories = Object.keys(categoriesMap).filter(c => c !== "project");
 
-  const categoryIcons: Record<string, any> = {
+  const categoryIcons: Record<string, React.ReactNode> = {
     "product": <Box size={20} />,
     "user-guides": <Library size={20} />,
     "services": <Server size={20} />,

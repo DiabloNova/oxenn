@@ -32,14 +32,11 @@ function calculateCosineDistance(a: number[], b: number[]): number {
   return 1 - (dotProduct / (Math.sqrt(normA) * Math.sqrt(normB)));
 }
 
-interface MockQueryable {
-  query: (sql: string, params?: unknown[]) => Promise<{ rowCount: number; rows: unknown[] }>;
-}
-
 // Resilient query mocking for standalone execution
 const originalQuery = Pool.prototype.query;
 function setupMockInterceptors() {
-  (Pool.prototype as unknown as MockQueryable).query = async function(sql: string, params: unknown[] = []) {
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock pg Pool prototype query */
+  (Pool.prototype as any).query = async function(sql: string, params: unknown[] = []) {
     const normalizedSql = sql.toLowerCase();
 
     if (normalizedSql.includes("insert into document_embeddings")) {
@@ -91,7 +88,8 @@ function setupMockInterceptors() {
 
     // Call original or fallback
     if (originalQuery) {
-      return originalQuery.apply(this, [sql, params as unknown[]]);
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- delegate to original pool query */
+      return originalQuery.apply(this, [sql, params] as any);
     }
     return { rowCount: 0, rows: [] };
   };
@@ -200,6 +198,7 @@ export async function testRAGQueryService() {
 }
 
 // Standard direct execution fallback
+/* eslint-disable-next-line @typescript-eslint/no-require-imports -- required for direct script execution */
 if (require.main === module) {
   setupMockInterceptors();
   testRAGQueryService().catch(err => {

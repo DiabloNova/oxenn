@@ -1,6 +1,6 @@
 import { CitationIntelligenceService } from "../../../src/features/ai-intelligence/services/citation-intelligence-service";
 import { BrandRepository, CompetitorRepository, CitationIntelligenceRepository } from "../../../src/features/ai-intelligence/repositories";
-import { Brand, Competitor, CitationSource, CitationOccurrence } from "../../../src/features/ai-intelligence/domain/types";
+import { Brand, Competitor } from "../../../src/features/ai-intelligence/domain/types";
 import { TenantContextManager } from "../../../src/core/database/tenant-context";
 import * as assert from "assert";
 
@@ -37,6 +37,8 @@ export async function runCitationIntelligenceTests() {
     name: "CompetitorX",
     domain: "external-competitor.com",
     status: "active",
+    classification: "direct",
+    monitoringStatus: "enabled",
     audit: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -111,9 +113,10 @@ export async function runCitationIntelligenceTests() {
         await repo.findSources(tenantA);
       });
       throw new Error("Failure: Tenant B bypassed tenant isolation checks on sources!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
-      assert.strictEqual(err.message.includes("Cross-tenant operation blocked"), true);
+    } catch (err: unknown) {
+      const error = err as Error;
+      assert.strictEqual(error.name, "TenantContextViolationException");
+      assert.strictEqual(error.message.includes("Cross-tenant operation blocked"), true);
     }
     console.log("  ✅ Tenant isolation verified.");
 

@@ -17,6 +17,7 @@ export async function testTechnicalOptimization() {
   try {
     // 1. Scenario A: Perfect Scrape (HTTPS, alt tags, canonical, viewport, heading hierarchy all correct)
     console.log("  * Scenario A: Testing Perfect Score...");
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- mocking third party SDK method */
     (firecrawlApp as any).scrapeUrl = async (url: string, options?: any): Promise<any> => {
       if (!url || !options) return null;
       return {
@@ -55,6 +56,7 @@ export async function testTechnicalOptimization() {
 
     // 2. Scenario B: Poor Scrape (HTTP, missing alt tags, missing viewport, missing canonical)
     console.log("  * Scenario B: Testing Poor Score and Issue Detection...");
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- mocking third party SDK method */
     (firecrawlApp as any).scrapeUrl = async (url: string, options?: any): Promise<any> => {
       if (!url || !options) return null;
       return {
@@ -128,7 +130,7 @@ export async function testTechnicalOptimization() {
     });
 
     const resD = await POST(reqD);
-    const badUrlPayload = await resD.json();
+    const _badUrlPayload = await resD.json();
 
     if (resD.status !== 400) {
       throw new Error(`Scenario D Failed: Expected status 400, got ${resD.status}`);

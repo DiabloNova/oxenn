@@ -10,21 +10,13 @@ import { PremiumAuditResponse } from "@/app/api/v1/audit/premium/route";
 import {
   Sparkles,
   Search,
-  CheckCircle2,
-  XCircle,
-  Lock,
   Globe,
   AlertCircle,
-  Flame,
-  Check,
-  Shield,
   Layers,
-  FileCode,
   Gauge,
   Workflow,
   Sparkle,
   FileDown,
-  ArrowLeft,
   CircleDot
 } from "lucide-react";
 
@@ -50,7 +42,7 @@ export const PremiumAuditPanel: React.FC = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isPending) {
-      setLoadingStep(0);
+      queueMicrotask(() => setLoadingStep(0));
       interval = setInterval(() => {
         setLoadingStep((prev) => {
           if (prev < 2) return prev + 1;
@@ -58,7 +50,7 @@ export const PremiumAuditPanel: React.FC = () => {
         });
       }, 4000);
     } else {
-      setLoadingStep(0);
+      queueMicrotask(() => setLoadingStep(0));
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -187,7 +179,7 @@ export const PremiumAuditPanel: React.FC = () => {
     return "stroke-red-500 text-red-400";
   };
 
-  const getMetricColor = (score: number) => {
+  const _getMetricColor = (score: number) => {
     if (score >= 85) return "bg-emerald-500 text-emerald-400";
     if (score >= 70) return "bg-amber-500 text-amber-400";
     return "bg-red-500 text-red-400";

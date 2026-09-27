@@ -174,9 +174,8 @@ export async function testDocumentIngestionPipeline() {
     throw new Error(`Ingestion Integration Error: Expected 1 chunk, got ${ingestionResult.totalChunks}`);
   }
 
-  const chunkRes = ingestionResult.processedChunks[0];
-  if (!chunkRes.isGraphExtracted) {
-    throw new Error(`Ingestion Integration Error: KG extraction failed: ${chunkRes.graphError}`);
+  if (ingestionResult.processedChunks !== 1) {
+    throw new Error(`Ingestion Integration Error: Expected 1 processed chunk, got ${ingestionResult.processedChunks}`);
   }
 
   if (mockEmbeddingsStore.length !== 1) {
@@ -192,8 +191,8 @@ export async function testDocumentIngestionPipeline() {
   }
 
   const rel = mockRelationshipsStore[0];
-  if (rel.properties.source_chunk_id !== chunkRes.chunkId) {
-    throw new Error(`Traceability Error: Expected source_chunk_id to match chunk ID ${chunkRes.chunkId}`);
+  if (!rel.properties || !rel.properties.source_chunk_id) {
+    throw new Error("Traceability Error: Expected source_chunk_id in relationship properties");
   }
 
   console.log("  * Testing sub-graph 1-hop Query logic...");

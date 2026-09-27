@@ -8,10 +8,10 @@ import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthProvider";
 import {
-  Globe, Zap, Shield, Sparkles, Loader2, Award,
-  RefreshCw, Layers, Layout, Download, Eye, Plus,
-  Trash2, AlertTriangle, Trophy, Users, CheckCircle,
-  TrendingUp, ShieldAlert, ChevronDown, BarChart3, ChevronUp
+  Globe, Zap, Sparkles, Loader2, Award,
+  RefreshCw, Layers, Download, Plus,
+  Trash2, Trophy, Users, CheckCircle,
+  TrendingUp, ShieldAlert, ChevronDown, BarChart3, AlertTriangle
 } from "lucide-react";
 import {
   ResponsiveContainer, RadarChart, PolarGrid,
@@ -44,7 +44,7 @@ export const CompetitiveAnalysisPanel: React.FC = () => {
   ];
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
   useEffect(() => {
@@ -59,10 +59,10 @@ export const CompetitiveAnalysisPanel: React.FC = () => {
         });
       }, 3000);
     } else {
-      setCurrentStep(0);
+      queueMicrotask(() => setCurrentStep(0));
     }
     return () => clearInterval(timer);
-  }, [isLoading]);
+  }, [isLoading, steps.length]);
 
   const handleAddCompetitor = () => {
     if (competitorUrls.length < 5) {
@@ -143,7 +143,7 @@ export const CompetitiveAnalysisPanel: React.FC = () => {
     ];
 
     return fields.map((f) => {
-      const item: any = { subject: f.label };
+      const item: Record<string, unknown> = { subject: f.label };
       item[isRtl ? "شما" : "User"] = data.competitorComparison[0]?.headToHead[f.key as "content" | "technical" | "seo" | "brand"].user || 80;
       data.competitorComparison.forEach((comp) => {
         item[comp.competitorName] = comp.headToHead[f.key as "content" | "technical" | "seo" | "brand"].competitor;

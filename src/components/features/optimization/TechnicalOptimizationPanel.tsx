@@ -9,8 +9,8 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthProvider";
 import {
   Zap, AlertTriangle, ShieldAlert, CheckCircle,
-  Settings, Award, RefreshCw, Layers, Layout,
-  Cpu, FileText, Download, Smartphone, Eye,
+  Award, RefreshCw, Layers, Layout,
+  Cpu, FileText, Download, Smartphone,
   Globe, Accessibility, Shield, Sparkles, Loader2,
   ChevronDown
 } from "lucide-react";
@@ -94,10 +94,10 @@ export const TechnicalOptimizationPanel: React.FC = () => {
         });
       }, 2500);
     } else {
-      setCurrentStep(0);
+      queueMicrotask(() => setCurrentStep(0));
     }
     return () => clearInterval(timer);
-  }, [isLoading]);
+  }, [isLoading, steps.length]);
 
   const handleStartAnalysis = async (e: React.FormEvent) => {
     e.preventDefault();

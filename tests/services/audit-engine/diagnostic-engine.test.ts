@@ -109,7 +109,7 @@ export async function runDiagnosticEngineTests() {
 
     // Construct mock Competitors & Metrics
     const competitors: Competitor[] = [
-      { id: "comp-1", organizationId: tenantA, name: "Rival Corp", domain: "rival.com", status: "active", audit: createAudit() }
+      { id: "comp-1", organizationId: tenantA, name: "Rival Corp", domain: "rival.com", status: "active", classification: "direct", monitoringStatus: "enabled", audit: createAudit() }
     ];
 
     const historicalMetrics: HistoricalMetric[] = [
@@ -266,7 +266,7 @@ export async function runDiagnosticEngineTests() {
       await findingRepo.save(f2);
 
       // Retrieve findings for websiteId
-      const savedFindings = await findingRepo.findByWebsiteId(tenantA, websiteId);
+      const _savedFindings = await findingRepo.findByWebsiteId(tenantA, websiteId);
       // Because it duplicates in memory store, if they have different IDs we check findingRepo.findByCodeAndResource
       const matched = await findingRepo.findByCodeAndResource(tenantA, websiteId, "ERR_TECH_HTTP_FAILED", "https://my-brand.com/home");
       assert.notStrictEqual(matched, null);

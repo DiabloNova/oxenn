@@ -278,9 +278,9 @@ export async function runLLMAnalyticsTests() {
     // ----------------------------------------------------
     console.log('▶ TEST 15: Explicit End-to-End Deep Equality Determinism Test...');
 
-    let run1: any;
-    let run2: any;
-    let run3: any;
+    let run1: unknown;
+    let run2: unknown;
+    let run3: unknown;
 
     await TenantContextManager.runWithTenantContext(tenantA, 'usr-test-1', 'req-llm-det1', async () => {
       run1 = analyticsService.compareModels(tenantA, sampleRecords);

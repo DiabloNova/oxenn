@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { TenantContextManager } from "../../../src/core/database/tenant-context";
 import * as fs from "fs";
 import * as path from "path";
 

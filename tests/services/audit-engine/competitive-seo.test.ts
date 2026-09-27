@@ -20,7 +20,6 @@ import {
   Page,
   Keyword,
   Topic,
-  CompetitiveSeoFinding,
   AuditMetadata
 } from "../../../src/features/ai-intelligence/domain/types";
 import * as assert from "assert";
@@ -277,8 +276,8 @@ export async function runCompetitiveSeoTests() {
         await seoService.compareSeo(tenantB, "tenant-brand.com", [competitorId]);
       });
       throw new Error("Security Failure: Allowed cross-tenant SEO comparison!");
-    } catch (err: any) {
-      assert.strictEqual(err.message.includes("Tenant website not found"), true);
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).message.includes("Tenant website not found"), true);
     }
 
     // A2: Passing Tenant A's organization ID inside Tenant B's context (Context Violation)
@@ -287,8 +286,8 @@ export async function runCompetitiveSeoTests() {
         await seoService.compareSeo(tenantA, "tenant-brand.com", [competitorId]);
       });
       throw new Error("Security Failure: Allowed cross-tenant SEO comparison with Tenant A ID!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     // Scenario B: Tenant B attempts to directly read competitive findings owned by Tenant A
@@ -298,8 +297,8 @@ export async function runCompetitiveSeoTests() {
         await findingRepo.findByCompetitorId(tenantA, competitorId);
       });
       throw new Error("Security Failure: Allowed cross-tenant direct findings query!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     console.log("  ✅ Zero-trust multi-tenant isolation successfully validated.");

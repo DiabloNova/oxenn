@@ -8,7 +8,7 @@ export class AuditLogger {
     this.auditId = auditId;
   }
 
-  private log(level: "INFO" | "WARN" | "ERROR", message: string, meta?: Record<string, any>) {
+  private log(level: "INFO" | "WARN" | "ERROR", message: string, meta?: Record<string, unknown>) {
     const timestamp = new Date().toISOString();
     const cleanMeta = meta ? { ...meta } : undefined;
 
@@ -33,15 +33,15 @@ export class AuditLogger {
     console.log(`[CoreIntelligenceAuditEngine][${level}] ${JSON.stringify(output)}`);
   }
 
-  public info(message: string, meta?: Record<string, any>) {
+  public info(message: string, meta?: Record<string, unknown>) {
     this.log("INFO", message, meta);
   }
 
-  public warn(message: string, meta?: Record<string, any>) {
+  public warn(message: string, meta?: Record<string, unknown>) {
     this.log("WARN", message, meta);
   }
 
-  public error(message: string, error?: unknown, meta?: Record<string, any>) {
+  public error(message: string, error?: unknown, meta?: Record<string, unknown>) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     this.log("ERROR", message, {

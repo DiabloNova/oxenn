@@ -5,36 +5,24 @@ import { useTheme } from "@/components/ThemeProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import {
   Sparkles,
-  TrendingUp,
   Award,
   AlertTriangle,
   CheckCircle,
-  HelpCircle,
   ShieldCheck,
-  Percent,
   Layers,
-  Tag,
-  Clock,
-  Compass,
-  Link2,
-  ArrowUpRight,
-  BookOpen,
-  Eye,
-  CheckSquare
+  ArrowUpRight
 } from "lucide-react";
 import { getBrandIntelligenceOverviewAction } from "@/app/actions/brand-intelligence";
-import { Brand, BrandAssociation } from "@/features/ai-intelligence/domain/types";
+import { BrandAssociation } from "@/features/ai-intelligence/domain/types";
 
 export default function BrandMonitoringPage() {
   const { language } = useTheme();
   const isRtl = language === "fa";
 
-  const [brand, setBrand] = useState<Brand | null>(null);
-  const [metrics, setMetrics] = useState<any | null>(null);
+  const [metrics, setMetrics] = useState<Record<string, number> | null>(null);
   const [associations, setAssociations] = useState<BrandAssociation[]>([]);
-  const [alerts, setAlerts] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<Array<{ code: string; message: string }>>([]);
 
-  const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -45,11 +33,11 @@ export default function BrandMonitoringPage() {
       setErrorMsg(null);
 
       const res = await getBrandIntelligenceOverviewAction();
-      if (res.success && (res as any).result) {
-        setBrand((res as any).result.brand);
-        setMetrics((res as any).result.authorityMetrics);
-        setAssociations((res as any).result.associations);
-        setAlerts((res as any).result.alerts);
+      if (res.success && (res as unknown as { result?: { authorityMetrics: Record<string, number>; associations: BrandAssociation[]; alerts: Array<{ code: string; message: string }> } }).result) {
+        const data = (res as unknown as { result: { authorityMetrics: Record<string, number>; associations: BrandAssociation[]; alerts: Array<{ code: string; message: string }> } }).result;
+        setMetrics(data.authorityMetrics);
+        setAssociations(data.associations);
+        setAlerts(data.alerts);
       } else {
         setErrorMsg(isRtl ? "خطا در بارگذاری دیتابیس پایش برند." : "Failed to load brand monitoring intelligence.");
       }
@@ -228,7 +216,7 @@ export default function BrandMonitoringPage() {
                   </div>
                   <CardContent className="p-4 space-y-3 text-xs">
                     <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed italic font-mono bg-[var(--border)]/10 p-2 rounded">
-                      "{assoc.supportingContext}"
+                      &quot;{assoc.supportingContext}&quot;
                     </p>
                     <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)] font-mono">
                       <span>{isRtl ? "تکرار مراجع: " : "Appearances: "}<strong className="text-[var(--sky-blue-500)] font-black">{assoc.occurrenceCount}</strong></span>

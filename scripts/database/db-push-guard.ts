@@ -15,7 +15,7 @@ export interface GuardOptions {
   env?: GuardEnvironment;
   clientFactory?: (connectionString: string) => {
     connect: () => Promise<void>;
-    query: (text: string) => Promise<{ rows: any[] }>;
+    query: (text: string) => Promise<{ rows: Array<Record<string, unknown>> }>;
     end: () => Promise<void>;
   };
 }
@@ -135,8 +135,8 @@ export async function validateDbPushGuard(options: GuardOptions = {}): Promise<{
     } finally {
       await client.end();
     }
-  } catch (err: any) {
-    const rawError = err?.message || String(err);
+  } catch (err: unknown) {
+    const rawError = err instanceof Error ? err.message : String(err);
     const safeError = sanitizeErrorMessage(rawError, dbUrl);
     return {
       allowed: false,
@@ -152,6 +152,7 @@ export async function validateDbPushGuard(options: GuardOptions = {}): Promise<{
 }
 
 // CLI Execution Wrapper
+/* eslint-disable-next-line @typescript-eslint/no-require-imports -- CLI execution wrapper */
 if (require.main === module) {
   validateDbPushGuard()
     .then((result) => {

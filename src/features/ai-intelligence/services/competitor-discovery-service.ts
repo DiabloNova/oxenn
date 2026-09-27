@@ -166,7 +166,7 @@ export class CompetitorDiscoveryService {
         status: "candidate",
         classification: "unknown",
         discoverySource: evaluation.evidence?.signal,
-        discoveryEvidence: evaluation.evidence as any,
+        discoveryEvidence: evaluation.evidence as unknown as Record<string, unknown>,
         confidence: evaluation.confidence,
         firstDiscoveredAt: new Date().toISOString(),
         lastObservedAt: new Date().toISOString(),

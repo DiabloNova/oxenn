@@ -13,7 +13,7 @@ import {
 } from "../../../src/features/ai-intelligence/services/competitor-discovery-service";
 import { CompetitorClassificationService } from "../../../src/features/ai-intelligence/services/competitor-classification-service";
 import { CompetitorMonitoringService } from "../../../src/features/ai-intelligence/services/competitor-monitoring-service";
-import { Competitor, CompetitorStatusType, AuditMetadata } from "../../../src/features/ai-intelligence/domain/types";
+import { Competitor, AuditMetadata } from "../../../src/features/ai-intelligence/domain/types";
 import * as assert from "assert";
 
 function createAudit(createdBy = "test-system", version = 1): AuditMetadata {
@@ -162,8 +162,8 @@ export async function runCompetitorDiscoveryTests() {
       try {
         await monitoringService.transitionStatus(tenantA, compId, "candidate");
         throw new Error("Security Failure: Allowed invalid state-machine status transition (active -> candidate)!");
-      } catch (err: any) {
-        assert.strictEqual(err.message.includes("Invalid status transition"), true);
+      } catch (err: unknown) {
+        assert.strictEqual((err as Error).message.includes("Invalid status transition"), true);
       }
     });
 
@@ -266,8 +266,8 @@ export async function runCompetitorDiscoveryTests() {
         await competitorRepo.findById(tenantA, compId);
       });
       throw new Error("Security Failure: Allowed cross-tenant competitor reads!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     try {
@@ -275,8 +275,8 @@ export async function runCompetitorDiscoveryTests() {
         await competitorRepo.findChangesByCompetitorId(tenantA, compId);
       });
       throw new Error("Security Failure: Allowed cross-tenant competitor changes read!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     // Scenario B: Tenant B attempts to update Tenant A's competitor profile
@@ -295,8 +295,8 @@ export async function runCompetitorDiscoveryTests() {
         await competitorRepo.save(fakeComp);
       });
       throw new Error("Security Failure: Allowed cross-tenant competitor update!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     // Scenario C: Tenant B attempts to transition status of Tenant A's competitor
@@ -306,8 +306,8 @@ export async function runCompetitorDiscoveryTests() {
         await monitoringService.transitionStatus(tenantB, compId, "inactive");
       });
       throw new Error("Security Failure: Allowed cross-tenant status transition!");
-    } catch (err: any) {
-      assert.strictEqual(err.message.includes("Competitor not found"), true);
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).message.includes("Competitor not found"), true);
     }
 
     // C2: Passing Tenant A's organization ID inside Tenant B's context (Context Violation)
@@ -316,8 +316,8 @@ export async function runCompetitorDiscoveryTests() {
         await monitoringService.transitionStatus(tenantA, compId, "inactive");
       });
       throw new Error("Security Failure: Allowed cross-tenant status transition with raw ID!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     console.log("  ✅ Strict zero-trust multi-tenant isolation successfully validated.");

@@ -4,19 +4,12 @@ import React, { useState, useEffect, useTransition } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import {
-  Sparkles,
-  RefreshCw,
-  Award,
-  Link2,
   Tag,
   AlertTriangle,
   CheckCircle,
   Clock,
   Compass,
   FileText,
-  ChevronDown,
-  ChevronUp,
-  Bookmark,
   Plus,
   Play,
   Settings,
@@ -27,10 +20,8 @@ import {
 } from "lucide-react";
 import {
   createPromptDefinitionAction,
-  updatePromptDefinitionAction,
   getPromptDefinitionsAction,
   getPromptDetailsAction,
-  executePromptAction,
   executeModelComparisonAction,
   schedulePromptAction,
   unschedulePromptAction
@@ -96,44 +87,8 @@ export default function AeoPlaygroundPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Load brands on mount
-  useEffect(() => {
-    async function loadBrands() {
-      setIsLoading(true);
-      const res = await getBrandsAction();
-      if (res.success && (res as any).result && (res as any).result.length > 0) {
-        setBrands((res as any).result);
-        setSelectedBrandId((res as any).result[0].id);
-        loadDefinitions((res as any).result[0].id);
-      } else if (!res.success) {
-        setErrorMsg(isRtl ? "خطا در بارگذاری برندهای فعال" : "Failed to load tenant brands");
-        setIsLoading(false);
-      }
-    }
-    loadBrands();
-  }, [isRtl]);
-
-  // Load prompts library
-  const loadDefinitions = async (brandId: string) => {
-    setIsLoading(true);
-    setErrorMsg(null);
-    const res = await getPromptDefinitionsAction(brandId);
-    if (res.success && (res as any).result) {
-      setDefinitions((res as any).result);
-      if ((res as any).result.length > 0) {
-        handleSelectPrompt((res as any).result[0]);
-      } else {
-        setSelectedDef(null);
-        setPromptDetails(null);
-      }
-    } else {
-      setErrorMsg(isRtl ? "خطا در بارگذاری قالب‌های پرسش" : "Failed to load prompt templates");
-    }
-    setIsLoading(false);
-  };
-
   // Select a prompt template to view details
-  const handleSelectPrompt = async (prompt: PromptDefinition) => {
+  const handleSelectPrompt = React.useCallback(async (prompt: PromptDefinition) => {
     setSelectedDef(prompt);
     setComparisonResults(null);
     setErrorMsg(null);
@@ -148,14 +103,57 @@ export default function AeoPlaygroundPage() {
 
     // Fetch executions and schedule
     const res = await getPromptDetailsAction(prompt.id);
-    if (res.success && (res as any).result) {
-      setPromptDetails((res as any).result);
-      if ((res as any).result.schedule) {
-        setCronExpression((res as any).result.schedule.cronExpression);
-        setTimezone((res as any).result.schedule.timezone);
+    const detailsRes = res as unknown as { success: boolean; result?: { schedule?: PromptSchedule | null; executions: PromptExecution[]; positions: PositionObservation[] } };
+    if (detailsRes.success && detailsRes.result) {
+      setPromptDetails({
+        schedule: detailsRes.result.schedule ?? null,
+        executions: detailsRes.result.executions || [],
+        positions: detailsRes.result.positions || []
+      });
+      if (detailsRes.result.schedule) {
+        setCronExpression(detailsRes.result.schedule.cronExpression);
+        setTimezone(detailsRes.result.schedule.timezone);
       }
     }
-  };
+  }, []);
+
+  // Load prompts library
+  const loadDefinitions = React.useCallback(async (brandId: string) => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    const res = await getPromptDefinitionsAction(brandId);
+    if (res.success && (res as { result?: PromptDefinition[] }).result) {
+      const defs = (res as { result: PromptDefinition[] }).result;
+      setDefinitions(defs);
+      if (defs.length > 0) {
+        handleSelectPrompt(defs[0]);
+      } else {
+        setSelectedDef(null);
+        setPromptDetails(null);
+      }
+    } else {
+      setErrorMsg(isRtl ? "خطا در بارگذاری قالب‌های پرسش" : "Failed to load prompt templates");
+    }
+    setIsLoading(false);
+  }, [handleSelectPrompt, isRtl]);
+
+  // Load brands on mount
+  useEffect(() => {
+    async function loadBrands() {
+      setIsLoading(true);
+      const res = await getBrandsAction();
+      if (res.success && (res as { result?: Brand[] }).result && (res as { result: Brand[] }).result.length > 0) {
+        const brandList = (res as { result: Brand[] }).result;
+        setBrands(brandList);
+        setSelectedBrandId(brandList[0].id);
+        loadDefinitions(brandList[0].id);
+      } else if (!res.success) {
+        setErrorMsg(isRtl ? "خطا در بارگذاری برندهای فعال" : "Failed to load tenant brands");
+        setIsLoading(false);
+      }
+    }
+    loadBrands();
+  }, [isRtl, loadDefinitions]);
 
   // Trigger single execution or comparison
   const runComparison = () => {
@@ -172,17 +170,19 @@ export default function AeoPlaygroundPage() {
         models: selectedModels
       });
 
-      if (res.success && (res as any).result) {
-        setComparisonResults((res as any).result);
+      const compRes = res as unknown as { success: boolean; result?: { executions: PromptExecution[]; positions: Record<string, PositionObservation[]> }; error?: string };
+      if (compRes.success && compRes.result) {
+        setComparisonResults(compRes.result);
         setSuccessMsg(isRtl ? "پاسخ مدل‌ها با موفقیت دریافت و آنالیز شد." : "Model responses compiled and analyzed successfully.");
 
         // Reload details to refresh history list
         const detailsRes = await getPromptDetailsAction(selectedDef.id);
-        if (detailsRes.success && (detailsRes as any).result) {
-          setPromptDetails((detailsRes as any).result);
+        const detailsObj = detailsRes as unknown as { success: boolean; result?: { schedule: PromptSchedule | null; executions: PromptExecution[]; positions: PositionObservation[] } };
+        if (detailsObj.success && detailsObj.result) {
+          setPromptDetails(detailsObj.result);
         }
       } else {
-        setErrorMsg((res as any).error || (isRtl ? "خطا در برقراری ارتباط با مدل‌ها." : "Error communicating with models."));
+        setErrorMsg(compRes.error || (isRtl ? "خطا در برقراری ارتباط با مدل‌ها." : "Error communicating with models."));
       }
     });
   };
@@ -222,7 +222,8 @@ export default function AeoPlaygroundPage() {
         notes: newNotes
       });
 
-      if (res.success && (res as any).result) {
+      const createRes = res as unknown as { success: boolean; result?: PromptDefinition; error?: string };
+      if (createRes.success && createRes.result) {
         setShowCreateModal(false);
         setSuccessMsg(isRtl ? "قالب جدید با موفقیت به کتابخانه اضافه شد." : "New template added to library.");
 
@@ -235,7 +236,7 @@ export default function AeoPlaygroundPage() {
         // Reload list
         loadDefinitions(selectedBrandId);
       } else {
-        setErrorMsg((res as any).error || "Failed to create prompt template");
+        setErrorMsg(createRes.error || "Failed to create prompt template");
       }
     });
   };
@@ -253,17 +254,19 @@ export default function AeoPlaygroundPage() {
         timezone
       });
 
-      if (res.success && (res as any).result) {
+      const schedRes = res as unknown as { success: boolean; result?: PromptSchedule; error?: string };
+      if (schedRes.success && schedRes.result) {
         setSuccessMsg(isRtl ? "زمان‌بندی پایش با موفقیت ذخیره شد." : "Schedule updated successfully.");
         setShowSchedulePanel(false);
 
         // Refresh details
         const detailsRes = await getPromptDetailsAction(selectedDef.id);
-        if (detailsRes.success && (detailsRes as any).result) {
-          setPromptDetails((detailsRes as any).result);
+        const detailsObj = detailsRes as unknown as { success: boolean; result?: { schedule: PromptSchedule | null; executions: PromptExecution[]; positions: PositionObservation[] } };
+        if (detailsObj.success && detailsObj.result) {
+          setPromptDetails(detailsObj.result);
         }
       } else {
-        setErrorMsg((res as any).error || "Failed to save schedule");
+        setErrorMsg(schedRes.error || "Failed to save schedule");
       }
     });
   };
@@ -276,16 +279,18 @@ export default function AeoPlaygroundPage() {
 
     startTransition(async () => {
       const res = await unschedulePromptAction({ promptId: selectedDef.id });
-      if (res.success) {
+      const unschedRes = res as unknown as { success: boolean; error?: string };
+      if (unschedRes.success) {
         setSuccessMsg(isRtl ? "زمان‌بندی با موفقیت متوقف شد." : "Schedule disabled successfully.");
 
         // Refresh details
         const detailsRes = await getPromptDetailsAction(selectedDef.id);
-        if (detailsRes.success && (detailsRes as any).result) {
-          setPromptDetails((detailsRes as any).result);
+        const detailsObj = detailsRes as unknown as { success: boolean; result?: { schedule: PromptSchedule | null; executions: PromptExecution[]; positions: PositionObservation[] } };
+        if (detailsObj.success && detailsObj.result) {
+          setPromptDetails(detailsObj.result);
         }
       } else {
-        setErrorMsg((res as any).error || "Failed to disable schedule");
+        setErrorMsg(unschedRes.error || "Failed to disable schedule");
       }
     });
   };
@@ -640,7 +645,7 @@ export default function AeoPlaygroundPage() {
                                         </span>
                                       </div>
                                       <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed italic mt-1.5 border-t border-[var(--border)]/10 pt-1.5 font-mono">
-                                        "{pos.evidenceExcerpt}"
+                                        &quot;{pos.evidenceExcerpt}&quot;
                                       </p>
                                     </div>
                                   ))}

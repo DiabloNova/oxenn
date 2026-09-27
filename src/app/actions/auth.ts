@@ -2,9 +2,6 @@
 
 import { User, Session, UserRole } from "@/types/auth";
 import { createSession, invalidateSession, getSession } from "@/services/auth/session";
-import { db } from "@/features/ai-intelligence/repositories";
-import { users, organizationMembers, organizations } from "../../../database/schema";
-import { eq, and } from "drizzle-orm";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { randomUUID } from "crypto";
 
@@ -19,7 +16,7 @@ export async function loginAction(email: string): Promise<User> {
     }
 
     const { rows: userRows } = await client.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
-    let userRecord = userRows[0];
+    const userRecord = userRows[0];
 
     if (!userRecord) {
         throw new Error("Invalid credentials or user not found.");

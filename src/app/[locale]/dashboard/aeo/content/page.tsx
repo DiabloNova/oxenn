@@ -37,7 +37,7 @@ export default function AeoContentIntelligenceDashboard() {
   const [analyses, setAnalyses] = useState<AeoAnalysis[]>([]);
   const [faqOpportunities, setFaqOpportunities] = useState<FaqOpportunity[]>([]);
   const [kgAlignments, setKgAlignments] = useState<KgAlignment[]>([]);
-  const [signals, setSignals] = useState<any[]>([]);
+  const [signals, setSignals] = useState<Array<{ pageId: string; level: string; code: string; message: string }>>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -61,7 +61,7 @@ export default function AeoContentIntelligenceDashboard() {
           setSelectedPageId(pgs[0].id);
         }
       } else {
-        const errorVal = res.success === false ? (res as any).error : null;
+        const errorVal = res.success === false ? (res as unknown as { error?: string }).error : null;
         setErrorMsg(errorVal || (isRtl ? "خطا در بارگذاری اطلاعات هوشمندی محتوا" : "Failed to load AEO Content Intelligence data"));
       }
       setIsLoading(false);
@@ -95,7 +95,7 @@ export default function AeoContentIntelligenceDashboard() {
           setSignals(dashboardRes.result.recommendationSignals);
         }
       } else {
-        const errorVal = res.success === false ? (res as any).error : null;
+        const errorVal = res.success === false ? (res as unknown as { error?: string }).error : null;
         setErrorMsg(errorVal || (isRtl ? "اجرای تحلیل محتوا با خطا مواجه شد." : "AEO Content analysis failed."));
       }
     });

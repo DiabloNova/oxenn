@@ -62,7 +62,7 @@ export class AIVisibilityAuditEngine {
       version: 1
     };
 
-    let audit: AIVisibilityAudit = {
+    const audit: AIVisibilityAudit = {
       id: auditId,
       organizationId,
       brandId,
@@ -423,7 +423,7 @@ export class AIVisibilityAuditEngine {
     const urlMatches = text.match(urlRegex) || [];
     const citations: AuditPromptAnalysis["citationPresence"]["citations"] = [];
 
-    let brandDomainCited = false;
+    let _brandDomainCited = false;
 
     for (const matchedUrl of urlMatches) {
       const sanitizedUrl = matchedUrl.replace(/[.,);]$/, ""); // remove tail punctuation
@@ -433,7 +433,7 @@ export class AIVisibilityAuditEngine {
         const isTargetDomain = brandDomain ? domain === brandDomain : false;
 
         if (isTargetDomain) {
-          brandDomainCited = true;
+          _brandDomainCited = true;
         }
 
         // Authority signal modeling: 0-100 score or "unknown"
@@ -687,12 +687,12 @@ export class AIVisibilityAuditEngine {
    * - Answer Inclusion: 20%
    */
   private computeOverallScore(metrics: AIVisibilityAuditMetrics): number {
-    let visWeight = 0.20;
-    let mentionWeight = 0.15;
-    let entityWeight = 0.15;
+    const visWeight = 0.20;
+    const mentionWeight = 0.15;
+    const entityWeight = 0.15;
     let citationWeight = 0.15;
     let authorityWeight = 0.15;
-    let inclusionWeight = 0.20;
+    const inclusionWeight = 0.20;
 
     // Redribute Source Authority weight to Citation Presence if authority data is missing (Score is 0)
     if (metrics.sourceAuthorityScore === 0) {

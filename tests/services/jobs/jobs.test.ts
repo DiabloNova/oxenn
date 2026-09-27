@@ -6,19 +6,19 @@ import { User } from "../../../src/types/auth";
 import { JobService } from "../../../src/services/jobs/service";
 import { InMemoryJobRepository } from "../../../src/services/jobs/repository";
 import { ExponentialBackoffRetryPolicy } from "../../../src/services/jobs/retry";
-import { InMemoryJobQueue, IJobExecutor } from "../../../src/services/jobs/queue";
+import { InMemoryJobQueue } from "../../../src/services/jobs/queue";
 import { JobExecutionManager } from "../../../src/services/jobs/executor";
-import { Job, JobSchedule } from "../../../src/services/jobs/types";
+import { JobSchedule } from "../../../src/services/jobs/types";
 import { CrawlJobMetadata, AiAnalysisJobMetadata } from "../../../src/services/jobs/contracts";
 import { TenantContextManager } from "../../../src/core/database/tenant-context";
 
 // Mock implementation of the cookie store
 const mockCookieStore = {
-  store: new Map<string, any>(),
+  store: new Map<string, unknown>(),
   get(name: string) {
     return this.store.get(name);
   },
-  set(name: string, value: any, options: any) {
+  set(name: string, value: unknown, options?: Record<string, unknown>) {
     this.store.set(name, { value, name, ...options });
   },
   delete(name: string) {
@@ -42,6 +42,7 @@ export async function runJobTests() {
   const retryPolicy = new ExponentialBackoffRetryPolicy(100, 1000); // Fast delays for testing
   const executor = new JobExecutionManager(service, retryPolicy);
   const queue = new InMemoryJobQueue(executor);
+  void queue;
 
   const mockUser: User = {
     id: "usr-test-123",
@@ -62,8 +63,9 @@ export async function runJobTests() {
   try {
     await service.createJob({ type: "crawl" });
     throw new Error("Security Boundary Violation: Created a job without active session!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Unauthorized")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Unauthorized")) {
       console.log("  ✅ Unauthenticated job creation correctly blocked (Failed closed).");
     } else {
       throw err;
@@ -118,8 +120,9 @@ export async function runJobTests() {
   try {
     await service.transitionStatus(freshJob.id, "running");
     throw new Error("Lifecycle Violation: Transitioned a completed job back to running!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Cannot transition a completed job")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Cannot transition a completed job")) {
       // Correct!
     } else {
       throw err;
@@ -132,8 +135,9 @@ export async function runJobTests() {
   try {
     await service.transitionStatus(failedJob.id, "completed");
     throw new Error("Lifecycle Violation: Transitioned a failed job directly to completed!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Cannot transition a failed job")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Cannot transition a failed job")) {
       // Correct!
     } else {
       throw err;
@@ -146,8 +150,9 @@ export async function runJobTests() {
   try {
     await service.transitionStatus(cancelledJob.id, "running");
     throw new Error("Lifecycle Violation: Transitioned a cancelled job back to active!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Cannot transition a cancelled job")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Cannot transition a cancelled job")) {
       console.log("  ✅ State machine invariants strictly enforced; illegal state transitions rejected.");
     } else {
       throw err;
@@ -179,9 +184,9 @@ export async function runJobTests() {
   };
   const crawlJob = await service.createJob({
     type: "crawl",
-    metadata: crawlMeta as any
+    metadata: crawlMeta as unknown as Record<string, unknown>
   });
-  if ((crawlJob.metadata as any).depthLimit !== 3) {
+  if ((crawlJob.metadata as Record<string, unknown>).depthLimit !== 3) {
     throw new Error("Crawl Job Contract Mismatch: metadata fields failed to map.");
   }
 
@@ -193,9 +198,9 @@ export async function runJobTests() {
   };
   const aiJob = await service.createJob({
     type: "ai_analysis",
-    metadata: aiMeta as any
+    metadata: aiMeta as unknown as Record<string, unknown>
   });
-  if ((aiJob.metadata as any).modelName !== "gemini-2.0") {
+  if ((aiJob.metadata as Record<string, unknown>).modelName !== "gemini-2.0") {
     throw new Error("AI Job Contract Mismatch: metadata fields failed to map.");
   }
 
@@ -219,6 +224,7 @@ export async function runJobTests() {
   let activeTenantIdInWorker = "";
 
   executor.registerExecutor("crawl", async (job) => {
+    void job;
     activeTenantIdInWorker = TenantContextManager.getRequiredTenantId();
   });
 
