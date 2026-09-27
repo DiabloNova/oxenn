@@ -191,7 +191,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Dependency Injection and IoC Container",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Dependency Injection and IoC Container  This document outlines the design of our lightweight Inversion of Control (IoC) dependency container.  ## Container Design  The \`DependencyContainer\` class acts as the centralized registry for all infrastructure and application services.  \`\`\`typescript import { container } from \\"@/core/container\\";  // Resolve Postgres Repository const tenantRepo = container.resolve<ITenantRepository>(\\"TenantRepository\\");  // Resolve Client gateway const apiClient = conta`
+    snippet: `# Dependency Injection and IoC Container  This document outlines the design of our lightweight Inversion of Control (IoC) dependency container.  ## Container Design  The \`DependencyContainer\` class acts as the centralized registry for all infrastructure and application services.  \`\`\`typescript import { container } from "@/core/container";  // Resolve Postgres Repository const tenantRepo = container.resolve<ITenantRepository>("TenantRepository");  // Resolve Client gateway const apiClient = conta`
   },
   {
     slug: "DOMAIN_MODEL",
