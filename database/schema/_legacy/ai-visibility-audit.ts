@@ -1,4 +1,4 @@
-import { TableDefinition } from "./types";
+import { TableDefinition } from "../types";
 
 export const aiVisibilityAuditsTable: TableDefinition = {
   tableName: "ai_visibility_audits",

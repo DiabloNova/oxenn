@@ -1,5 +1,7 @@
 "use server";
 
+import { AuthorizationError } from "@/services/auth/authorization";
+import { mapErrorToResult } from "@/services/auth/error-mapping";
 import { z } from "zod";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { requireSession } from "@/services/auth/session";
@@ -117,10 +119,10 @@ export async function createPromptDefinitionAction(
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;
@@ -173,10 +175,10 @@ export async function updatePromptDefinitionAction(
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;
@@ -212,10 +214,10 @@ export async function getPromptDefinitionsAction(brandId: string) {
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;
@@ -278,10 +280,10 @@ export async function getPromptDetailsAction(promptId: string) {
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;
@@ -354,10 +356,10 @@ export async function executePromptAction(
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;
@@ -409,10 +411,10 @@ export async function executeModelComparisonAction(
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;
@@ -470,10 +472,10 @@ export async function schedulePromptAction(
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;
@@ -515,10 +517,10 @@ export async function unschedulePromptAction(
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;

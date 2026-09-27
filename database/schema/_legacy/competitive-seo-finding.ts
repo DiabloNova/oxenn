@@ -1,4 +1,4 @@
-import { TableDefinition } from "./types";
+import { TableDefinition } from "../types";
 
 export const competitiveSeoFindingsTable: TableDefinition = {
   tableName: "competitive_seo_findings",

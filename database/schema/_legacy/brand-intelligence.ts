@@ -1,7 +1,7 @@
-import { TableDefinition } from "./types";
+import { TableDefinition } from "../types";
 
-export const citationSourcesTable: TableDefinition = {
-  tableName: "citation_sources",
+export const brandAssociationsTable: TableDefinition = {
+  tableName: "brand_associations",
   columns: [
     {
       name: "id",
@@ -20,29 +20,30 @@ export const citationSourcesTable: TableDefinition = {
       }
     },
     {
-      name: "domain",
+      name: "brand_id",
+      type: "UUID",
+      nullable: false,
+      references: {
+        table: "brands",
+        column: "id",
+        onDelete: "CASCADE"
+      }
+    },
+    {
+      name: "entity_name",
       type: "TEXT",
       nullable: false
     },
     {
-      name: "canonical_url",
-      type: "TEXT",
-      nullable: true
-    },
-    {
-      name: "classification",
+      name: "relationship_type",
       type: "TEXT",
       nullable: false
     },
     {
-      name: "quality_score",
+      name: "occurrence_count",
       type: "INTEGER",
-      nullable: false
-    },
-    {
-      name: "authority_score",
-      type: "INTEGER",
-      nullable: false
+      nullable: false,
+      default: "1"
     },
     {
       name: "first_seen_at",
@@ -57,10 +58,15 @@ export const citationSourcesTable: TableDefinition = {
       default: "NOW()"
     },
     {
-      name: "occurrence_count",
-      type: "INTEGER",
+      name: "supporting_context",
+      type: "TEXT",
+      nullable: false
+    },
+    {
+      name: "confidence",
+      type: "DOUBLE PRECISION",
       nullable: false,
-      default: "0"
+      default: "1.0"
     },
     {
       name: "created_at",
@@ -78,8 +84,8 @@ export const citationSourcesTable: TableDefinition = {
   sql: ""
 };
 
-export const citationOccurrencesTable: TableDefinition = {
-  tableName: "citation_occurrences",
+export const recommendationObservationsTable: TableDefinition = {
+  tableName: "recommendation_observations",
   columns: [
     {
       name: "id",
@@ -98,21 +104,11 @@ export const citationOccurrencesTable: TableDefinition = {
       }
     },
     {
-      name: "source_id",
+      name: "brand_id",
       type: "UUID",
       nullable: false,
       references: {
-        table: "citation_sources",
-        column: "id",
-        onDelete: "CASCADE"
-      }
-    },
-    {
-      name: "audit_id",
-      type: "UUID",
-      nullable: true,
-      references: {
-        table: "ai_visibility_audits",
+        table: "brands",
         column: "id",
         onDelete: "CASCADE"
       }
@@ -135,7 +131,7 @@ export const citationOccurrencesTable: TableDefinition = {
     {
       name: "observation_id",
       type: "UUID",
-      nullable: true,
+      nullable: false,
       references: {
         table: "ai_observations",
         column: "id",
@@ -143,19 +139,9 @@ export const citationOccurrencesTable: TableDefinition = {
       }
     },
     {
-      name: "url",
+      name: "recommendation_status",
       type: "TEXT",
       nullable: false
-    },
-    {
-      name: "title",
-      type: "TEXT",
-      nullable: true
-    },
-    {
-      name: "snippet",
-      type: "TEXT",
-      nullable: true
     },
     {
       name: "position",
@@ -163,10 +149,9 @@ export const citationOccurrencesTable: TableDefinition = {
       nullable: true
     },
     {
-      name: "confidence",
-      type: "DOUBLE PRECISION",
-      nullable: false,
-      default: "1.0"
+      name: "evidence_excerpt",
+      type: "TEXT",
+      nullable: false
     },
     {
       name: "created_at",

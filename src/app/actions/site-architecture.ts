@@ -1,5 +1,7 @@
 "use server";
 
+import { AuthorizationError } from "@/services/auth/authorization";
+import { mapErrorToResult } from "@/services/auth/error-mapping";
 import { requireSession } from "@/services/auth/session";
 import { requireWorkspaceMembership } from "@/services/auth/authorization";
 import { TenantContextManager } from "@/core/database/tenant-context";
@@ -19,10 +21,10 @@ export async function getSiteArchitectureAction(websiteDomain = "secure-site.com
   let session;
   try {
     session = await requireSession();
-    if (!session.user) throw new Error("Unauthorized");
+    if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
     await requireWorkspaceMembership(session.user.id, session.user.workspaceId);
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : "Unauthorized" };
+    return mapErrorToResult(err);
   }
 
   const tenantId = session.user.workspaceId;
@@ -138,6 +140,6 @@ export async function getSiteArchitectureAction(websiteDomain = "secure-site.com
       };
     });
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : "Internal Server Error" };
+    return mapErrorToResult(err);
   }
 }
