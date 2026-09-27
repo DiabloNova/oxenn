@@ -36,7 +36,7 @@ export async function runMigrations(databaseUrl?: string) {
 if (require.main === module) {
   runMigrations()
     .then(() => process.exit(0))
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("[Migration Runner] Migration failed:", err);
       process.exit(1);
     });
