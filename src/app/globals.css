@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -15,6 +16,91 @@
   --animate-aurora: aurora 18s ease-in-out infinite;
   --animate-border-spin: border-spin 4s linear infinite;
   --animate-float: float 6s ease-in-out infinite;
+
+  /* Tailwind 4 mappings for ox- variables */
+  --color-ox-brand-50: var(--ox-brand-50);
+  --color-ox-brand-100: var(--ox-brand-100);
+  --color-ox-brand-200: var(--ox-brand-200);
+  --color-ox-brand-300: var(--ox-brand-300);
+  --color-ox-brand-400: var(--ox-brand-400);
+  --color-ox-brand-500: var(--ox-brand-500);
+  --color-ox-brand-600: var(--ox-brand-600);
+  --color-ox-brand-700: var(--ox-brand-700);
+  --color-ox-brand-800: var(--ox-brand-800);
+  --color-ox-brand-900: var(--ox-brand-900);
+  --color-ox-brand-950: var(--ox-brand-950);
+
+  --color-ox-accent-50: var(--ox-accent-50);
+  --color-ox-accent-100: var(--ox-accent-100);
+  --color-ox-accent-200: var(--ox-accent-200);
+  --color-ox-accent-300: var(--ox-accent-300);
+  --color-ox-accent-400: var(--ox-accent-400);
+  --color-ox-accent-500: var(--ox-accent-500);
+  --color-ox-accent-600: var(--ox-accent-600);
+  --color-ox-accent-700: var(--ox-accent-700);
+  --color-ox-accent-800: var(--ox-accent-800);
+  --color-ox-accent-900: var(--ox-accent-900);
+  --color-ox-accent-950: var(--ox-accent-950);
+
+  --color-ox-background: var(--ox-background);
+  --color-ox-surface: var(--ox-surface);
+  --color-ox-surface-raised: var(--ox-surface-raised);
+  --color-ox-surface-muted: var(--ox-surface-muted);
+
+  --color-ox-border: var(--ox-border);
+  --color-ox-border-strong: var(--ox-border-strong);
+
+  --color-ox-text-primary: var(--ox-text-primary);
+  --color-ox-text-secondary: var(--ox-text-secondary);
+  --color-ox-text-muted: var(--ox-text-muted);
+  --color-ox-text-inverse: var(--ox-text-inverse);
+
+  --color-ox-success: var(--ox-success);
+  --color-ox-success-bg: var(--ox-success-bg);
+  --color-ox-warning: var(--ox-warning);
+  --color-ox-warning-bg: var(--ox-warning-bg);
+  --color-ox-error: var(--ox-error);
+  --color-ox-error-bg: var(--ox-error-bg);
+  --color-ox-info: var(--ox-info);
+  --color-ox-info-bg: var(--ox-info-bg);
+
+  --text-ox-xs: var(--ox-text-xs);
+  --text-ox-sm: var(--ox-text-sm);
+  --text-ox-base: var(--ox-text-base);
+  --text-ox-lg: var(--ox-text-lg);
+  --text-ox-xl: var(--ox-text-xl);
+  --text-ox-2xl: var(--ox-text-2xl);
+  --text-ox-3xl: var(--ox-text-3xl);
+  --text-ox-4xl: var(--ox-text-4xl);
+
+  --spacing-ox-0: var(--ox-space-0);
+  --spacing-ox-1: var(--ox-space-1);
+  --spacing-ox-2: var(--ox-space-2);
+  --spacing-ox-3: var(--ox-space-3);
+  --spacing-ox-4: var(--ox-space-4);
+  --spacing-ox-5: var(--ox-space-5);
+  --spacing-ox-6: var(--ox-space-6);
+  --spacing-ox-8: var(--ox-space-8);
+  --spacing-ox-10: var(--ox-space-10);
+  --spacing-ox-12: var(--ox-space-12);
+  --spacing-ox-16: var(--ox-space-16);
+  --spacing-ox-20: var(--ox-space-20);
+
+  --radius-ox-sm: var(--ox-radius-sm);
+  --radius-ox-md: var(--ox-radius-md);
+  --radius-ox-lg: var(--ox-radius-lg);
+  --radius-ox-xl: var(--ox-radius-xl);
+  --radius-ox-full: var(--ox-radius-full);
+
+  --shadow-ox-sm: var(--ox-shadow-sm);
+  --shadow-ox-md: var(--ox-shadow-md);
+  --shadow-ox-lg: var(--ox-shadow-lg);
+  --shadow-ox-glass: var(--ox-shadow-glass);
+
+  --blur-ox-sm: var(--ox-blur-sm);
+  --blur-ox-md: var(--ox-blur-md);
+  --blur-ox-lg: var(--ox-blur-lg);
+  --blur-ox-xl: var(--ox-blur-xl);
 
   @keyframes fade-in {
     from { opacity: 0; }
