@@ -1,0 +1,154 @@
+@layer base {
+  /* =========================================================
+     DARK THEME (DEFAULT) — oxenn semantic tokens
+     ========================================================= */
+  :root {
+    /* Brand Ramp - using the sky/orange base from globals */
+    --ox-brand-50: #f0f9ff;
+    --ox-brand-100: #e0f2fe;
+    --ox-brand-200: #bae6fd;
+    --ox-brand-300: #7dd3fc;
+    --ox-brand-400: #38bdf8;
+    --ox-brand-500: #0ea5e9;
+    --ox-brand-600: #0284c7;
+    --ox-brand-700: #0369a1;
+    --ox-brand-800: #075985;
+    --ox-brand-900: #0c4a6e;
+    --ox-brand-950: #082f49;
+
+    --ox-accent-50: #fff7ed;
+    --ox-accent-100: #ffedd5;
+    --ox-accent-200: #fed7aa;
+    --ox-accent-300: #fdba74;
+    --ox-accent-400: #fb923c;
+    --ox-accent-500: #f97316;
+    --ox-accent-600: #ea580c;
+    --ox-accent-700: #c2410c;
+    --ox-accent-800: #9a3412;
+    --ox-accent-900: #7c2d12;
+    --ox-accent-950: #431407;
+
+    /* Semantic Colors - Backgrounds */
+    --ox-background: #0f172a;
+    --ox-surface: #1e293b;
+    --ox-surface-raised: #334155;
+    --ox-surface-muted: #0b1220;
+
+    /* Semantic Colors - Borders */
+    --ox-border: rgba(148, 163, 184, 0.15);
+    --ox-border-strong: rgba(148, 163, 184, 0.3);
+
+    /* Semantic Colors - Text */
+    --ox-text-primary: #f8fafc;
+    --ox-text-secondary: #cbd5e1;
+    --ox-text-muted: #94a3b8;
+    --ox-text-inverse: #0f172a;
+
+    /* Semantic Colors - Status */
+    --ox-success: #10b981;
+    --ox-success-bg: rgba(16, 185, 129, 0.15);
+    --ox-warning: #f59e0b;
+    --ox-warning-bg: rgba(245, 158, 11, 0.15);
+    --ox-error: #ef4444;
+    --ox-error-bg: rgba(239, 68, 68, 0.15);
+    --ox-info: #38bdf8;
+    --ox-info-bg: rgba(56, 189, 248, 0.15);
+
+    /* Typography Scale (Fluid) */
+    --ox-text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.8rem);
+    --ox-text-sm: clamp(0.875rem, 0.85rem + 0.125vw, 0.9rem);
+    --ox-text-base: clamp(1rem, 0.95rem + 0.25vw, 1.05rem);
+    --ox-text-lg: clamp(1.125rem, 1.05rem + 0.375vw, 1.2rem);
+    --ox-text-xl: clamp(1.25rem, 1.15rem + 0.5vw, 1.35rem);
+    --ox-text-2xl: clamp(1.5rem, 1.35rem + 0.75vw, 1.65rem);
+    --ox-text-3xl: clamp(1.875rem, 1.65rem + 1.125vw, 2.1rem);
+    --ox-text-4xl: clamp(2.25rem, 2rem + 1.25vw, 2.5rem);
+
+    /* Line Heights */
+    --ox-leading-tight: 1.25;
+    --ox-leading-snug: 1.375;
+    --ox-leading-normal: 1.5;
+    --ox-leading-relaxed: 1.625;
+    --ox-leading-loose: 2;
+    --ox-leading-fa: 1.85;
+
+    /* Spacing 4/8 Scale */
+    --ox-space-0: 0px;
+    --ox-space-1: 4px;
+    --ox-space-2: 8px;
+    --ox-space-3: 12px;
+    --ox-space-4: 16px;
+    --ox-space-5: 20px;
+    --ox-space-6: 24px;
+    --ox-space-8: 32px;
+    --ox-space-10: 40px;
+    --ox-space-12: 48px;
+    --ox-space-16: 64px;
+    --ox-space-20: 80px;
+
+    /* Radius Scale */
+    --ox-radius-sm: 4px;
+    --ox-radius-md: 8px;
+    --ox-radius-lg: 12px;
+    --ox-radius-xl: 16px;
+    --ox-radius-full: 9999px;
+
+    /* Elevation / Shadows */
+    --ox-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --ox-shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+    --ox-shadow-lg: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --ox-shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+    /* Blur */
+    --ox-blur-sm: 4px;
+    --ox-blur-md: 8px;
+    --ox-blur-lg: 12px;
+    --ox-blur-xl: 16px;
+
+    /* Motion */
+    --ox-motion-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --ox-motion-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --ox-motion-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* =========================================================
+     LIGHT THEME
+     ========================================================= */
+  :root.light {
+    --ox-background: #ffffff;
+    --ox-surface: #f8fafc;
+    --ox-surface-raised: #f1f5f9;
+    --ox-surface-muted: #f8fafc;
+
+    --ox-border: rgba(148, 163, 184, 0.2);
+    --ox-border-strong: rgba(148, 163, 184, 0.35);
+
+    --ox-text-primary: #0f172a;
+    --ox-text-secondary: #334155;
+    --ox-text-muted: #64748b;
+    --ox-text-inverse: #f8fafc;
+
+    /* Adjust Status Colors for AAA / AA contrast against white */
+    --ox-success: #047857; /* AA vs #FFF -> 4.5+ */
+    --ox-success-bg: #dcfce7;
+    --ox-warning: #b45309; /* AA vs #FFF -> 4.5+ */
+    --ox-warning-bg: #fef3c7;
+    --ox-error: #dc2626; /* AA vs #FFF -> 4.5+ */
+    --ox-error-bg: #fee2e2;
+    --ox-info: #0369a1; /* AA vs #FFF -> 4.5+ */
+    --ox-info-bg: #dbeafe;
+
+    --ox-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.06);
+    --ox-shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+    --ox-shadow-lg: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    --ox-shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --ox-motion-fast: 0ms linear;
+      --ox-motion-normal: 0ms linear;
+      --ox-motion-slow: 0ms linear;
+    }
+  }
+}
