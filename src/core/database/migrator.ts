@@ -23,14 +23,15 @@ export async function runMigrations(databaseUrl?: string) {
     try {
       console.log("[Migration Runner] Ensuring pgvector extension is created...");
       await pool.query("CREATE EXTENSION IF NOT EXISTS vector;");
-    } catch (extError: any) {
-      if (extError.code === "42501" || extError.message.includes("permission denied")) {
+    } catch (extError: unknown) {
+      const err = extError as { code?: string; message?: string };
+      if (err.code === "42501" || (err.message && err.message.includes("permission denied"))) {
         console.error("\n[Migration Runner] FATAL: Insufficient privileges to create the 'vector' extension.");
         console.error("Please run the following script as a database superuser:");
         console.error("  psql -U postgres -d your_db -f database/bootstrap.sql\n");
         throw new Error("Insufficient privileges to create 'vector' extension.");
       } else {
-        console.error("[Migration Runner] Failed to create vector extension:", extError.message);
+        console.error("[Migration Runner] Failed to create vector extension:", err.message);
         throw extError;
       }
     }
