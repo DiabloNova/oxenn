@@ -1,188 +1,71 @@
-# oxenn (اوژن)
+# Oxenn
 
-## ۱. معرفی پروژه
+**Oxenn** (اوژن) is a bilingual (fa/en) AI visibility and AEO (Artificial Intelligence Engine Optimization) platform. This project is designed to monitor, analyze, and improve brand visibility in the era of modern AI-driven search engines and Large Language Models.
 
-اوژن (oxenn) یک پلتفرم هوش برند و تحلیل سئو برای موتورهای جست‌وجوی مبتنی بر هوش مصنوعی (AEO/GEO) است. این پروژه به منظور پایش، تحلیل و بهبود دیده شدن برندها در عصر موتورهای جست‌وجوی نوین (نظیر تولیدات مبتنی بر مدل‌های زبانی بزرگ) طراحی شده است. مخاطب اصلی این محصول، متخصصان سئو، مدیران بازاریابی و تیم‌های فنی هستند که نیازمند درک عمیق از نحوه درک و پردازش برند و محتوای آن‌ها توسط هوش مصنوعی هستند.
+## 1. Product Overview
 
-## ۲. قابلیت‌های اصلی
+The core audience includes SEO specialists, marketing managers, and technical teams who need deep insights into how their brand and content are perceived and processed by AI platforms. Oxenn provides a robust multi-tenant architecture, AI analysis features, web crawling, and comprehensive reporting.
 
-**قابلیت‌های پیاده‌سازی شده:**
-- **ساختار چند-مستاجری (Multi-tenant):** معماری کامل ایزوله‌سازی داده‌ها برای پشتیبانی از فضاهای کاری (Workspaces) مختلف با کنترل دسترسی مبتنی بر نقش (RBAC).
-- **احراز هویت و مجوزها:** احراز هویت امن مبتنی بر رمز عبور با استفاده از الگوریتم `Argon2id`، نشست‌های سمت سرور (Server-side sessions)، جلوگیری از حملات Brute-force، و قفل حساب کاربری (Hard Lock) مبتنی بر IP.
-- **خزش صفحات وب (Web Crawling):** استفاده از Firecrawl جهت استخراج سیگنال‌های سئو (هدینگ‌ها، لینک‌ها، متادیتا) به صورت زمان‌بندی شده و کش شده.
-- **تحلیل هوش مصنوعی (AEO/GEO Insights):** استخراج موجودیت‌ها، پرسش و پاسخ‌ها، و ارائه توصیه‌های سئو از طریق تحلیل سیگنال‌ها توسط مدل Gemini-1.5-Pro (Vercel AI SDK).
-- **سیستم مدیریت اعتبار (Credits Management):** کنترل مصرف منابع و رهگیری تراکنش‌های اعتباری در سطح فضای کاری.
-- **پشتیبانی از زبان فارسی و راست‌چین (RTL):** طراحی رابط کاربری بومی برای زبان فارسی و پشتیبانی کامل از RTL با استفاده از Tailwind CSS.
-- **رابط کاربری داشبورد:** شامل مسیرهای متنوع برای مشاهده اطلاعات برند، رصد رقبا و تحلیل سئو.
+## 2. Tech Stack
 
-**قابلیت‌های در دست توسعه/برنامه‌ریزی شده:**
-- پایش تغییرات رقبا به صورت پیشرفته.
-- گزارش‌گیری و صدور هشدار (Alerts) کامل از طریق کانال‌های مختلف.
+- **Framework:** Next.js 16 (App Router)
+- **UI:** React 19, Tailwind CSS
+- **Language:** TypeScript (Strict Mode)
+- **Package Manager:** pnpm
+- **Runtime Requirement:** Node ≥ 22
+- **Database Engine:** Drizzle ORM + PostgreSQL + pgvector
 
-## ۳. معماری فنی
+## 3. Setup & Installation
 
-اوژن بر پایه معماری‌های مدرن وب و با رویکرد امنیت و مقیاس‌پذیری بالا توسعه یافته است:
+To set up the development environment, follow these steps:
 
-- **Next.js (App Router):** فریم‌ورک اصلی برای توسعه رابط کاربری (React) و مسیرهای API.
-- **TypeScript:** جهت تضمین امنیت نوع‌ها در سراسر کدبیس.
-- **Tailwind CSS:** برای طراحی رابط کاربری با تمرکز بر زیبایی‌شناسی مدرن B2B و پشتیبانی از RTL.
-- **Drizzle ORM & PostgreSQL:** مدیریت پایگاه داده با استفاده از Drizzle ORM و اتصال به PostgreSQL، همراه با استفاده از ویژگی RLS (Row-Level Security) جهت ایزوله‌سازی داده‌های مستاجران (Tenants).
-- **Inngest:** پیاده‌سازی زیرساخت کارهای پس‌زمینه (Background Jobs) و اجرای زمان‌بندی‌شده فرآیندها بدون نیاز به ابزارهای صف سنتی.
-- **Firecrawl & Cheerio:** استخراج و پردازش داده‌های وب‌سایت‌ها و تحلیل ساختار DOM به صورت قطعی (Deterministic).
-- **Vercel AI SDK:** یکپارچگی با ارائه‌دهندگان مدل‌های زبانی (نظیر Google) جهت استخراج بینش‌های ساختاریافته (Structured Output).
+1. Enable Corepack and install dependencies:
+   ```bash
+   corepack enable pnpm
+   pnpm install
+   ```
 
-## ۴. ساختار پروژه
+2. Configure environment variables:
+   Copy the example environment file and fill in your credentials.
+   ```bash
+   cp .env.example .env
+   ```
 
-```text
-src/
-├── app/          # مسیرهای Next.js (شامل رابط کاربری و API‌ها)
-├── components/   # کامپوننت‌های قابل استفاده مجدد رابط کاربری
-├── core/         # کدهای اصلی (کانتینرها، پایگاه داده، کش)
-├── features/     # ماژول‌های ویژگی-محور (مثل acquisition، AI Intelligence)
-├── inngest/      # توابع پس‌زمینه (Background Functions)
-├── lib/          # ابزارهای کاربردی (Redis, AI, Crawler)
-└── services/     # سرویس‌های دامنه (مانند Auth, Audit, observability)
+3. Validate the environment configuration:
+   ```bash
+   pnpm env:check dev
+   ```
 
-database/
-├── drizzle/      # فایل‌های مهاجرت (Migrations)
-└── schema/       # تعاریف ساختار پایگاه داده با استفاده از Drizzle
-```
+## 4. Scripts Overview
 
-## ۵. جریان کلی سیستم
+| Command | Description |
+| :--- | :--- |
+| `pnpm dev` | Starts the Next.js development server. |
+| `pnpm build` | Generates documentation data and compiles the Next.js production build. |
+| `pnpm lint` | Runs ESLint to check for code quality and formatting issues. |
+| `pnpm typecheck` | Executes TypeScript compiler in strict mode (`tsc --noEmit`). |
+| `pnpm test:acquisition` | Runs the test suite for the data acquisition modules. |
+| `pnpm db:generate` | Generates Drizzle database migrations based on schema changes. |
+| `pnpm db:migrate` | Runs environment checks (`env:check migrate`) and executes database migrations via `src/core/database/migrator.ts`. |
+| `pnpm db:push` | Pushes schema changes directly to the database (guarded by `scripts/database/db-push-guard.ts` for safety). |
 
-**جریان درخواست کاربر:**
-```text
-User
-  ↓
-Next.js Server Action / Route Handler
-  ↓
-Authorization (Session / Tenant Context Verification)
-  ↓
-Domain Service
-  ↓
-Drizzle ORM (With RLS / Tenant Context)
-  ↓
-PostgreSQL
-```
+## 5. Migration Doctrine
 
-**جریان خزش و تحلیل پس‌زمینه:**
-```text
-Inngest Event / Schedule
-  ↓
-Background Function (src/inngest/)
-  ↓
-Crawler / AI Observation Service (Firecrawl / Google AI)
-  ↓
-Redis Cache / PostgreSQL Persistence
-```
+For comprehensive guidelines and instructions regarding database migrations, please refer to our dedicated **[AGENTS.md](./AGENTS.md)**.
 
-## ۶. پایگاه داده
+## 6. Project Structure Overview
 
-پروژه از **PostgreSQL** به عنوان پایگاه داده اصلی استفاده می‌کند.
-- **ORM:** مدیریت کوئری‌ها و ساختار پایگاه داده از طریق **Drizzle ORM** انجام می‌شود.
-- **شمای داده‌ها:** فایل‌های شمای کانونی در مسیر `database/schema/` تعریف شده و سپس در `database/schema/index.ts` مجتمع شده‌اند.
-- **مهاجرت‌ها (Migrations):** از طریق اسکریپت `drizzle-kit` تولید و در مسیر `database/drizzle/` ذخیره می‌شوند. سیستم اجرای مهاجرت در `src/core/database/migrator.ts` پیاده‌سازی شده است.
-- **ایزوله‌سازی (Tenant Isolation):** دسترسی به داده‌ها در سطح دیتابیس با استفاده از Row-Level Security (RLS) مدیریت می‌شود و استفاده از کلاس `TenantContextManager` جهت تضمین نشت نکردن داده‌ها اجباری است.
+- `src/app/`: Next.js App Router endpoints and pages (Bilingual support via `[locale]`).
+- `src/components/`: Reusable React UI components and layouts.
+- `src/lib/`: Core utilities, engine logic (e.g., `audit-engine`), and external service integrations.
+- `src/services/`: Business logic layer handling intelligence, web crawling, analytics, caching, and AI integrations.
+- `database/`: Database configuration, schemas, and Drizzle migrations.
+- `tests/`: Automated test suites covering core logic and features.
+- `docs/`: Extensive project documentation and historical artifacts.
 
-## ۷. امنیت
+## 7. Documentation Portal
 
-- **احراز هویت:** پیاده‌سازی مبتنی بر `Argon2id` برای هشینگ امن رمز عبور، پیاده‌سازی در `src/services/auth`.
-- **مجوزها:** کنترل دسترسی بر پایه نقش (Role-Based Access Control) در سطح فضای کاری.
-- **ایزوله‌سازی مستاجران:** تمام درخواست‌ها به دیتابیس باید همراه با کانتکست (Context) فضای کاری (Workspace ID) باشند. عدم ارسال این کانتکست موجب خطای امنیتی می‌شود.
-- **مقابله با حملات:** سیستم از محدودیت نرخ درخواست (Rate Limiting) و قفل حساب کاربری (Hard Lock) در برابر حملات Brute-Force بهره می‌برد.
-- **حفاظت SSRF:** تمام عملیات خزش و واکشی‌های برون‌مرزی (Outbound Fetches) با استفاده از تابع محافظت‌شده در `src/services/crawler/url-validator.ts` انجام می‌شود.
+Access all internal architecture specs, task executions, and historical reports in the **[Docs Portal](./docs/)**.
 
-## ۸. نصب و اجرای پروژه
-
-### پیش‌نیازها
-- Node.js (نسخه ۲۰ یا بالاتر)
-- مدیریت بسته‌ها: `pnpm` (توصیه شده) یا `npm`
-- پایگاه داده: PostgreSQL در حال اجرا
-- سرویس Redis (می‌تواند از طریق Upstash تهیه شود)
-
-### نصب
-کد دستوری:
-```
-npm install
-```
-
-### متغیرهای محیطی
-یک کپی از فایل `.env.example` با نام `.env` بسازید و مقادیر مربوط به پایگاه داده و سرویس‌ها را وارد کنید:
-```
-DATABASE_URL=
-MIGRATION_DATABASE_URL=
-STAGING_MIGRATION_DATABASE_URL=
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-FIRECRAWL_API_KEY=
-GOOGLE_GENERATIVE_AI_API_KEY=
-DATA_SOURCE=db
-RESEND_API_KEY=
-```
-
-### اجرای پروژه برای توسعه
-ابتدا پایگاه داده را به‌روزرسانی کنید:
-```
-npm run db:push
-```
-
-سپس سرور توسعه را اجرا کنید:
-```
-npm run dev &
-```
-
-### بیلد برای محیط عملیاتی (Production)
-```
-npm run build
-npm run start &
-```
-
-## ۹. تنظیمات و سرویس‌های خارجی
-
-پروژه به صورت یکپارچه با چندین سرویس شخص ثالث کار می‌کند:
-
-**سرویس‌های ضروری:**
-- **PostgreSQL:** پایگاه داده رابطه‌ای اصلی.
-- **Upstash (Redis):** برای کش کردن نتایج API‌ها و خزش وب.
-- **Firecrawl API:** برای واکشی و استخراج ساختارمند محتوای وب.
-- **Google Generative AI (Gemini):** برای تولید خروجی‌های هوشمند (AEO/GEO Insights).
-- **Resend:** برای ارسال ایمیل‌های تراکنشی.
-
-**سرویس‌های زیرساختی:**
-- **Inngest:** جهت مدیریت رویدادها و اجرای پس‌زمینه (استفاده از نسخه ابری یا اجرای محلی در حال توسعه).
-- **Vercel:** زیرساخت استقرار و اجرای پروژه.
-
-## ۱۰. وضعیت فعلی پروژه
-
-پروژه در وضعیت **توسعه فعال** قرار دارد. امکانات کلیدی مانند سیستم احراز هویت، مدیریت Workspaces، خزش صفحات وب، تحلیل هوش مصنوعی و کارهای پس‌زمینه (Inngest) پیاده‌سازی شده و قابل استفاده هستند. با این حال، برخی از داشبوردها و گزارش‌های پیشرفته در حال تکمیل می‌باشند. به طور کلی، معماری امنیتی و زیرساختی پایگاه داده برای استفاده در سطح تولید (Production) آماده و مقاوم شده است.
-
-## ۱۱. توسعه و مشارکت
-
-- **سازماندهی کد:** تمامی توسعه‌ها باید در مسیرهای استاندارد (مانند `src/services` و `src/features`) انجام شوند. از ایجاد مسیرهای جدید بدون نیاز جدی خودداری کنید.
-- **ایزوله‌سازی:** هرگز کدهای مربوط به ارتباط دیتابیس را به کلاینت منتقل نکنید و همیشه از `secureServerAction` استفاده نمایید.
-- **قوانین Agent:** هنگام کار با پروژه، اصول و قواعد تعریف‌شده در فایل `AGENTS.md` (شامل بررسی مرزهای امنیتی و معماری) باید به شدت رعایت شود.
-
-## ۱۲. تست و کنترل کیفیت
-
-این پروژه از ابزار اجرای مستقل `tsx` برای اجرای فایل‌های تست (`*.test.ts`) استفاده می‌کند. هیچ فریم‌ورک تست پیچیده‌ای مانند Jest استفاده نشده است تا تمرکز بر روی تست‌های خالص Node.js حفظ شود.
-
-اجرای تست‌های امنیتی و زیرساختی (نمونه):
-```
-npm run test:acquisition
-```
-تست‌های متعددی برای سرویس‌های دامنه (مانند `tests/services/auth/`, `tests/features/acquisition/`) و ابزارهای مرتبط با تست دیتابیس در مسیر `tests/` موجود است.
-
-## ۱۳. استقرار
-
-الگوی پیشنهادی و فعلی استقرار برای این پروژه به شکل زیر است:
-```text
-Vercel (Application & Serverless Functions)
-    ↓
-Neon / Supabase (PostgreSQL)
-    ↓
-Upstash (Redis)
-    ↓
-Inngest Cloud (Background Jobs & Schedulers)
-```
-
-استقرار خودکار پس از Push در شاخه اصلی (Main) توسط Vercel و بررسی‌های کیفی با استفاده از CircleCI (`.circleci/config.yml`) انجام می‌پذیرد.
+---
+**Deployment Status:** Configuration via Vercel — see docs. (Note: Ensure manual deployment protocol and validation until CI pipeline passes in external environments).
