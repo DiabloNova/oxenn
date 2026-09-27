@@ -46,7 +46,7 @@ To set up the development environment, follow these steps:
 | `pnpm typecheck` | Executes TypeScript compiler in strict mode (`tsc --noEmit`). |
 | `pnpm test:acquisition` | Runs the test suite for the data acquisition modules. |
 | `pnpm db:generate` | Generates Drizzle database migrations based on schema changes. |
-| `pnpm db:migrate` | Runs environment checks (`env:check migrate`) and executes database migrations via `src/core/database/migrator.ts`. |
+| `pnpm db:migrate` | Runs environment checks (`env:check migrate`) and executes database migrations via `src/core/database/migrator.ts`. Requires `vector` extension (see `database/bootstrap.sql`). |
 | `pnpm db:push` | Pushes schema changes directly to the database (guarded by `scripts/database/db-push-guard.ts` for safety). |
 
 ## 5. Migration Doctrine
