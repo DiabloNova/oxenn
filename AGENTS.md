@@ -416,6 +416,7 @@ Before making database changes, the agent MUST inspect the relevant layers.
 Database Environment Rules:
 - In migration contexts (e.g., `src/core/database/migrator.ts`), database connection resolution MUST resolve `MIGRATION_DATABASE_URL ?? DATABASE_URL`.
 - Runtime application code MUST use `DATABASE_URL` only and NEVER use `MIGRATION_DATABASE_URL`.
+- For new/empty databases, superuser bootstrap is required to create extensions (see `database/bootstrap.sql`).
 
 The agent MUST NOT:
 

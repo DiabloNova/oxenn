@@ -22,6 +22,20 @@
       "when": 1787298574291,
       "tag": "0002_soft_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790518778194,
+      "tag": "0003_warm_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790518930340,
+      "tag": "0004_abandoned_black_crow",
+      "breakpoints": true
     }
   ]
 }

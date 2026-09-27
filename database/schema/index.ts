@@ -1075,6 +1075,7 @@ export const documentEmbeddings = pgTable("document_embeddings", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
 }, (table) => [
   index("idx_document_embeddings_tenant").on(table.tenantId),
+  index("idx_document_embeddings_embedding").using("hnsw", table.embedding.op("vector_cosine_ops")),
   ...tenantPolicy("tenant_id")
 ]);
 
