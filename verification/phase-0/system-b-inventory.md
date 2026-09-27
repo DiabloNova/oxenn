@@ -11,7 +11,7 @@
 
 ---
 ## Base Tables Creation Status Check
-Question: Does ANY file in System-B (`database/migrations/`) create `organizations`, `brands`, `prompts`, `ai_engines`, `roles`, `permissions`, `admin_users`, `tenant_quotas`?
+Question: Does ANY file in System-B (`database/archive/migrations-legacy/`) create `organizations`, `brands`, `prompts`, `ai_engines`, `roles`, `permissions`, `admin_users`, `tenant_quotas`?
 
 **Answer**: **None found** for all 8 tables.
 - `organizations`: **not found**

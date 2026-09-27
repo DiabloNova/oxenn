@@ -158,9 +158,9 @@ The exact missing tables are:
 ### 1. `api_keys` Table
 - **Exported in `database/schema/index.ts`?** **No.** (0 definitions exist in the active schema file).
 - **Created by `pnpm db:migrate`?** **No.**
-- **Location in repo:** Exists ONLY in handwritten SQL migration `database/migrations/0015_api_keys.sql`.
+- **Location in repo:** Exists ONLY in handwritten SQL migration `database/archive/migrations-legacy/0015_api_keys.sql` (now absorbed into canonical Drizzle chain).
 
 ### 2. Website Monitoring Trio (`monitoring_configs`, `crawl_snapshots`, `monitoring_alerts`)
 - **Exported in `database/schema/index.ts`?** **Yes.** Defined at the end of `database/schema/index.ts` (lines 867–919).
 - **Created by `pnpm db:migrate`?** **No.** None of these 3 tables exist in the Drizzle migration journal files `0000_reflective_loa.sql`, `0001_illegal_grey_gargoyle.sql`, or `0002_soft_jimmy_woo.sql`.
-- **Location in repo:** Defined in TS schema `database/schema/index.ts` and in handwritten SQL migration `database/migrations/0016_website_monitoring.sql`, but missing from the Drizzle migration journal chain.
+- **Location in repo:** Defined in TS schema `database/schema/index.ts` and in handwritten SQL migration `database/archive/migrations-legacy/0016_website_monitoring.sql` (now absorbed into canonical Drizzle chain).

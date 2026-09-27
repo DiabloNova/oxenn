@@ -413,10 +413,14 @@ One artifact MUST NOT be assumed to prove the correctness of another.
 
 Before making database changes, the agent MUST inspect the relevant layers.
 
-Database Environment Rules:
-- In migration contexts (e.g., `src/core/database/migrator.ts`), database connection resolution MUST resolve `MIGRATION_DATABASE_URL ?? DATABASE_URL`.
-- Runtime application code MUST use `DATABASE_URL` only and NEVER use `MIGRATION_DATABASE_URL`.
-- For new/empty databases, superuser bootstrap is required to create extensions (see `database/bootstrap.sql`).
+Database & Migration Rules (Single-Runner Doctrine):
+- **Single Migration Location**: Migrations exist ONLY in `database/drizzle/` generated via `drizzle-kit generate`. Handwritten SQL migration folders or secondary runners are strictly prohibited.
+- **Single Source of Schema Truth**: All schema modifications MUST start in `database/schema/index.ts` (or modular exports re-exported by `database/schema/index.ts`).
+- **Single Migration Execution Path**: `pnpm db:migrate` (`src/core/database/migrator.ts`) is the ONLY authorized application path for executing database migrations.
+- **Dev Guarding**: `pnpm db:push` remains strictly dev-only and MUST be executed behind its safety guard (`scripts/database/db-push-guard.ts`).
+- **Connection Environment Resolution**: In migration contexts (e.g., `src/core/database/migrator.ts`), database connection resolution MUST resolve `MIGRATION_DATABASE_URL ?? DATABASE_URL`.
+- **Runtime Connection Rule**: Runtime application code MUST use `DATABASE_URL` only and NEVER use `MIGRATION_DATABASE_URL`.
+- **Bootstrap Requirements**: For new/empty databases, superuser bootstrap is required to create extensions (see `database/bootstrap.sql`).
 
 The agent MUST NOT:
 

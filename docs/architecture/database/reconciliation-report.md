@@ -100,4 +100,4 @@ All 37 tenant-scoped tables feature `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVE
 ## 4. Architectural Notes & Observations
 
 - **Worker Context Bypass:** As audited, `scripts/crawl-worker.ts` maintains its own ad-hoc database pool and bypasses `TenantContextManager`. This behavior is retained as designed and noted in accordance with constraints.
-- **Migration Artifacts:** Legacy SQL scripts (`0001-0014`) are preserved under `database/migrations/` as historical audit logs. All current Drizzle ORM migrations are managed under `database/drizzle/`.
+- **Migration Artifacts:** Legacy SQL scripts (`0001-0016`) are archived under `database/archive/migrations-legacy/` as read-only historical audit logs. All current Drizzle ORM migrations are managed under `database/drizzle/`.
