@@ -106,7 +106,7 @@ Direct usage of the PostgreSQL database driver (`pg`) is limited to two files in
 
 ## 3. SCHEMA vs MIGRATION DRIFT
 
-### 3.1 Comparison: `database/schema/*.ts` vs `database/migrations/*.sql`
+### 3.1 Comparison: `database/schema/*.ts` vs `database/archive/migrations-legacy/*.sql`
 
 #### A. Tables Defined in TypeScript Schema but MISSING from ALL SQL Migrations (21 Tables Total)
 
@@ -327,12 +327,12 @@ Application code sets `app.current_tenant_id` in **EXACTLY ONE PLACE**:
 The following ordered list identifies all technical issues that must be addressed before connecting a live PostgreSQL database:
 
 ### 1. [BLOCKER] Missing Core Tables in SQL Migrations
-- **Issue:** 21 tables defined in `database/schema/*.ts` (including `organizations`, `admin_users`, `brands`, `entities`, `citations`, `ai_observations`, `visibility_scores`, `prompts`) are missing from all SQL migration files in `database/migrations/`.
+- **Issue:** 21 tables defined in `database/schema/*.ts` (including `organizations`, `admin_users`, `brands`, `entities`, `citations`, `ai_observations`, `visibility_scores`, `prompts`) are missing from all SQL migration files in `database/archive/migrations-legacy/`.
 - **Impact:** Any repository query against missing tables will throw `relation "xyz" does not exist` database errors immediately.
 
 ### 2. [BLOCKER] Broken Migration FK Dependency Ordering
 - **Issue:** `0003_competitive_analyses.sql` and `0005_unified_intelligence_model.sql` attempt to create foreign key constraints referencing `organizations(id)` and `brands(id)`, but neither table is created prior to these migrations.
-- **Impact:** Running `psql -f database/migrations/*.sql` on a fresh database halts execution due to broken foreign key dependencies.
+- **Impact:** Running `psql -f database/archive/migrations-legacy/*.sql` on a fresh database halts execution due to broken foreign key dependencies.
 
 ### 3. [BLOCKER] Absence of Database Migration Runner
 - **Issue:** No migration execution or tracking system exists in the repo, contradicting `database/schema/migration-strategy.md` (which documents Drizzle Kit CLI commands not present in `package.json`).

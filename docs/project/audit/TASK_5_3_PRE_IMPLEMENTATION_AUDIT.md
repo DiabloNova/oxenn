@@ -51,7 +51,7 @@ We will reuse:
 
 We will create/modify:
 - **Database:**
-  - Create: `database/migrations/0010_brand_intelligence.sql`
+  - Create: `database/archive/migrations-legacy/0010_brand_intelligence.sql`
   - Create: `database/schema/brand-intelligence.ts`
 - **Domain Layer:**
   - Modify: `src/features/ai-intelligence/domain/types/index.ts` (extend with BrandAssociation, RecommendationObservation, and BrandAuthority types)

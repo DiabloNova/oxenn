@@ -54,7 +54,7 @@
 
 نکته: برخی جداول مانند  brands ،  pages ،  kg_relationships ،  crawl_jobs ،  crawl_results ،  prompts  و  tenant_quotas  فقط در فایل  index.ts  به‌عنوان ارجاع یا تعریف دیده شده‌اند، اما محتوای کامل آن‌ها در اسنپ‌شات موجود نیست. بنابراین وضعیت RLS آن‌ها بر اساس وجود  pgPolicy  در schema فرض شده، اما نیاز به تأیید مستقیم از فایل‌های تعریف دارد.
 
-## ۲.۲ جداول ساخته‌شده در فایل‌های SQL مهاجرت (دایرکتوری  database/migrations/ )
+## ۲.۲ جداول ساخته‌شده در فایل‌های SQL مهاجرت (دایرکتوری  database/archive/migrations-legacy/ )
 
 | فایل مهاجرت | جداول ایجادشده | RLS در فایل SQL |
 |-------------|----------------|-----------------|
@@ -71,7 +71,7 @@
 | مسیر | تعداد فایل‌های SQL | نام فایل‌ها | وضعیت |
 |------|-------------------|------------|--------|
 |  database/drizzle/  | ۱ |  0000_reflective_loa.sql  (و پوشه  meta/ ) | تولیدشده توسط drizzle‑kit، احتمالاً شامل کل اسکیما |
-|  database/migrations/  | ۳ |  0001_optimus_vector_kg.sql ،  0002_technical_audits.sql ،  0003_competitive_analyses.sql  | مهاجرت‌های دستی یا جداگانه که شماره‌گذاری آن‌ها با فایل  0000  در دایرکتوری دیگر همخوانی ندارد. |
+|  database/archive/migrations-legacy/  | ۳ |  0001_optimus_vector_kg.sql ،  0002_technical_audits.sql ،  0003_competitive_analyses.sql  | مهاجرت‌های دستی یا جداگانه که شماره‌گذاری آن‌ها با فایل  0000  در دایرکتوری دیگر همخوانی ندارد. |
 
 ---
 
@@ -80,7 +80,7 @@
 بر اساس کد  src/core/database/migrator.ts ، مهاجرت‌ها از مسیر  database/drizzle  (با استفاده از  drizzle-orm/node-postgres/migrator ) اجرا می‌شوند. بنابراین:
 
 فقط فایل  0000_reflective_loa.sql  (و هر فایل دیگری که در  database/drizzle  تولید شود) در زنجیره قرار می‌گیرد.
-فایل‌های  database/migrations/0001  تا  0003  هرگز توسط مهاجر اجرا نخواهند شد، مگر اینکه مسیر در  migrator.ts  تغییر کند یا آن فایل‌ها به  database/drizzle  منتقل شوند.
+فایل‌های  database/archive/migrations-legacy/0001  تا  0003  هرگز توسط مهاجر اجرا نخواهند شد، مگر اینکه مسیر در  migrator.ts  تغییر کند یا آن فایل‌ها به  database/drizzle  منتقل شوند.
 بنابراین زنجیرهٔ مهاجرت موجود در مخزن ناقص و غیرقابل اجرا است، زیرا:
 فایل  0000  احتمالاً شامل جداول پایه (مانند  organizations ) است، اما فایل‌های ۰۰۰۱ تا ۰۰۰۳ که به آن وابسته‌اند، در مسیر مهاجر قرار ندارند.
 ترتیب و وابستگی بین  0000  و  0001  و غیره مشخص نیست و ممکن است باعث شکست در اجرا شود.
@@ -115,12 +115,12 @@
 
 | شماره | شرح تناقض | شواهد | وضعیت |
 |-------|-----------|-------|--------|
-| ۱ | دو دایرکتوری مجزا برای مهاجرت —  database/drizzle  و  database/migrations  با شماره‌گذاری هم‌پوشانی (۰۰۰۰ در برابر ۰۰۰۱ تا ۰۰۰۳). | ساختار دایرکتوری | Conflict |
+| ۱ | دو دایرکتوری مجزا برای مهاجرت —  database/drizzle  و  database/archive/migrations-legacy  با شماره‌گذاری هم‌پوشانی (۰۰۰۰ در برابر ۰۰۰1 تا ۰۰۰۳). | ساختار دایرکتوری | Conflict |
 | ۲ | جداول پایه در مهاجرت‌های شماره‌دار وجود ندارند —  organizations ،  brands ،  pages  و غیره فقط در Drizzle schema تعریف شده‌اند، اما در فایل‌های ۰۰۰۱ تا ۰۰۰۳ ساخته نشده‌اند. | مقایسهٔ محتوای مهاجرت‌ها | Conflict |
 | ۳ | فقدان RLS برای  technical_audits  در مهاجرت ۰۰۰۲، در حالی که سایر جداول مهاجرت‌شده (مانند  document_embeddings  و  competitive_analyses ) دارای RLS هستند. | محتوای ۰۰۰۲ | Inconsistency |
 | ۴ | نام ستون tenant در جداول متفاوت — برخی از  organization_id  و برخی از  tenant_id  استفاده می‌کنند. | مقایسهٔ ستون‌ها در  document_embeddings  و  aeo_analyses  | Inconsistency |
 | ۵ | عدم تطابق بین جدول‌های تعریف‌شده در Drizzle schema و مهاجرت‌های شماره‌دار — مثلاً  aeo_analyses  در schema هست اما در مهاجرت نیست. | مقایسه | Conflict |
-| ۶ | مسیر مهاجرت در  migrator.ts  به  database/drizzle  اشاره دارد، اما فایل‌های ۰۰۰۱ تا ۰۰۰۳ در  database/migrations  قرار دارند. | کد  migrator.ts  | Conflict |
+| ۶ | مسیر مهاجرت در  migrator.ts  به  database/drizzle  اشاره دارد، اما فایل‌های ۰۰۰۱ تا ۰۰۰۳ در  database/archive/migrations-legacy  قرار دارند. | کد  migrator.ts  | Conflict |
 
 ---
 
@@ -132,12 +132,12 @@
 |-------|-----|----------------------------------|
 |  git rev-parse HEAD  | دریافت SHA commit | رشتهٔ ۴۰ کاراکتری |
 |  git status --porcelain  | بررسی تغییرات محلی | خروجی خالی (یا شامل فایل‌های نادیده‌گرفته) |
-|  ls -la database/migrations/  | فهرست فایل‌های مهاجرت در آن دایرکتوری | شامل ۳ فایل  0001 ,  0002 ,  0003  |
-|  ls -la database/drizzle/  | فهرست فایل‌های تولیدشده توسط Drizzle | شامل  0000_reflective_loa.sql  و پوشه  meta/  |
-|  grep -r "ENABLE ROW LEVEL SECURITY" database/migrations/  | جستجوی دستور RLS در مهاجرت‌های شماره‌دار | باید در ۰۰۰۱ و ۰۰۰۳ یافت شود، در ۰۰۰۲ خیر |
-|  grep -r "CREATE POLICY" database/migrations/  | جستجوی سیاست‌ها در مهاجرت‌ها | مشابه بالا |
+|  ls -la database/archive/migrations-legacy/≉ | فهرست فایل‌های مهاجرت در آن دایرکتوری | شامل ۳ فایل  0001 ,  0002 ,  0003  |
+|  ls -la database/drizzle/≉ | فهرست فایل‌های تولیدشده توسط Drizzle | شامل  0000_reflective_loa.sql  و پوشه  meta/  |
+|  grep -r "ENABLE ROW LEVEL SECURITY" database/archive/migrations-legacy/≉ | جستجوی دستور RLS در مهاجرت‌های شماره‌دار | باید در ۰۰۰۱ و ۰۰۰۳ یافت شود، در ۰۰۰۲ خیر |
+|  grep -r "CREATE POLICY" database/archive/migrations-legacy/≉ | جستجوی سیاست‌ها در مهاجرت‌ها | مشابه بالا |
 |  grep -r "pgPolicy" database/schema/  | جستجوی استفاده از pgPolicy در Drizzle schema | باید در فایل‌های schema یافت شود |
-|  grep -r "current_setting('app.current_tenant_id')" database/migrations/  | تأیید استفاده از tenant context در مهاجرت‌ها | باید در ۰۰۰۱ و ۰۰۰۳ موجود باشد |
+|  grep -r "current_setting('app.current_tenant_id')" database/archive/migrations-legacy/≉ | تأیید استفاده از tenant context در مهاجرت‌ها | باید در ۰۰۰۱ و ۰۰۰۳ موجود باشد |
 
 توجه: خروجی واقعی این دستورات در گزارش فعلی درج نشده است، زیرا اسنپ‌شات مخزن امکان اجرای آن‌ها را نمی‌دهد. بنابراین تمام نتایج مبتنی بر این دستورات نیازمند تأیید مستقل هستند و در غیر این صورت به‌عنوان  UNVERIFIED  در نظر گرفته می‌شوند.
 

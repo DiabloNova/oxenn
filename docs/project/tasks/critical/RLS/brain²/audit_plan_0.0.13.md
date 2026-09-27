@@ -19,10 +19,10 @@ git status --porcelain`
    
    `database/drizzle/
    database/drizzle/meta/
-   database/migrations/`
+   database/archive/migrations-legacy/
    
    4. محتوای package.json، src/core/database/migrator.ts و فایل‌های schema را بررسی کن.
-   5. بررسی کن آیا database/drizzle مسیر اجرایی migration است و آیا database/migrations مسیر رقیب است.
+   5. بررسی کن آیا database/drizzle مسیر اجرایی migration است و آیا database/archive/migrations-legacy مسیر رقیب است.
    6. هیچ DATABASE_URL متصل به Neon فعلی را استفاده نکن.
    7. اگر snapshot یا branch جداگانه برای دیتابیس وجود ندارد، کار را متوقف کن و فقط دستورالعمل ساخت Neon branch جداگانه را گزارش کن.
 
@@ -47,13 +47,13 @@ git status --porcelain`
 محدوده بررسی:
 - database/schema/
 - database/drizzle/0000_reflective_loa.sql
-- database/migrations/*.sql
+- database/archive/migrations-legacy/*.sql
 - src/core/database/migrator.ts
 
 کارها:
 1. همه `table definition` های `TypeScript` را استخراج کن.
 2. همه `CREATE TABLE` های database/drizzle را استخراج کن.
-3. همه `CREATE TABLE` های database/migrations را استخراج کن.
+3. همه `CREATE TABLE` های database/archive/migrations-legacy را استخراج کن.
 4. نام جدول‌ها را `canonicalize` کن و `duplicate` ها را حذف نکن؛ منبع هر `occurrence` را نگه دار.
 5. برای هر جدول این ستون‌ها را گزارش کن:
    
@@ -79,13 +79,13 @@ git status --porcelain`
 شواهد موجود:
 - فایل src/core/database/migrator.ts از database/drizzle استفاده می‌کند.
 - همچنین database/drizzle شامل 0000_reflective_loa.sql و meta است.
-- و database/migrations شامل فایل‌های 0001 تا 0014 است.
+- و database/archive/migrations-legacy شامل فایل‌های 0001 تا 0014 است.
 
 کارها:
 1. بررسی کن آیا 0000 تمام جدول‌ها و constraint های لازم را ایجاد می‌کند.
 2. بررسی کن آیا فایل‌های 0001 تا 0014 با 0000 duplicate یا conflicting هستند.
 3. مسیر canonical پیشنهادی را database/drizzle در نظر بگیر، اما بدون تأیید حذف یا جابه‌جایی انجام نده.
-4. برای database/migrations یک وضعیت دقیق تعیین کن:
+4. برای database/archive/migrations-legacy یک وضعیت دقیق تعیین کن:
    - جستجوی legacy قابل حذف
    - منبع ناقص
    - منبع لازم برای ادغام

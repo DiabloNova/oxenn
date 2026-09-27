@@ -13,13 +13,13 @@ Steps:
 3. List all files under:
    database/drizzle/
    database/drizzle/meta/
-   database/migrations/
+   database/archive/migrations-legacy/
 4. Inspect:
    package.json
    src/core/database/migrator.ts
    database/schema/
 5. Determine which directory is used by the migration runner.
-6. Determine whether database/migrations is active, legacy, duplicated, or unresolved.
+6. Determine whether database/archive/migrations-legacy is active, legacy, duplicated, or unresolved.
 7. Do not connect to the existing Neon database.
 8. If a disposable database is unavailable, stop and report BLOCKED.
 
@@ -44,13 +44,13 @@ Inspect:
 - database/schema/
 - database/drizzle/0000_reflective_loa.sql
 - database/drizzle/meta/
-- database/migrations/*.sql
+- database/archive/migrations-legacy/*.sql
 - src/core/database/migrator.ts
 
 Steps:
 1. Extract every TypeScript table definition.
 2. Extract every CREATE TABLE statement from database/drizzle.
-3. Extract every CREATE TABLE statement from database/migrations.
+3. Extract every CREATE TABLE statement from database/archive/migrations-legacy.
 4. Preserve every source occurrence; do not silently remove duplicates.
 5. Canonicalize table names and produce one row per unique table.
 6. For each table report:
@@ -82,7 +82,7 @@ Task: Determine the single authoritative migration strategy. Do not delete, rena
 Inspect:
 - database/drizzle/
 - database/drizzle/meta/
-- database/migrations/
+- database/archive/migrations-legacy/
 - src/core/database/migrator.ts
 - package.json
 - drizzle configuration files, if present
@@ -90,7 +90,7 @@ Inspect:
 Steps:
 1. Confirm which directory src/core/database/migrator.ts executes.
 2. Determine whether database/drizzle/0000_reflective_loa.sql creates the complete schema.
-3. Determine whether database/migrations/0001 through 0014 are duplicated, incomplete, conflicting, or independent.
+3. Determine whether database/archive/migrations-legacy/0001 through 0014 are duplicated, incomplete, conflicting, or independent.
 4. Compare table creation order and foreign-key dependencies.
 5. Compare RLS definitions between both migration paths.
 6. Determine whether both paths can safely exist in the repository.
@@ -397,7 +397,7 @@ The report must answer all eight reviewer objections:
 
 1. Exact before/after RLS table diff.
 2. Exact reconciliation of all table counts.
-3. Complete inventory of database/migrations, database/drizzle, and database/drizzle/meta.
+3. Complete inventory of database/archive/migrations-legacy, database/drizzle, and database/drizzle/meta.
 4. Evidence that the canonical migration executes successfully on a disposable empty PostgreSQL database.
 5. Runtime RLS policy evidence, including policy names, roles, commands, USING expressions, WITH CHECK expressions, and FORCE RLS state.
 6. Evidence that db:push is development-only and blocked against production or non-empty databases.

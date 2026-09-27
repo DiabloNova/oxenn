@@ -51,7 +51,7 @@ To set up the development environment, follow these steps:
 
 ## 5. Migration Doctrine
 
-For comprehensive guidelines and instructions regarding database migrations, please refer to our dedicated **[AGENTS.md](./AGENTS.md)**.
+Under our single-runner doctrine, database migrations exist exclusively in `database/drizzle/` via `drizzle-kit generate` with schema changes originating in `database/schema/index.ts` and applied solely via `pnpm db:migrate`. For complete operational guidelines, refer to **[AGENTS.md](./AGENTS.md)**.
 
 ## 6. Project Structure Overview
 

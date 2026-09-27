@@ -60,7 +60,7 @@ We will reuse:
 
 We will create/modify:
 - **Database:**
-  - Create: `database/migrations/0008_prompt_intelligence.sql`
+  - Create: `database/archive/migrations-legacy/0008_prompt_intelligence.sql`
   - Create: `database/schema/prompt-intelligence.ts`
 - **Domain Layer:**
   - Modify: `src/features/ai-intelligence/domain/types/index.ts` (extend with prompt definitions, scheduled parameters, execution states, position observations)
