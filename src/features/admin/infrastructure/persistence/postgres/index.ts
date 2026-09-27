@@ -15,11 +15,19 @@ import {
 import { Tenant, AdminUser, FeatureFlag, AuditRecord, AIProviderConfiguration } from "../../../domain/types";
 import { UnitOfWork } from "../uow";
 import { TenantContextManager, isQueryTenantScoped, TenantContextViolationException } from "../../../../../core/database/tenant-context";
+import { sanitizeErrorMessage } from "../../../../../core/utils/error-sanitizer";
 
 export class OptimisticLockingError extends Error {
   constructor(entityName: string, expectedVersion: number, actualVersion: number) {
     super(`Optimistic Locking Exception: Concurrency conflict detected on ${entityName} update. Expected version ${expectedVersion}, got ${actualVersion}.`);
     this.name = "OptimisticLockingError";
+  }
+}
+
+export class DatabaseUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DatabaseUnavailableError";
   }
 }
 
@@ -34,7 +42,10 @@ export class PostgresClient {
   private currentTransactionOperations: (() => Promise<void>)[] = [];
 
   private constructor() {
-    const connectionString = process.env.DATABASE_URL || "postgresql://localhost:5432/aeo_saas";
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("DATABASE_URL is required");
+    }
     this.pool = new Pool({
       connectionString,
       max: 20,
@@ -58,13 +69,12 @@ export class PostgresClient {
    * Safe connection leasing from Pool
    */
   public async connectClient(): Promise<PoolClient> {
-    let client: any;
+    let client: PoolClient;
     try {
       client = await this.pool.connect();
-    } catch {
-      // Fallback driver for local offline environments (simulates PoolClient query bindings)
-      console.warn("[Postgres Telemetry] Database connection failed. Initialising offline simulation driver.");
-      client = new MockPoolClient();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new DatabaseUnavailableError(sanitizeErrorMessage(msg, process.env.DATABASE_URL));
     }
 
     // Wrap the leased client using Object.create to preserve the prototype chain, event emitters, and other methods of PoolClient
@@ -163,40 +173,14 @@ export class PostgresClient {
     console.debug(`[Postgres SQL] Executing Parameterised Query: "${sql}" with values: [${params.join(", ")}]`);
     try {
       return await this.pool.query(sql, params);
-    } catch {
-      return {
-        rows: [] as T[],
-        command: "SELECT",
-        rowCount: 0,
-        oid: 0,
-        fields: []
-      };
-    }
-  }
-}
-
-/**
- * Mock Pool Client for offline tsx testing contexts
- */
-class MockPoolClient {
-  public async query(sql: string, params: unknown[] = []): Promise<QueryResult<QueryResultRow>> {
-    console.debug(`[Postgres Transacted SQL] Executing Parameterised Query: "${sql}" with values: [${params.join(", ")}]`);
-    try {
-      return await PostgresClient.getInstance().getPool().query(sql, params);
-    } catch (err: unknown) {
-      if ((err as { code?: string }).code === "ECONNREFUSED" || (err instanceof Error && (err.message.includes("connect ECONNREFUSED") || err.message.includes("Database connection failed")))) {
-        return {
-          rows: [] as QueryResultRow[],
-          command: "BEGIN",
-          rowCount: 0,
-          oid: 0,
-          fields: []
-        };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("ECONNREFUSED") || msg.includes("Database connection failed") || (err as { code?: string }).code === "ECONNREFUSED") {
+        throw new DatabaseUnavailableError(sanitizeErrorMessage(msg, process.env.DATABASE_URL));
       }
       throw err;
     }
   }
-  public release(): void {}
 }
 
 /**

@@ -183,25 +183,20 @@ export class TenantContextManager {
 
     let leasedClient: any = null;
 
-    try {
-      // Dynamically import PostgresClient to avoid circular dependencies
-      const { PostgresClient } = await import("../../../features/admin/infrastructure/persistence/postgres");
-      const pgClient = PostgresClient.getInstance();
-      leasedClient = await pgClient.connectClient();
-    } catch (err) {
-      console.warn("[TenantContextManager] DB connection failed, creating fallback mock client.", err);
-      // Fallback
-    }
+    // Dynamically import PostgresClient to avoid circular dependencies
+    const { PostgresClient } = await import("../../../features/admin/infrastructure/persistence/postgres");
+    const pgClient = PostgresClient.getInstance();
+
+    // We do not catch the connectClient error here; it should propagate up as DatabaseUnavailableError.
+    leasedClient = await pgClient.connectClient();
 
     // Execute the transaction lifecycle
     try {
-      if (leasedClient) {
-        await leasedClient.query("BEGIN");
-        await leasedClient.query(
-          "SELECT set_config('app.current_tenant_id', $1, true)",
-          [tenantId]
-        );
-      }
+      await leasedClient.query("BEGIN");
+      await leasedClient.query(
+        "SELECT set_config('app.current_tenant_id', $1, true)",
+        [tenantId]
+      );
 
       const transactedCtx: TenantContext = Object.freeze({
         tenantId,
@@ -214,9 +209,7 @@ export class TenantContextManager {
 
       const result = await this.storage.run(transactedCtx, work);
 
-      if (leasedClient) {
-        await leasedClient.query("COMMIT");
-      }
+      await leasedClient.query("COMMIT");
       return result;
     } catch (err) {
       if (leasedClient) {
