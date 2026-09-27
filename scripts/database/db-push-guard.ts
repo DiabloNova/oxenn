@@ -1,4 +1,5 @@
 import { Client } from "pg";
+import { sanitizeErrorMessage } from "../../src/core/utils/error-sanitizer";
 
 export interface GuardEnvironment {
   NODE_ENV?: string;
@@ -18,18 +19,6 @@ export interface GuardOptions {
     query: (text: string) => Promise<{ rows: Array<Record<string, unknown>> }>;
     end: () => Promise<void>;
   };
-}
-
-export function sanitizeErrorMessage(msg: string, dbUrl?: string): string {
-  let sanitized = msg;
-  if (dbUrl) {
-    sanitized = sanitized.split(dbUrl).join("[REDACTED_DATABASE_URL]");
-  }
-  // Redact any postgres:// or postgresql:// URLs
-  sanitized = sanitized.replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, "[REDACTED_DATABASE_URL]");
-  // Redact password parameters or user:pass patterns
-  sanitized = sanitized.replace(/:[^:@\s]+@/g, ":[REDACTED_PASSWORD]@");
-  return sanitized;
 }
 
 export async function validateDbPushGuard(options: GuardOptions = {}): Promise<{ allowed: boolean; reason: string }> {
