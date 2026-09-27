@@ -1,3 +1,4 @@
+import { AuthorizationError } from "@/services/auth/authorization";
 "use server";
 
 import { requireSession, createSession } from "@/services/auth/session";
@@ -11,7 +12,7 @@ import { UserRole } from "@/types/auth";
 
 export async function createWorkspaceAction(name: string) {
   const session = await requireSession();
-  if (!session.user) throw new Error("Unauthorized");
+  if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
 
   const orgId = randomUUID();
   const orgSlug = `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${randomUUID().slice(0,4)}`;
@@ -39,7 +40,7 @@ export async function createWorkspaceAction(name: string) {
 
 export async function listWorkspacesAction() {
   const session = await requireSession();
-  if (!session.user) throw new Error("Unauthorized");
+  if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
 
   return await TenantContextManager.runWithSystemContext(session.user.id, "sys-list-workspaces", async () => {
     const client = TenantContextManager.getDbClient();
@@ -63,7 +64,7 @@ export async function listWorkspacesAction() {
 
 export async function inviteUserAction(workspaceId: string, email: string, role: string) {
   const session = await requireSession();
-  if (!session.user) throw new Error("Unauthorized");
+  if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
@@ -105,7 +106,7 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
 
 export async function acceptInvitationAction(token: string) {
   const session = await requireSession();
-  if (!session.user) throw new Error("Unauthorized");
+  if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
 
   return await TenantContextManager.runWithSystemContext(session.user.id, "sys-accept-invitation", async () => {
     const client = TenantContextManager.getDbClient();
@@ -154,7 +155,7 @@ export async function acceptInvitationAction(token: string) {
 
 export async function removeMemberAction(workspaceId: string, memberId: string) {
   const session = await requireSession();
-  if (!session.user) throw new Error("Unauthorized");
+  if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
@@ -177,7 +178,7 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
 
 export async function updateMemberRoleAction(workspaceId: string, memberId: string, role: string) {
   const session = await requireSession();
-  if (!session.user) throw new Error("Unauthorized");
+  if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
@@ -201,7 +202,7 @@ export async function updateMemberRoleAction(workspaceId: string, memberId: stri
 
 export async function switchWorkspaceAction(workspaceId: string) {
   const session = await requireSession();
-  if (!session.user) throw new Error("Unauthorized");
+  if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
 
   await requireWorkspaceMembership(session.user.id, workspaceId);
 

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiService } from "../services/api-service";
 import { ApiQuotaService } from "../services/api-quota-service";
+import { AuthorizationError } from "@/services/auth/authorization";
+import { TenantContextViolationException } from "@/core/database/tenant-context";
+import { DatabaseUnavailableError } from "@/features/admin/infrastructure/persistence/postgres";
+import { ZodError } from "zod";
 
 const apiService = new ApiService();
 const apiQuotaService = new ApiQuotaService();
@@ -90,6 +94,22 @@ export async function withPublicApi(
 
   } catch (error: unknown) {
     console.error("[Public API Error]", error);
+
+    if (error instanceof AuthorizationError) {
+      return buildApiErrorResponse("UNAUTHORIZED", error.message, error.statusCode);
+    }
+    if (
+      error instanceof TenantContextViolationException ||
+      error instanceof DatabaseUnavailableError
+    ) {
+      const response = buildApiErrorResponse("SERVICE_UNAVAILABLE", "Service Unavailable", 503);
+      response.headers.set("Retry-After", "30");
+      return response;
+    }
+    if (error instanceof ZodError) {
+      return buildApiErrorResponse("BAD_REQUEST", "Validation Error", 400);
+    }
+
     // Never expose stack traces or internal SQL errors to the API
     return buildApiErrorResponse("INTERNAL_SERVER_ERROR", "An unexpected error occurred.", 500);
   }
