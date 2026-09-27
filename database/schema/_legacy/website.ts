@@ -1,14 +1,14 @@
-import { TableDefinition } from "./types";
+import { TableDefinition } from "../types";
 
-export const brandsTable: TableDefinition = {
-  tableName: "brands",
+export const websitesTable: TableDefinition = {
+  tableName: "websites",
   columns: [
     {
       name: "id",
       type: "UUID",
       nullable: false,
       primaryKey: true,
-      description: "Unique identifier for the brand"
+      description: "Unique website identifier"
     },
     {
       name: "organization_id",
@@ -19,39 +19,39 @@ export const brandsTable: TableDefinition = {
         column: "id",
         onDelete: "CASCADE"
       },
-      description: "Organization (tenant) partition key"
+      description: "Tenant owner partition key"
     },
     {
-      name: "name",
+      name: "domain",
       type: "TEXT",
       nullable: false,
-      description: "Name of the brand"
+      description: "Canonical domain name"
     },
     {
-      name: "description",
-      type: "TEXT",
-      nullable: true,
-      description: "Description of the brand"
-    },
-    {
-      name: "website",
+      name: "normalized_url",
       type: "TEXT",
       nullable: false,
-      description: "Primary website URL used for search matching"
+      description: "Normalized landing URL"
     },
     {
-      name: "industry",
+      name: "status",
       type: "TEXT",
-      nullable: true,
-      description: "SaaS brand industry sector"
+      nullable: false,
+      default: "'active'",
+      description: "Website lifecycle status (active, archived)"
     },
     {
-      name: "country",
-      type: "TEXT",
+      name: "last_crawled_at",
+      type: "TIMESTAMP",
       nullable: true,
-      description: "Primary brand geographical location"
+      description: "Last crawlers execution date"
     },
-    // Audit & Lifecycle columns
+    {
+      name: "last_analyzed_at",
+      type: "TIMESTAMP",
+      nullable: true,
+      description: "Last AI Engine analysis date"
+    },
     {
       name: "created_at",
       type: "TIMESTAMP",
@@ -95,18 +95,18 @@ export const brandsTable: TableDefinition = {
     }
   ],
   indexes: [
-    "CREATE INDEX idx_brands_organization ON brands(organization_id);",
-    "CREATE INDEX idx_brands_deleted_at ON brands(deleted_at) WHERE deleted_at IS NULL;"
+    "CREATE INDEX idx_websites_organization ON websites(organization_id);",
+    "CREATE UNIQUE INDEX idx_websites_domain_org ON websites(organization_id, domain) WHERE deleted_at IS NULL;"
   ],
   sql: `
-CREATE TABLE IF NOT EXISTS brands (
+CREATE TABLE IF NOT EXISTS websites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  description TEXT,
-  website TEXT NOT NULL,
-  industry TEXT,
-  country TEXT,
+  domain TEXT NOT NULL,
+  normalized_url TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  last_crawled_at TIMESTAMP WITH TIME ZONE,
+  last_analyzed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   created_by TEXT NOT NULL DEFAULT 'system',
@@ -115,33 +115,31 @@ CREATE TABLE IF NOT EXISTS brands (
   version INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE INDEX IF NOT EXISTS idx_brands_organization ON brands(organization_id);
-CREATE INDEX IF NOT EXISTS idx_brands_deleted_at ON brands(deleted_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_websites_organization ON websites(organization_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_websites_domain_org ON websites(organization_id, domain) WHERE deleted_at IS NULL;
 
 -- Enable PostgreSQL Row Level Security (RLS) for zero-trust tenant isolation
-ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
-ALTER TABLE brands FORCE ROW LEVEL SECURITY;
+ALTER TABLE websites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE websites FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tenant_isolation_policy ON brands;
-
-DROP POLICY IF EXISTS select_tenant_isolation_policy ON brands;
-CREATE POLICY select_tenant_isolation_policy ON brands
+DROP POLICY IF EXISTS select_tenant_isolation_policy ON websites;
+CREATE POLICY select_tenant_isolation_policy ON websites
   FOR SELECT
   USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS insert_tenant_isolation_policy ON brands;
-CREATE POLICY insert_tenant_isolation_policy ON brands
+DROP POLICY IF EXISTS insert_tenant_isolation_policy ON websites;
+CREATE POLICY insert_tenant_isolation_policy ON websites
   FOR INSERT
   WITH CHECK (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS update_tenant_isolation_policy ON brands;
-CREATE POLICY update_tenant_isolation_policy ON brands
+DROP POLICY IF EXISTS update_tenant_isolation_policy ON websites;
+CREATE POLICY update_tenant_isolation_policy ON websites
   FOR UPDATE
   USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS delete_tenant_isolation_policy ON brands;
-CREATE POLICY delete_tenant_isolation_policy ON brands
+DROP POLICY IF EXISTS delete_tenant_isolation_policy ON websites;
+CREATE POLICY delete_tenant_isolation_policy ON websites
   FOR DELETE
   USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
   `

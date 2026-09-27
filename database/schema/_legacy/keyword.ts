@@ -1,14 +1,14 @@
-import { TableDefinition } from "./types";
+import { TableDefinition } from "../types";
 
-export const topicsTable: TableDefinition = {
-  tableName: "topics",
+export const keywordsTable: TableDefinition = {
+  tableName: "keywords",
   columns: [
     {
       name: "id",
       type: "UUID",
       nullable: false,
       primaryKey: true,
-      description: "Unique topic identifier"
+      description: "Unique keyword identifier"
     },
     {
       name: "organization_id",
@@ -25,31 +25,26 @@ export const topicsTable: TableDefinition = {
       name: "name",
       type: "TEXT",
       nullable: false,
-      description: "Canonical topic/subject name"
+      description: "Normalized lowercased search term"
     },
     {
-      name: "description",
+      name: "display_name",
       type: "TEXT",
-      nullable: true,
-      description: "Detailed topic description text"
+      nullable: false,
+      description: "Verbatim query search term"
     },
     {
       name: "language",
       type: "TEXT",
       nullable: false,
       default: "'en'",
-      description: "Locale classification code"
+      description: "Locale classification"
     },
     {
-      name: "parent_topic_id",
-      type: "UUID",
+      name: "intent",
+      type: "TEXT",
       nullable: true,
-      references: {
-        table: "topics",
-        column: "id",
-        onDelete: "SET NULL"
-      },
-      description: "Parent hierarchy topic relationship"
+      description: "Searcher buying/journey intent classification"
     },
     {
       name: "created_at",
@@ -94,18 +89,17 @@ export const topicsTable: TableDefinition = {
     }
   ],
   indexes: [
-    "CREATE INDEX idx_topics_organization ON topics(organization_id);",
-    "CREATE INDEX idx_topics_parent ON topics(parent_topic_id);",
-    "CREATE UNIQUE INDEX idx_topics_name_org ON topics(organization_id, name) WHERE deleted_at IS NULL;"
+    "CREATE INDEX idx_keywords_organization ON keywords(organization_id);",
+    "CREATE UNIQUE INDEX idx_keywords_name_org ON keywords(organization_id, name) WHERE deleted_at IS NULL;"
   ],
   sql: `
-CREATE TABLE IF NOT EXISTS topics (
+CREATE TABLE IF NOT EXISTS keywords (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  description TEXT,
+  display_name TEXT NOT NULL,
   language TEXT NOT NULL DEFAULT 'en',
-  parent_topic_id UUID REFERENCES topics(id) ON DELETE SET NULL,
+  intent TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   created_by TEXT NOT NULL DEFAULT 'system',
@@ -114,39 +108,38 @@ CREATE TABLE IF NOT EXISTS topics (
   version INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE INDEX IF NOT EXISTS idx_topics_organization ON topics(organization_id);
-CREATE INDEX IF NOT EXISTS idx_topics_parent ON topics(parent_topic_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_topics_name_org ON topics(organization_id, name) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_keywords_organization ON keywords(organization_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_keywords_name_org ON keywords(organization_id, name) WHERE deleted_at IS NULL;
 
 -- Enable PostgreSQL Row Level Security (RLS) for zero-trust tenant isolation
-ALTER TABLE topics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE topics FORCE ROW LEVEL SECURITY;
+ALTER TABLE keywords ENABLE ROW LEVEL SECURITY;
+ALTER TABLE keywords FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS select_tenant_isolation_policy ON topics;
-CREATE POLICY select_tenant_isolation_policy ON topics
+DROP POLICY IF EXISTS select_tenant_isolation_policy ON keywords;
+CREATE POLICY select_tenant_isolation_policy ON keywords
   FOR SELECT
   USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS insert_tenant_isolation_policy ON topics;
-CREATE POLICY insert_tenant_isolation_policy ON topics
+DROP POLICY IF EXISTS insert_tenant_isolation_policy ON keywords;
+CREATE POLICY insert_tenant_isolation_policy ON keywords
   FOR INSERT
   WITH CHECK (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS update_tenant_isolation_policy ON topics;
-CREATE POLICY update_tenant_isolation_policy ON topics
+DROP POLICY IF EXISTS update_tenant_isolation_policy ON keywords;
+CREATE POLICY update_tenant_isolation_policy ON keywords
   FOR UPDATE
   USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS delete_tenant_isolation_policy ON topics;
-CREATE POLICY delete_tenant_isolation_policy ON topics
+DROP POLICY IF EXISTS delete_tenant_isolation_policy ON keywords;
+CREATE POLICY delete_tenant_isolation_policy ON keywords
   FOR DELETE
   USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
   `
 };
 
-export const topicsEntitiesTable: TableDefinition = {
-  tableName: "topics_entities",
+export const keywordsTopicsTable: TableDefinition = {
+  tableName: "keywords_topics",
   columns: [
     {
       name: "organization_id",
@@ -155,44 +148,44 @@ export const topicsEntitiesTable: TableDefinition = {
       references: { table: "organizations", column: "id", onDelete: "CASCADE" }
     },
     {
+      name: "keyword_id",
+      type: "UUID",
+      nullable: false,
+      references: { table: "keywords", column: "id", onDelete: "CASCADE" }
+    },
+    {
       name: "topic_id",
       type: "UUID",
       nullable: false,
       references: { table: "topics", column: "id", onDelete: "CASCADE" }
-    },
-    {
-      name: "entity_id",
-      type: "UUID",
-      nullable: false,
-      references: { table: "entities", column: "id", onDelete: "CASCADE" }
     }
   ],
   sql: `
-CREATE TABLE IF NOT EXISTS topics_entities (
+CREATE TABLE IF NOT EXISTS keywords_topics (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  keyword_id UUID NOT NULL REFERENCES keywords(id) ON DELETE CASCADE,
   topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
-  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-  PRIMARY KEY (topic_id, entity_id)
+  PRIMARY KEY (keyword_id, topic_id)
 );
 
-ALTER TABLE topics_entities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE topics_entities FORCE ROW LEVEL SECURITY;
+ALTER TABLE keywords_topics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE keywords_topics FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS select_tenant_isolation_policy ON topics_entities;
-CREATE POLICY select_tenant_isolation_policy ON topics_entities
+DROP POLICY IF EXISTS select_tenant_isolation_policy ON keywords_topics;
+CREATE POLICY select_tenant_isolation_policy ON keywords_topics
   FOR SELECT USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS insert_tenant_isolation_policy ON topics_entities;
-CREATE POLICY insert_tenant_isolation_policy ON topics_entities
+DROP POLICY IF EXISTS insert_tenant_isolation_policy ON keywords_topics;
+CREATE POLICY insert_tenant_isolation_policy ON keywords_topics
   FOR INSERT WITH CHECK (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS update_tenant_isolation_policy ON topics_entities;
-CREATE POLICY update_tenant_isolation_policy ON topics_entities
+DROP POLICY IF EXISTS update_tenant_isolation_policy ON keywords_topics;
+CREATE POLICY update_tenant_isolation_policy ON keywords_topics
   FOR UPDATE USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
-DROP POLICY IF EXISTS delete_tenant_isolation_policy ON topics_entities;
-CREATE POLICY delete_tenant_isolation_policy ON topics_entities
+DROP POLICY IF EXISTS delete_tenant_isolation_policy ON keywords_topics;
+CREATE POLICY delete_tenant_isolation_policy ON keywords_topics
   FOR DELETE USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
   `
 };
