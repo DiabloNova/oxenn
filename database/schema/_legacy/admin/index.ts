@@ -1,4 +1,4 @@
-import { TableDefinition } from "../types";
+import { TableDefinition } from "../../types";
 
 export const adminUsersTable: TableDefinition = {
   tableName: "admin_users",
