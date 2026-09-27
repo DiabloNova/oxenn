@@ -1,7 +1,7 @@
 import { ICacheStore, CacheEntry, CacheSetOptions } from "./types";
 
 export class InMemoryCacheStore implements ICacheStore {
-  private store = new Map<string, CacheEntry<any>>();
+  private store = new Map<string, CacheEntry<unknown>>();
 
   async get<T>(key: string): Promise<T | null> {
     const entry = this.store.get(key);

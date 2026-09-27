@@ -41,7 +41,7 @@ export class CacheService {
   generateKey(options: {
     tenantId: string;
     category: "llm" | "crawl" | "query";
-    inputs: Record<string, any>;
+    inputs: Record<string, unknown>;
     version?: string;
   }): string {
     const sortedInputs = JSON.stringify(options.inputs, Object.keys(options.inputs).sort());

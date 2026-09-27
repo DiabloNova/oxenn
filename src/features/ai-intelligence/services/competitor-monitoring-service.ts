@@ -116,7 +116,7 @@ export class CompetitorMonitoringService {
 
           changes.push(change);
           // Apply changes to current competitor instance
-          (competitor as any)[field] = observedVal;
+          (competitor as unknown as Record<string, unknown>)[field] = observedVal;
         }
       }
     }

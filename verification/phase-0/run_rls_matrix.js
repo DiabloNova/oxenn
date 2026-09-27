@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
@@ -167,7 +168,7 @@ async function runMatrix() {
           } catch (err) {
             try {
               await client.query('ROLLBACK;');
-            } catch (rErr) {}
+            } catch (_rErr) {}
 
             status = 'DENIED';
             detail = `ERR ${err.code}: ${err.message}`;

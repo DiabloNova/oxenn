@@ -66,9 +66,9 @@ export async function runDashboardHomeTests() {
 
   // Mock postgres query to return empty list
   const originalQuery = pg.query;
-  pg.query = async () => {
+  pg.query = (async <T = unknown>() => {
     return { rowCount: 0, rows: [] } as unknown as ReturnType<typeof pg.query>;
-  };
+  }) as typeof pg.query;
 
   try {
     const summary = await dashboardHomeService.getDashboardSummary("fa");
@@ -125,9 +125,9 @@ export async function runDashboardHomeTests() {
     created_at: new Date().toISOString()
   };
 
-  pg.query = async () => {
+  pg.query = (async <T = unknown>() => {
     return { rowCount: 1, rows: [mockAuditRow] } as unknown as ReturnType<typeof pg.query>;
-  };
+  }) as typeof pg.query;
 
   try {
     const summary = await dashboardHomeService.getDashboardSummary("en");

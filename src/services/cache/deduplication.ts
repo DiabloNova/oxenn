@@ -8,7 +8,7 @@ export interface IDeduplicationStore {
 }
 
 export class InMemoryDeduplicationStore implements IDeduplicationStore {
-  private inFlight = new Map<string, Promise<any>>();
+  private inFlight = new Map<string, Promise<unknown>>();
 
   async deduplicate<T>(key: string, action: () => Promise<T>): Promise<T> {
     const activePromise = this.inFlight.get(key);

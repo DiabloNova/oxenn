@@ -722,7 +722,7 @@ export class CompetitiveRadarService {
     enforceTenantContext(organizationId);
 
     const snapshot = await this.generateRadarSnapshot(organizationId, brandId, competitorIds);
-    const benchmarks: Record<string, any> = {};
+    const benchmarks: Record<string, { median: number | null; average: number | null; best: number | null; rank: number | null; percentile: number | null; status: "valid" | "partial" | "unavailable" | "incompatible" }> = {};
 
     const dimensionsList = [
       "technical_seo", "content_coverage", "keyword_coverage", "topic_coverage", "structural_quality",
@@ -912,8 +912,8 @@ export class CompetitiveRadarService {
     // Snapshot 2: Past period (e.g. Q1) using Past competitor set
     const pastSnapshot = await this.generateRadarSnapshot(organizationId, brandId, pastCompetitorIds, pastPeriod);
 
-    const tenantTrend: Record<string, any> = {};
-    const gapTrend: Record<string, any> = {};
+    const tenantTrend: Record<string, { current: number | null; past: number | null; change: number | null }> = {};
+    const gapTrend: Record<string, { currentGap: number | null; pastGap: number | null; change: number | null }> = {};
 
     const dimensionsList = [
       "technical_seo", "content_coverage", "keyword_coverage", "topic_coverage", "structural_quality",

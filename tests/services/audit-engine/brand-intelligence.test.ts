@@ -37,6 +37,8 @@ export async function runBrandIntelligenceTests() {
     name: "CompetitorX",
     domain: "external-competitor.com",
     status: "active",
+    classification: "direct",
+    monitoringStatus: "enabled",
     audit: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -140,9 +142,10 @@ export async function runBrandIntelligenceTests() {
         await repo.findAssociationsByBrandId(tenantA, "brand-test-777");
       });
       throw new Error("Failure: Tenant B bypassed tenant context check on associations!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
-      assert.strictEqual(err.message.includes("Cross-tenant operation blocked"), true);
+    } catch (err: unknown) {
+      const error = err as Error;
+      assert.strictEqual(error.name, "TenantContextViolationException");
+      assert.strictEqual(error.message.includes("Cross-tenant operation blocked"), true);
     }
     console.log("  ✅ Tenant isolation validated.");
 

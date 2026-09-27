@@ -49,7 +49,7 @@ export default function AppSidebar({
 
   useEffect(() => {
     if (mobileOpen !== undefined) {
-      setIsOpen(mobileOpen);
+      queueMicrotask(() => setIsOpen(mobileOpen));
     }
   }, [mobileOpen]);
 

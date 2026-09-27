@@ -21,7 +21,6 @@ import {
   CitationSource,
   BrandAssociation,
   RecommendationObservation,
-  CompetitiveSeoFinding,
   AuditMetadata
 } from "../../../src/features/ai-intelligence/domain/types";
 import * as assert from "assert";
@@ -293,8 +292,8 @@ export async function runCompetitiveAiTests() {
         await aiService.compareAi(tenantA, brandId, competitorId);
       });
       throw new Error("Security Failure: Allowed cross-tenant AI comparison with raw ID!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     // Scenario B: Tenant B attempts to directly read competitive findings owned by Tenant A
@@ -303,8 +302,8 @@ export async function runCompetitiveAiTests() {
         await findingRepo.findByCompetitorId(tenantA, competitorId);
       });
       throw new Error("Security Failure: Allowed cross-tenant direct findings query!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     console.log("  ✅ Zero-trust multi-tenant isolation successfully validated.");

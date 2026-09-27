@@ -12,7 +12,6 @@ import {
   Sparkles,
   Globe,
   AlertCircle,
-  CheckCircle2,
   Terminal,
   FileCode,
   Shield,
@@ -40,7 +39,7 @@ interface AuditState {
   logs: string[];
 }
 
-export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick }) => {
+export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: _onUpgradeClick }) => {
   const { language, direction } = useTheme();
   const { session, login, register } = useAuth();
   const isRtl = language === "fa";
@@ -66,6 +65,44 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick }
 
   const consoleEndRef = useRef<HTMLDivElement | null>(null);
 
+  const runAudit = React.useCallback(async () => {
+    setAuditState({
+      status: "processing",
+      job: null,
+      error: null,
+      logs: [],
+    });
+
+    try {
+      const initialJob = await auditService.provisionAuditJob(url);
+
+      const completedJob = await auditService.simulateCrawlingAndAnalysis(
+        initialJob,
+        (logLine) => {
+          setAuditState((prev) => ({
+            ...prev,
+            logs: [...prev.logs, logLine],
+          }));
+        }
+      );
+
+      setAuditState({
+        status: "completed",
+        job: completedJob,
+        error: null,
+        logs: completedJob.analysis.firecrawlLogs.map(l => `[${l.timestamp}] [${l.level.toUpperCase()}] ${l.message}`),
+      });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setAuditState({
+        status: "error",
+        job: null,
+        error: errMsg,
+        logs: [],
+      });
+    }
+  }, [url]);
+
   // Auto-scroll the terminal logs
   useEffect(() => {
     if (consoleEndRef.current) {
@@ -76,9 +113,11 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick }
   // If session changes from unauthenticated to authenticated, and we are in the auth-required state, immediately resume audit!
   useEffect(() => {
     if (session.status === "authenticated" && auditState.status === "auth-required") {
-      runAudit();
+      queueMicrotask(() => {
+        runAudit();
+      });
     }
-  }, [session.status]);
+  }, [session.status, auditState.status, runAudit]);
 
   const strings = {
     title: isRtl ? "موتور بهینه‌سازی و تحلیل رایگان برند" : "Free AI Visibility Ingestion Funnel",
@@ -161,43 +200,6 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick }
     }
   };
 
-  const runAudit = async () => {
-    setAuditState({
-      status: "processing",
-      job: null,
-      error: null,
-      logs: [],
-    });
-
-    try {
-      const initialJob = await auditService.provisionAuditJob(url);
-
-      const completedJob = await auditService.simulateCrawlingAndAnalysis(
-        initialJob,
-        (logLine) => {
-          setAuditState((prev) => ({
-            ...prev,
-            logs: [...prev.logs, logLine],
-          }));
-        }
-      );
-
-      setAuditState({
-        status: "completed",
-        job: completedJob,
-        error: null,
-        logs: completedJob.analysis.firecrawlLogs.map(l => `[${l.timestamp}] [${l.level.toUpperCase()}] ${l.message}`),
-      });
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      setAuditState({
-        status: "error",
-        job: null,
-        error: errMsg,
-        logs: [],
-      });
-    }
-  };
 
   const handleInlineAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -466,16 +468,18 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick }
 
           {/* Report Tab Swapper */}
           <div className="flex border border-[var(--border)] bg-[var(--muted-surface)]/40 p-1 rounded-2xl">
-            {[
-              { id: "overview", label: strings.overviewTab, icon: Award },
-              { id: "engine", label: strings.engineTab, icon: Brain },
-              { id: "recommendations", label: strings.recommendationsTab, icon: Compass },
-            ].map((tab) => {
+            {(
+              [
+                { id: "overview", label: strings.overviewTab, icon: Award },
+                { id: "engine", label: strings.engineTab, icon: Brain },
+                { id: "recommendations", label: strings.recommendationsTab, icon: Compass },
+              ] as const
+            ).map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveReportTab(tab.id as any)}
+                  onClick={() => setActiveReportTab(tab.id)}
                   className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
                     activeReportTab === tab.id
                       ? "bg-gradient-to-r from-[var(--sky-blue-500)]/25 to-[var(--orange-500)]/15 border border-[var(--sky-blue-500)]/30 text-[var(--text-primary)] shadow-sm font-black"

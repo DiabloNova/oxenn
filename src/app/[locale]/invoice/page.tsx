@@ -93,7 +93,7 @@ export default function InvoicePaymentPage({ params }: { params: Promise<{ local
                       <button
                         key={method.id}
                         type="button"
-                        onClick={() => setPaymentMethod(method.id as any)}
+                        onClick={() => setPaymentMethod(method.id as "card" | "bank" | "crypto")}
                         className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${
                           paymentMethod === method.id
                             ? "border-[var(--sky-blue-500)] bg-[var(--sky-blue-500)]/10 text-white shadow-lg shadow-sky-500/5"

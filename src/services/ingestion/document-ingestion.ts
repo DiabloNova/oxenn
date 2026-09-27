@@ -113,7 +113,7 @@ export class DocumentIngestionService {
         );
         
         // Safely extract ID if the service returns it, otherwise use fallback
-        chunkId = (insertResult as any)?.id || chunkId;
+        chunkId = (insertResult as { id?: string })?.id || chunkId;
 
         // E. Fail-safe Knowledge Graph Extraction
         try {

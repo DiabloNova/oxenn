@@ -202,9 +202,10 @@ export async function runAIVisibilityTests() {
         await auditRepo.findByBrandId(tenantA, "brand-test-001");
       });
       throw new Error("Multi-Tenant Isolation Failure: Tenant B was allowed to query Tenant A's audit!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
-      assert.strictEqual(err.message.includes("Cross-tenant operation blocked"), true);
+    } catch (err: unknown) {
+      const error = err as Error;
+      assert.strictEqual(error.name, "TenantContextViolationException");
+      assert.strictEqual(error.message.includes("Cross-tenant operation blocked"), true);
     }
 
     // Tenant B cannot save or manipulate Tenant A's audits
@@ -232,9 +233,10 @@ export async function runAIVisibilityTests() {
         await auditRepo.save(maliciousAudit);
       });
       throw new Error("Multi-Tenant Isolation Failure: Tenant B allowed to save cross-tenant audit!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
-      assert.strictEqual(err.message.includes("Cross-tenant operation blocked"), true);
+    } catch (err: unknown) {
+      const error = err as Error;
+      assert.strictEqual(error.name, "TenantContextViolationException");
+      assert.strictEqual(error.message.includes("Cross-tenant operation blocked"), true);
     }
 
     console.log("  ✅ Multi-Tenant Zero-Trust Isolation successfully passed.");

@@ -3,22 +3,16 @@
 import React, { useState, useTransition, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { Button } from "@/components/Button";
-import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { ContentStudioResponse } from "@/app/api/v1/content/studio/route";
 import {
   Sparkles,
   Search,
-  CheckCircle2,
-  XCircle,
   Sparkle,
   PenTool,
   Bookmark,
-  TrendingUp,
   X,
-  Plus,
-  RefreshCw,
   Copy,
   ChevronLeft,
   Check,
@@ -57,7 +51,7 @@ export const ContentStudio: React.FC = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isPending) {
-      setLoadingStep(0);
+      queueMicrotask(() => setLoadingStep(0));
       interval = setInterval(() => {
         setLoadingStep((prev) => {
           if (prev < 2) return prev + 1;
@@ -65,7 +59,7 @@ export const ContentStudio: React.FC = () => {
         });
       }, 3500);
     } else {
-      setLoadingStep(0);
+      queueMicrotask(() => setLoadingStep(0));
     }
     return () => {
       if (interval) clearInterval(interval);

@@ -35,6 +35,7 @@ import {
   AuditPrompt,
   AIVisibilityAuditStatus,
   AuditPromptStatus,
+  PromptCategory,
   PromptDefinition,
   PromptSchedule,
   PromptExecution,
@@ -579,54 +580,54 @@ export class AeoContentIntelligenceRepository implements IAeoContentIntelligence
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToAnalysis(row: any): AeoAnalysis {
+  private mapRowToAnalysis(row: Record<string, unknown>): AeoAnalysis {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      pageId: row.page_id,
-      overallScore: row.overall_score,
-      answerability: typeof row.answerability === "string" ? JSON.parse(row.answerability) : (row.answerability || {}),
-      entityCoverage: typeof row.entity_coverage === "string" ? JSON.parse(row.entity_coverage) : (row.entity_coverage || []),
-      semanticCoverage: typeof row.semantic_coverage === "string" ? JSON.parse(row.semantic_coverage) : (row.semantic_coverage || {}),
-      questionCoverage: typeof row.question_coverage === "string" ? JSON.parse(row.question_coverage) : (row.question_coverage || {}),
-      citationReadiness: typeof row.citation_readiness === "string" ? JSON.parse(row.citation_readiness) : (row.citation_readiness || {}),
-      structuredAnswerQuality: typeof row.structured_answer_quality === "string" ? JSON.parse(row.structured_answer_quality) : (row.structured_answer_quality || {}),
-      kgAlignment: typeof row.kg_alignment === "string" ? JSON.parse(row.kg_alignment) : (row.kg_alignment || {}),
-      scoringVersion: row.scoring_version,
-      analyzerVersion: row.analyzer_version,
-      provenance: typeof row.provenance === "string" ? JSON.parse(row.provenance) : (row.provenance || {}),
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      pageId: row.page_id as string,
+      overallScore: row.overall_score as number,
+      answerability: typeof row.answerability === "string" ? JSON.parse(row.answerability) : ((row.answerability as AeoAnalysis["answerability"]) || {}),
+      entityCoverage: typeof row.entity_coverage === "string" ? JSON.parse(row.entity_coverage) : ((row.entity_coverage as AeoAnalysis["entityCoverage"]) || []),
+      semanticCoverage: typeof row.semantic_coverage === "string" ? JSON.parse(row.semantic_coverage) : ((row.semantic_coverage as AeoAnalysis["semanticCoverage"]) || {}),
+      questionCoverage: typeof row.question_coverage === "string" ? JSON.parse(row.question_coverage) : ((row.question_coverage as AeoAnalysis["questionCoverage"]) || {}),
+      citationReadiness: typeof row.citation_readiness === "string" ? JSON.parse(row.citation_readiness) : ((row.citation_readiness as AeoAnalysis["citationReadiness"]) || {}),
+      structuredAnswerQuality: typeof row.structured_answer_quality === "string" ? JSON.parse(row.structured_answer_quality) : ((row.structured_answer_quality as AeoAnalysis["structuredAnswerQuality"]) || {}),
+      kgAlignment: typeof row.kg_alignment === "string" ? JSON.parse(row.kg_alignment) : ((row.kg_alignment as AeoAnalysis["kgAlignment"]) || {}),
+      scoringVersion: row.scoring_version as string,
+      analyzerVersion: row.analyzer_version as string,
+      provenance: typeof row.provenance === "string" ? JSON.parse(row.provenance) : ((row.provenance as AeoAnalysis["provenance"]) || {}),
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string
     };
   }
 
-  private mapRowToFaqOpportunity(row: any): FaqOpportunity {
+  private mapRowToFaqOpportunity(row: Record<string, unknown>): FaqOpportunity {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      pageId: row.page_id,
-      question: row.question,
-      sourceType: row.source_type,
-      evidenceSourceId: row.evidence_source_id || undefined,
-      priority: row.priority as any,
-      impactScore: row.impact_score,
-      status: row.status as any,
-      createdAt: row.created_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      pageId: row.page_id as string,
+      question: row.question as string,
+      sourceType: row.source_type as FaqOpportunity["sourceType"],
+      evidenceSourceId: (row.evidence_source_id as string) || undefined,
+      priority: row.priority as FaqOpportunity["priority"],
+      impactScore: row.impact_score as number,
+      status: row.status as FaqOpportunity["status"],
+      createdAt: row.created_at as string
     };
   }
 
-  private mapRowToKgAlignment(row: any): KgAlignment {
+  private mapRowToKgAlignment(row: Record<string, unknown>): KgAlignment {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      pageId: row.page_id,
-      alignmentType: row.alignment_type as any,
-      entityName: row.entity_name,
-      propertyName: row.property_name || undefined,
-      expectedValue: row.expected_value || undefined,
-      actualValue: row.actual_value || undefined,
-      status: row.status as any,
-      createdAt: row.created_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      pageId: row.page_id as string,
+      alignmentType: row.alignment_type as KgAlignment["alignmentType"],
+      entityName: row.entity_name as string,
+      propertyName: (row.property_name as string) || undefined,
+      expectedValue: (row.expected_value as string) || undefined,
+      actualValue: (row.actual_value as string) || undefined,
+      status: row.status as KgAlignment["status"],
+      createdAt: row.created_at as string
     };
   }
 
@@ -938,51 +939,51 @@ export class AIVisibilityAuditRepository implements IAIVisibilityAuditRepository
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToAudit(row: any): AIVisibilityAudit {
+  private mapRowToAudit(row: Record<string, unknown>): AIVisibilityAudit {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      brandId: row.brand_id,
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      brandId: row.brand_id as string,
       status: row.status as AIVisibilityAuditStatus,
-      overallScore: row.overall_score,
-      metrics: typeof row.metrics === "string" ? JSON.parse(row.metrics) : (row.metrics || {}),
-      promptsCoverage: typeof row.prompts_coverage === "string" ? JSON.parse(row.prompts_coverage) : (row.prompts_coverage || {}),
-      evidenceSummary: typeof row.evidence_summary === "string" ? JSON.parse(row.evidence_summary) : (row.evidence_summary || {}),
-      scoringVersion: row.scoring_version,
-      analyzerVersion: row.analyzer_version,
+      overallScore: row.overall_score as number,
+      metrics: typeof row.metrics === "string" ? JSON.parse(row.metrics) : ((row.metrics as AIVisibilityAudit["metrics"]) || {}),
+      promptsCoverage: typeof row.prompts_coverage === "string" ? JSON.parse(row.prompts_coverage) : ((row.prompts_coverage as AIVisibilityAudit["promptsCoverage"]) || {}),
+      evidenceSummary: typeof row.evidence_summary === "string" ? JSON.parse(row.evidence_summary) : ((row.evidence_summary as AIVisibilityAudit["evidenceSummary"]) || {}),
+      scoringVersion: row.scoring_version as string,
+      analyzerVersion: row.analyzer_version as string,
       audit: {
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        createdBy: row.created_by,
-        updatedBy: row.updated_by,
-        deletedAt: row.deleted_at || undefined,
-        version: row.version
+        createdAt: row.created_at as string,
+        updatedAt: row.updated_at as string,
+        createdBy: row.created_by as string,
+        updatedBy: row.updated_by as string,
+        deletedAt: (row.deleted_at as string) || undefined,
+        version: row.version as number
       }
     };
   }
 
-  private mapRowToPrompt(row: any): AuditPrompt {
+  private mapRowToPrompt(row: Record<string, unknown>): AuditPrompt {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      auditId: row.audit_id,
-      promptText: row.prompt_text,
-      category: row.category,
-      targetEntity: row.target_entity,
-      locale: row.locale,
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      auditId: row.audit_id as string,
+      promptText: row.prompt_text as string,
+      category: row.category as PromptCategory,
+      targetEntity: row.target_entity as string,
+      locale: row.locale as string,
       status: row.status as AuditPromptStatus,
-      errorMessage: row.error_message || undefined,
-      latencyMs: row.latency_ms || undefined,
-      executedAt: row.executed_at || undefined,
-      responseText: row.response_text || undefined,
-      analysis: typeof row.analysis === "string" ? JSON.parse(row.analysis) : (row.analysis || {}),
+      errorMessage: (row.error_message as string) || undefined,
+      latencyMs: (row.latency_ms as number) || undefined,
+      executedAt: (row.executed_at as string) || undefined,
+      responseText: (row.response_text as string) || undefined,
+      analysis: typeof row.analysis === "string" ? JSON.parse(row.analysis) : ((row.analysis as AuditPrompt["analysis"]) || {}),
       audit: {
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        createdBy: row.created_by,
-        updatedBy: row.updated_by,
-        deletedAt: row.deleted_at || undefined,
-        version: row.version
+        createdAt: row.created_at as string,
+        updatedAt: row.updated_at as string,
+        createdBy: row.created_by as string,
+        updatedBy: row.updated_by as string,
+        deletedAt: (row.deleted_at as string) || undefined,
+        version: row.version as number
       }
     };
   }
@@ -1163,88 +1164,88 @@ export class PromptIntelligenceRepository implements IPromptIntelligenceReposito
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToDefinition(row: any): PromptDefinition {
+  private mapRowToDefinition(row: Record<string, unknown>): PromptDefinition {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      brandId: row.brand_id,
-      name: row.name,
-      promptTemplate: row.prompt_template,
-      category: row.category,
-      intent: row.intent,
-      locale: row.locale,
-      isActive: row.is_active,
-      variables: typeof row.variables === "string" ? JSON.parse(row.variables) : (row.variables || []),
-      competitors: row.competitors || [],
-      tags: row.tags || [],
-      notes: row.notes || undefined,
-      version: row.version,
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      brandId: row.brand_id as string,
+      name: row.name as string,
+      promptTemplate: row.prompt_template as string,
+      category: row.category as PromptCategory,
+      intent: row.intent as PromptDefinition["intent"],
+      locale: row.locale as string,
+      isActive: row.is_active as boolean,
+      variables: typeof row.variables === "string" ? JSON.parse(row.variables) : ((row.variables as PromptDefinition["variables"]) || []),
+      competitors: (row.competitors as string[]) || [],
+      tags: (row.tags as string[]) || [],
+      notes: (row.notes as string) || undefined,
+      version: row.version as number,
       audit: {
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        createdBy: row.created_by,
-        updatedBy: row.updated_by,
-        deletedAt: row.deleted_at || undefined,
-        version: row.opt_version
+        createdAt: row.created_at as string,
+        updatedAt: row.updated_at as string,
+        createdBy: row.created_by as string,
+        updatedBy: row.updated_by as string,
+        deletedAt: (row.deleted_at as string) || undefined,
+        version: row.opt_version as number
       }
     };
   }
 
-  private mapRowToSchedule(row: any): PromptSchedule {
+  private mapRowToSchedule(row: Record<string, unknown>): PromptSchedule {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      promptId: row.prompt_id,
-      enabled: row.enabled,
-      cronExpression: row.cron_expression,
-      timezone: row.timezone,
-      nextExecutionAt: row.next_execution_at || undefined,
-      lastExecutionAt: row.last_execution_at || undefined,
-      status: row.status,
-      failureReason: row.failure_reason || undefined,
-      scheduleVersion: row.schedule_version,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      promptId: row.prompt_id as string,
+      enabled: row.enabled as boolean,
+      cronExpression: row.cron_expression as string,
+      timezone: row.timezone as string,
+      nextExecutionAt: (row.next_execution_at as string) || undefined,
+      lastExecutionAt: (row.last_execution_at as string) || undefined,
+      status: row.status as PromptSchedule["status"],
+      failureReason: (row.failure_reason as string) || undefined,
+      scheduleVersion: row.schedule_version as number,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string
     };
   }
 
-  private mapRowToExecution(row: any): PromptExecution {
+  private mapRowToExecution(row: Record<string, unknown>): PromptExecution {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      promptId: row.prompt_id,
-      promptVersion: row.prompt_version,
-      resolvedPromptText: row.resolved_prompt_text,
-      variablesValues: typeof row.variables_values === "string" ? JSON.parse(row.variables_values) : (row.variables_values || {}),
-      status: row.status,
-      provider: row.provider,
-      model: row.model,
-      modelVersion: row.model_version || undefined,
-      responseText: row.response_text || undefined,
-      latencyMs: row.latency_ms || undefined,
-      errorMessage: row.error_message || undefined,
-      attempts: row.attempts,
-      maxAttempts: row.max_attempts,
-      scheduledFor: row.scheduled_for || undefined,
-      executedAt: row.executed_at || undefined,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      promptId: row.prompt_id as string,
+      promptVersion: row.prompt_version as number,
+      resolvedPromptText: row.resolved_prompt_text as string,
+      variablesValues: typeof row.variables_values === "string" ? JSON.parse(row.variables_values) : ((row.variables_values as Record<string, string>) || {}),
+      status: row.status as PromptExecution["status"],
+      provider: row.provider as string,
+      model: row.model as string,
+      modelVersion: (row.model_version as string) || undefined,
+      responseText: (row.response_text as string) || undefined,
+      latencyMs: (row.latency_ms as number) || undefined,
+      errorMessage: (row.error_message as string) || undefined,
+      attempts: row.attempts as number,
+      maxAttempts: row.max_attempts as number,
+      scheduledFor: (row.scheduled_for as string) || undefined,
+      executedAt: (row.executed_at as string) || undefined,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string
     };
   }
 
-  private mapRowToPosition(row: any): PositionObservation {
+  private mapRowToPosition(row: Record<string, unknown>): PositionObservation {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      sourceExecutionId: row.source_execution_id,
-      subjectEntityId: row.subject_entity_id,
-      presence: row.presence,
-      numericPosition: row.numeric_position || undefined,
-      evidenceExcerpt: row.evidence_excerpt,
-      evidenceStructure: row.evidence_structure,
-      confidence: row.confidence,
-      analyzerVersion: row.analyzer_version,
-      createdAt: row.created_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      sourceExecutionId: row.source_execution_id as string,
+      subjectEntityId: row.subject_entity_id as string,
+      presence: row.presence as PositionObservation["presence"],
+      numericPosition: (row.numeric_position as number) || undefined,
+      evidenceExcerpt: row.evidence_excerpt as string,
+      evidenceStructure: row.evidence_structure as PositionObservation["evidenceStructure"],
+      confidence: row.confidence as number,
+      analyzerVersion: row.analyzer_version as string,
+      createdAt: row.created_at as string
     };
   }
 
@@ -1573,38 +1574,38 @@ export class CitationIntelligenceRepository implements ICitationIntelligenceRepo
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToSource(row: any): CitationSource {
+  private mapRowToSource(row: Record<string, unknown>): CitationSource {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      domain: row.domain,
-      canonicalUrl: row.canonical_url || undefined,
-      classification: row.classification,
-      qualityScore: row.quality_score,
-      authorityScore: row.authority_score,
-      firstSeenAt: row.first_seen_at,
-      lastSeenAt: row.last_seen_at,
-      occurrenceCount: row.occurrence_count,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      domain: row.domain as string,
+      canonicalUrl: (row.canonical_url as string) || undefined,
+      classification: row.classification as CitationSource["classification"],
+      qualityScore: row.quality_score as number,
+      authorityScore: row.authority_score as number,
+      firstSeenAt: row.first_seen_at as string,
+      lastSeenAt: row.last_seen_at as string,
+      occurrenceCount: row.occurrence_count as number,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string
     };
   }
 
-  private mapRowToOccurrence(row: any): CitationOccurrence {
+  private mapRowToOccurrence(row: Record<string, unknown>): CitationOccurrence {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      sourceId: row.source_id,
-      auditId: row.audit_id || undefined,
-      executionId: row.execution_id || undefined,
-      promptId: row.prompt_id || undefined,
-      observationId: row.observation_id || undefined,
-      url: row.url,
-      title: row.title || undefined,
-      snippet: row.snippet || undefined,
-      position: row.position || undefined,
-      confidence: row.confidence,
-      createdAt: row.created_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      sourceId: row.source_id as string,
+      auditId: (row.audit_id as string) || undefined,
+      executionId: (row.execution_id as string) || undefined,
+      promptId: (row.prompt_id as string) || undefined,
+      observationId: (row.observation_id as string) || undefined,
+      url: row.url as string,
+      title: (row.title as string) || undefined,
+      snippet: (row.snippet as string) || undefined,
+      position: (row.position as number) || undefined,
+      confidence: row.confidence as number,
+      createdAt: row.created_at as string
     };
   }
 
@@ -1806,35 +1807,35 @@ export class BrandIntelligenceRepository implements IBrandIntelligenceRepository
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToAssociation(row: any): BrandAssociation {
+  private mapRowToAssociation(row: Record<string, unknown>): BrandAssociation {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      brandId: row.brand_id,
-      entityName: row.entity_name,
-      relationshipType: row.relationship_type,
-      occurrenceCount: row.occurrence_count,
-      firstSeenAt: row.first_seen_at,
-      lastSeenAt: row.last_seen_at,
-      supportingContext: row.supporting_context,
-      confidence: row.confidence,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      brandId: row.brand_id as string,
+      entityName: row.entity_name as string,
+      relationshipType: row.relationship_type as string,
+      occurrenceCount: row.occurrence_count as number,
+      firstSeenAt: row.first_seen_at as string,
+      lastSeenAt: row.last_seen_at as string,
+      supportingContext: row.supporting_context as string,
+      confidence: row.confidence as number,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string
     };
   }
 
-  private mapRowToRecommendation(row: any): RecommendationObservation {
+  private mapRowToRecommendation(row: Record<string, unknown>): RecommendationObservation {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      brandId: row.brand_id,
-      executionId: row.execution_id || undefined,
-      promptId: row.prompt_id || undefined,
-      observationId: row.observation_id,
-      recommendationStatus: row.recommendation_status,
-      position: row.position || undefined,
-      evidenceExcerpt: row.evidence_excerpt,
-      createdAt: row.created_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      brandId: row.brand_id as string,
+      executionId: (row.execution_id as string) || undefined,
+      promptId: (row.prompt_id as string) || undefined,
+      observationId: row.observation_id as string,
+      recommendationStatus: row.recommendation_status as RecommendationObservation["recommendationStatus"],
+      position: (row.position as number) || undefined,
+      evidenceExcerpt: row.evidence_excerpt as string,
+      createdAt: row.created_at as string
     };
   }
 
@@ -2436,45 +2437,45 @@ export class CompetitorRepository implements ICompetitorRepository {
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToCompetitor(row: any): Competitor {
+  private mapRowToCompetitor(row: Record<string, unknown>): Competitor {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      name: row.name,
-      domain: row.domain,
-      status: row.status as any,
-      brandName: row.brand_name || undefined,
-      classification: row.classification as any,
-      discoverySource: row.discovery_source || undefined,
-      discoveryEvidence: typeof row.discovery_evidence === "string" ? JSON.parse(row.discovery_evidence) : (row.discovery_evidence || undefined),
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      name: row.name as string,
+      domain: row.domain as string,
+      status: row.status as Competitor["status"],
+      brandName: (row.brand_name as string) || undefined,
+      classification: row.classification as Competitor["classification"],
+      discoverySource: (row.discovery_source as string) || undefined,
+      discoveryEvidence: typeof row.discovery_evidence === "string" ? JSON.parse(row.discovery_evidence) : ((row.discovery_evidence as Competitor["discoveryEvidence"]) || undefined),
       confidence: row.confidence !== null && row.confidence !== undefined ? Number(row.confidence) : undefined,
-      firstDiscoveredAt: row.first_discovered_at,
-      lastObservedAt: row.last_observed_at,
-      lastMonitoredAt: row.last_monitored_at || undefined,
-      monitoringStatus: row.monitoring_status,
-      notesMetadata: typeof row.notes_metadata === "string" ? JSON.parse(row.notes_metadata) : (row.notes_metadata || undefined),
+      firstDiscoveredAt: row.first_discovered_at as string,
+      lastObservedAt: row.last_observed_at as string,
+      lastMonitoredAt: (row.last_monitored_at as string) || undefined,
+      monitoringStatus: row.monitoring_status as Competitor["monitoringStatus"],
+      notesMetadata: typeof row.notes_metadata === "string" ? JSON.parse(row.notes_metadata) : ((row.notes_metadata as Record<string, unknown>) || undefined),
       audit: {
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        createdBy: row.created_by,
-        updatedBy: row.updated_by,
-        deletedAt: row.deleted_at || undefined,
-        version: row.version
+        createdAt: row.created_at as string,
+        updatedAt: row.updated_at as string,
+        createdBy: row.created_by as string,
+        updatedBy: row.updated_by as string,
+        deletedAt: (row.deleted_at as string) || undefined,
+        version: row.version as number
       }
     };
   }
 
-  private mapRowToCompetitorChange(row: any): CompetitorChange {
+  private mapRowToCompetitorChange(row: Record<string, unknown>): CompetitorChange {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      competitorId: row.competitor_id,
-      changedField: row.changed_field,
-      previousValue: row.previous_value,
-      newValue: row.new_value,
-      changeType: row.change_type,
-      observedAt: row.observed_at,
-      createdAt: row.created_at
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      competitorId: row.competitor_id as string,
+      changedField: row.changed_field as string,
+      previousValue: row.previous_value as string,
+      newValue: row.new_value as string,
+      changeType: row.change_type as string,
+      observedAt: row.observed_at as string,
+      createdAt: row.created_at as string
     };
   }
 
@@ -2658,25 +2659,25 @@ export class CompetitiveSeoFindingRepository implements ICompetitiveSeoFindingRe
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToFinding(row: any): CompetitiveSeoFinding {
+  private mapRowToFinding(row: Record<string, unknown>): CompetitiveSeoFinding {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      competitorId: row.competitor_id,
-      findingType: row.finding_type as any,
-      comparisonScope: row.comparison_scope,
-      competitivePosition: row.competitive_position as any,
-      tenantValue: row.tenant_value || undefined,
-      competitorValue: row.competitor_value || undefined,
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      competitorId: row.competitor_id as string,
+      findingType: row.finding_type as CompetitiveSeoFinding["findingType"],
+      comparisonScope: row.comparison_scope as string,
+      competitivePosition: row.competitive_position as CompetitiveSeoFinding["competitivePosition"],
+      tenantValue: (row.tenant_value as string) || undefined,
+      competitorValue: (row.competitor_value as string) || undefined,
       difference: row.difference !== null && row.difference !== undefined ? Number(row.difference) : undefined,
-      differenceDirection: row.difference_direction as any,
-      severity: row.severity as any,
-      evidence: typeof row.evidence === "string" ? JSON.parse(row.evidence) : (row.evidence || {}),
-      sourceReference: row.source_reference || undefined,
-      calculationMetadata: typeof row.calculation_metadata === "string" ? JSON.parse(row.calculation_metadata) : (row.calculation_metadata || {}),
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      version: row.version
+      differenceDirection: row.difference_direction as CompetitiveSeoFinding["differenceDirection"],
+      severity: row.severity as CompetitiveSeoFinding["severity"],
+      evidence: typeof row.evidence === "string" ? JSON.parse(row.evidence) : ((row.evidence as CompetitiveSeoFinding["evidence"]) || {}),
+      sourceReference: (row.source_reference as string) || undefined,
+      calculationMetadata: typeof row.calculation_metadata === "string" ? JSON.parse(row.calculation_metadata) : ((row.calculation_metadata as Record<string, unknown>) || {}),
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+      version: row.version as number
     };
   }
 
@@ -3033,56 +3034,56 @@ export class EntityRepository implements IEntityRepository {
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToEntity(row: any): Entity {
+  private mapRowToEntity(row: Record<string, unknown>): Entity {
     return {
-      id: row.id,
-      organizationId: row.organization_id,
-      brandId: row.brand_id,
-      name: row.name,
-      type: row.type,
-      wikidataId: row.wikidata_id || undefined,
-      wikipediaUrl: row.wikipedia_url || undefined,
-      aliases: row.aliases || undefined,
-      description: row.description || undefined,
-      provenance: typeof row.provenance === "string" ? JSON.parse(row.provenance) : (row.provenance || undefined),
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      brandId: row.brand_id as string,
+      name: row.name as string,
+      type: row.type as string,
+      wikidataId: (row.wikidata_id as string) || undefined,
+      wikipediaUrl: (row.wikipedia_url as string) || undefined,
+      aliases: (row.aliases as string[]) || undefined,
+      description: (row.description as string) || undefined,
+      provenance: typeof row.provenance === "string" ? JSON.parse(row.provenance) : ((row.provenance as Entity["provenance"]) || undefined),
       authorityScore: row.authority_score !== null && row.authority_score !== undefined ? Number(row.authority_score) : undefined,
       completenessScore: row.completeness_score !== null && row.completeness_score !== undefined ? Number(row.completeness_score) : undefined,
-      status: row.status || undefined,
+      status: (row.status as Entity["status"]) || undefined,
       confidence: {
         score: Number(row.confidence_score),
         rating: row.confidence_rating as "high" | "medium" | "low"
       },
       audit: {
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        createdBy: row.created_by,
-        updatedBy: row.updated_by,
-        deletedAt: row.deleted_at || undefined,
-        version: row.version
+        createdAt: row.created_at as string,
+        updatedAt: row.updated_at as string,
+        createdBy: row.created_by as string,
+        updatedBy: row.updated_by as string,
+        deletedAt: (row.deleted_at as string) || undefined,
+        version: row.version as number
       }
     };
   }
 
-  private mapRowToRelationship(row: any): EntityRelationship {
+  private mapRowToRelationship(row: Record<string, unknown>): EntityRelationship {
     return {
-      organizationId: row.organization_id,
-      sourceEntityId: row.source_entity_id,
-      targetEntityId: row.target_entity_id,
+      organizationId: row.organization_id as string,
+      sourceEntityId: row.source_entity_id as string,
+      targetEntityId: row.target_entity_id as string,
       relationshipType: row.relationship_type as RelationshipType,
-      direction: row.direction || undefined,
-      provenance: typeof row.provenance === "string" ? JSON.parse(row.provenance) : (row.provenance || undefined),
-      metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : (row.metadata || undefined),
+      direction: (row.direction as EntityRelationship["direction"]) || undefined,
+      provenance: typeof row.provenance === "string" ? JSON.parse(row.provenance) : ((row.provenance as EntityRelationship["provenance"]) || undefined),
+      metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : ((row.metadata as Record<string, unknown>) || undefined),
       confidence: {
         score: Number(row.confidence_score),
         rating: row.confidence_rating as "high" | "medium" | "low"
       },
       audit: {
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        createdBy: row.created_by,
-        updatedBy: row.updated_by,
-        deletedAt: row.deleted_at || undefined,
-        version: row.version
+        createdAt: row.created_at as string,
+        updatedAt: row.updated_at as string,
+        createdBy: row.created_by as string,
+        updatedBy: row.updated_by as string,
+        deletedAt: (row.deleted_at as string) || undefined,
+        version: row.version as number
       }
     };
   }

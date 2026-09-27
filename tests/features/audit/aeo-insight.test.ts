@@ -37,7 +37,8 @@ export async function testAeoInsight() {
   const originalQuery = pgInstance.query;
 
   // Intercept PostgresClient.query to return predictions
-  pgInstance.query = async (sql: string, params: unknown[] = []): Promise<any> => {
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock postgres query return type */
+  pgInstance.query = async (sql: string): Promise<any> => {
     const normalized = sql.toLowerCase();
 
     if (normalized.includes("select * from kg_entities")) {

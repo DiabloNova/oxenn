@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
@@ -161,16 +161,18 @@ export default function AuditDetailPage() {
 
       {/* Report Tab Swapper */}
       <div className="flex border border-[var(--border)] bg-[var(--muted-surface)]/40 p-1 rounded-2xl">
-        {[
-          { id: "overview", label: strings.overviewTab, icon: Award },
-          { id: "engine", label: strings.engineTab, icon: Brain },
-          { id: "recommendations", label: strings.recommendationsTab, icon: Compass },
-        ].map((tab) => {
+        {(
+          [
+            { id: "overview", label: strings.overviewTab, icon: Award },
+            { id: "engine", label: strings.engineTab, icon: Brain },
+            { id: "recommendations", label: strings.recommendationsTab, icon: Compass },
+          ] as const
+        ).map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
                 activeTab === tab.id
                   ? "bg-gradient-to-r from-[var(--sky-blue-500)]/25 to-[var(--orange-500)]/15 border border-[var(--sky-blue-500)]/30 text-[var(--text-primary)] shadow-sm font-black"

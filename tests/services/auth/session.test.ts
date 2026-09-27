@@ -15,14 +15,23 @@ import { ingestDocumentAction } from "../../../src/app/actions/ingestion";
 import { queryKnowledgeGraphAction } from "../../../src/app/actions/query";
 import { requireWorkspaceMembership, requireRole, authorizeApiRequest } from "../../../src/services/auth/authorization";
 
+interface MockCookieItem {
+  value: string;
+  name?: string;
+  httpOnly?: boolean;
+  sameSite?: string;
+  path?: string;
+  expires?: Date | string;
+}
+
 // Mock implementation of the cookie store
 const mockCookieStore = {
-  store: new Map<string, any>(),
-  get(name: string) {
+  store: new Map<string, MockCookieItem>(),
+  get(name: string): MockCookieItem | undefined {
     return this.store.get(name);
   },
-  set(name: string, value: any, options: any) {
-    this.store.set(name, { value, name, ...options });
+  set(name: string, value: unknown, options?: Record<string, unknown>) {
+    this.store.set(name, { value: value as string, name, ...options });
   },
   delete(name: string) {
     this.store.delete(name);
@@ -40,11 +49,10 @@ let lastInterceptedTenantId = "";
 let lastInterceptedUserId = "";
 
 // Mock TenantContextManager.runWithTenantContext to avoid hitting database / vector store / AI providers during security boundary testing
-const originalRunWithTenantContext = TenantContextManager.runWithTenantContext;
-TenantContextManager.runWithTenantContext = async function (tenantId, userId, requestId, work, options) {
+TenantContextManager.runWithTenantContext = async function (tenantId, userId) {
   lastInterceptedTenantId = tenantId;
-  lastInterceptedUserId = userId;
-  return { mockResult: "success" } as any;
+  lastInterceptedUserId = userId || "";
+  return { mockResult: "success" } as unknown as never;
 };
 
 // Mock database table for Scenario 14 (RLS & Mutation safety)
@@ -179,8 +187,9 @@ export async function runAuthTests() {
   try {
     await requireSession();
     throw new Error("SEC-REG-015 Mismatch: requireSession did not fail closed on missing session");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Unauthorized")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Unauthorized")) {
       // Correct!
     } else {
       throw err;
@@ -194,7 +203,7 @@ export async function runAuthTests() {
 
   // Invalid/Tampered Signature -> rejected
   await createSession(mockUser);
-  const originalCookieValue = mockCookieStore.store.get("seorchable_session").value;
+  const originalCookieValue = mockCookieStore.store.get("seorchable_session")!.value;
   // Tamper signature
   mockCookieStore.store.set("seorchable_session", {
     value: originalCookieValue + "abc",
@@ -208,7 +217,8 @@ export async function runAuthTests() {
   }
 
   // Tamper Payload -> rejected
-  const [payloadBase64, originalSig] = originalCookieValue.split(".");
+  const [_payloadBase64, originalSig] = originalCookieValue.split(".");
+  void _payloadBase64;
   const tamperedPayloadStr = Buffer.from(
     JSON.stringify({
       user: { ...mockUser, role: "super_admin" }, // Hack to privilege escalate
@@ -397,8 +407,9 @@ export async function runAuthTests() {
   try {
     await requireSession();
     throw new Error("SEC-REG-013 Failed: requireSession did not fail closed on logged out session");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Unauthorized")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Unauthorized")) {
       // Correct!
     } else {
       throw err;
@@ -424,8 +435,9 @@ export async function runAuthTests() {
   try {
     await requireWorkspaceMembership(mockUser.id, "ws-other-hacker-tenant");
     throw new Error("SEC-REG-007 Failed: Non-member was allowed access to another workspace!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("is not a member")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("is not a member")) {
       // Correct!
     } else {
       throw err;
@@ -452,8 +464,9 @@ export async function runAuthTests() {
   try {
     await requireRole("workspace_admin");
     throw new Error("SEC-REG-008 Failed: Viewer was allowed to perform workspace_admin actions!");
-  } catch (err: any) {
-    if (err.message && err.message.includes("Insufficient privileges")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("Insufficient privileges")) {
       // Correct!
     } else {
       throw err;
@@ -498,7 +511,7 @@ export async function runAuthTests() {
       headers: {
         get: (name: string) => headerMap.get(name.toLowerCase()) || null
       }
-    } as any;
+    } as unknown as NextRequest;
   }
 
   // 13.1 Valid signed session overrides client headers (SEC-REG-011)
@@ -530,8 +543,9 @@ export async function runAuthTests() {
   try {
     await authorizeApiRequest(unauthApiReq);
     throw new Error(`SEC-REG-001 Failed: authorizeApiRequest did not fail closed on empty context!`);
-  } catch (err: any) {
-    if (err.message && err.message.includes("API headers required")) {
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message && error.message.includes("API headers required")) {
       // Correct!
     } else {
       throw err;
@@ -609,6 +623,7 @@ export async function runAuthTests() {
 }
 
 // Execute tests if run directly
+/* eslint-disable-next-line @typescript-eslint/no-require-imports -- required for direct script execution */
 if (require.main === module) {
   runAuthTests().catch((err) => {
     console.error("❌ Test Suite Failed with Error:", err);

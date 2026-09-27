@@ -54,6 +54,8 @@ export async function runAeoContentIntelligenceTests() {
     name: "CompetitorX",
     domain: "external-competitor.com",
     status: "active",
+    classification: "direct",
+    monitoringStatus: "enabled",
     audit: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -272,9 +274,10 @@ export async function runAeoContentIntelligenceTests() {
         await repo.findAnalysisById(tenantA, "page-aeo-777");
       });
       throw new Error("Failure: Tenant B bypassed tenant context check on analyses!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
-      assert.strictEqual(err.message.includes("Cross-tenant operation blocked"), true);
+    } catch (err: unknown) {
+      const error = err as Error;
+      assert.strictEqual(error.name, "TenantContextViolationException");
+      assert.strictEqual(error.message.includes("Cross-tenant operation blocked"), true);
     }
     console.log("  ✅ Multi-tenant security isolation successfully passed.");
 

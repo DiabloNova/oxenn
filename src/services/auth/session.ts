@@ -7,8 +7,8 @@ let cookiesFn = nextCookies;
 /**
  * Utility to override cookies function for unit testing environments.
  */
-export function setCookiesMock(mockFn: any) {
-  cookiesFn = mockFn;
+export function setCookiesMock(mockFn: unknown) {
+  cookiesFn = mockFn as typeof nextCookies;
 }
 
 // Resolve the session secret safely.

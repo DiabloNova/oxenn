@@ -1,6 +1,6 @@
-import { PromptIntelligenceService, SUPPORTED_MODELS } from "../../../src/features/ai-intelligence/services/prompt-intelligence-service";
+import { PromptIntelligenceService } from "../../../src/features/ai-intelligence/services/prompt-intelligence-service";
 import { BrandRepository, PromptIntelligenceRepository } from "../../../src/features/ai-intelligence/repositories";
-import { Brand, PromptDefinition } from "../../../src/features/ai-intelligence/domain/types";
+import { Brand } from "../../../src/features/ai-intelligence/domain/types";
 import { TenantContextManager } from "../../../src/core/database/tenant-context";
 import * as assert from "assert";
 
@@ -54,8 +54,8 @@ export async function runPromptIntelligenceTests() {
         { name: "missing_var", defaultValue: "" }
       ], {});
       throw new Error("Failure: Allowed missing variable resolution!");
-    } catch (err: any) {
-      assert.strictEqual(err.message.includes("Validation Error"), true);
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).message.includes("Validation Error"), true);
     }
     console.log("  ✅ Variable resolution validated.");
 
@@ -87,8 +87,8 @@ export async function runPromptIntelligenceTests() {
       try {
         await service.transitionExecutionStatus(tenantA, exec.id, "running");
         throw new Error("Failure: Allowed transition out of terminal state succeeded!");
-      } catch (err: any) {
-        assert.strictEqual(err.message.includes("Illegal State Transition"), true);
+      } catch (err: unknown) {
+        assert.strictEqual((err as Error).message.includes("Illegal State Transition"), true);
       }
     });
     console.log("  ✅ State machine transitions validated.");
@@ -138,9 +138,10 @@ export async function runPromptIntelligenceTests() {
         await repo.findDefinitionsByBrandId(tenantA, "brand-test-999");
       });
       throw new Error("Failure: Tenant B bypassed tenant context check!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
-      assert.strictEqual(err.message.includes("Cross-tenant operation blocked"), true);
+    } catch (err: unknown) {
+      const error = err as Error;
+      assert.strictEqual(error.name, "TenantContextViolationException");
+      assert.strictEqual(error.message.includes("Cross-tenant operation blocked"), true);
     }
     console.log("  ✅ Tenant isolation validated.");
 

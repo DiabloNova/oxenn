@@ -45,7 +45,7 @@ export class SubscriptionService {
     return {
       tenantId,
       effectivePlan,
-      status: isExpired ? "expired" : (sub.status as any),
+      status: isExpired ? "expired" : (sub.status as TenantSubscriptionState["status"]),
       startDate: sub.startDate.toISOString(),
       endDate: sub.endDate.toISOString(),
       isExpired,

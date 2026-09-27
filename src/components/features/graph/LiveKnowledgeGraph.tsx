@@ -1,16 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
 import {
   TrendingUp,
-  TrendingDown,
   Activity,
-  Sparkles,
   Clock,
-  ArrowUpRight,
-  Info,
   Shield,
   Zap,
   Globe,
@@ -125,7 +121,7 @@ export function LiveKnowledgeGraph() {
   // Check prefers-reduced-motion
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mediaQuery.matches);
+    queueMicrotask(() => setReducedMotion(mediaQuery.matches));
     const listener = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
     mediaQuery.addEventListener("change", listener);
     return () => mediaQuery.removeEventListener("change", listener);

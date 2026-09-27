@@ -34,22 +34,23 @@ async function runProbe() {
   setCookiesMock(cookieMock);
 
   // Helper to test async functions
-  async function testFunction(name: string, fn: () => Promise<any>) {
+  async function testFunction(name: string, fn: () => Promise<unknown>) {
     console.log(`Testing ${name}:`);
     try {
       const res = await fn();
       console.log(`   Result: WORKS ->`, res);
       return { status: "WORKS", result: res };
-    } catch (err: any) {
-      console.log(`   Result: THROWS -> "${err.message}"`);
-      if (err.stack) {
-        const stackLines = err.stack.split("\n");
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.log(`   Result: THROWS -> "${error.message}"`);
+      if (error.stack) {
+        const stackLines = error.stack.split("\n");
         const throwSite = stackLines.find((l: string) => l.includes("src/") || l.includes("verification/"));
         if (throwSite) {
           console.log(`   Throw site: ${throwSite.trim()}`);
         }
       }
-      return { status: "THROWS", error: err.message, stack: err.stack };
+      return { status: "THROWS", error: error.message, stack: error.stack };
     }
   }
 

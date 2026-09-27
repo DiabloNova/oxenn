@@ -4,22 +4,14 @@ import React, { useState, useEffect, useTransition } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import {
-  Sparkles,
   Link2,
   TrendingUp,
-  Award,
   AlertTriangle,
   CheckCircle,
-  HelpCircle,
-  Share2,
   List,
-  Layers,
-  ChevronRight,
-  TrendingDown,
   ArrowUpRight,
   ShieldCheck,
-  Percent,
-  Receipt
+  Percent
 } from "lucide-react";
 import { getCitationsDashboardDataAction } from "@/app/actions/citation-intelligence";
 import { CitationSource, CitationOccurrence } from "@/features/ai-intelligence/domain/types";
@@ -29,12 +21,11 @@ export default function AeoCitationsPage() {
   const isRtl = language === "fa";
 
   const [sources, setSources] = useState<CitationSource[]>([]);
-  const [occurrences, setOccurrences] = useState<CitationOccurrence[]>([]);
+  const [_occurrences, setOccurrences] = useState<CitationOccurrence[]>([]);
   const [share, setShare] = useState<{ brandShare: number; competitorShare: number; otherShare: number } | null>(null);
-  const [gaps, setGaps] = useState<any[]>([]);
-  const [trends, setTrends] = useState<any[]>([]);
+  const [gaps, setGaps] = useState<Array<{ domain: string; competitorName: string; authorityScore: number; evidenceSnippet: string }>>([]);
+  const [trends, setTrends] = useState<Array<{ date: string; owned: number; competitor: number; total: number }>>([]);
 
-  const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -45,12 +36,13 @@ export default function AeoCitationsPage() {
       setErrorMsg(null);
 
       const res = await getCitationsDashboardDataAction();
-      if (res.success && (res as any).result) {
-        setSources((res as any).result.sources);
-        setOccurrences((res as any).result.occurrences);
-        setShare((res as any).result.share);
-        setGaps((res as any).result.gaps);
-        setTrends((res as any).result.trends);
+      if (res.success && (res as { result?: { sources: CitationSource[]; occurrences: CitationOccurrence[]; share: { brandShare: number; competitorShare: number; otherShare: number }; gaps: Array<{ domain: string; competitorName: string; authorityScore: number; evidenceSnippet: string }>; trends: Array<{ date: string; owned: number; competitor: number; total: number }> } }).result) {
+        const data = (res as { result: { sources: CitationSource[]; occurrences: CitationOccurrence[]; share: { brandShare: number; competitorShare: number; otherShare: number }; gaps: Array<{ domain: string; competitorName: string; authorityScore: number; evidenceSnippet: string }>; trends: Array<{ date: string; owned: number; competitor: number; total: number }> } }).result;
+        setSources(data.sources);
+        setOccurrences(data.occurrences);
+        setShare(data.share);
+        setGaps(data.gaps);
+        setTrends(data.trends);
       } else {
         setErrorMsg(isRtl ? "خطا در بارگذاری دیتابیس استنادات." : "Failed to load citation intelligence database.");
       }
@@ -193,7 +185,7 @@ export default function AeoCitationsPage() {
                             : `Competitor (${gap.competitorName}) is cited on this high-authority source while your brand lacks any coverage.`}
                         </p>
                         <p className="text-[9px] text-[var(--text-muted)] italic font-mono pt-1 border-t border-[var(--border)]/10">
-                          "{gap.evidenceSnippet}"
+                          &quot;{gap.evidenceSnippet}&quot;
                         </p>
                       </div>
                     </div>

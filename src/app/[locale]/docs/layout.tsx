@@ -3,10 +3,8 @@
 import React, { useState, use } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Search, Menu, X, Home, ArrowRight } from "lucide-react";
+import { BookOpen, Search, Menu, X, Home } from "lucide-react";
 import { DOCS_INDEX } from "@/lib/docsIndex";
-import { useTheme } from "@/components/ThemeProvider";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 
 interface DocsLayoutProps {
@@ -45,7 +43,7 @@ export default function DocsLayout({ children, params }: DocsLayoutProps) {
 
   const isActiveDoc = (slug: string) => pathname?.includes(`/docs/${slug}`);
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <div className="flex flex-col h-full bg-slate-950 text-white border-r border-l border-white/10">
       <div className="p-6 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2.5 mb-4">
@@ -133,7 +131,7 @@ export default function DocsLayout({ children, params }: DocsLayoutProps) {
       </header>
 
       <aside className="hidden md:flex flex-col w-76 lg:w-80 h-screen sticky top-0 shrink-0 overflow-hidden border-e border-white/10">
-        <SidebarContent />
+        {renderSidebarContent()}
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 max-h-screen overflow-y-auto">

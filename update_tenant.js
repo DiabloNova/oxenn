@@ -1,3 +1,4 @@
+/* eslint-disable */
 const fs = require('fs');
 const file = 'src/core/database/tenant-context/index.ts';
 let code = fs.readFileSync(file, 'utf8');

@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Dialog } from "@/components/Dialog";
-import { Check, Shield, Award, Sparkles, Building, ChevronRight, AlertCircle } from "lucide-react";
+import { Check, Sparkles, ChevronRight, AlertCircle } from "lucide-react";
 
 export default function PricingPage() {
   const router = useRouter();
@@ -31,15 +31,7 @@ export default function PricingPage() {
   const [authError, setAuthError] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  // Check if there was a pre-selected plan in the query params (e.g. from landing page)
-  useEffect(() => {
-    const planParam = searchParams?.get("plan");
-    if (planParam) {
-      handlePlanSelection(planParam);
-    }
-  }, [searchParams]);
-
-  const handlePlanSelection = (planName: string) => {
+  const handlePlanSelection = React.useCallback((planName: string) => {
     setSelectedPlan(planName);
 
     if (session.status === "unauthenticated") {
@@ -49,7 +41,17 @@ export default function PricingPage() {
       // Authenticated users go straight to workspace creation
       setIsWorkspaceOpen(true);
     }
-  };
+  }, [session.status]);
+
+  // Check if there was a pre-selected plan in the query params (e.g. from landing page)
+  useEffect(() => {
+    const planParam = searchParams?.get("plan");
+    if (planParam) {
+      queueMicrotask(() => {
+        handlePlanSelection(planParam);
+      });
+    }
+  }, [searchParams, handlePlanSelection]);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,8 +88,8 @@ export default function PricingPage() {
       setIsWorkspaceOpen(false);
 
       // Track analytics conversion event if defined
-      if (typeof window !== "undefined" && (window as any).dataLayer) {
-        (window as any).dataLayer.push({
+      if (typeof window !== "undefined" && (window as unknown as { dataLayer?: Array<Record<string, unknown>> }).dataLayer) {
+        (window as unknown as { dataLayer: Array<Record<string, unknown>> }).dataLayer.push({
           event: "subscription_started",
           plan: selectedPlan,
           domain: targetDomain

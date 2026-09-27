@@ -9,6 +9,7 @@ export class MonitoringConfigRepository {
   public async getById(configId: string): Promise<MonitoringConfig | null> {
     const tenantId = TenantContextManager.getRequiredTenantId();
     const ctx = TenantContextManager.getContext();
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- fallback global pg client */
     const db = drizzle(ctx?.dbClient || (global as any).pgClient);
 
     const rows = await db
@@ -38,6 +39,7 @@ export class MonitoringConfigRepository {
   public async save(config: MonitoringConfig): Promise<MonitoringConfig> {
     const tenantId = TenantContextManager.getRequiredTenantId();
     const ctx = TenantContextManager.getContext();
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- fallback global pg client */
     const db = drizzle(ctx?.dbClient || (global as any).pgClient);
 
     const rows = await db
@@ -48,7 +50,7 @@ export class MonitoringConfigRepository {
         websiteId: config.websiteId,
         targetUrl: config.targetUrl,
         enabled: config.enabled,
-        crawlPolicy: config.crawlPolicy as any,
+        crawlPolicy: config.crawlPolicy as unknown as Record<string, unknown>,
         createdAt: new Date(config.createdAt),
         updatedAt: new Date(config.updatedAt)
       })
@@ -58,7 +60,7 @@ export class MonitoringConfigRepository {
           websiteId: config.websiteId,
           targetUrl: config.targetUrl,
           enabled: config.enabled,
-          crawlPolicy: config.crawlPolicy as any,
+          crawlPolicy: config.crawlPolicy as unknown as Record<string, unknown>,
           updatedAt: new Date()
         }
       })

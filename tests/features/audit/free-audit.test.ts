@@ -17,6 +17,7 @@ export async function testFreeAudit() {
   try {
     // 1. Scenario A: Perfect Scrape (Score 100, Grade A)
     console.log("  * Scenario A: Testing Perfect Score (100) & Grade A...");
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- mocking third party SDK method */
     (firecrawlApp as any).scrapeUrl = async (url: string, options?: any): Promise<any> => {
       // Avoid unused variable warnings
       if (!url || !options) return null;
@@ -60,6 +61,7 @@ export async function testFreeAudit() {
 
     // 2. Scenario B: Imperfect/Poor Scrape (Missing tags, HTTP, noindex -> score 0, Grade F)
     console.log("  * Scenario B: Testing Poor Score & Grade F...");
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- mocking third party SDK method */
     (firecrawlApp as any).scrapeUrl = async (url: string, options?: any): Promise<any> => {
       // Avoid unused variable warnings
       if (!url || !options) return null;

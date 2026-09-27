@@ -17,8 +17,8 @@ import {
   MapPin,
   Bot,
   Zap,
-  ShieldCheck,
-  ArrowUpRight
+  ArrowUpRight,
+  ShieldCheck
 } from "lucide-react";
 import { getTechnicalSeoDashboardAction } from "@/app/actions/technical-seo";
 
@@ -31,7 +31,7 @@ interface FindingItem {
   severity: "low" | "medium" | "high" | "critical";
   confidence: string;
   affectedResource: string;
-  evidence: Record<string, any>;
+  evidence: Record<string, unknown>;
 }
 
 interface RecommendationItem {
@@ -48,30 +48,32 @@ export default function TechnicalSeoPage() {
   const isRtl = language === "fa";
 
   const [loading, setLoading] = useState(true);
-  const [pages, setPages] = useState<any[]>([]);
+  const [pages, setPages] = useState<unknown[]>([]);
   const [findings, setFindings] = useState<FindingItem[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  const fetchData = async () => {
+  const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {
       const res = await getTechnicalSeoDashboardAction();
       if (res.success && "result" in res && res.result) {
         setPages(res.result.pages || []);
-        setFindings(res.result.findings || []);
-        setRecommendations(res.result.recommendations || []);
+        setFindings((res.result.findings as unknown as FindingItem[]) || []);
+        setRecommendations((res.result.recommendations as unknown as RecommendationItem[]) || []);
       }
     } catch (err) {
       console.error("Failed to load Technical SEO dashboard data:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    queueMicrotask(() => {
+      fetchData();
+    });
+  }, [fetchData]);
 
   const criticalCount = findings.filter(f => f.severity === "critical").length;
   const highCount = findings.filter(f => f.severity === "high").length;

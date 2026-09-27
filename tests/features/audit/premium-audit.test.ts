@@ -21,6 +21,7 @@ export async function testPremiumAudit() {
 
     // 1. Scenario A: Perfect Crawl (Verify Score, Grades, and JSON Recommendations)
     console.log("  * Scenario A: Testing Perfect Crawl and Score calculation...");
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- mocking third party SDK method */
     (firecrawlApp as any).crawlUrl = async (url: string, options?: any): Promise<any> => {
       if (!url || !options) return null;
       return {
@@ -101,7 +102,7 @@ export async function testPremiumAudit() {
     });
 
     const resC = await POST(reqC);
-    const payloadC = (await resC.json()) as { error: string; message: string };
+    const _payloadC = (await resC.json()) as { error: string; message: string };
 
     if (resC.status !== 400) {
       throw new Error(`Scenario C Failed: Expected status 400, got ${resC.status}`);

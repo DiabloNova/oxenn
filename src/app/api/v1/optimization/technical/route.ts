@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
         const isMockMode = !apiKey || apiKey === "" || apiKey.includes("your-api-key") || apiKey.startsWith("fc-your-");
 
         let hasAltTags = true;
-        let isHttps = url.toLowerCase().startsWith("https://");
+        const isHttps = url.toLowerCase().startsWith("https://");
         let hasCanonical = true;
         let hasViewport = true;
         let hasHeadingHierarchy = true;
@@ -127,10 +127,10 @@ export async function POST(req: NextRequest) {
         }
 
         // 4. Calculate Weighted Scoring (Performance 30, Accessibility 25, Mobile 20, Security 15, Technical SEO 10)
-        let perfScore = 27; // out of 30
+        const perfScore = 27; // out of 30
         let accessScore = 23; // out of 25
         let mobileScore = 18; // out of 20
-        let secScore = isHttps ? 15 : 5; // out of 15
+        const secScore = isHttps ? 15 : 5; // out of 15
         let seoScore = 9; // out of 10
 
         const criticalIssues: TechnicalAuditResponse["criticalIssues"] = [];

@@ -327,7 +327,7 @@ export async function runCompetitiveRadarTests() {
       assert.strictEqual(techWeakness!.tenantValue, "60%");
       assert.strictEqual(techWeakness!.competitiveReference, "90%");
       assert.strictEqual(techWeakness!.competitiveGap, -30);
-      assert.strictEqual(techWeakness!.evidence.explanation.includes("holds a performance advantage"), true);
+      assert.strictEqual(String(techWeakness!.evidence.explanation).includes("holds a performance advantage"), true);
 
       // Strength finding: Content Coverage (800 words vs 400 words)
       const contentStrength = insights.find(i => i.type === "strength" && i.dimension === "Content Coverage");
@@ -348,8 +348,8 @@ export async function runCompetitiveRadarTests() {
         await radarService.generateRadarSnapshot(tenantA, brandId, [comp1Id]);
       });
       throw new Error("Security Failure: Allowed cross-tenant snapshot calculation!");
-    } catch (err: any) {
-      assert.strictEqual(err.name, "TenantContextViolationException");
+    } catch (err: unknown) {
+      assert.strictEqual((err as Error).name, "TenantContextViolationException");
     }
 
     // Verify that passing tenantB but requesting comp1Id (owned by tenantA) returns empty competitor data due to RLS

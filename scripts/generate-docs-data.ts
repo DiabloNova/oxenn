@@ -61,7 +61,7 @@ function getAllDocs(basePath = "docs"): DocMeta[] {
                 title = firstLine.replace('# ', '').trim();
             }
             contentSnippet = content.substring(0, 500).replace(/\n/g, ' ');
-        } catch (e) {}
+        } catch (_e) {}
 
         docs.push({
           slug,

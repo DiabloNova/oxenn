@@ -105,6 +105,8 @@ export async function runIntelligenceModelTests() {
         name: "Rival Corp",
         domain: "rival-site.com",
         status: "active",
+        classification: "direct",
+        monitoringStatus: "enabled",
         audit: createAudit()
       };
       await competitorRepo.save(competitor);

@@ -8,6 +8,7 @@ export class MonitoringAlertRepository {
   public async create(alert: Omit<MonitoringAlert, "id" | "organizationId" | "createdAt">): Promise<MonitoringAlert> {
     const tenantId = TenantContextManager.getRequiredTenantId();
     const ctx = TenantContextManager.getContext();
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- fallback global pg client */
     const db = drizzle(ctx?.dbClient || (global as any).pgClient);
 
     const rows = await db

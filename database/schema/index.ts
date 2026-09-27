@@ -425,6 +425,7 @@ export const topics = pgTable("topics", {
   name: text("name").notNull(),
   description: text("description"),
   language: text("language").notNull().default("en"),
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle self-referencing foreign key */
   parentTopicId: uuid("parent_topic_id").references((): any => topics.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
@@ -1197,10 +1198,10 @@ export const monitoringConfigs = pgTable("monitoring_configs", {
   crawlPolicy: jsonb("crawl_policy").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow)
-}, (table) => {
+}, (t) => {
   return [
-    index("idx_monitoring_configs_org").on(table.organizationId),
-    index("idx_monitoring_configs_website").on(table.websiteId),
+    index("idx_monitoring_configs_org").on(t.organizationId),
+    index("idx_monitoring_configs_website").on(t.websiteId),
     ...tenantPolicy("organization_id")
   ];
 });
@@ -1214,11 +1215,11 @@ export const crawlSnapshots = pgTable("crawl_snapshots", {
   contentHash: text("content_hash"),
   extractedContent: text("extracted_content"),
   snapshotMetadata: jsonb("snapshot_metadata").notNull().default({})
-}, (table) => {
+}, (t) => {
   return [
-    index("idx_crawl_snapshots_org").on(table.organizationId),
-    index("idx_crawl_snapshots_config").on(table.monitoringConfigId),
-    index("idx_crawl_snapshots_captured").on(table.capturedAt),
+    index("idx_crawl_snapshots_org").on(t.organizationId),
+    index("idx_crawl_snapshots_config").on(t.monitoringConfigId),
+    index("idx_crawl_snapshots_captured").on(t.capturedAt),
     ...tenantPolicy("organization_id")
   ];
 });

@@ -46,7 +46,7 @@ export interface DashboardSummaryData {
     actionType: string;
     description: string;
     time: string;
-    metadata?: any;
+    metadata?: unknown;
   }>;
 }
 
@@ -74,7 +74,7 @@ export const dashboardHomeService = {
       `req-dashboard-summary-${Date.now()}`,
       async () => {
         // 1. Retrieve recent audits from `premium_audits` table
-        let recentAudits: any[] = [];
+        let recentAudits: Array<Record<string, unknown>> = [];
         try {
           const auditsRes = await pg.query(
             `SELECT id, url, score, grade, pages_analyzed, metrics, issues, recommendations, created_at
@@ -96,17 +96,17 @@ export const dashboardHomeService = {
         let technicalHealth: number | "N/A" = "N/A";
         let contentHealth: number | "N/A" = "N/A";
         let aiVisibility: number | "N/A" = "N/A";
-        let brandAuthority: number | "N/A" = "N/A";
-        let citationVisibility: number | "N/A" = "N/A";
-        let competitivePosition: string | "N/A" = "N/A";
+        const brandAuthority: number | "N/A" = "N/A";
+        const citationVisibility: number | "N/A" = "N/A";
+        const competitivePosition: string | "N/A" = "N/A";
 
         if (latestAudit) {
-          seoHealth = latestAudit.score;
+          seoHealth = latestAudit.score as number;
 
           // Parse JSONB metrics securely
           const parsedMetrics = typeof latestAudit.metrics === "string"
             ? JSON.parse(latestAudit.metrics)
-            : latestAudit.metrics || {};
+            : (latestAudit.metrics as Record<string, number> || {});
 
           technicalHealth = parsedMetrics.technicalHealth !== undefined ? parsedMetrics.technicalHealth : 85;
           contentHealth = parsedMetrics.contentQuality !== undefined ? parsedMetrics.contentQuality : 80;
@@ -120,16 +120,17 @@ export const dashboardHomeService = {
           // Sort chronologically for the chart
           const sortedAudits = [...recentAudits].reverse();
           sortedAudits.forEach((audit) => {
-            const dateObj = new Date(audit.created_at);
+            const dateObj = new Date(String(audit.created_at));
             const dateStr = isRtl
               ? dateObj.toLocaleDateString("fa-IR", { month: "short", day: "numeric" })
               : dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-            const pMetrics = typeof audit.metrics === "string" ? JSON.parse(audit.metrics) : audit.metrics || {};
+            const pMetrics = typeof audit.metrics === "string" ? JSON.parse(audit.metrics) : (audit.metrics as Record<string, number> || {});
+            const auditScore = audit.score as number;
             visibilityTrends.push({
               date: dateStr,
-              seo: audit.score,
-              ai: pMetrics.semanticCoverage !== undefined ? pMetrics.semanticCoverage : Math.max(40, audit.score - 10),
+              seo: auditScore,
+              ai: pMetrics.semanticCoverage !== undefined ? pMetrics.semanticCoverage : Math.max(40, auditScore - 10),
             });
           });
         }
@@ -143,7 +144,7 @@ export const dashboardHomeService = {
             ? JSON.parse(latestAudit.issues)
             : latestAudit.issues || [];
 
-          parsedIssues.forEach((issueObj: any, index: number) => {
+          parsedIssues.forEach((issueObj: Record<string, unknown>, index: number) => {
             const id = `issue-${index}`;
             const severity = issueObj.severity || "warning";
             const category = issueObj.category || "technical";
@@ -155,7 +156,7 @@ export const dashboardHomeService = {
 
             criticalIssues.push({
               id,
-              issue: issueObj.description || (isRtl ? "نیاز به بررسی ساختار بهینه‌سازی" : "Optimization structure review needed"),
+              issue: String(issueObj.description || issueObj.issue || (isRtl ? "نیاز به بررسی ساختار بهینه‌سازی" : "Optimization structure review needed")),
               impact: severity === "critical"
                 ? (isRtl ? "کاهش بحرانی رتبه درPerplexity" : "Critical drop in Perplexity search visibility")
                 : (isRtl ? "تاثیر متوسط در کشف برند" : "Medium impact on brand discoverability"),
@@ -168,17 +169,17 @@ export const dashboardHomeService = {
             ? JSON.parse(latestAudit.recommendations)
             : latestAudit.recommendations || [];
 
-          parsedRecs.forEach((recObj: any, index: number) => {
+          parsedRecs.forEach((recObj: Record<string, unknown>, index: number) => {
             const id = `rec-${index}`;
             let toolRoute = "/dashboard/content/studio";
             if (recObj.priority === "high") toolRoute = "/dashboard/seo/technical";
 
             recommendedActions.push({
               id,
-              action: recObj.insight || recObj.recommendation || (isRtl ? "بهینه‌سازی تگ‌های اسکیما معنایی" : "Optimize semantic schema tags"),
-              impact: recObj.estimatedImpact || (isRtl ? "افزایش حضور معنایی" : "Boost semantic prominence"),
+              action: (recObj.insight as string) || (recObj.recommendation as string) || (isRtl ? "بهینه‌سازی تگ‌های اسکیما معنایی" : "Optimize semantic schema tags"),
+              impact: (recObj.estimatedImpact as string) || (isRtl ? "افزایش حضور معنایی" : "Boost semantic prominence"),
               toolRoute,
-              priority: (recObj.priority as any) || "medium"
+              priority: (recObj.priority as "high" | "medium" | "low") || "medium"
             });
           });
         } else {
@@ -189,7 +190,7 @@ export const dashboardHomeService = {
         // 4. Activity Logs Map
         const recentActivity: DashboardSummaryData["recentActivity"] = [];
         recentAudits.slice(0, 5).forEach((audit, index) => {
-          const dateObj = new Date(audit.created_at);
+          const dateObj = new Date(String(audit.created_at));
           const timeStr = isRtl
             ? dateObj.toLocaleDateString("fa-IR", { hour: "2-digit", minute: "2-digit" })
             : dateObj.toLocaleDateString("en-US", { hour: "2-digit", minute: "2-digit" });
@@ -206,13 +207,13 @@ export const dashboardHomeService = {
 
         // Map database records into clean response schemas
         const mappedRecentAudits = recentAudits.map((audit) => ({
-          id: audit.id,
-          url: audit.url,
-          score: audit.score,
-          grade: audit.grade,
-          createdAt: audit.created_at,
+          id: audit.id as string,
+          url: audit.url as string,
+          score: audit.score as number,
+          grade: audit.grade as string,
+          createdAt: audit.created_at as string,
           status: "completed",
-          crawledPages: audit.pages_analyzed || 1,
+          crawledPages: (audit.pages_analyzed as number) || 1,
         }));
 
         return {

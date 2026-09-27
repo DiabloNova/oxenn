@@ -173,16 +173,17 @@ export async function extractSignals(crawl: CrawlResult, responseTimeMs: number,
       const rawJson = $(el).html();
       if (rawJson) {
         const parsed = JSON.parse(rawJson);
-        const findTypes = (obj: any) => {
+        const findTypes = (obj: unknown) => {
           if (!obj) return;
-          if (typeof obj === "object") {
-            if (obj["@type"]) {
-              schemaTypes.push(String(obj["@type"]));
+          if (typeof obj === "object" && obj !== null) {
+            const rec = obj as Record<string, unknown>;
+            if (rec["@type"]) {
+              schemaTypes.push(String(rec["@type"]));
             }
             if (Array.isArray(obj)) {
               obj.forEach(findTypes);
             } else {
-              Object.values(obj).forEach(findTypes);
+              Object.values(rec).forEach(findTypes);
             }
           }
         };
