@@ -1183,3 +1183,9 @@ When uncertainty remains material to correctness, security, database integrity, 
 
 Do not hide uncertainty behind implementation.
 ```0
+
+## 44. Application Role Model
+The database operates under a strict role separation model:
+- `app_owner`: Owns tables, executes DDL and migrations. Has BYPASSRLS capability where supported.
+- `app_runtime`: Narrowly-scoped role for executing application code (DML only: SELECT, INSERT, UPDATE, DELETE). This role does not own tables, does not have BYPASSRLS, and is subject to strict, forced Row Level Security (RLS).
+Application code and tests must use `app_runtime` for normal operations to ensure tenant isolation is strictly enforced.
