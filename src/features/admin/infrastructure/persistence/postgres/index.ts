@@ -80,7 +80,7 @@ export class PostgresClient {
     // Wrap the leased client using Object.create to preserve the prototype chain, event emitters, and other methods of PoolClient
     const wrappedClient = Object.create(client);
     wrappedClient.query = async (sql: string, params: unknown[] = []) => {
-      if (isQueryTenantScoped(sql)) {
+      if (isQueryTenantScoped(sql) && !TenantContextManager.isSystemMode()) {
         TenantContextManager.getRequiredTenantId();
         const activeDbClient = TenantContextManager.getDbClient();
         if (!activeDbClient) {
@@ -154,7 +154,7 @@ export class PostgresClient {
   public async query<T extends QueryResultRow = QueryResultRow>(sql: string, params: unknown[] = []): Promise<QueryResult<T>> {
     const isTenantQuery = isQueryTenantScoped(sql);
 
-    if (isTenantQuery) {
+    if (isTenantQuery && !TenantContextManager.isSystemMode()) {
       TenantContextManager.getRequiredTenantId();
       const activeDbClient = TenantContextManager.getDbClient();
       if (!activeDbClient) {

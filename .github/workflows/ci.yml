@@ -38,8 +38,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Verify tenant tables schema alignment
+        run: pnpm tsx scripts/database/verify-tenant-tables.ts
+
       - name: Build
         run: pnpm build
 
       - name: Verify generated tracked files (no drift)
-        run: git diff --exit-code src/lib/docsIndex.ts
+        run: git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts

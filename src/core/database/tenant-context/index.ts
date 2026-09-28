@@ -17,53 +17,31 @@ export class TenantContextViolationException extends Error {
   }
 }
 
-export const TENANT_SCOPED_TABLES = Object.freeze([
-  "brands",
-  "entities",
-  "entity_relationships",
-  "prompts",
-  "ai_observations",
-  "brand_mentions",
-  "citations",
-  "visibility_scores",
-  "recommendations",
-  "tenant_quotas",
-  "tenant_subscriptions",
-  "document_embeddings",
-  "kg_entities",
-  "kg_relationships",
-  "premium_audits",
-  "competitive_analyses",
-  "crawl_jobs",
-  "crawl_results",
-  "crawl_cache",
-  "ai_visibility_audits",
-  "audit_prompts",
-  "prompt_definitions",
-  "prompt_schedules",
-  "prompt_executions",
-  "position_observations",
-  "citation_sources",
-  "citation_occurrences",
-  "brand_associations",
-  "recommendation_observations",
-  "aeo_analyses",
-  "faq_opportunities",
-  "kg_alignments",
-  "monitoring_configs",
-  "crawl_snapshots",
-  "monitoring_alerts"
-]);
+import { TENANT_SCOPED_TABLES } from "../tenant-tables.generated";
+export { TENANT_SCOPED_TABLES, type TenantScopedTable } from "../tenant-tables.generated";
+
+/**
+ * Strips comments and string literals from SQL using single-pass tokenization
+ * to avoid false positive table matches and prevent string literals containing '--' or block comments
+ * from consuming subsequent valid SQL.
+ */
+function cleanSql(sql: string): string {
+  if (!sql) return "";
+  return sql.replace(
+    /'(?:''|[^'])*'|\$([a-zA-Z0-9_]*)\$[\s\S]*?\$\1\$|\/\*[\s\S]*?\*\/|--[^\n]*/g,
+    " "
+  );
+}
 
 /**
  * Checks if a given SQL query targets any of the tenant-scoped tables.
  */
 export function isQueryTenantScoped(sql: string): boolean {
   if (!sql) return false;
-  const normalized = sql.toLowerCase();
+  const cleaned = cleanSql(sql);
   for (const table of TENANT_SCOPED_TABLES) {
-    const regex = new RegExp(`\\b${table}\\b`, "i");
-    if (regex.test(normalized)) {
+    const regex = new RegExp(`(?<![a-zA-Z0-9_])${table}(?![a-zA-Z0-9_])`, "i");
+    if (regex.test(cleaned)) {
       return true;
     }
   }
