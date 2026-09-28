@@ -11,7 +11,7 @@ function request(): CrawlRequest {
     throw normalized.error;
   }
   return {
-    tenantId: "test-tenant",
+    tenantId: "a0000000-0000-4000-8000-00000000000a",
     requestedUrl: "https://example.com/",
     normalizedUrl: normalized.value,
     policy: resolveCrawlPolicy({ robotsPolicy: "ignore" }),

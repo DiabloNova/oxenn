@@ -106,32 +106,59 @@ async function main(): Promise<void> {
     return;
   }
 
+  const testTenantIds = [
+    "a0000000-0000-4000-8000-00000000000a",
+    "b0000000-0000-4000-8000-00000000000b",
+    "c0000000-0000-4000-8000-00000000000c",
+    "d0000000-0000-4000-8000-00000000000d",
+    "e0000000-0000-4000-8000-00000000000e",
+    "f0000000-0000-4000-8000-00000000000f",
+    "a1000000-0000-4000-8000-00000000000a",
+    "a2000000-0000-4000-8000-00000000000a",
+    "a3000000-0000-4000-8000-00000000000a",
+    "a4000000-0000-4000-8000-00000000000a"
+  ];
+
   const pool = new Pool({ connectionString: databaseUrl, max: 24 });
+  const setupClient = await pool.connect();
+  try {
+    for (const id of testTenantIds) {
+      await setupClient.query(
+        `INSERT INTO organizations (id, name, slug)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (id) DO NOTHING`,
+        [id, 'Test ' + id.slice(0, 8), 'test-' + id.slice(0, 8)]
+      );
+    }
+  } finally {
+    setupClient.release();
+  }
+
   const jobs = new CrawlJobRepository();
   const cache = new CrawlCacheRepository();
   const results = new CrawlResultRepository();
   const dispatcher = new CrawlDispatcherRepository(pool);
 
   try {
-    await withTenant("ws-context", async () => {
+    await withTenant("a0000000-0000-4000-8000-00000000000a", async () => {
       const client = TenantContextManager.getDbClient() as PoolClient | null;
       assert.ok(client);
       const setting = await client.query<{ value: string }>(
         "SELECT current_setting('app.current_tenant_id', true) AS value"
       );
-      assert.equal(setting.rows[0]?.value, "ws-context");
+      assert.equal(setting.rows[0]?.value, "a0000000-0000-4000-8000-00000000000a");
     });
 
-    await cleanup(pool, "ws-a");
-    await cleanup(pool, "ws-b");
-    const tenantAJob = await withTenant("ws-a", () =>
-      jobs.createOrGetByDedup({ request: request("ws-a") })
+    await cleanup(pool, "b0000000-0000-4000-8000-00000000000b");
+    await cleanup(pool, "c0000000-0000-4000-8000-00000000000c");
+    const tenantAJob = await withTenant("b0000000-0000-4000-8000-00000000000b", () =>
+      jobs.createOrGetByDedup({ request: request("b0000000-0000-4000-8000-00000000000b") })
     );
-    await withTenant("ws-a", async () => {
+    await withTenant("b0000000-0000-4000-8000-00000000000b", async () => {
       await results.put(tenantAJob.id, result);
       await cache.put("cache-a", result, new Date(Date.now() + 60_000));
     });
-    await withTenant("ws-b", async () => {
+    await withTenant("c0000000-0000-4000-8000-00000000000c", async () => {
       assert.equal(await jobs.getById(tenantAJob.id), null);
       assert.equal((await results.getByJobId(tenantAJob.id)), null);
       assert.equal((await cache.get("cache-a")).outcome, "MISS");
@@ -141,50 +168,50 @@ async function main(): Promise<void> {
       );
     });
 
-    await cleanup(pool, "ws-concurrent");
+    await cleanup(pool, "d0000000-0000-4000-8000-00000000000d");
     const concurrent = await Promise.all(
       Array.from({ length: 12 }, () =>
-        withTenant("ws-concurrent", () =>
+        withTenant("d0000000-0000-4000-8000-00000000000d", () =>
           jobs.createOrGetByDedup({
-            request: request("ws-concurrent")
+            request: request("d0000000-0000-4000-8000-00000000000d")
           })
         )
       )
     );
     assert.equal(new Set(concurrent.map(job => job.id)).size, 1);
-    const observedActive = await withTenant("ws-concurrent", async () => {
+    const observedActive = await withTenant("d0000000-0000-4000-8000-00000000000d", async () => {
       const client = TenantContextManager.getDbClient() as PoolClient;
       const rows = await client.query<{ count: string }>(
         `SELECT count(*)::text AS count FROM crawl_jobs
          WHERE tenant_id = $1 AND dedup_key = $2
            AND status IN ('PENDING', 'QUEUED', 'RUNNING')`,
-        ["ws-concurrent", concurrent[0].dedupKey]
+        ["d0000000-0000-4000-8000-00000000000d", concurrent[0].dedupKey]
       );
       return Number(rows.rows[0]?.count);
     });
     assert.equal(observedActive, 1);
 
-    await cleanup(pool, "ws-policy");
-    const first = await withTenant("ws-policy", () =>
-      jobs.createOrGetByDedup({ request: request("ws-policy") })
+    await cleanup(pool, "e0000000-0000-4000-8000-00000000000e");
+    const first = await withTenant("e0000000-0000-4000-8000-00000000000e", () =>
+      jobs.createOrGetByDedup({ request: request("e0000000-0000-4000-8000-00000000000e") })
     );
-    const second = await withTenant("ws-policy", () =>
+    const second = await withTenant("e0000000-0000-4000-8000-00000000000e", () =>
       jobs.createOrGetByDedup({
-        request: request("ws-policy", { ...policy, maxPages: 2 })
+        request: request("e0000000-0000-4000-8000-00000000000e", { ...policy, maxPages: 2 })
       })
     );
     assert.notEqual(first.id, second.id);
 
-    await cleanup(pool, "ws-race");
-    const raceJob = await withTenant("ws-race", () =>
-      jobs.createOrGetByDedup({ request: request("ws-race") })
+    await cleanup(pool, "f0000000-0000-4000-8000-00000000000f");
+    const raceJob = await withTenant("f0000000-0000-4000-8000-00000000000f", () =>
+      jobs.createOrGetByDedup({ request: request("f0000000-0000-4000-8000-00000000000f") })
     );
-    const queued = await withTenant("ws-race", () =>
+    const queued = await withTenant("f0000000-0000-4000-8000-00000000000f", () =>
       jobs.transition(raceJob.id, "PENDING", raceJob.version, "QUEUED")
     );
     const transitions = await Promise.allSettled(
       [0, 1].map(() =>
-        withTenant("ws-race", () =>
+        withTenant("f0000000-0000-4000-8000-00000000000f", () =>
           jobs.transition(queued.id, "QUEUED", queued.version, "RUNNING")
         )
       )
@@ -198,33 +225,33 @@ async function main(): Promise<void> {
       1
     );
 
-    await cleanup(pool, "ws-dispatch-a");
-    await cleanup(pool, "ws-dispatch-b");
-    await cleanup(pool, "ws-recovery");
-    await cleanup(pool, "ws-e2e");
-    const dispatchA = await withTenant("ws-dispatch-a", () =>
-      jobs.createOrGetByDedup({ request: request("ws-dispatch-a") })
+    await cleanup(pool, "a1000000-0000-4000-8000-00000000000a");
+    await cleanup(pool, "a2000000-0000-4000-8000-00000000000a");
+    await cleanup(pool, "a3000000-0000-4000-8000-00000000000a");
+    await cleanup(pool, "a4000000-0000-4000-8000-00000000000a");
+    const dispatchA = await withTenant("a1000000-0000-4000-8000-00000000000a", () =>
+      jobs.createOrGetByDedup({ request: request("a1000000-0000-4000-8000-00000000000a") })
     );
-    const dispatchB = await withTenant("ws-dispatch-b", () =>
-      jobs.createOrGetByDedup({ request: request("ws-dispatch-b") })
+    const dispatchB = await withTenant("a2000000-0000-4000-8000-00000000000a", () =>
+      jobs.createOrGetByDedup({ request: request("a2000000-0000-4000-8000-00000000000a") })
     );
-    await withTenant("ws-dispatch-a", () =>
+    await withTenant("a1000000-0000-4000-8000-00000000000a", () =>
       jobs.transition(dispatchA.id, "PENDING", dispatchA.version, "QUEUED")
     );
-    await withTenant("ws-dispatch-b", () =>
+    await withTenant("a2000000-0000-4000-8000-00000000000a", () =>
       jobs.transition(dispatchB.id, "PENDING", dispatchB.version, "QUEUED")
     );
     const claimed = await dispatcher.claim("integration-worker", 2, 60_000);
     assert.deepEqual(
       new Set(claimed.map(candidate => candidate.tenantId)),
-      new Set(["ws-dispatch-a", "ws-dispatch-b"])
+      new Set(["a1000000-0000-4000-8000-00000000000a", "a2000000-0000-4000-8000-00000000000a"])
     );
 
-    await cleanup(pool, "ws-recovery");
-    const recoveryJob = await withTenant("ws-recovery", () =>
-      jobs.createOrGetByDedup({ request: request("ws-recovery") })
+    await cleanup(pool, "a3000000-0000-4000-8000-00000000000a");
+    const recoveryJob = await withTenant("a3000000-0000-4000-8000-00000000000a", () =>
+      jobs.createOrGetByDedup({ request: request("a3000000-0000-4000-8000-00000000000a") })
     );
-    const recoveryQueued = await withTenant("ws-recovery", () =>
+    const recoveryQueued = await withTenant("a3000000-0000-4000-8000-00000000000a", () =>
       jobs.transition(
         recoveryJob.id,
         "PENDING",
@@ -238,11 +265,11 @@ async function main(): Promise<void> {
       60_000
     )).find(candidate => candidate.id === recoveryQueued.id);
     assert.ok(recoveryClaim);
-    const running = await withTenant("ws-recovery", () =>
+    const running = await withTenant("a3000000-0000-4000-8000-00000000000a", () =>
       jobs.getById(recoveryClaim.id)
     );
     assert.ok(running);
-    await rawTenant(pool, "ws-recovery", async client => {
+    await rawTenant(pool, "a3000000-0000-4000-8000-00000000000a", async client => {
       await client.query(
         "UPDATE crawl_jobs SET lease_expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1",
         [recoveryClaim.id]
@@ -259,12 +286,12 @@ async function main(): Promise<void> {
       ),
       false
     );
-    const queuedAgain = await withTenant("ws-recovery", () =>
+    const queuedAgain = await withTenant("a3000000-0000-4000-8000-00000000000a", () =>
       jobs.getById(recoveryClaim.id)
     );
     assert.equal(queuedAgain?.status, "QUEUED");
 
-    await cleanup(pool, "ws-e2e");
+    await cleanup(pool, "a4000000-0000-4000-8000-00000000000a");
     const server = createServer((_request, response) => {
       response
         .writeHead(200, { "content-type": "text/html" })
@@ -293,8 +320,8 @@ async function main(): Promise<void> {
       localRouter,
       async () => ({ ok: true, ips: ["127.0.0.1"] })
     );
-    const submission = await withTenant("ws-e2e", () =>
-      localOrchestrator.submit("ws-e2e", localUrl, localPolicy)
+    const submission = await withTenant("a4000000-0000-4000-8000-00000000000a", () =>
+      localOrchestrator.submit("a4000000-0000-4000-8000-00000000000a", localUrl, localPolicy)
     );
     assert.ok(submission.job);
     const candidate = (await dispatcher.claim("e2e-worker", 100, 60_000)).find(
@@ -302,10 +329,10 @@ async function main(): Promise<void> {
     );
     assert.ok(candidate);
     const leaseVersion = submission.job.version + 1;
-    const e2eRunning = await withTenant("ws-e2e", () => jobs.getById(candidate.id));
+    const e2eRunning = await withTenant("a4000000-0000-4000-8000-00000000000a", () => jobs.getById(candidate.id));
     assert.equal(e2eRunning?.status, "RUNNING");
     await localOrchestrator.execute(e2eRunning as NonNullable<typeof e2eRunning>, new AbortController().signal, {
-      runTenantOperation: operation => withTenant("ws-e2e", operation),
+      runTenantOperation: operation => withTenant("a4000000-0000-4000-8000-00000000000a", operation),
       getExpectedVersion: () => leaseVersion,
       completeIfLeaseOwner: (status, expectedVersion, facts) =>
         dispatcher.completeIfLeaseOwner(
@@ -316,17 +343,25 @@ async function main(): Promise<void> {
           facts
         )
     });
-    const terminal = await withTenant("ws-e2e", () => jobs.getById(candidate.id));
+    const terminal = await withTenant("a4000000-0000-4000-8000-00000000000a", () => jobs.getById(candidate.id));
     assert.equal(terminal?.status, "SUCCEEDED");
-    assert.ok(await withTenant("ws-e2e", () => results.getByJobId(candidate.id)));
-    const hit = await withTenant("ws-e2e", () =>
-      localOrchestrator.submit("ws-e2e", localUrl, localPolicy)
+    assert.ok(await withTenant("a4000000-0000-4000-8000-00000000000a", () => results.getByJobId(candidate.id)));
+    const hit = await withTenant("a4000000-0000-4000-8000-00000000000a", () =>
+      localOrchestrator.submit("a4000000-0000-4000-8000-00000000000a", localUrl, localPolicy)
     );
     assert.equal(hit.cacheOutcome, "HIT");
     await new Promise<void>(resolve => server.close(() => resolve()));
 
     console.log("✅ acquisition integration suites passed");
   } finally {
+    const cleanClient = await pool.connect();
+    try {
+      for (const id of testTenantIds) {
+        await cleanClient.query("DELETE FROM organizations WHERE id = $1", [id]);
+      }
+    } finally {
+      cleanClient.release();
+    }
     await pool.end();
     await PostgresClient.getInstance().getPool().end();
   }
