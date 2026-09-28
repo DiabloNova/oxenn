@@ -160,7 +160,7 @@ export const adminUsers = pgTable("admin_users", {
   id: uuid("id").primaryKey().default(defaultUuid),
   email: text("email").notNull().unique(),
   fullName: text("full_name").notNull(),
-  roleId: uuid("role_id").notNull(),
+  roleId: uuid("role_id").notNull().references(() => roles.id, { onDelete: "restrict" }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
@@ -219,7 +219,7 @@ export const systemConfigurations = pgTable("system_configurations", {
 
 export const tenantQuotas = pgTable("tenant_quotas", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  tenantId: uuid("tenant_id").notNull(),
+  tenantId: uuid("tenant_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   maxUsers: integer("max_users").notNull(),
   maxBrands: integer("max_brands").notNull(),
   maxPrompts: integer("max_prompts").notNull(),
@@ -240,7 +240,7 @@ export const tenantQuotas = pgTable("tenant_quotas", {
 
 export const creditTransactions = pgTable("credit_transactions", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  tenantId: uuid("tenant_id").notNull(),
+  tenantId: uuid("tenant_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(),
   transactionType: text("transaction_type").notNull(), // allocation, consumption, refund
   description: text("description"),
@@ -253,7 +253,7 @@ export const creditTransactions = pgTable("credit_transactions", {
 
 export const tenantSubscriptions = pgTable("tenant_subscriptions", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  tenantId: uuid("tenant_id").notNull(),
+  tenantId: uuid("tenant_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   plan: text("plan").notNull(),
   status: text("status").notNull(),
   billingCycle: text("billing_cycle").notNull(),
@@ -935,7 +935,7 @@ export const premiumAudits = pgTable("premium_audits", {
 
 export const technicalAudits = pgTable("technical_audits", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  organizationId: uuid("organization_id").notNull(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
   technicalScore: integer("technical_score").notNull(),
   grade: text("grade").notNull(),
@@ -951,7 +951,7 @@ export const technicalAudits = pgTable("technical_audits", {
 
 export const competitiveAnalyses = pgTable("competitive_analyses", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  organizationId: uuid("organization_id").notNull(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   userUrl: text("user_url").notNull(),
   competitorUrls: text("competitor_urls").array().notNull(),
   overallScore: integer("overall_score").notNull(),
@@ -1068,7 +1068,7 @@ export const competitiveSeoFindings = pgTable("competitive_seo_findings", {
 // ==========================================
 export const documentEmbeddings = pgTable("document_embeddings", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  tenantId: uuid("tenant_id").notNull(),
+  tenantId: uuid("tenant_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   contentChunk: text("content_chunk").notNull(),
   metadata: jsonb("metadata").notNull().default({}),
   embedding: vector("embedding").notNull(),

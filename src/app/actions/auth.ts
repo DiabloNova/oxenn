@@ -64,7 +64,7 @@ export async function registerAction(name: string, email: string): Promise<User>
         throw new Error("User already exists.");
     }
 
-    const userId = `usr-${randomUUID().slice(0,8)}`;
+    const userId = `usr-${randomUUID()}`;
 
     // Create User
     await client.query("INSERT INTO users (id, name, email) VALUES ($1, $2, $3)", [userId, name, email]);
