@@ -16,7 +16,8 @@
     "env:check": "tsx scripts/env-check.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "pnpm env:check migrate && tsx src/core/database/migrator.ts",
-    "db:push": "tsx scripts/database/db-push-guard.ts && drizzle-kit push"
+    "db:push": "tsx scripts/database/db-push-guard.ts && drizzle-kit push",
+    "test:isolation": "tsx tests/isolation/suite.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.24",
