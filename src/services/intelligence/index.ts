@@ -30,7 +30,7 @@ export const intelligenceService = {
         id: "ins-02",
         engine: "ChatGPT",
         title: "Rising Positive Sentiment alignment",
-        description: "Latest GPT-4o benchmarks show a +12% increase in brand recommendation density for logistics services.",
+        description: "System alerts detect shifts in brand recommendation density across specific service queries.",
         sentiment: "positive",
         createdAt: new Date().toISOString(),
       }

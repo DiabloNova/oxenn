@@ -164,14 +164,14 @@ export default function DocDetailPage({ params }: DocDetailPageProps) {
         rendered.push(<hr key={idx} className="border-white/10 my-6" />);
       } else if (trimmed.startsWith("- ")) {
         rendered.push(
-          <li key={idx} className="list-none flex items-start gap-2.5 text-[13px] text-slate-300 leading-relaxed my-2.5 ps-2">
+          <li key={idx} className={`list-none flex items-start gap-2.5 text-[13px] text-slate-300 my-2.5 ps-2 ${isFa ? "leading-[1.9]" : "leading-relaxed"}`}>
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--orange-500)] shrink-0 mt-2" />
             <span dangerouslySetInnerHTML={{ __html: parseInlineMarkdown(trimmed.substring(2)) }} />
           </li>
         );
       } else {
         rendered.push(
-          <p key={idx} className="text-[13px] sm:text-sm text-slate-300 leading-relaxed my-3.5 text-justify"
+          <p key={idx} className={`text-[13px] sm:text-sm text-slate-300 my-3.5 text-justify ${isFa ? "leading-[1.9]" : "leading-relaxed"}`}
              dangerouslySetInnerHTML={{ __html: parseInlineMarkdown(trimmed) }} />
         );
       }

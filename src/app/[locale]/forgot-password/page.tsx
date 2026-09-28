@@ -1,5 +1,6 @@
 "use client";
 
+import { AmbientSpheres } from "@/components/backgrounds/AmbientSpheres";
 import React, { useState, use } from "react";
 import Link from "next/link";
 import { Input } from "@/components/Input";

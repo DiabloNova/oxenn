@@ -1,5 +1,6 @@
 "use client";
 
+import { AmbientSpheres } from "@/components/backgrounds/AmbientSpheres";
 import React, { use } from "react";
 import { LandingHeader } from "@/components/marketing/LandingHeader";
 import { LandingFooter } from "@/components/marketing/LandingFooter";
@@ -18,7 +19,7 @@ export default function PrivacyPage({ params }: { params: Promise<{ locale: stri
 
       <main className="flex-1 pt-32 pb-24 relative overflow-hidden">
         {/* Decorative elements */}
-        <div className="absolute top-1/4 right-1/4 w-[35vw] h-[35vw] bg-gradient-to-br from-[#38bdf8]/15 to-[#f97316]/5 rounded-full blur-[100px] pointer-events-none -z-10" />
+        <AmbientSpheres />
         <div className="absolute inset-0 grid-backdrop opacity-[0.25] pointer-events-none -z-10" />
 
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-12 relative z-10">

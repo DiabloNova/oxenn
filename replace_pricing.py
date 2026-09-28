@@ -1,4 +1,16 @@
-"use client";
+import os
+import re
+
+filepath = "src/app/[locale]/pricing/page.tsx"
+if not os.path.exists(filepath):
+    print("File not found")
+    exit(1)
+
+with open(filepath, 'r') as f:
+    content = f.read()
+
+# I will write a completely new pricing page based on the previous code but using the domain plans.ts
+new_content = """"use client";
 
 import { AmbientSpheres } from "@/components/backgrounds/AmbientSpheres";
 import React, { useEffect, useState } from "react";
@@ -107,13 +119,13 @@ export default function PricingPage() {
                       )}
                       {plan.entitlements.canUseCustomPrompts && (
                         <li className="flex items-center gap-2">
-                          <Construction size={14} className="text-orange-400 shrink-0" aria-label="Coming soon" />
+                          <Construction size={14} className="text-orange-400 shrink-0" title="Coming soon" />
                           <span className="opacity-70 line-through decoration-orange-400/50">{isRtl ? "پرامپت‌های سفارشی (به زودی)" : "Custom Prompts (Coming Soon)"}</span>
                         </li>
                       )}
                       {plan.entitlements.canAccessApi && (
                          <li className="flex items-center gap-2">
-                           <Construction size={14} className="text-orange-400 shrink-0" aria-label="Coming soon" />
+                           <Construction size={14} className="text-orange-400 shrink-0" title="Coming soon" />
                            <span className="opacity-70 line-through decoration-orange-400/50">{isRtl ? "دسترسی API (به زودی)" : "API Access (Coming Soon)"}</span>
                          </li>
                       )}
@@ -138,3 +150,7 @@ export default function PricingPage() {
     </div>
   );
 }
+"""
+
+with open(filepath, 'w') as f:
+    f.write(new_content)

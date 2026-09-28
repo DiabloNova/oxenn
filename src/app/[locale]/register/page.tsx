@@ -1,5 +1,6 @@
 "use client";
 
+import { AmbientSpheres } from "@/components/backgrounds/AmbientSpheres";
 import React, { useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -132,10 +133,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-[var(--background)] relative overflow-hidden" style={{ direction: isFa ? "rtl" : "ltr" }}>
       {/* Decorative Signature Gradients */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--sky-blue-500)]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--orange-500)]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute inset-0 grid-backdrop opacity-[0.2] pointer-events-none -z-10" />
-
+      <AmbientSpheres />
       {/* Main Container */}
       <div className="w-full max-w-[480px] space-y-6">
         {/* Brand Logo & Heading */}
