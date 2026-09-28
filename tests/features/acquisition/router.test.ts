@@ -15,7 +15,7 @@ function request(): CrawlRequest {
     throw normalized.error;
   }
   return {
-    tenantId: "router-test",
+    tenantId: "03000000-0000-0000-0000-000000000030",
     requestedUrl: normalized.value.canonical,
     normalizedUrl: normalized.value,
     policy: resolveCrawlPolicy({

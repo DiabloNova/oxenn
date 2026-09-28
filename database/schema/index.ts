@@ -51,16 +51,6 @@ function tenantPolicy(colName: "organization_id" | "tenant_id" = "organization_i
   ];
 }
 
-function textTenantPolicy() {
-  return [
-    pgPolicy(`crawl_tenant_policy`, {
-      for: "all",
-      using: sql`tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')`,
-      withCheck: sql`tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')`
-    })
-  ];
-}
-
 // ==========================================
 // 1. ORGANIZATIONS
 // ==========================================
@@ -1114,7 +1104,7 @@ export const kgRelationships = pgTable("kg_relationships", {
 // ==========================================
 export const crawlJobs = pgTable("crawl_jobs", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  tenantId: text("tenant_id").notNull(),
+  tenantId: uuid("tenant_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   requestedUrl: text("requested_url").notNull(),
   normalizedUrl: text("normalized_url").notNull(),
   policy: jsonb("policy").notNull(),
@@ -1159,24 +1149,24 @@ export const crawlJobs = pgTable("crawl_jobs", {
   check("crawl_jobs_max_attempts_check", sql`max_attempts > 0`),
   check("crawl_jobs_cache_outcome_check", sql`cache_outcome IS NULL OR cache_outcome IN ('HIT', 'MISS', 'STALE', 'BYPASS')`),
   check("crawl_jobs_version_check", sql`version > 0`),
-  ...textTenantPolicy()
+  ...tenantPolicy("tenant_id")
 ]);
 
 export const crawlResults = pgTable("crawl_results", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  tenantId: text("tenant_id").notNull(),
+  tenantId: uuid("tenant_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   jobId: uuid("job_id").notNull().references(() => crawlJobs.id, { onDelete: "cascade" }),
   result: jsonb("result").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
 }, (table) => [
   uniqueIndex("crawl_results_job_unique").on(table.jobId),
   uniqueIndex("crawl_results_tenant_job_unique").on(table.tenantId, table.jobId),
-  ...textTenantPolicy()
+  ...tenantPolicy("tenant_id")
 ]);
 
 export const crawlCache = pgTable("crawl_cache", {
   id: uuid("id").primaryKey().default(defaultUuid),
-  tenantId: text("tenant_id").notNull(),
+  tenantId: uuid("tenant_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   cacheScope: text("cache_scope").notNull().default("tenant"),
   cacheKey: text("cache_key").notNull(),
   normalizedResult: jsonb("normalized_result").notNull(),
@@ -1186,7 +1176,7 @@ export const crawlCache = pgTable("crawl_cache", {
 }, (table) => [
   uniqueIndex("idx_crawl_cache_key").on(table.tenantId, table.cacheScope, table.cacheKey),
   check("crawl_cache_scope_check", sql`cache_scope = 'tenant'`),
-  ...textTenantPolicy()
+  ...tenantPolicy("tenant_id")
 ]);
 
 // Website Monitoring additions

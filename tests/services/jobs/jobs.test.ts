@@ -49,7 +49,7 @@ export async function runJobTests() {
     name: "Async Engineer",
     email: "worker@seorchable.ir",
     role: "workspace_admin",
-    workspaceId: "ws-test-99"
+    workspaceId: "d0000000-0000-0000-0000-00000000000d"
   };
 
   // ----------------------------------------------------
@@ -75,7 +75,7 @@ export async function runJobTests() {
   // 1.2 Authenticated -> Derived from session, client cannot spoof
   await createSession(mockUser);
   // Spoof plain cookies
-  mockCookieStore.store.set("tenant_id", { value: "ws-hacker-tenant" });
+  mockCookieStore.store.set("tenant_id", { value: "90000000-0000-0000-0000-000000000009" });
   mockCookieStore.store.set("user_id", { value: "usr-hacker" });
 
   const job = await service.createJob({ type: "crawl" });
@@ -99,11 +99,11 @@ export async function runJobTests() {
   }
 
   // 2.2 Same key across different tenants -> must NOT collide
-  const secondUser: User = { id: "usr-other", name: "Other User", email: "other@test.com", role: "workspace_admin", workspaceId: "ws-other-tenant" };
+  const secondUser: User = { id: "usr-other", name: "Other User", email: "other@test.com", role: "workspace_admin", workspaceId: "c0000000-0000-0000-0000-00000000000c" };
   await createSession(secondUser);
   const jobOtherTenant = await service.createJob({ type: "crawl", idempotencyKey: key });
 
-  if (job1.id === jobOtherTenant.id || jobOtherTenant.tenantId !== "ws-other-tenant") {
+  if (job1.id === jobOtherTenant.id || jobOtherTenant.tenantId !== "c0000000-0000-0000-0000-00000000000c") {
     throw new Error("Security Isolation Leak: Cross-tenant idempotency key collision occurred!");
   }
   console.log("  ✅ Idempotency keys are strictly isolated by tenant scope.");
@@ -208,11 +208,11 @@ export async function runJobTests() {
   const schedule: JobSchedule = {
     id: "sched-001",
     jobType: "seo_audit",
-    tenantId: "ws-test-99",
+    tenantId: "d0000000-0000-0000-0000-00000000000d",
     scheduledFor: new Date(Date.now() + 60000),
     enabled: true
   };
-  if (schedule.jobType !== "seo_audit" || schedule.tenantId !== "ws-test-99") {
+  if (schedule.jobType !== "seo_audit" || schedule.tenantId !== "d0000000-0000-0000-0000-00000000000d") {
     throw new Error("Scheduled Job Contract Mismatch.");
   }
   console.log("  ✅ Crawl, AI, and Scheduled job contracts successfully validated.");

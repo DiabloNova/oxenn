@@ -32,8 +32,8 @@ export async function runCacheTests() {
   const service = new CacheService(store);
   const deduplicator = new InMemoryDeduplicationStore();
 
-  const tenantA = "ws-tenant-a";
-  const tenantB = "ws-tenant-b";
+  const tenantA = "a0000000-0000-0000-0000-00000000000a";
+  const tenantB = "b0000000-0000-0000-0000-00000000000b";
 
   const mockUserA: User = {
     id: "usr-1",
@@ -259,7 +259,7 @@ export async function runCacheTests() {
   };
 
   // Run 3 identical concurrent deduplicated calls
-  const dedupKey = "ws-tenant-a:compute-x";
+  const dedupKey = "a0000000-0000-0000-0000-00000000000a:compute-x";
   const p1 = deduplicator.deduplicate(dedupKey, expensiveOperation);
   const p2 = deduplicator.deduplicate(dedupKey, expensiveOperation);
   const p3 = deduplicator.deduplicate(dedupKey, expensiveOperation);
@@ -281,7 +281,7 @@ export async function runCacheTests() {
   };
   void failingOperation;
 
-  const failKey = "ws-tenant-a:compute-fail";
+  const failKey = "a0000000-0000-0000-0000-00000000000a:compute-fail";
   try {
     await deduplicator.deduplicate(failKey, failingOperation);
   } catch {

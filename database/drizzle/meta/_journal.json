@@ -50,6 +50,13 @@
       "when": 1790567801185,
       "tag": "0006_stormy_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790585459216,
+      "tag": "0007_crawl-tenant-uuid",
+      "breakpoints": true
     }
   ]
 }

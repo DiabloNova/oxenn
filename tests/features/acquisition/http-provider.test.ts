@@ -39,7 +39,7 @@ export async function testHttpProviderLimits(): Promise<void> {
   const normalized = normalizeUrl(`http://a.test:${port}/`);
   assert.ok(normalized.ok);
   const request: CrawlRequest = {
-    tenantId: "http-provider-test",
+    tenantId: "01000000-0000-0000-0000-000000000010",
     requestedUrl: normalized.value.canonical,
     normalizedUrl: normalized.value,
     policy: resolveCrawlPolicy({
