@@ -21,20 +21,16 @@ import { TENANT_SCOPED_TABLES } from "../tenant-tables.generated";
 export { TENANT_SCOPED_TABLES, type TenantScopedTable } from "../tenant-tables.generated";
 
 /**
- * Strips comments and string literals from SQL to avoid false positive table matches.
+ * Strips comments and string literals from SQL using single-pass tokenization
+ * to avoid false positive table matches and prevent string literals containing '--' or block comments
+ * from consuming subsequent valid SQL.
  */
 function cleanSql(sql: string): string {
   if (!sql) return "";
-  let cleaned = sql;
-  // Strip multi-line comments
-  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, " ");
-  // Strip single-line comments
-  cleaned = cleaned.replace(/--.*$/gm, " ");
-  // Strip dollar-quoted string literals ($tag$...$tag$ or $$...$$)
-  cleaned = cleaned.replace(/\$[a-zA-Z0-9_]*\$[\s\S]*?\$[a-zA-Z0-9_]*\$/g, " ");
-  // Strip single-quoted string literals ('...' and escaped quotes '')
-  cleaned = cleaned.replace(/'(?:''|[^'])*'/g, " ");
-  return cleaned;
+  return sql.replace(
+    /'(?:''|[^'])*'|\$([a-zA-Z0-9_]*)\$[\s\S]*?\$\1\$|\/\*[\s\S]*?\*\/|--[^\n]*/g,
+    " "
+  );
 }
 
 /**

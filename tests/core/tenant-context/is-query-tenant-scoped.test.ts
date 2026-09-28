@@ -71,4 +71,20 @@ describe("isQueryTenantScoped Matcher Test Suite", () => {
   it("case 17 (TRAP): ignores table name appearing inside dollar-quoted string literal", () => {
     expect(isQueryTenantScoped("SELECT * FROM system_configurations WHERE value = $$websites$$")).toBe(false);
   });
+
+  it("case 18 (DEFECT 2 SECURITY FIX): single-quoted literal containing comment sequence '--' does NOT wipe subsequent SQL", () => {
+    expect(isQueryTenantScoped("SELECT '--' AS x, * FROM websites")).toBe(true);
+  });
+
+  it("case 19 (DEFECT 2 SECURITY FIX): single-quoted literal containing comment sequence '/*' does NOT wipe subsequent SQL", () => {
+    expect(isQueryTenantScoped("SELECT * FROM pages WHERE path LIKE '/*%' AND title = '*/'")).toBe(true);
+  });
+
+  it("case 20 (DEFECT 2 SECURITY FIX): dollar-quoted literal containing '--' does NOT wipe subsequent SQL", () => {
+    expect(isQueryTenantScoped("SELECT $$-- foo$$ AS x, * FROM websites")).toBe(true);
+  });
+
+  it("case 21 (DEFECT 2 SECURITY FIX): tagged dollar-quoted literal containing block comment does NOT wipe subsequent SQL", () => {
+    expect(isQueryTenantScoped("SELECT $tag$/* comment */$tag$ AS x, * FROM websites")).toBe(true);
+  });
 });
