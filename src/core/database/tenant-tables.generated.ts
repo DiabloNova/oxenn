@@ -1,0 +1,61 @@
+/**
+ * AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY.
+ * Generated from database/drizzle latest snapshot by scripts/database/verify-tenant-tables.ts.
+ * Represents all schema tables with at least one Row Level Security (RLS) tenant isolation policy.
+ */
+
+export const TENANT_SCOPED_TABLES = Object.freeze([
+  "aeo_analyses",
+  "ai_observations",
+  "ai_visibility_audits",
+  "api_keys",
+  "audit_prompts",
+  "brand_associations",
+  "brand_mentions",
+  "brands",
+  "citation_occurrences",
+  "citation_sources",
+  "citations",
+  "competitive_analyses",
+  "competitive_seo_findings",
+  "competitor_changes",
+  "competitors",
+  "crawl_cache",
+  "crawl_jobs",
+  "crawl_results",
+  "crawl_snapshots",
+  "credit_transactions",
+  "diagnostic_finding_relationships",
+  "diagnostic_findings",
+  "document_embeddings",
+  "entities",
+  "entity_relationships",
+  "faq_opportunities",
+  "historical_metrics",
+  "keywords",
+  "kg_alignments",
+  "kg_entities",
+  "kg_relationships",
+  "monitoring_alerts",
+  "monitoring_configs",
+  "organization_invitations",
+  "organization_members",
+  "organizations",
+  "pages",
+  "position_observations",
+  "premium_audits",
+  "prompt_definitions",
+  "prompt_executions",
+  "prompt_schedules",
+  "prompts",
+  "recommendation_observations",
+  "recommendations",
+  "technical_audits",
+  "tenant_quotas",
+  "tenant_subscriptions",
+  "topics",
+  "visibility_scores",
+  "websites"
+] as const);
+
+export type TenantScopedTable = (typeof TENANT_SCOPED_TABLES)[number];
