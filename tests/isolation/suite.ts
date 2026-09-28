@@ -26,6 +26,7 @@ function randomUUID() {
   return crypto.randomUUID();
 }
 
+type ColumnMetadata = { column_name: string; data_type: string; is_nullable: string; column_default: unknown; };
 const testDbUrl = "postgresql://postgres:postgres@localhost:5432/isolation_test_db";
 const MOCK_VECTOR = '[' + Array.from({length: 768}, () => (Math.random() * 0.1).toFixed(4)).join(',') + ']';
 
@@ -104,7 +105,7 @@ async function runTest() {
         AND t.table_type = 'BASE TABLE'
     `);
 
-    const tablesMetadata: Record<string, any[]> = {};
+    const tablesMetadata: Record<string, ColumnMetadata[]> = {};
     for (const row of res.rows) {
       if (!tablesMetadata[row.table_name]) {
         tablesMetadata[row.table_name] = [];
@@ -123,7 +124,7 @@ async function runTest() {
       tenant_id: { A: orgAId, B: orgBId },
     };
 
-    function getDefaultValue(col: any, isForA: boolean, tableName: string) {
+    function getDefaultValue(col: ColumnMetadata, isForA: boolean, tableName: string) {
       if (col.column_name === 'tenant_id' || col.column_name === 'organization_id') {
         return isForA ? orgAId : orgBId;
       }
@@ -168,8 +169,8 @@ async function runTest() {
       }
     }
 
-    const rowsMapA: Record<string, any> = {};
-    const rowsMapB: Record<string, any> = {};
+    const rowsMapA: Record<string, string> = {};
+    const rowsMapB: Record<string, string> = {};
 
     console.log(`Verifying ${TENANT_SCOPED_TABLES.length} tenant tables...`);
     for (const tableName of TENANT_SCOPED_TABLES) {
@@ -201,7 +202,8 @@ async function runTest() {
       try {
         await client.query(`INSERT INTO ${tableName} (${colNames.join(', ')}) VALUES (${placeholders})`, valA);
         await client.query(`INSERT INTO ${tableName} (${colNames.join(', ')}) VALUES (${placeholders})`, valB);
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string };
         console.error(`Failed to insert fixture into ${tableName}: ${err.message}`);
         throw err;
       }
@@ -229,7 +231,8 @@ async function runTest() {
           console.error(`❌ Table ${tableName}: returned ${resNoTenant.rows[0].count} rows with NO tenant context (expected 0)`);
           success = false;
         }
-      } catch(err: any) {
+      } catch(error: unknown) {
+        const err = error as Error & { code?: string };
         if (err.code === '42501') {
           assertionsCount++;
         } else {
@@ -258,7 +261,8 @@ async function runTest() {
           await client.query(`INSERT INTO ${tableName} (${colNames.join(', ')}) VALUES (${placeholders})`, valA);
           unsetInsertAllowed = true;
         }
-      } catch (err: any) { unsetErrCode = err.code; }
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string }; unsetErrCode = err.code; }
       finally { await client.query("ROLLBACK TO SAVEPOINT unset_insert"); await client.query("COMMIT"); }
 
       if (unsetInsertAllowed) {
@@ -281,7 +285,8 @@ async function runTest() {
           console.error(`❌ Table ${tableName}: returned 0 rows for Tenant A (expected 1)`);
           success = false;
         }
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string };
          console.error(`❌ Table ${tableName}: App_runtime cannot select A: ${err.message}`);
          success = false;
       }
@@ -329,7 +334,8 @@ async function runTest() {
           await client.query(`INSERT INTO ${tableName} (${colNames.join(', ')}) VALUES (${placeholders})`, valB);
           negInsertAllowed = true;
         }
-      } catch (err: any) { negErrCode = err.code; }
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string }; negErrCode = err.code; }
       finally { await client.query("ROLLBACK TO SAVEPOINT neg_insert"); await client.query("COMMIT"); }
 
       if (negInsertAllowed) {
@@ -379,7 +385,8 @@ async function runTest() {
         if (tableName !== 'organization_members' && tableName !== 'organizations') {
           await client.query(`INSERT INTO ${tableName} (${colNames.join(', ')}) VALUES (${placeholders})`, valA);
         }
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string };
         if (err.code !== '23503' && err.code !== '23514' && err.code !== '23505') {
           console.error(`❌ Table ${tableName} positive insert failed: ${err.message} (Code: ${err.code})`);
           posInsertAllowed = false;
@@ -406,7 +413,8 @@ async function runTest() {
       try {
         await client.query(`SELECT count(*) FROM ${tableName}`);
         assertionsCount++;
-      } catch(err: any) {
+      } catch(error: unknown) {
+        const err = error as Error & { code?: string };
         console.error(`❌ Global table ${tableName} is NOT readable by app_runtime: ${err.message}`);
         success = false;
       }
