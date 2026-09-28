@@ -28,8 +28,8 @@ export async function runCostControlTests() {
   console.log("=========================================================================");
 
   const budgetService = new BudgetService();
-  const tenantA = "ws-tenant-a";
-  const _tenantB = "ws-tenant-b";
+  const tenantA = "a0000000-0000-0000-0000-00000000000a";
+  const _tenantB = "b0000000-0000-0000-0000-00000000000b";
 
   // ----------------------------------------------------
   // COST-001: Paid Model calculates cost correctly
