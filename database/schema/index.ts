@@ -51,6 +51,16 @@ function tenantPolicy(colName: "organization_id" | "tenant_id" = "organization_i
   ];
 }
 
+function textTenantPolicy() {
+  return [
+    pgPolicy(`crawl_tenant_policy`, {
+      for: "all",
+      using: sql`tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')`,
+      withCheck: sql`tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')`
+    })
+  ];
+}
+
 // ==========================================
 // 1. ORGANIZATIONS
 // ==========================================

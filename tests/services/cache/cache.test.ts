@@ -259,7 +259,7 @@ export async function runCacheTests() {
   };
 
   // Run 3 identical concurrent deduplicated calls
-  const dedupKey = "a0000000-0000-0000-0000-00000000000a:compute-x";
+  const dedupKey = "ws-tenant-a:compute-x";
   const p1 = deduplicator.deduplicate(dedupKey, expensiveOperation);
   const p2 = deduplicator.deduplicate(dedupKey, expensiveOperation);
   const p3 = deduplicator.deduplicate(dedupKey, expensiveOperation);
@@ -281,7 +281,7 @@ export async function runCacheTests() {
   };
   void failingOperation;
 
-  const failKey = "a0000000-0000-0000-0000-00000000000a:compute-fail";
+  const failKey = "ws-tenant-a:compute-fail";
   try {
     await deduplicator.deduplicate(failKey, failingOperation);
   } catch {
