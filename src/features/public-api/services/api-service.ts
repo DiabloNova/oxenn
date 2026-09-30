@@ -61,8 +61,8 @@ export class ApiService {
 
     // We execute in system context to look up the key across tenants (auth phase)
     const apiKey = await TenantContextManager.runWithSystemContext(
-      "system",
-      "api-key-auth",
+      null,
+      "sys-api-key-auth",
       async () => {
         return await this.repository.findByPrefix(prefix);
       }

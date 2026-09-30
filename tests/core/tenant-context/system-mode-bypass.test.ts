@@ -32,7 +32,7 @@ describe("Defect 1: System Mode Bypass Verification Test Suite", () => {
     const pool = pgClient.getPool();
     vi.spyOn(pool, "query").mockResolvedValue({ rows: [{ id: "site-1", domain: "example.com" }], rowCount: 1 } as unknown as ReturnType<typeof pool.query>);
 
-    await TenantContextManager.runWithSystemContext("usr-system-actor", "req-123", async () => {
+    await TenantContextManager.runWithSystemContext(null, "sys-auth-check", async () => {
       expect(TenantContextManager.isSystemMode()).toBe(true);
 
       const res = await pgClient.query("SELECT * FROM websites WHERE domain = $1", ["example.com"]);
@@ -51,7 +51,7 @@ describe("Defect 1: System Mode Bypass Verification Test Suite", () => {
 
     const leasedClient = await pgClient.connectClient();
 
-    await TenantContextManager.runWithSystemContext("usr-system-actor", "req-123", async () => {
+    await TenantContextManager.runWithSystemContext(null, "sys-auth-check", async () => {
       expect(TenantContextManager.isSystemMode()).toBe(true);
 
       const res = await leasedClient.query("SELECT * FROM api_keys WHERE prefix = $1 LIMIT 1", ["ox_live_123"]);
