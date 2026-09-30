@@ -47,7 +47,7 @@ This document provides a ground-truth inventory of all executable test runner en
 
 ### `tests/features/admin/run-all.ts`
 - **Invocation:** None (No corresponding package.json script)
-- **DB/Connection:** Needs a database connection. Triggers a `DatabaseUnavailableError` during instantiation of DB client contexts (e.g. `PostgresClient.getInstance()`).
+- **DB/Connection:** Needs a database connection. Attempts to instantiate `PostgresClient`.
   ```typescript
   import { testPostgresIntegration } from "./infrastructure/postgres-integration.test";
   ```
@@ -60,11 +60,18 @@ This document provides a ground-truth inventory of all executable test runner en
   ```
 - **External Dependencies:** Requires local PostgreSQL.
 - **Classification:** DB
-- **Execution Result:** NOT RUN (VM lacks PostgreSQL instance, fails with `DatabaseUnavailableError`)
+- **Execution Result:**
+  - Command: `pnpm tsx tests/features/admin/run-all.ts`
+  - Exit Code: `1`
+  - Output summary:
+    ```
+    ❌ ADMIN TEST SUITE RUNNER FAILURE: Error: DATABASE_URL is required
+    ```
+  - **CI Hazard:** `j038.md` flagged this runner with "prints-and-exits-0? YES", meaning in some error conditions it might fail silently. The db job must enforce non-zero exit codes.
 
 ### `tests/features/ai-intelligence/run-all.ts`
 - **Invocation:** None (No corresponding package.json script)
-- **DB/Connection:** Uses `pg` module and requires a DB connection, mocking part of `Pool` locally. Triggers `DatabaseUnavailableError` downstream in repositories.
+- **DB/Connection:** Uses `pg` module and requires a DB connection.
   ```typescript
   import { Pool } from "pg";
   ```
@@ -77,7 +84,13 @@ This document provides a ground-truth inventory of all executable test runner en
   ```
 - **External Dependencies:** Requires local PostgreSQL.
 - **Classification:** DB
-- **Execution Result:** NOT RUN (VM lacks PostgreSQL instance, fails with `DatabaseUnavailableError` on tenant context execution)
+- **Execution Result:**
+  - Command: `pnpm tsx tests/features/ai-intelligence/run-all.ts`
+  - Exit Code: `1`
+  - Output summary:
+    ```
+    ❌ TEST SUITE RUNNER FAILURE: Error: DATABASE_URL is required
+    ```
 
 ### `tests/features/acquisition/integration/run-all.ts`
 - **Invocation:** None (No corresponding package.json script)
@@ -94,7 +107,8 @@ This document provides a ground-truth inventory of all executable test runner en
   ```
 - **External Dependencies:** Requires local PostgreSQL.
 - **Classification:** DB
-- **Execution Result:** NOT RUN (Gracefully skips when `DATABASE_URL` is unset)
+- **Execution Result:** RAN, exit 0 — silently skipped (`⚠️ acquisition integration suite skipped: DATABASE_URL is not set`).
+- **CI Hazard:** env-conditional silent skip (per j038). The db job MUST set/assert `DATABASE_URL`, or the runner should exit non-zero when it is unset in CI.
 
 ### `tests/isolation/suite.ts`
 - **Invocation:** Executed via `pnpm test:isolation` (`tsx tests/isolation/suite.ts`)
@@ -114,10 +128,19 @@ This document provides a ground-truth inventory of all executable test runner en
   ```
 - **External Dependencies:** Requires local PostgreSQL.
 - **Classification:** DB
-- **Execution Result:** NOT RUN (VM lacks PostgreSQL, fails with `ECONNREFUSED` attempting to connect to `::1:5432`)
+- **Execution Result:**
+  - Command: `pnpm tsx tests/isolation/suite.ts`
+  - Exit Code: `1`
+  - Output summary: Fails with `ECONNREFUSED` attempting to connect to `::1:5432` due to missing database instance.
 
 ## 2. J038.md Discrepancy Cross-Check
-Classifications matched perfectly against findings documented in `verification/phase-7/j038.md`.
+The runner classifications were cross-checked against `verification/phase-7/j038.md`.
+
+*Discrepancies & Hazards:*
+- **tests/features/acquisition/integration/run-all.ts:** Found to silently skip and exit 0 when `DATABASE_URL` is missing. This confirms the "env-conditional silent skip? YES" flag in `j038.md`. This is a CI hazard; the DB job MUST supply `DATABASE_URL` or the test should be modified to enforce failure.
+- **tests/features/admin/run-all.ts:** Flagged in `j038.md` as "prints-and-exits-0? YES". Although it exited 1 in our missing-URL environment, the CI job wiring must be robust against any internal silent failures.
+
+Other core categorizations (DB vs unit/pure) matched the existing claims.
 
 ## 3. Summary Lists
 
