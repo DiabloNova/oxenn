@@ -32,7 +32,7 @@ export async function loginAction(email: string, password: string): Promise<User
         throw new Error("Invalid credentials or user not found.");
     }
 
-    const { rows: credRows } = await client.query("SELECT * FROM user_credentials WHERE user_id = $1", [userRecord.id]);
+    const { rows: credRows } = await client.query("SELECT * FROM user_credentials WHERE user_id = $1 FOR UPDATE", [userRecord.id]);
     const credRecord = credRows[0];
 
     // Dummy hash for missing credential
@@ -54,8 +54,12 @@ export async function loginAction(email: string, password: string): Promise<User
         await client.query(`
             UPDATE user_credentials
             SET
-                failed_attempts = failed_attempts + 1,
+                failed_attempts = CASE
+                    WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN 1
+                    ELSE failed_attempts + 1
+                END,
                 locked_until = CASE
+                    WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN NULL
                     WHEN failed_attempts + 1 >= $1 THEN NOW() + interval '${LOCKOUT_DURATION_MINS} minutes'
                     ELSE locked_until
                 END,
