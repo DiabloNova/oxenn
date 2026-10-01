@@ -100,16 +100,50 @@ export class TenantContextManager {
     purpose: PrivilegedPurposeTag,
     work: () => Promise<T>
   ): Promise<T> {
-    if (!PRIVILEGED_PATHS_REGISTRY[purpose]) {
+    if (!Object.hasOwn(PRIVILEGED_PATHS_REGISTRY, purpose)) {
       throw new TenantContextViolationException(
         `System Context Violation: Unregistered purpose tag "${purpose}".`
       );
     }
+
+    const TEST_ONLY_TAGS = new Set<string>(["sys-admin-run", "test-req"]);
+    // Allow 'sys-admin-run' and 'test-req' only if NODE_ENV is 'test' or in verification probes (which also mock NODE_ENV or pass flags, but we default to checking test mode).
+    if (TEST_ONLY_TAGS.has(purpose) && process.env.NODE_ENV !== "test" && !process.env.VERIFICATION_PROBE_ACTIVE) {
+      throw new TenantContextViolationException(
+        `System Context Violation: test-only purpose tag "${purpose}" used outside tests.`
+      );
+    }
+
     const pathInfo = PRIVILEGED_PATHS_REGISTRY[purpose];
 
     console.log(`[SystemContext] Leasing client for purpose: ${purpose}`);
 
     const parentCtx = this.getContext();
+
+    const doAuditLog = (client: any, status: "success" | "error", details?: string) => {
+      // Fire and forget autocommit insert. Must run outside the main transaction (or post commit/rollback)
+      client.query(
+        `INSERT INTO audit_records (
+          id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
+        ) VALUES (
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        )`,
+        [
+          userId || "system", // actor_id
+          "system@oxenn.local", // actor_email
+          "system", // actor_role
+          purpose, // action
+          "privileged_db_access", // resource_type
+          pathInfo.allowedTables.join(","), // resource_id
+          status, // status
+          details || null, // error_details
+          "0.0.0.0", // ip_address
+          "system-context" // user_agent
+        ]
+      ).catch((err: any) => {
+        console.error(`[TenantContextManager] Failed to emit ${status} audit log:`, err);
+      });
+    };
 
     // Check if there is already an active transaction in the current async scope for system mode
     if (parentCtx && parentCtx.dbClient && parentCtx.executionMode === "system") {
@@ -119,7 +153,15 @@ export class TenantContextManager {
         transactionDepth: depth,
         purpose
       });
-      return this.storage.run(nestedCtx, work);
+
+      try {
+        const result = await this.storage.run(nestedCtx, work);
+        doAuditLog(parentCtx.dbClient, "success");
+        return result;
+      } catch (err) {
+        doAuditLog(parentCtx.dbClient, "error", err instanceof Error ? err.message : String(err));
+        throw err;
+      }
     }
 
     let leasedClient: any = null;
@@ -144,61 +186,19 @@ export class TenantContextManager {
         purpose
       });
 
-      // Fire and forget audit record logging
-      leasedClient.query(
-        `INSERT INTO audit_records (
-          id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, ip_address, user_agent
-        ) VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9
-        )`,
-        [
-          userId || "system", // actor_id
-          "system@oxenn.local", // actor_email (mock for system)
-          "system", // actor_role
-          purpose, // action
-          "privileged_db_access", // resource_type
-          pathInfo.allowedTables.join(","), // resource_id
-          "success", // status
-          "0.0.0.0", // ip_address
-          "system-context" // user_agent
-        ]
-      ).catch((err: any) => {
-        console.error("[TenantContextManager] Failed to emit audit log:", err);
-      });
-
       const result = await this.storage.run(transactedCtx, work);
 
       await leasedClient.query("COMMIT");
+      doAuditLog(leasedClient, "success");
       return result;
     } catch (err) {
       if (leasedClient) {
         try {
-          // Fire and forget error audit log
-          leasedClient.query(
-            `INSERT INTO audit_records (
-              id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
-            ) VALUES (
-              gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-            )`,
-            [
-              userId || "system", // actor_id
-              "system@oxenn.local", // actor_email
-              "system", // actor_role
-              purpose, // action
-              "privileged_db_access", // resource_type
-              pathInfo.allowedTables.join(","), // resource_id
-              "error", // status
-              err instanceof Error ? err.message : String(err), // error_details
-              "0.0.0.0", // ip_address
-              "system-context" // user_agent
-            ]
-          ).catch((auditErr: any) => {
-            console.error("[TenantContextManager] Failed to emit error audit log:", auditErr);
-          });
           await leasedClient.query("ROLLBACK");
         } catch (rollbackErr) {
           console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);
         }
+        doAuditLog(leasedClient, "error", err instanceof Error ? err.message : String(err));
       }
       throw err;
     } finally {
