@@ -110,7 +110,7 @@ export async function loginAction(email: string, password: string): Promise<User
 /**
  * Registers user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<User> {
+export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<User | { errorCode: "USER_EXISTS" }> {
   if (!password || !validatePasswordRequirements(password)) {
      throw new Error("Password must be between 10 and 255 characters");
   }
@@ -124,7 +124,7 @@ export async function registerAction(name: string, email: string, password: stri
     // Check if user exists
     const { rows: existingUser } = await client.query("SELECT id FROM users WHERE email = $1", [email]);
     if (existingUser.length > 0) {
-        throw new Error("User already exists.");
+        return { errorCode: "USER_EXISTS" as const };
     }
 
     const userId = `usr-${randomUUID()}`;

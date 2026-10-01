@@ -90,7 +90,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       // Secure server-side registration strictly on the server to prevent client-controlled spoofing
-      await registerAction(name, email, password, workspaceName);
+      const result = await registerAction(name, email, password, workspaceName);
+      if ("errorCode" in result) {
+        throw Object.assign(new Error("Registration failed."), { code: result.errorCode });
+      }
 
       // Do NOT sign in the user after register, because registration does not create a session
       setSession({

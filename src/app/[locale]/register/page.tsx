@@ -115,9 +115,8 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
         router.push(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
       }, 1500);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // Surface actual errors (like "User already exists.") or fall back
-      const finalMsg = msg === "User already exists."
+      const code = (err as { code?: string })?.code;
+      const finalMsg = code === "USER_EXISTS"
         ? (isFa ? "این ایمیل قبلاً ثبت شده است." : "This email may already exist.")
         : (isFa ? "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید." : "Registration failed. Please try again.");
       setSubmitError(finalMsg);
