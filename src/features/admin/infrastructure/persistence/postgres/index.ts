@@ -57,7 +57,7 @@ export class PostgresClient {
     const authenticatorConnectionString = process.env.AUTHENTICATOR_DATABASE_URL || connectionString;
     this.authenticatorPool = new Pool({
       connectionString: authenticatorConnectionString,
-      max: 5,
+      max: Number(process.env.AUTHENTICATOR_POOL_MAX ?? 20),
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000
     });
