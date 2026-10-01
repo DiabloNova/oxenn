@@ -9,7 +9,7 @@ export interface TenantContext {
   readonly dbClient?: any;
   readonly transactionDepth?: number;
   readonly purpose?: string;
-  readonly pendingAudits?: Array<["success" | "error", string | undefined, PrivilegedPurposeTag]>;
+  readonly pendingAudits?: Array<{ status: "success" | "error"; details?: string; nestedPurpose: PrivilegedPurposeTag }>;
 }
 
 export class TenantContextViolationException extends Error {
@@ -108,25 +108,23 @@ export class TenantContextManager {
     }
 
     const TEST_ONLY_TAGS = new Set<string>(["sys-admin-run", "test-req"]);
-    // Allow 'sys-admin-run' and 'test-req' only if NODE_ENV is 'test' or in verification probes (which also mock NODE_ENV or pass flags, but we default to checking test mode).
-    if (TEST_ONLY_TAGS.has(purpose) && process.env.NODE_ENV !== "test" && !process.env.VERIFICATION_PROBE_ACTIVE) {
+    // Allow 'sys-admin-run' and 'test-req' only if NODE_ENV is 'test' or in verification probes.
+    // Fall back to strictly blocking them in production otherwise.
+    if (TEST_ONLY_TAGS.has(purpose) && process.env.NODE_ENV !== "test" && process.env.VERIFICATION_PROBE_ACTIVE !== "1") {
       throw new TenantContextViolationException(
         `System Context Violation: test-only purpose tag "${purpose}" used outside tests.`
       );
     }
 
+    const pathInfo = PRIVILEGED_PATHS_REGISTRY[purpose];
+
     console.log(`[SystemContext] Leasing client for purpose: ${purpose}`);
 
     const parentCtx = this.getContext();
 
-    const doAuditLog = (
-      client: any,
-      status: "success" | "error",
-      details?: string,
-      auditPurpose: PrivilegedPurposeTag = purpose
-    ) => {
-      const pathInfo = PRIVILEGED_PATHS_REGISTRY[auditPurpose];
+    const doAuditLog = (client: any, status: "success" | "error", nestedPurpose: PrivilegedPurposeTag, details?: string) => {
       // Fire and forget autocommit insert. Must run outside the main transaction (or post commit/rollback)
+      const pInfo = PRIVILEGED_PATHS_REGISTRY[nestedPurpose];
       client.query(
         `INSERT INTO audit_records (
           id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
@@ -137,16 +135,16 @@ export class TenantContextManager {
           userId || "system", // actor_id
           "system@oxenn.local", // actor_email
           "system", // actor_role
-          auditPurpose, // action
+          nestedPurpose, // action
           "privileged_db_access", // resource_type
-          pathInfo.allowedTables.join(","), // resource_id
+          pInfo.allowedTables.join(","), // resource_id
           status, // status
           details || null, // error_details
           "0.0.0.0", // ip_address
           "system-context" // user_agent
         ]
       ).catch((err: any) => {
-        console.error(`[TenantContextManager] Failed to emit ${status} audit log:`, err);
+        console.error(`[TenantContextManager] Failed to emit ${status} audit log for ${nestedPurpose}:`, err);
       });
     };
 
@@ -156,24 +154,26 @@ export class TenantContextManager {
       const nestedCtx = Object.freeze({
         ...parentCtx,
         transactionDepth: depth,
-        purpose
+        purpose,
+        pendingAudits: parentCtx.pendingAudits || []
       });
 
       try {
         const result = await this.storage.run(nestedCtx, work);
-        parentCtx.pendingAudits?.push(["success", undefined, purpose]);
+        if (nestedCtx.pendingAudits) {
+           nestedCtx.pendingAudits.push({ status: "success", nestedPurpose: purpose });
+        }
         return result;
       } catch (err) {
-        parentCtx.pendingAudits?.push([
-          "error",
-          err instanceof Error ? err.message : String(err),
-          purpose
-        ]);
+        if (nestedCtx.pendingAudits) {
+           nestedCtx.pendingAudits.push({ status: "error", details: err instanceof Error ? err.message : String(err), nestedPurpose: purpose });
+        }
         throw err;
       }
     }
 
     let leasedClient: any = null;
+    let transactedCtx: TenantContext | null = null;
 
     // Dynamically import PostgresClient to avoid circular dependencies
     const { PostgresClient } = await import("../../../features/admin/infrastructure/persistence/postgres");
@@ -182,17 +182,10 @@ export class TenantContextManager {
     // Lease a system/privileged client
     leasedClient = await pgClient.connectSystemClient(purpose);
 
-    const pendingAudits: NonNullable<TenantContext["pendingAudits"]> = [];
-    const flushPendingAudits = () => {
-      for (const [status, details, auditPurpose] of pendingAudits) {
-        doAuditLog(leasedClient, status, details, auditPurpose);
-      }
-    };
-
     try {
       await leasedClient.query("BEGIN");
 
-      const transactedCtx: TenantContext = Object.freeze({
+      transactedCtx = Object.freeze({
         tenantId: null,
         userId,
         requestId: null,
@@ -200,14 +193,19 @@ export class TenantContextManager {
         dbClient: leasedClient,
         transactionDepth: 1,
         purpose,
-        pendingAudits
+        pendingAudits: []
       });
 
       const result = await this.storage.run(transactedCtx, work);
 
       await leasedClient.query("COMMIT");
-      flushPendingAudits();
-      doAuditLog(leasedClient, "success");
+      doAuditLog(leasedClient, "success", purpose);
+
+      if (transactedCtx.pendingAudits) {
+         for (const audit of transactedCtx.pendingAudits) {
+             doAuditLog(leasedClient, audit.status, audit.nestedPurpose, audit.details);
+         }
+      }
       return result;
     } catch (err) {
       if (leasedClient) {
@@ -216,8 +214,13 @@ export class TenantContextManager {
         } catch (rollbackErr) {
           console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);
         }
-        flushPendingAudits();
-        doAuditLog(leasedClient, "error", err instanceof Error ? err.message : String(err));
+        doAuditLog(leasedClient, "error", purpose, err instanceof Error ? err.message : String(err));
+
+        if (transactedCtx && transactedCtx.pendingAudits) {
+           for (const audit of transactedCtx.pendingAudits) {
+               doAuditLog(leasedClient, audit.status, audit.nestedPurpose, audit.details);
+           }
+        }
       }
       throw err;
     } finally {
