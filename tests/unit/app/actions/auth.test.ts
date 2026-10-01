@@ -40,7 +40,7 @@ describe("Authentication Actions", () => {
     it("throws error if user already exists", async () => {
       mockQuery.mockResolvedValueOnce({ rows: [{ id: "usr-existing" }] }); // SELECT id FROM users WHERE email
 
-      await expect(registerAction("Test", "test@test.com", "Password123")).rejects.toThrow("User already exists.");
+      await expect(registerAction("Test", "test@test.com", "Password123")).resolves.toEqual({ errorCode: "USER_EXISTS" });
     });
 
     it("throws error if password doesn't meet requirements", async () => {
