@@ -8,6 +8,7 @@ export interface TenantContext {
   readonly executionMode: "tenant" | "system";
   readonly dbClient?: any;
   readonly transactionDepth?: number;
+  readonly purpose?: string;
 }
 
 export class TenantContextViolationException extends Error {
@@ -95,16 +96,65 @@ export class TenantContextManager {
    */
   public static async runWithSystemContext<T>(
     userId: string | null,
-    requestId: string | null,
+    purpose: string,
     work: () => Promise<T>
   ): Promise<T> {
-    const ctx: TenantContext = Object.freeze({
-      tenantId: null,
-      userId,
-      requestId,
-      executionMode: "system"
-    });
-    return this.storage.run(ctx, work);
+    // TODO (J-029): Full audit wiring. For now, log the purpose hook.
+    console.log(`[SystemContext] Leasing client for purpose: ${purpose}`);
+
+    const parentCtx = this.getContext();
+
+    // Check if there is already an active transaction in the current async scope for system mode
+    if (parentCtx && parentCtx.dbClient && parentCtx.executionMode === "system") {
+      const depth = (parentCtx.transactionDepth || 1) + 1;
+      const nestedCtx = Object.freeze({
+        ...parentCtx,
+        transactionDepth: depth,
+        purpose
+      });
+      return this.storage.run(nestedCtx, work);
+    }
+
+    let leasedClient: any = null;
+
+    // Dynamically import PostgresClient to avoid circular dependencies
+    const { PostgresClient } = await import("../../../features/admin/infrastructure/persistence/postgres");
+    const pgClient = PostgresClient.getInstance();
+
+    // Lease a system/privileged client
+    leasedClient = await pgClient.connectSystemClient(purpose);
+
+    try {
+      await leasedClient.query("BEGIN");
+
+      const transactedCtx: TenantContext = Object.freeze({
+        tenantId: null,
+        userId,
+        requestId: null,
+        executionMode: "system",
+        dbClient: leasedClient,
+        transactionDepth: 1,
+        purpose
+      });
+
+      const result = await this.storage.run(transactedCtx, work);
+
+      await leasedClient.query("COMMIT");
+      return result;
+    } catch (err) {
+      if (leasedClient) {
+        try {
+          await leasedClient.query("ROLLBACK");
+        } catch (rollbackErr) {
+          console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);
+        }
+      }
+      throw err;
+    } finally {
+      if (leasedClient && typeof leasedClient.release === "function") {
+        leasedClient.release();
+      }
+    }
   }
 
   /**

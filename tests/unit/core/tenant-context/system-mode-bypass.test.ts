@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { TenantContextManager, TenantContextViolationException } from "../../../src/core/database/tenant-context";
+import { TenantContextManager, TenantContextViolationException } from "../../../../src/core/database/tenant-context";
 
 // Ensure DATABASE_URL is set before importing PostgresClient
 if (!process.env.DATABASE_URL) {
@@ -7,10 +7,10 @@ if (!process.env.DATABASE_URL) {
 }
 
 describe("Defect 1: System Mode Bypass Verification Test Suite", () => {
-  let PostgresClientModule: typeof import("../../../src/features/admin/infrastructure/persistence/postgres");
+  let PostgresClientModule: typeof import("../../../../src/features/admin/infrastructure/persistence/postgres");
 
   beforeEach(async () => {
-    PostgresClientModule = await import("../../../src/features/admin/infrastructure/persistence/postgres");
+    PostgresClientModule = await import("../../../../src/features/admin/infrastructure/persistence/postgres");
   });
 
   afterEach(() => {
@@ -28,11 +28,14 @@ describe("Defect 1: System Mode Bypass Verification Test Suite", () => {
   it("bypasses tenant ID requirement when querying whitelisted table inside runWithSystemContext", async () => {
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
-    // Mock pool.query so it doesn't attempt real DB connection
-    const pool = pgClient.getPool();
-    vi.spyOn(pool, "query").mockResolvedValue({ rows: [{ id: "site-1", domain: "example.com" }], rowCount: 1 } as unknown as ReturnType<typeof pool.query>);
+    const mockSysClient = {
+      query: vi.fn().mockImplementation(async (sql: string) =>
+        sql.startsWith("SELECT") ? { rows: [{ id: "site-1", domain: "example.com" }], rowCount: 1 } : { rows: [], rowCount: 0 }),
+      release: vi.fn(),
+    };
+    vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockSysClient as unknown as import("pg").PoolClient);
 
-    await TenantContextManager.runWithSystemContext("usr-system-actor", "req-123", async () => {
+    await TenantContextManager.runWithSystemContext(null, "sys-auth-check", async () => {
       expect(TenantContextManager.isSystemMode()).toBe(true);
 
       const res = await pgClient.query("SELECT * FROM websites WHERE domain = $1", ["example.com"]);
@@ -48,10 +51,11 @@ describe("Defect 1: System Mode Bypass Verification Test Suite", () => {
       release: vi.fn(),
     };
     vi.spyOn(pgClient.getPool(), "connect").mockImplementation(async () => mockClient as unknown as import("pg").PoolClient);
+    vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
 
     const leasedClient = await pgClient.connectClient();
 
-    await TenantContextManager.runWithSystemContext("usr-system-actor", "req-123", async () => {
+    await TenantContextManager.runWithSystemContext(null, "sys-auth-check", async () => {
       expect(TenantContextManager.isSystemMode()).toBe(true);
 
       const res = await leasedClient.query("SELECT * FROM api_keys WHERE prefix = $1 LIMIT 1", ["ox_live_123"]);

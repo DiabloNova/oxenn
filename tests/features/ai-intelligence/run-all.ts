@@ -176,7 +176,7 @@ async function main() {
     testDomain();
 
     // Run Security tests under an explicit System Context
-    await TenantContextManager.runWithSystemContext("user-admin", "req-admin-01", async () => {
+    await TenantContextManager.runWithSystemContext("user-admin", "sys-admin-run", async () => {
       await testSecurity();
     });
 

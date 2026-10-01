@@ -38,6 +38,7 @@ export class DatabaseUnavailableError extends Error {
 export class PostgresClient {
   private static instance: PostgresClient;
   private pool: Pool;
+  private authenticatorPool: Pool;
   private inTransaction = false;
   private currentTransactionOperations: (() => Promise<void>)[] = [];
 
@@ -52,6 +53,14 @@ export class PostgresClient {
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000
     });
+
+    const authenticatorConnectionString = process.env.AUTHENTICATOR_DATABASE_URL || connectionString;
+    this.authenticatorPool = new Pool({
+      connectionString: authenticatorConnectionString,
+      max: Number(process.env.AUTHENTICATOR_POOL_MAX ?? 20),
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000
+    });
   }
 
   public static getInstance(): PostgresClient {
@@ -63,6 +72,37 @@ export class PostgresClient {
 
   public getPool(): Pool {
     return this.pool;
+  }
+
+  /**
+   * Safe system connection leasing from Authenticator Pool
+   */
+  public async connectSystemClient(purpose: string): Promise<PoolClient> {
+    let client: PoolClient;
+    try {
+      client = await this.authenticatorPool.connect();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new DatabaseUnavailableError(sanitizeErrorMessage(msg, process.env.AUTHENTICATOR_DATABASE_URL || process.env.DATABASE_URL));
+    }
+
+    // Wrap the leased client using Object.create to preserve the prototype chain, event emitters, and other methods of PoolClient
+    const wrappedClient = Object.create(client);
+    wrappedClient.query = async (sql: string, params: unknown[] = []) => {
+      if (isQueryTenantScoped(sql) && !TenantContextManager.isSystemMode()) {
+        throw new TenantContextViolationException(
+          "Tenant Context Violation: System client used outside of system mode."
+        );
+      }
+      return client.query(sql, params);
+    };
+    wrappedClient.release = () => {
+      if (typeof client.release === "function") {
+        client.release();
+      }
+    };
+
+    return wrappedClient as unknown as PoolClient;
   }
 
   /**

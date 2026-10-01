@@ -57,7 +57,7 @@ export async function testTenantPipeline() {
 
   // 2. Test: Explicit System Context (Legitimate cross-tenant administrative access)
   console.log("  * Testing Explicit System Context Access...");
-  await TenantContextManager.runWithSystemContext("admin-01", "req-01", async () => {
+  await TenantContextManager.runWithSystemContext("admin-01", "sys-admin-run", async () => {
     const brand = await brandRepo.findById(tenantAId, "brand-pipeline-a");
     if (!brand || brand.name !== "Pipeline Brand A") {
       throw new Error("Pipeline Test Failure: System Context was unable to query tenant-scoped brand repository.");

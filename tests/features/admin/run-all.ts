@@ -19,7 +19,7 @@ async function main() {
     testDomain();
 
     // All administrative operations must execute within an explicit System Context
-    await TenantContextManager.runWithSystemContext("admin-user-super", "req-admin-01", async () => {
+    await TenantContextManager.runWithSystemContext("admin-user-super", "sys-admin-run", async () => {
       await testCQRS();
       testSecurity();
       await testInfrastructure();

@@ -1,0 +1,100 @@
+vi.mock("pg");
+vi.mock("../../src/services/auth/session", async (importOriginal) => {
+    const mod = await importOriginal<typeof import("../../src/services/auth/session")>();
+
+    const mockSession = {
+        user: {
+            id: 'usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37',
+            name: 'Probe',
+            email: 'probe@example.com',
+            role: 'workspace_admin',
+            workspaceId: 'd4001873-8482-4977-b746-ab085a855012'
+        },
+        expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        status: "authenticated"
+    };
+
+    return {
+      ...mod,
+      getSession: vi.fn().mockResolvedValue(mockSession),
+      requireSession: vi.fn().mockResolvedValue(mockSession),
+      createSession: vi.fn().mockResolvedValue(undefined),
+      invalidateSession: vi.fn().mockResolvedValue(undefined)
+    };
+});
+
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { registerAction, loginAction } from "../../src/app/actions/auth";
+import { requireWorkspaceMembership, requireRole } from "../../src/services/auth/authorization";
+import { switchWorkspaceAction } from "../../src/app/actions/workspace";
+
+// Ensure DATABASE_URL is set before importing PostgresClient
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = "postgres://postgres:postgres@localhost:5432/oxenn";
+}
+
+describe("Auth Lifecycle Tests", () => {
+  let PostgresClientModule: typeof import("../../src/features/admin/infrastructure/persistence/postgres");
+
+  beforeEach(async () => {
+    PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
+
+    const pgClient = PostgresClientModule.PostgresClient.getInstance();
+
+    const mockClient = {
+      query: vi.fn().mockImplementation(async (sqlOrObj: unknown, params: unknown[]) => {
+        const sql = typeof sqlOrObj === 'string' ? sqlOrObj : (sqlOrObj as {text?: string}).text || String(sqlOrObj);
+
+        if (sql.includes("INSERT INTO users")) return { rowCount: 1 };
+        if (sql.includes("SELECT id FROM users WHERE email")) return { rows: [], rowCount: 0 }; // Register unique
+        if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
+        if (sql.includes("SELECT m.organization_id")) return { rows: [{ workspaceId: "d4001873-8482-4977-b746-ab085a855012", role: "workspace_admin", workspaceName: "Probe's Workspace" }], rowCount: 1 };
+        if (sql.includes("organization_members")) return { rows: [{ id: "1", role: "workspace_admin" }], rowCount: 1 }; // Membership passes
+        if (sql.includes("organizations")) return { rows: [{ id: "d4001873-8482-4977-b746-ab085a855012" }], rowCount: 1 };
+        return { rows: [], rowCount: 0 };
+      }),
+      release: vi.fn(),
+    };
+
+    vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("completes full auth lifecycle", async () => {
+    // 1. Register
+    const registeredUser = await registerAction("Probe", "probe@example.com");
+    expect(registeredUser.id).toBeDefined();
+
+    // 2. Login
+    const loggedInUser = await loginAction("probe@example.com");
+    expect(loggedInUser.email).toBe("probe@example.com");
+
+    // 3. requireWorkspaceMembership (pass)
+    await requireWorkspaceMembership(loggedInUser.id, loggedInUser.workspaceId);
+
+    // 4. requireRole
+    await requireRole("workspace_admin", loggedInUser.workspaceId);
+
+    // 5. switchWorkspaceAction
+    await switchWorkspaceAction(loggedInUser.workspaceId);
+  });
+
+  it("negative test: wrong workspace denied", async () => {
+     const PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
+     const pgClient = PostgresClientModule.PostgresClient.getInstance();
+
+     const mockClient = {
+        query: vi.fn().mockImplementation(async (sql: string, params: unknown[]) => {
+           return { rows: [], rowCount: 0 }; // Empty rows -> denied
+        }),
+        release: vi.fn(),
+     };
+
+     vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
+
+     await expect(requireWorkspaceMembership('usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37', 'ws-invalid')).rejects.toThrow("Forbidden");
+  });
+});
