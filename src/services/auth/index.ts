@@ -19,7 +19,7 @@ export const authService = {
     }
   },
 
-  async login(email: string): Promise<User> {
+  async login(email: string, password?: string): Promise<User> {
     const mockUser: User = {
       id: "usr-1001",
       name: "Seyed Alireza",

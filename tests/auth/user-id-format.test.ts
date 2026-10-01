@@ -30,7 +30,7 @@ describe('User ID Generation', () => {
             })
         } as unknown as { query: () => Promise<{rows: unknown[]}> });
 
-        const result = await registerAction("Test User", "test@example.com");
+        const result = await registerAction("Test User", "test@example.com", "Password123");
 
         // Assertions
         expect(generatedId).toMatch(/^usr-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -63,7 +63,7 @@ describe('User ID Generation', () => {
         } as unknown as { query: () => Promise<{rows: unknown[]}> });
 
         for (let i = 0; i < 10000; i++) {
-            await registerAction(`Test User ${i}`, `test${i}@example.com`);
+            await registerAction(`Test User ${i}`, `test${i}@example.com`, "Password123");
         }
 
         expect(ids.size).toBe(10000); // Expect all IDs to be unique

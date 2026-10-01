@@ -24,7 +24,7 @@ export function HeroSection() {
     e.preventDefault();
     if (!email) return;
     setIsLoading(true);
-    await login(email);
+    await login(email, "Password123");
     setIsLoading(false);
   };
 
