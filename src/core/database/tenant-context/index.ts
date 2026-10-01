@@ -214,11 +214,16 @@ export class TenantContextManager {
         } catch (rollbackErr) {
           console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);
         }
-        doAuditLog(leasedClient, "error", purpose, err instanceof Error ? err.message : String(err));
+        const outerMsg = err instanceof Error ? err.message : String(err);
+        doAuditLog(leasedClient, "error", purpose, outerMsg);
 
         if (transactedCtx && transactedCtx.pendingAudits) {
            for (const audit of transactedCtx.pendingAudits) {
-               doAuditLog(leasedClient, audit.status, audit.nestedPurpose, audit.details);
+               const resolvedStatus = "error";
+               const resolvedDetails = audit.status === "success"
+                 ? `rolled back with outer lease (${purpose}): ${outerMsg}`
+                 : audit.details;
+               doAuditLog(leasedClient, resolvedStatus, audit.nestedPurpose, resolvedDetails);
            }
         }
       }
