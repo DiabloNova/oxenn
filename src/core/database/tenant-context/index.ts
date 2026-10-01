@@ -9,6 +9,7 @@ export interface TenantContext {
   readonly dbClient?: any;
   readonly transactionDepth?: number;
   readonly purpose?: string;
+  readonly pendingAudits?: Array<["success" | "error", string | undefined, PrivilegedPurposeTag]>;
 }
 
 export class TenantContextViolationException extends Error {
@@ -114,13 +115,17 @@ export class TenantContextManager {
       );
     }
 
-    const pathInfo = PRIVILEGED_PATHS_REGISTRY[purpose];
-
     console.log(`[SystemContext] Leasing client for purpose: ${purpose}`);
 
     const parentCtx = this.getContext();
 
-    const doAuditLog = (client: any, status: "success" | "error", details?: string) => {
+    const doAuditLog = (
+      client: any,
+      status: "success" | "error",
+      details?: string,
+      auditPurpose: PrivilegedPurposeTag = purpose
+    ) => {
+      const pathInfo = PRIVILEGED_PATHS_REGISTRY[auditPurpose];
       // Fire and forget autocommit insert. Must run outside the main transaction (or post commit/rollback)
       client.query(
         `INSERT INTO audit_records (
@@ -132,7 +137,7 @@ export class TenantContextManager {
           userId || "system", // actor_id
           "system@oxenn.local", // actor_email
           "system", // actor_role
-          purpose, // action
+          auditPurpose, // action
           "privileged_db_access", // resource_type
           pathInfo.allowedTables.join(","), // resource_id
           status, // status
@@ -156,10 +161,14 @@ export class TenantContextManager {
 
       try {
         const result = await this.storage.run(nestedCtx, work);
-        doAuditLog(parentCtx.dbClient, "success");
+        parentCtx.pendingAudits?.push(["success", undefined, purpose]);
         return result;
       } catch (err) {
-        doAuditLog(parentCtx.dbClient, "error", err instanceof Error ? err.message : String(err));
+        parentCtx.pendingAudits?.push([
+          "error",
+          err instanceof Error ? err.message : String(err),
+          purpose
+        ]);
         throw err;
       }
     }
@@ -173,6 +182,13 @@ export class TenantContextManager {
     // Lease a system/privileged client
     leasedClient = await pgClient.connectSystemClient(purpose);
 
+    const pendingAudits: NonNullable<TenantContext["pendingAudits"]> = [];
+    const flushPendingAudits = () => {
+      for (const [status, details, auditPurpose] of pendingAudits) {
+        doAuditLog(leasedClient, status, details, auditPurpose);
+      }
+    };
+
     try {
       await leasedClient.query("BEGIN");
 
@@ -183,12 +199,14 @@ export class TenantContextManager {
         executionMode: "system",
         dbClient: leasedClient,
         transactionDepth: 1,
-        purpose
+        purpose,
+        pendingAudits
       });
 
       const result = await this.storage.run(transactedCtx, work);
 
       await leasedClient.query("COMMIT");
+      flushPendingAudits();
       doAuditLog(leasedClient, "success");
       return result;
     } catch (err) {
@@ -198,6 +216,7 @@ export class TenantContextManager {
         } catch (rollbackErr) {
           console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);
         }
+        flushPendingAudits();
         doAuditLog(leasedClient, "error", err instanceof Error ? err.message : String(err));
       }
       throw err;
