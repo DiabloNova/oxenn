@@ -83,7 +83,7 @@ describe("Auth Lifecycle Tests", () => {
   it("completes full auth lifecycle", async () => {
     // 1. Register
     const registeredUser = await registerAction("Probe", "probe@example.com", "Password123");
-    expect(registeredUser.id).toBeDefined();
+    expect((registeredUser as { id: string }).id).toBeDefined();
 
     // 2. Login
     const loggedInUser = await loginAction("probe@example.com", "Password123");
