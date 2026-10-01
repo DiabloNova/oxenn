@@ -12,6 +12,10 @@ export function setCookiesMock(mockFn: unknown) {
   cookiesFn = mockFn as typeof nextCookies;
 }
 
+export async function getCookieStore() {
+  return await cookiesFn();
+}
+
 const COOKIE_NAME = "oxenn_session";
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -87,9 +91,10 @@ export async function getSession(): Promise<Session | null> {
                u.email, u.name,
                m.role
         FROM sessions s
-        JOIN users u ON s.user_id = u.id
+        JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+        JOIN organizations o ON o.id = s.workspace_id AND o.deleted_at IS NULL
         LEFT JOIN organization_members m ON s.workspace_id = m.organization_id AND s.user_id = m.user_id
-        WHERE s.token_hash = $1
+        WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
       `, [tokenHash]);
 
       return rows[0];
@@ -141,27 +146,29 @@ export async function getAuthenticatedUser(): Promise<User | null> {
  */
 export async function invalidateSession(): Promise<void> {
   const cookieStore = await cookiesFn();
-  const cookie = cookieStore.get(COOKIE_NAME);
 
-  if (cookie && cookie.value) {
-    const rawToken = cookie.value;
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  try {
+    const cookie = cookieStore.get(COOKIE_NAME);
+    if (cookie && cookie.value) {
+      const rawToken = cookie.value;
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
 
-    await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
-      const client = TenantContextManager.getDbClient();
-      if (!client) throw new Error("Failed to get DB client in system context");
+      await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+        const client = TenantContextManager.getDbClient();
+        if (!client) throw new Error("Failed to get DB client in system context");
 
-      await client.query(`
-        UPDATE sessions
-        SET revoked_at = NOW()
-        WHERE token_hash = $1
-      `, [tokenHash]);
-    });
+        await client.query(`
+          UPDATE sessions
+          SET revoked_at = NOW()
+          WHERE token_hash = $1
+        `, [tokenHash]);
+      });
+    }
+  } finally {
+    cookieStore.delete(COOKIE_NAME);
+    cookieStore.delete("tenant_id");
+    cookieStore.delete("user_id");
   }
-
-  cookieStore.delete(COOKIE_NAME);
-  cookieStore.delete("tenant_id");
-  cookieStore.delete("user_id");
 }
 
 export async function revokeAllForUser(userId: string): Promise<void> {
