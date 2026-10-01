@@ -1193,3 +1193,18 @@ The database operates under a strict role separation model:
 - `app_owner`: Owns tables, executes DDL and migrations. Has BYPASSRLS capability where supported.
 - `app_runtime`: Narrowly-scoped role for executing application code (DML only: SELECT, INSERT, UPDATE, DELETE). This role does not own tables, does not have BYPASSRLS, and is subject to strict, forced Row Level Security (RLS).
 Application code and tests must use `app_runtime` for normal operations to ensure tenant isolation is strictly enforced.
+
+---
+
+## 45. Privileged Database Paths
+
+Explicit system-context database leases (`runWithSystemContext`) bypass tenant validation. These must be rigorously controlled, tracked, and audited.
+
+Any new system-context database access path MUST:
+1. Be registered in the explicit registry at `src/core/database/privileged-paths.ts`.
+2. Use a distinct purpose tag.
+3. Be documented with a clear justification.
+4. Declare exactly which tables it touches.
+5. Be mirrored in human-readable documentation at `docs/security/privileged-paths.md`.
+
+Adding a new privileged path is a sensitive operation that requires explicit justification. Any unregistered string passed as a purpose tag to `runWithSystemContext` will be rejected at runtime.

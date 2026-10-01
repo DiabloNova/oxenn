@@ -18,6 +18,7 @@ export class TenantContextViolationException extends Error {
   }
 }
 
+import { PRIVILEGED_PATHS_REGISTRY, type PrivilegedPurposeTag } from "../privileged-paths";
 import { TENANT_SCOPED_TABLES } from "../tenant-tables.generated";
 export { TENANT_SCOPED_TABLES, type TenantScopedTable } from "../tenant-tables.generated";
 
@@ -96,10 +97,16 @@ export class TenantContextManager {
    */
   public static async runWithSystemContext<T>(
     userId: string | null,
-    purpose: string,
+    purpose: PrivilegedPurposeTag,
     work: () => Promise<T>
   ): Promise<T> {
-    // TODO (J-029): Full audit wiring. For now, log the purpose hook.
+    if (!PRIVILEGED_PATHS_REGISTRY[purpose]) {
+      throw new TenantContextViolationException(
+        `System Context Violation: Unregistered purpose tag "${purpose}".`
+      );
+    }
+    const pathInfo = PRIVILEGED_PATHS_REGISTRY[purpose];
+
     console.log(`[SystemContext] Leasing client for purpose: ${purpose}`);
 
     const parentCtx = this.getContext();
@@ -137,6 +144,28 @@ export class TenantContextManager {
         purpose
       });
 
+      // Fire and forget audit record logging
+      leasedClient.query(
+        `INSERT INTO audit_records (
+          id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, ip_address, user_agent
+        ) VALUES (
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9
+        )`,
+        [
+          userId || "system", // actor_id
+          "system@oxenn.local", // actor_email (mock for system)
+          "system", // actor_role
+          purpose, // action
+          "privileged_db_access", // resource_type
+          pathInfo.allowedTables.join(","), // resource_id
+          "success", // status
+          "0.0.0.0", // ip_address
+          "system-context" // user_agent
+        ]
+      ).catch((err: any) => {
+        console.error("[TenantContextManager] Failed to emit audit log:", err);
+      });
+
       const result = await this.storage.run(transactedCtx, work);
 
       await leasedClient.query("COMMIT");
@@ -144,6 +173,28 @@ export class TenantContextManager {
     } catch (err) {
       if (leasedClient) {
         try {
+          // Fire and forget error audit log
+          leasedClient.query(
+            `INSERT INTO audit_records (
+              id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
+            ) VALUES (
+              gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+            )`,
+            [
+              userId || "system", // actor_id
+              "system@oxenn.local", // actor_email
+              "system", // actor_role
+              purpose, // action
+              "privileged_db_access", // resource_type
+              pathInfo.allowedTables.join(","), // resource_id
+              "error", // status
+              err instanceof Error ? err.message : String(err), // error_details
+              "0.0.0.0", // ip_address
+              "system-context" // user_agent
+            ]
+          ).catch((auditErr: any) => {
+            console.error("[TenantContextManager] Failed to emit error audit log:", auditErr);
+          });
           await leasedClient.query("ROLLBACK");
         } catch (rollbackErr) {
           console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);

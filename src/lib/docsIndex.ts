@@ -314,6 +314,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Security Architecture Model  This document outlines the security, tenant authorization, Role-Based Access Control (RBAC), and compliance guidelines implemented for the AI Intelligence Engine.  ---  ## 1. Zero-Trust Tenant Isolation  The platform enforces zero-trust tenant isolation through multiple decoupled security shields:  1. **Repository Guard Rails**: Finders require explicit \`organizationId\` parameter filtering. 2. **Domain Layer Assertions**: Tenant contexts are verified inside domain `
   },
   {
+    slug: "privileged-paths",
+    titleEn: "Privileged Database Paths",
+    titleFa: "Privileged Database Paths",
+    category: "security",
+    categoryFa: "Security",
+    snippet: `# Privileged Database Paths  This document outlines all permitted explicit system-context leases (\`runWithSystemContext\`) that allow querying the database without a bound \`tenant_id\`.  | Purpose Tag | Allowed Tables | Caller Module | Justification | | :--- | :--- | :--- | :--- | | **sys-login** | \`users\`, \`tenants\`, \`tenant_users\` | \`src/app/actions/auth.ts\` | Requires user lookup across all tenants during authentication. | | **sys-register** | \`users\`, \`tenants\`, \`tenant_users\` | \`src/app/actio`
+  },
+  {
     slug: "services",
     titleEn: "Service Documentation",
     titleFa: "Service Documentation",
