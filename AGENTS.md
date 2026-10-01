@@ -86,6 +86,66 @@ The agent MUST NOT treat any of the following as a substitute for inspecting the
 These sources may provide useful leads, but important conclusions MUST be verified against the appropriate live source.
 
 ---
+# Requirement-Property Verification and Completion Gate
+
+For every task, identify the underlying product, security, correctness, isolation, reliability, maintainability, or operational property that the task is intended to establish or preserve. Treat that property as a mandatory invariant, not merely as an implementation suggestion.
+
+**Before declaring a task complete, perform an adversarial self-review of the actual implementation and ask:**
+
+1. Does the implementation genuinely enforce the intended property at runtime, rather than only documenting it, typing it, naming it, or testing the happy path?
+2. Can another production caller bypass, broaden, or weaken the intended restriction?
+3. Are failure, rollback, exception, nested, repeated, concurrent, or re-entrant paths consistent with the same invariant?
+4. Can development-only, test-only, administrative, emergency, or wildcard behavior become reachable from production code?
+5. Are malformed, unexpected, inherited, missing, or otherwise adversarial inputs handled safely?
+6. Can the implementation leave transactions, connections, locks, sessions, files, or other resources in an invalid or leaked state?
+7. Can error handling itself break the operation that the change is intended to protect?
+8. Do audit, logging, authorization, tenancy, or isolation guarantees actually survive the relevant failure boundaries?
+9. Do comments, documentation, tests, and naming accurately describe what the runtime implementation really enforces?
+10. Does the implementation satisfy the actual purpose of the task, even if it technically satisfies the literal wording of the task?
+
+For security-sensitive, authorization-sensitive, tenancy-sensitive, database-sensitive, or production-reliability work, happy-path verification is insufficient. At minimum, verify the relevant negative and failure paths and include adversarial cases that could invalidate the intended invariant.
+
+**Do not treat a task as successful merely because:**
+
+- the requested files were changed;
+- the requested API or type exists;
+- the happy path passes;
+- unit tests pass while runtime enforcement is absent;
+- documentation claims a restriction that production code does not enforce; or
+- the implementation matches the literal task wording while creating a contradiction with the task's underlying purpose.
+
+The implementation must preserve the narrowest production scope required by the task. Privileged, administrative, wildcard, bypass, test, debug, or emergency capabilities must have explicit runtime boundaries appropriate to their intended environment and caller.
+
+# Necessary conditions of task completion: 
+
+**Before completion, provide evidence for the following where applicable:**
+
+1. The invariant or intended property identified from the task.
+2. The concrete implementation that enforces it.
+3. A successful/positive-path verification.
+4. A negative, failure, or adversarial-path verification appropriate to the risk.
+5. Evidence that production behavior cannot bypass or unintentionally broaden the intended boundary.
+6. Evidence that tests, documentation, and operational behavior remain consistent with the implementation.
+
+If the intended property cannot be demonstrated from the repository and available verification environment, mark the task "BLOCKED" or "INCOMPLETE" and report exactly what evidence is missing. Do not manufacture confidence, weaken the requirement, or declare success based solely on superficial task completion.
+
+This verification gate applies in addition to task-specific requirements and does not authorize broad refactoring or unrelated changes. When a contradiction is discovered, fix the smallest correct scope necessary to preserve the underlying invariant; otherwise stop and report the contradiction.
+
+# Completion Report Template
+
+Every completed task must report:
+
+- Status: "SUCCESS" / "INCOMPLETE" / "BLOCKED"
+- Invariant: the key property the task was required to establish or preserve.
+- Implementation: the concrete change that enforces that property.
+- Verification: tests, runtime checks, or other evidence performed.
+- Negative-path check: the relevant failure, adversarial, boundary, or bypass case verified.
+- Evidence: exact files, tests, commands, or outputs supporting the result.
+- Known limitations: any remaining gap, uncertainty, or unverified condition.
+
+**A task may be reported as "SUCCESS" only when the implementation and verification evidence support the intended invariant. If required evidence is missing or the invariant is not demonstrably preserved, report "INCOMPLETE" or "BLOCKED" instead.**
+
+---
 
 ## 3. Mandatory Read-Only Inspection Before Modification
 
