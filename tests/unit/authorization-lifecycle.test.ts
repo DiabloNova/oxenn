@@ -41,13 +41,30 @@ describe("Auth Lifecycle Tests", () => {
 
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
+    let capturedHash = "";
+    let capturedParams = "";
+
     const mockClient = {
       query: vi.fn().mockImplementation(async (sqlOrObj: unknown, params: unknown[]) => {
         const sql = typeof sqlOrObj === 'string' ? sqlOrObj : (sqlOrObj as {text?: string}).text || String(sqlOrObj);
 
         if (sql.includes("INSERT INTO users")) return { rowCount: 1 };
         if (sql.includes("SELECT id FROM users WHERE email")) return { rows: [], rowCount: 0 }; // Register unique
+        if (sql.includes("INSERT INTO user_credentials")) {
+           capturedHash = params[2] as string;
+           capturedParams = params[4] as string;
+           return { rowCount: 1 };
+        }
         if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
+        if (sql.includes("SELECT * FROM user_credentials WHERE user_id")) {
+           return { rows: [{
+              user_id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
+              password_hash: capturedHash || "5X942op26r/rCdLWgb3HfA==:6nwvtKsXerwaU9lugHy4cE6FoYTBrqg0BWn/tg9aiRXradK2OPsdpRNRtMbQV1qFeL+ZEIcm/ZsoKeazAD2EvA==",
+              params: capturedParams ? JSON.parse(capturedParams) : { n: 32768, r: 8, p: 1, keyLength: 64 },
+              failed_attempts: 0
+           }], rowCount: 1 };
+        }
+        if (sql.includes("UPDATE user_credentials")) return { rowCount: 1 };
         if (sql.includes("SELECT m.organization_id")) return { rows: [{ workspaceId: "d4001873-8482-4977-b746-ab085a855012", role: "workspace_admin", workspaceName: "Probe's Workspace" }], rowCount: 1 };
         if (sql.includes("organization_members")) return { rows: [{ id: "1", role: "workspace_admin" }], rowCount: 1 }; // Membership passes
         if (sql.includes("organizations")) return { rows: [{ id: "d4001873-8482-4977-b746-ab085a855012" }], rowCount: 1 };
@@ -65,11 +82,11 @@ describe("Auth Lifecycle Tests", () => {
 
   it("completes full auth lifecycle", async () => {
     // 1. Register
-    const registeredUser = await registerAction("Probe", "probe@example.com");
-    expect(registeredUser.id).toBeDefined();
+    const registeredUser = await registerAction("Probe", "probe@example.com", "Password123");
+    expect((registeredUser as { id: string }).id).toBeDefined();
 
     // 2. Login
-    const loggedInUser = await loginAction("probe@example.com");
+    const loggedInUser = await loginAction("probe@example.com", "Password123");
     expect(loggedInUser.email).toBe("probe@example.com");
 
     // 3. requireWorkspaceMembership (pass)

@@ -6,8 +6,8 @@ import { loginAction, logoutAction, getServerSessionAction, registerAction } fro
 
 interface AuthContextType {
   session: Session;
-  login: (email: string, password?: string) => Promise<void>;
-  register: (name: string, email: string, password?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, workspaceName?: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (requiredRole: UserRole) => boolean;
 }
@@ -53,42 +53,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
-  const login = async (email: string, password?: string) => {
+  const login = async (email: string, password: string) => {
     setSession((prev) => ({ ...prev, status: "loading" }));
 
-    // Prepare for future backend API integration here
-    // e.g. const res = await fetch("/api/v1/auth/login", { ... })
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      // Prepare for future backend API integration here
+      // e.g. const res = await fetch("/api/v1/auth/login", { ... })
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // Secure server-side login strictly on the server to prevent client-controlled spoofing
-    const user = await loginAction(email);
+      // Secure server-side login strictly on the server to prevent client-controlled spoofing
+      const user = await loginAction(email, password);
 
-    localStorage.setItem("auth_session_user", JSON.stringify(user));
+      localStorage.setItem("auth_session_user", JSON.stringify(user));
 
-    setSession({
-      user,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      status: "authenticated",
-    });
+      setSession({
+        user,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        status: "authenticated",
+      });
+    } catch (e) {
+      setSession({
+        user: null,
+        expiresAt: null,
+        status: "unauthenticated",
+      });
+      throw e;
+    }
   };
 
-  const register = async (name: string, email: string, password?: string) => {
+  const register = async (name: string, email: string, password: string, workspaceName?: string) => {
     setSession((prev) => ({ ...prev, status: "loading" }));
 
-    // Prepare for future backend API integration here
-    // e.g. const res = await fetch("/api/v1/auth/register", { ... })
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      // Prepare for future backend API integration here
+      // e.g. const res = await fetch("/api/v1/auth/register", { ... })
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // Secure server-side registration strictly on the server to prevent client-controlled spoofing
-    const user = await registerAction(name, email);
+      // Secure server-side registration strictly on the server to prevent client-controlled spoofing
+      const result = await registerAction(name, email, password, workspaceName);
+      if ("errorCode" in result) {
+        throw Object.assign(new Error("Registration failed."), { code: result.errorCode });
+      }
 
-    localStorage.setItem("auth_session_user", JSON.stringify(user));
-
-    setSession({
-      user,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      status: "authenticated",
-    });
+      // Do NOT sign in the user after register, because registration does not create a session
+      setSession({
+        user: null,
+        expiresAt: null,
+        status: "unauthenticated",
+      });
+    } catch (e) {
+      setSession({
+        user: null,
+        expiresAt: null,
+        status: "unauthenticated",
+      });
+      throw e;
+    }
   };
 
   const logout = async () => {

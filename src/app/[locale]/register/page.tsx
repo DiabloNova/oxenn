@@ -2,7 +2,7 @@
 
 import React, { useState, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
@@ -15,10 +15,11 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
   const locale = resolvedParams.locale;
   const isFa = locale === "fa";
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register } = useAuth();
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams?.get("email") || "");
   const [password, setPassword] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
 
@@ -81,8 +82,8 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     if (!password) {
       setPasswordError(isFa ? "رمز عبور الزامی است." : "Password is required.");
       isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError(isFa ? "رمز عبور باید حداقل ۶ کاراکتر باشد." : "Password must be at least 6 characters.");
+    } else if (password.length < 10 || password.length > 255) {
+      setPasswordError(isFa ? "رمز عبور باید بین ۱۰ تا ۲۵۵ کاراکتر باشد." : "Password must be between 10 and 255 characters.");
       isValid = false;
     } else {
       setPasswordError("");
@@ -107,15 +108,18 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
 
     setIsLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, workspaceName);
       setIsSuccess(true);
       // Let the user proceed to verify email or directly to dashboard
       setTimeout(() => {
         router.push(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
       }, 1500);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setSubmitError(isFa ? "خطا در ثبت‌نام. احتمال دارد این ایمیل قبلاً ثبت شده باشد." : "Registration failed. This email may already exist.");
+      const code = (err as { code?: string })?.code;
+      const finalMsg = code === "USER_EXISTS"
+        ? (isFa ? "این ایمیل قبلاً ثبت شده است." : "This email may already exist.")
+        : (isFa ? "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید." : "Registration failed. Please try again.");
+      setSubmitError(finalMsg);
     } finally {
       setIsLoading(false);
     }

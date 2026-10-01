@@ -57,6 +57,13 @@
       "when": 1790610450318,
       "tag": "0007_goofy_vanisher",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790857002943,
+      "tag": "0008_boring_ares",
+      "breakpoints": true
     }
   ]
 }

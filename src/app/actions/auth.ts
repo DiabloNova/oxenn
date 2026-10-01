@@ -4,11 +4,19 @@ import { User, Session, UserRole } from "@/types/auth";
 import { createSession, invalidateSession, getSession } from "@/services/auth/session";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { randomUUID } from "crypto";
+import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/services/auth/passwords";
+
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_DURATION_MINS = 15;
 
 /**
  * Authenticates user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function loginAction(email: string): Promise<User> {
+export async function loginAction(email: string, password: string): Promise<User> {
+  if (!password) {
+     throw new Error("Password is required");
+  }
+
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) {
@@ -18,9 +26,56 @@ export async function loginAction(email: string): Promise<User> {
     const { rows: userRows } = await client.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
     const userRecord = userRows[0];
 
+    // Dummy hash for missing user to mitigate timing attacks
     if (!userRecord) {
+        await hashPassword(password);
         throw new Error("Invalid credentials or user not found.");
     }
+
+    const { rows: credRows } = await client.query("SELECT * FROM user_credentials WHERE user_id = $1 FOR UPDATE", [userRecord.id]);
+    const credRecord = credRows[0];
+
+    // Dummy hash for missing credential
+    if (!credRecord) {
+        await hashPassword(password);
+        throw new Error("Invalid credentials or user not found.");
+    }
+
+    // Check lockout
+    if (credRecord.locked_until && new Date(credRecord.locked_until) > new Date()) {
+        throw new Error("Account is temporarily locked. Please try again later.");
+    }
+
+    // Verify password
+    const isPasswordValid = await verifyPassword(password, credRecord.password_hash, credRecord.params);
+
+    if (!isPasswordValid) {
+        // Increment failures atomically in the database
+        await client.query(`
+            UPDATE user_credentials
+            SET
+                failed_attempts = CASE
+                    WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN 1
+                    ELSE failed_attempts + 1
+                END,
+                locked_until = CASE
+                    WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN NULL
+                    WHEN failed_attempts + 1 >= $1 THEN NOW() + interval '${LOCKOUT_DURATION_MINS} minutes'
+                    ELSE locked_until
+                END,
+                updated_at = NOW()
+            WHERE user_id = $2
+        `, [LOCKOUT_THRESHOLD, userRecord.id]);
+
+        // Return error object instead of throwing inside system context to prevent rollback of failed attempts update
+        return { error: "Invalid credentials or user not found." };
+    }
+
+    // Reset failures on success
+    await client.query(
+        "UPDATE user_credentials SET failed_attempts = 0, locked_until = NULL, updated_at = NOW() WHERE user_id = $1",
+        [userRecord.id]
+    );
 
     const { rows: memberRows } = await client.query(`
         SELECT m.organization_id as "workspaceId", m.role, o.name as "workspaceName"
@@ -44,14 +99,22 @@ export async function loginAction(email: string): Promise<User> {
     };
   });
 
-  await createSession(result);
-  return result;
+  if (result && 'error' in result) {
+      throw new Error(result.error as string);
+  }
+
+  await createSession(result as User);
+  return result as User;
 }
 
 /**
  * Registers user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function registerAction(name: string, email: string): Promise<User> {
+export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<User | { errorCode: "USER_EXISTS" }> {
+  if (!password || !validatePasswordRequirements(password)) {
+     throw new Error("Password must be between 10 and 255 characters");
+  }
+
   const result = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) {
@@ -61,23 +124,41 @@ export async function registerAction(name: string, email: string): Promise<User>
     // Check if user exists
     const { rows: existingUser } = await client.query("SELECT id FROM users WHERE email = $1", [email]);
     if (existingUser.length > 0) {
-        throw new Error("User already exists.");
+        return { errorCode: "USER_EXISTS" as const };
     }
 
     const userId = `usr-${randomUUID()}`;
 
-    // Create User
-    await client.query("INSERT INTO users (id, name, email) VALUES ($1, $2, $3)", [userId, name, email]);
+    // Hash password
+    const hashResult = await hashPassword(password);
 
-    // Create Organization (Workspace)
     const orgId = randomUUID();
-    const orgSlug = `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${randomUUID().slice(0,4)}`;
-    const orgName = `${name}'s Workspace`;
 
-    await client.query("INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)", [orgId, orgName, orgSlug]);
+    await client.query('BEGIN');
+    try {
+        // Create User
+        await client.query("INSERT INTO users (id, name, email) VALUES ($1, $2, $3)", [userId, name, email]);
 
-    // Create Membership
-    await client.query("INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, $3)", [orgId, userId, "workspace_admin"]);
+        // Create Credentials
+        await client.query(
+            "INSERT INTO user_credentials (id, user_id, password_hash, algorithm, params) VALUES ($1, $2, $3, $4, $5)",
+            [randomUUID(), userId, hashResult.hash, hashResult.algorithm, JSON.stringify(hashResult.params)]
+        );
+
+        // Create Organization (Workspace)
+        const effectiveWorkspaceName = workspaceName || `${name}'s Workspace`;
+        const orgSlug = `${effectiveWorkspaceName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${randomUUID().slice(0,4)}`;
+
+        await client.query("INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)", [orgId, effectiveWorkspaceName, orgSlug]);
+
+        // Create Membership
+        await client.query("INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, $3)", [orgId, userId, "workspace_admin"]);
+
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    }
 
     return {
         id: userId,
@@ -88,7 +169,9 @@ export async function registerAction(name: string, email: string): Promise<User>
     };
   });
 
-  await createSession(result);
+  // DO NOT CREATE SESSION ON REGISTER per requirements
+  // await createSession(result);
+
   return result;
 }
 

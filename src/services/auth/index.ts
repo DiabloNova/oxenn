@@ -19,18 +19,6 @@ export const authService = {
     }
   },
 
-  async login(email: string): Promise<User> {
-    const mockUser: User = {
-      id: "usr-1001",
-      name: "Seyed Alireza",
-      email,
-      role: "workspace_admin",
-      workspaceId: "ws-tehran",
-    };
-    localStorage.setItem("auth_session_user", JSON.stringify(mockUser));
-    return mockUser;
-  },
-
   async logout(): Promise<void> {
     localStorage.removeItem("auth_session_user");
   }

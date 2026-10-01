@@ -108,6 +108,18 @@ export const users = pgTable("users", {
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
+export const userCredentials = pgTable("user_credentials", {
+  id: uuid("id").primaryKey().default(defaultUuid),
+  userId: text("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  passwordHash: text("password_hash").notNull(),
+  algorithm: text("algorithm").notNull().default('scrypt'),
+  params: jsonb("params").notNull(),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
+});
+
 export const organizationMembers = pgTable("organization_members", {
   id: uuid("id").primaryKey().default(defaultUuid),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
