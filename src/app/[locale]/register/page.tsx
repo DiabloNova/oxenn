@@ -117,7 +117,9 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       // Surface actual errors (like "User already exists.") or fall back
-      const finalMsg = msg || (isFa ? "خطا در ثبت‌نام. احتمال دارد این ایمیل قبلاً ثبت شده باشد." : "Registration failed. This email may already exist.");
+      const finalMsg = msg === "User already exists."
+        ? (isFa ? "این ایمیل قبلاً ثبت شده است." : "This email may already exist.")
+        : (isFa ? "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید." : "Registration failed. Please try again.");
       setSubmitError(finalMsg);
     } finally {
       setIsLoading(false);
