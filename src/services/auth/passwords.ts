@@ -58,6 +58,15 @@ export async function verifyPassword(password: string, storedHash: string, store
     return false;
   }
 
+  // Strictly validate parameters before invoking crypto.scrypt
+  if (!Number.isFinite(n) || !Number.isFinite(pr) || !Number.isFinite(pp) || !Number.isFinite(keyLength)) {
+    return false;
+  }
+
+  if (n <= 0 || pr <= 0 || pp <= 0 || keyLength <= 0) {
+    return false;
+  }
+
   if (n > 131072 || pr > 16 || pp > 4 || keyLength > 128) {
      return false;
   }

@@ -107,7 +107,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
 
     setIsLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, workspaceName);
       setIsSuccess(true);
       // Let the user proceed to verify email or directly to dashboard
       setTimeout(() => {

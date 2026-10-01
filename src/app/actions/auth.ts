@@ -50,17 +50,18 @@ export async function loginAction(email: string, password: string): Promise<User
     const isPasswordValid = await verifyPassword(password, credRecord.password_hash, credRecord.params);
 
     if (!isPasswordValid) {
-        // Increment failures
-        const newFailures = credRecord.failed_attempts + 1;
-        let lockedUntil = null;
-        if (newFailures >= LOCKOUT_THRESHOLD) {
-            lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINS * 60 * 1000).toISOString();
-        }
-
-        await client.query(
-            "UPDATE user_credentials SET failed_attempts = $1, locked_until = $2, updated_at = NOW() WHERE user_id = $3",
-            [newFailures, lockedUntil, userRecord.id]
-        );
+        // Increment failures atomically in the database
+        await client.query(`
+            UPDATE user_credentials
+            SET
+                failed_attempts = failed_attempts + 1,
+                locked_until = CASE
+                    WHEN failed_attempts + 1 >= $1 THEN NOW() + interval '${LOCKOUT_DURATION_MINS} minutes'
+                    ELSE locked_until
+                END,
+                updated_at = NOW()
+            WHERE user_id = $2
+        `, [LOCKOUT_THRESHOLD, userRecord.id]);
 
         // Return error object instead of throwing inside system context to prevent rollback of failed attempts update
         return { error: "Invalid credentials or user not found." };
@@ -105,7 +106,7 @@ export async function loginAction(email: string, password: string): Promise<User
 /**
  * Registers user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function registerAction(name: string, email: string, password: string): Promise<User> {
+export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<User> {
   if (!password || !validatePasswordRequirements(password)) {
      throw new Error("Password must be between 10 and 255 characters");
   }
@@ -141,10 +142,10 @@ export async function registerAction(name: string, email: string, password: stri
         );
 
         // Create Organization (Workspace)
-        const orgSlug = `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${randomUUID().slice(0,4)}`;
-        const orgName = `${name}'s Workspace`;
+        const effectiveWorkspaceName = workspaceName || `${name}'s Workspace`;
+        const orgSlug = `${effectiveWorkspaceName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${randomUUID().slice(0,4)}`;
 
-        await client.query("INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)", [orgId, orgName, orgSlug]);
+        await client.query("INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)", [orgId, effectiveWorkspaceName, orgSlug]);
 
         // Create Membership
         await client.query("INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, $3)", [orgId, userId, "workspace_admin"]);

@@ -42,7 +42,19 @@ describe("Password Service", () => {
       { ...result.params, r: 32 }, // Large r DoS
       { ...result.params, p: 8 }, // Large p DoS
       { ...result.params, keyLength: 256 }, // Large keyLength DoS
-      { ...result.params, n: "32768" as unknown as number }, // Non-numeric
+      { ...result.params, n: "32768" as unknown as number }, // Non-numeric n
+      { ...result.params, r: "8" as unknown as number }, // Non-numeric r
+      { ...result.params, p: "1" as unknown as number }, // Non-numeric p
+      { ...result.params, keyLength: "64" as unknown as number }, // Non-numeric keyLength
+      { ...result.params, n: -1 }, // Negative n
+      { ...result.params, n: NaN }, // NaN n
+      { ...result.params, r: -1 }, // Negative r
+      { ...result.params, p: -1 }, // Negative p
+      { ...result.params, keyLength: -1 }, // Negative keyLength
+      { ...result.params, n: Infinity }, // Infinity n
+      { ...result.params, r: Infinity }, // Infinity r
+      { ...result.params, p: Infinity }, // Infinity p
+      { ...result.params, keyLength: Infinity }, // Infinity keyLength
     ];
 
     for (const params of malformedParams) {

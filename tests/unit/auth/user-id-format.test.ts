@@ -1,16 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
-import { registerAction } from '../../src/app/actions/auth';
-import { TenantContextManager } from '../../src/core/database/tenant-context';
+import { registerAction } from '../../../src/app/actions/auth';
+import { TenantContextManager } from '../../../src/core/database/tenant-context';
 
 // Mock createSession at the top level
-vi.mock('../../src/services/auth/session', () => ({
+vi.mock('../../../src/services/auth/session', () => ({
     createSession: vi.fn(),
     invalidateSession: vi.fn(),
     getSession: vi.fn()
 }));
 
 // Mock hashPassword to prevent slow test execution (20 minutes for 10k real hashes)
-vi.mock('../../src/services/auth/passwords', () => ({
+vi.mock('../../../src/services/auth/passwords', () => ({
     hashPassword: vi.fn().mockResolvedValue({
         hash: 'mockhash',
         algorithm: 'scrypt',

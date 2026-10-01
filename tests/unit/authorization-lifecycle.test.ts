@@ -51,8 +51,8 @@ describe("Auth Lifecycle Tests", () => {
         if (sql.includes("INSERT INTO users")) return { rowCount: 1 };
         if (sql.includes("SELECT id FROM users WHERE email")) return { rows: [], rowCount: 0 }; // Register unique
         if (sql.includes("INSERT INTO user_credentials")) {
-           capturedHash = params[2];
-           capturedParams = params[4];
+           capturedHash = params[2] as string;
+           capturedParams = params[4] as string;
            return { rowCount: 1 };
         }
         if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login

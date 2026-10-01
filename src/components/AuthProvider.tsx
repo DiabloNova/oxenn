@@ -7,7 +7,7 @@ import { loginAction, logoutAction, getServerSessionAction, registerAction } fro
 interface AuthContextType {
   session: Session;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, workspaceName?: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (requiredRole: UserRole) => boolean;
 }
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, workspaceName?: string) => {
     setSession((prev) => ({ ...prev, status: "loading" }));
 
     try {
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       // Secure server-side registration strictly on the server to prevent client-controlled spoofing
-      await registerAction(name, email, password);
+      await registerAction(name, email, password, workspaceName);
 
       // Do NOT sign in the user after register, because registration does not create a session
       setSession({
