@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { LandingHeader } from "@/components/marketing/LandingHeader";
 import { LandingFooter } from "@/components/marketing/LandingFooter";
+import { HeroAccessCard } from "@/components/marketing/HeroAccessCard";
 import { FreeAuditPanel } from "@/components/features/audit/FreeAuditPanel";
 import { RadialPolarGraph } from "@/components/features/graph/RadialPolarGraph";
 import { LiveKnowledgeGraph } from "@/components/features/graph/LiveKnowledgeGraph";
@@ -202,6 +203,9 @@ export default function MarketingLandingPage({ params }: { params: Promise<{ loc
               <span>{isFa ? "کاوش پیشخوان‌های نرم‌افزاری" : "Explore Mock Dashboards"}</span>
               <ArrowRight size={16} className="rtl:-scale-x-100 shrink-0" />
             </button>
+          </div>
+          <div className="w-full max-w-md mx-auto">
+            <HeroAccessCard locale={locale} />
           </div>
         </div>
       </section>
