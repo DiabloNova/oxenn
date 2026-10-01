@@ -9,6 +9,7 @@ export interface TenantContext {
   readonly dbClient?: any;
   readonly transactionDepth?: number;
   readonly purpose?: string;
+  readonly pendingAudits?: Array<{ status: "success" | "error"; details?: string; nestedPurpose: PrivilegedPurposeTag }>;
 }
 
 export class TenantContextViolationException extends Error {
@@ -18,6 +19,7 @@ export class TenantContextViolationException extends Error {
   }
 }
 
+import { PRIVILEGED_PATHS_REGISTRY, type PrivilegedPurposeTag } from "../privileged-paths";
 import { TENANT_SCOPED_TABLES } from "../tenant-tables.generated";
 export { TENANT_SCOPED_TABLES, type TenantScopedTable } from "../tenant-tables.generated";
 
@@ -96,13 +98,55 @@ export class TenantContextManager {
    */
   public static async runWithSystemContext<T>(
     userId: string | null,
-    purpose: string,
+    purpose: PrivilegedPurposeTag,
     work: () => Promise<T>
   ): Promise<T> {
-    // TODO (J-029): Full audit wiring. For now, log the purpose hook.
+    if (!Object.hasOwn(PRIVILEGED_PATHS_REGISTRY, purpose)) {
+      throw new TenantContextViolationException(
+        `System Context Violation: Unregistered purpose tag "${purpose}".`
+      );
+    }
+
+    const TEST_ONLY_TAGS = new Set<string>(["sys-admin-run", "test-req"]);
+    // Allow 'sys-admin-run' and 'test-req' only if NODE_ENV is 'test' or in verification probes.
+    // Fall back to strictly blocking them in production otherwise.
+    if (TEST_ONLY_TAGS.has(purpose) && process.env.NODE_ENV !== "test" && process.env.VERIFICATION_PROBE_ACTIVE !== "1") {
+      throw new TenantContextViolationException(
+        `System Context Violation: test-only purpose tag "${purpose}" used outside tests.`
+      );
+    }
+
+    const pathInfo = PRIVILEGED_PATHS_REGISTRY[purpose];
+
     console.log(`[SystemContext] Leasing client for purpose: ${purpose}`);
 
     const parentCtx = this.getContext();
+
+    const doAuditLog = (client: any, status: "success" | "error", nestedPurpose: PrivilegedPurposeTag, details?: string) => {
+      // Fire and forget autocommit insert. Must run outside the main transaction (or post commit/rollback)
+      const pInfo = PRIVILEGED_PATHS_REGISTRY[nestedPurpose];
+      client.query(
+        `INSERT INTO audit_records (
+          id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
+        ) VALUES (
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        )`,
+        [
+          userId || "system", // actor_id
+          "system@oxenn.local", // actor_email
+          "system", // actor_role
+          nestedPurpose, // action
+          "privileged_db_access", // resource_type
+          pInfo.allowedTables.join(","), // resource_id
+          status, // status
+          details || null, // error_details
+          "0.0.0.0", // ip_address
+          "system-context" // user_agent
+        ]
+      ).catch((err: any) => {
+        console.error(`[TenantContextManager] Failed to emit ${status} audit log for ${nestedPurpose}:`, err);
+      });
+    };
 
     // Check if there is already an active transaction in the current async scope for system mode
     if (parentCtx && parentCtx.dbClient && parentCtx.executionMode === "system") {
@@ -110,12 +154,26 @@ export class TenantContextManager {
       const nestedCtx = Object.freeze({
         ...parentCtx,
         transactionDepth: depth,
-        purpose
+        purpose,
+        pendingAudits: parentCtx.pendingAudits || []
       });
-      return this.storage.run(nestedCtx, work);
+
+      try {
+        const result = await this.storage.run(nestedCtx, work);
+        if (nestedCtx.pendingAudits) {
+           nestedCtx.pendingAudits.push({ status: "success", nestedPurpose: purpose });
+        }
+        return result;
+      } catch (err) {
+        if (nestedCtx.pendingAudits) {
+           nestedCtx.pendingAudits.push({ status: "error", details: err instanceof Error ? err.message : String(err), nestedPurpose: purpose });
+        }
+        throw err;
+      }
     }
 
     let leasedClient: any = null;
+    let transactedCtx: TenantContext | null = null;
 
     // Dynamically import PostgresClient to avoid circular dependencies
     const { PostgresClient } = await import("../../../features/admin/infrastructure/persistence/postgres");
@@ -127,19 +185,27 @@ export class TenantContextManager {
     try {
       await leasedClient.query("BEGIN");
 
-      const transactedCtx: TenantContext = Object.freeze({
+      transactedCtx = Object.freeze({
         tenantId: null,
         userId,
         requestId: null,
         executionMode: "system",
         dbClient: leasedClient,
         transactionDepth: 1,
-        purpose
+        purpose,
+        pendingAudits: []
       });
 
       const result = await this.storage.run(transactedCtx, work);
 
       await leasedClient.query("COMMIT");
+      doAuditLog(leasedClient, "success", purpose);
+
+      if (transactedCtx.pendingAudits) {
+         for (const audit of transactedCtx.pendingAudits) {
+             doAuditLog(leasedClient, audit.status, audit.nestedPurpose, audit.details);
+         }
+      }
       return result;
     } catch (err) {
       if (leasedClient) {
@@ -147,6 +213,18 @@ export class TenantContextManager {
           await leasedClient.query("ROLLBACK");
         } catch (rollbackErr) {
           console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);
+        }
+        const outerMsg = err instanceof Error ? err.message : String(err);
+        doAuditLog(leasedClient, "error", purpose, outerMsg);
+
+        if (transactedCtx && transactedCtx.pendingAudits) {
+           for (const audit of transactedCtx.pendingAudits) {
+               const resolvedStatus = "error";
+               const resolvedDetails = audit.status === "success"
+                 ? `rolled back with outer lease (${purpose}): ${outerMsg}`
+                 : audit.details;
+               doAuditLog(leasedClient, resolvedStatus, audit.nestedPurpose, resolvedDetails);
+           }
         }
       }
       throw err;
