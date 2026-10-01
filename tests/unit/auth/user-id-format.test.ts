@@ -45,6 +45,9 @@ describe('User ID Generation', () => {
 
         // Assertions
         expect(generatedId).toMatch(/^usr-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        if (!("id" in result)) {
+            throw new Error("Expected registration to return a user");
+        }
         expect(result.id).toEqual(generatedId);
 
         vi.restoreAllMocks();
