@@ -41,19 +41,26 @@ describe("Auth Lifecycle Tests", () => {
 
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
+    let capturedHash = "";
+    let capturedParams = "";
+
     const mockClient = {
       query: vi.fn().mockImplementation(async (sqlOrObj: unknown, params: unknown[]) => {
         const sql = typeof sqlOrObj === 'string' ? sqlOrObj : (sqlOrObj as {text?: string}).text || String(sqlOrObj);
 
         if (sql.includes("INSERT INTO users")) return { rowCount: 1 };
         if (sql.includes("SELECT id FROM users WHERE email")) return { rows: [], rowCount: 0 }; // Register unique
+        if (sql.includes("INSERT INTO user_credentials")) {
+           capturedHash = params[2];
+           capturedParams = params[4];
+           return { rowCount: 1 };
+        }
         if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
         if (sql.includes("SELECT * FROM user_credentials WHERE user_id")) {
-           // We need to provide a valid hash for "Password123" to satisfy the verifyPassword check
            return { rows: [{
               user_id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
-              password_hash: "5X942op26r/rCdLWgb3HfA==:6nwvtKsXerwaU9lugHy4cE6FoYTBrqg0BWn/tg9aiRXradK2OPsdpRNRtMbQV1qFeL+ZEIcm/ZsoKeazAD2EvA==",
-              params: { n: 32768, r: 8, p: 1, keyLength: 64 },
+              password_hash: capturedHash || "5X942op26r/rCdLWgb3HfA==:6nwvtKsXerwaU9lugHy4cE6FoYTBrqg0BWn/tg9aiRXradK2OPsdpRNRtMbQV1qFeL+ZEIcm/ZsoKeazAD2EvA==",
+              params: capturedParams ? JSON.parse(capturedParams) : { n: 32768, r: 8, p: 1, keyLength: 64 },
               failed_attempts: 0
            }], rowCount: 1 };
         }

@@ -36,8 +36,26 @@ describe("Password Service", () => {
     let isValid = await verifyPassword(pwd, result.hash, null);
     expect(isValid).toBe(false);
 
-    // Test with malicious large parameters to prevent DoS
-    isValid = await verifyPassword(pwd, result.hash, { ...result.params, n: 1048576 });
+    // Test table for malformed parameters
+    const malformedParams = [
+      { ...result.params, n: 1048576 }, // Large n DoS
+      { ...result.params, r: 32 }, // Large r DoS
+      { ...result.params, p: 8 }, // Large p DoS
+      { ...result.params, keyLength: 256 }, // Large keyLength DoS
+      { ...result.params, n: "32768" as unknown as number }, // Non-numeric
+    ];
+
+    for (const params of malformedParams) {
+      isValid = await verifyPassword(pwd, result.hash, params);
+      expect(isValid).toBe(false);
+    }
+
+    // Test malformed hashes
+    isValid = await verifyPassword(pwd, "badhashformat", result.params);
+    expect(isValid).toBe(false);
+
+    // Test key length mismatch
+    isValid = await verifyPassword(pwd, result.hash, { ...result.params, keyLength: 32 });
     expect(isValid).toBe(false);
   });
 

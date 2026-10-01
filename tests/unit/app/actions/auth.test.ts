@@ -21,6 +21,16 @@ vi.mock("@/services/auth/session", () => ({
   getSession: vi.fn(),
 }));
 
+const mockHashPassword = vi.fn().mockResolvedValue({ hash: "dummy" });
+
+vi.mock("@/services/auth/passwords", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/auth/passwords")>();
+  return {
+    ...actual,
+    hashPassword: (...args: unknown[]) => mockHashPassword(...args),
+  };
+});
+
 describe("Authentication Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,23 +57,21 @@ describe("Authentication Actions", () => {
     it("throws error if user not found (with dummy hash timing protection)", async () => {
        mockQuery.mockResolvedValueOnce({ rows: [] }); // SELECT FROM users
 
-       const start = Date.now();
        await expect(loginAction("test@test.com", "Password123")).rejects.toThrow("Invalid credentials or user not found.");
-       const end = Date.now();
 
-       // dummy hash typically takes >= 10ms
-       expect(end - start).toBeGreaterThan(5);
+       // verify the dummy-hash mitigation directly instead of wall-clock time
+       expect(mockHashPassword).toHaveBeenCalled();
+    });
+
+    describe("loginAction lockout constraints", () => {
+      it("throws error when locked out", async () => {
+         mockQuery.mockResolvedValueOnce({ rows: [{ id: "usr-1" }] }); // SELECT FROM users
+
+         const lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+         mockQuery.mockResolvedValueOnce({ rows: [{ user_id: "usr-1", locked_until: lockedUntil }] }); // SELECT FROM user_credentials
+
+         await expect(loginAction("test@test.com", "Password123")).rejects.toThrow("Account is temporarily locked");
+      });
     });
   });
 });
-
-  describe("registerAction lockout constraints", () => {
-    it("throws error when locked out", async () => {
-       mockQuery.mockResolvedValueOnce({ rows: [{ id: "usr-1" }] }); // SELECT FROM users
-
-       const lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-       mockQuery.mockResolvedValueOnce({ rows: [{ user_id: "usr-1", locked_until: lockedUntil }] }); // SELECT FROM user_credentials
-
-       await expect(loginAction("test@test.com", "Password123")).rejects.toThrow("Account is temporarily locked");
-    });
-  });

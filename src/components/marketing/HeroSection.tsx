@@ -14,26 +14,19 @@ import { Input } from "@/components/Input";
  * wrapped in an animated conic border.
  */
 export function HeroSection() {
-  const { login, session } = useAuth();
+  const { session } = useAuth();
   const { language } = useTheme();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const isFa = language === "fa";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
-    setError("");
+    if (!email) return;
     setIsLoading(true);
-    try {
-      await login(email, password);
-    } catch {
-      setError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    // Redirect to register with the email prefilled
+    window.location.href = `/${language}/register?email=${encodeURIComponent(email)}`;
+    setIsLoading(false);
   };
 
   const chips = [
@@ -123,8 +116,8 @@ export function HeroSection() {
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                     {isFa
-                      ? "برای مشاهده‌ی نسخه‌ی نمایشی، با ایمیل و رمز عبور خود وارد شوید."
-                      : "Sign in with your email and password to open the live sandbox demo."}
+                      ? "ایمیل سازمانی خود را برای مشاهده‌ی نسخه‌ی نمایشی وارد کنید."
+                      : "Enter your business email to open the live sandbox demo."}
                   </p>
                 </div>
                 <Input
@@ -133,25 +126,8 @@ export function HeroSection() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="email"
-                  disabled={isLoading}
                   aria-label={isFa ? "ایمیل سازمانی" : "Business email"}
                 />
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  disabled={isLoading}
-                  aria-label={isFa ? "رمز عبور" : "Password"}
-                />
-                {error && (
-                  <p role="alert" className="text-xs font-medium text-[var(--color-error)]">
-                    {error}
-                  </p>
-                )}
                 <Button
                   type="submit"
                   variant="primary"

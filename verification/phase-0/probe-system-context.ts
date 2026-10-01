@@ -62,12 +62,12 @@ async function runProbe() {
   });
 
   // 2. registerAction
-  await testFunction("registerAction('Probe', 'probe@example.com')", () =>
+  await testFunction("registerAction('Probe', 'probe@example.com', '***')", () =>
     registerAction("Probe", "probe@example.com", "Password123")
   );
 
   // 3. loginAction
-  await testFunction("loginAction('probe@example.com')", () =>
+  await testFunction("loginAction('probe@example.com', '***')", () =>
     loginAction("probe@example.com", "Password123")
   );
 

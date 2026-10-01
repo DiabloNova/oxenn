@@ -62,7 +62,8 @@ export async function loginAction(email: string, password: string): Promise<User
             [newFailures, lockedUntil, userRecord.id]
         );
 
-        throw new Error("Invalid credentials or user not found.");
+        // Return error object instead of throwing inside system context to prevent rollback of failed attempts update
+        return { error: "Invalid credentials or user not found." };
     }
 
     // Reset failures on success
@@ -93,8 +94,12 @@ export async function loginAction(email: string, password: string): Promise<User
     };
   });
 
-  await createSession(result);
-  return result;
+  if (result && 'error' in result) {
+      throw new Error(result.error as string);
+  }
+
+  await createSession(result as User);
+  return result as User;
 }
 
 /**

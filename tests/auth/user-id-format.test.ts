@@ -9,6 +9,17 @@ vi.mock('../../src/services/auth/session', () => ({
     getSession: vi.fn()
 }));
 
+// Mock hashPassword to prevent slow test execution (20 minutes for 10k real hashes)
+vi.mock('../../src/services/auth/passwords', () => ({
+    hashPassword: vi.fn().mockResolvedValue({
+        hash: 'mockhash',
+        algorithm: 'scrypt',
+        params: {}
+    }),
+    verifyPassword: vi.fn(),
+    validatePasswordRequirements: vi.fn().mockReturnValue(true)
+}));
+
 describe('User ID Generation', () => {
     it('should generate an ID in the correct format with a full UUID', async () => {
         let generatedId = '';

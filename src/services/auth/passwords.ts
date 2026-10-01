@@ -90,11 +90,11 @@ export async function verifyPassword(password: string, storedHash: string, store
   });
 }
 
+export const PASSWORD_MAX_LENGTH = 255;
+
 export function validatePasswordRequirements(password: string): boolean {
   if (!password) return false;
   if (password.length < 10) return false;
-  if (password.length > 255) return false;
+  if (password.length > PASSWORD_MAX_LENGTH) return false;
   return true;
 }
-
-export const PASSWORD_MAX_LENGTH = 255;
