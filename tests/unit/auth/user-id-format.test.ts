@@ -17,7 +17,7 @@ vi.mock('../../../src/services/auth/passwords', () => ({
         params: {}
     }),
     verifyPassword: vi.fn(),
-    validatePasswordRequirements: vi.fn().mockReturnValue(true)
+    validatePasswordRequirements: (password: string) => !!password && password.length >= 10 && password.length <= 255,
 }));
 
 describe('User ID Generation', () => {
