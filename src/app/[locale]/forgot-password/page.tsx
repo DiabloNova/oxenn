@@ -90,9 +90,8 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
         await requestPasswordReset(email);
       }
       setIsSuccess(true);
-    } catch (err: any) {
-      const msg = err.message || "";
-      if (msg.includes("Invalid or expired token")) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes("Invalid or expired token")) {
         setSubmitError(isFa ? "لینک بازیابی نامعتبر یا منقضی شده است." : "The reset link is invalid or has expired.");
       } else {
         setSubmitError(isFa ? "خطایی رخ داد. مجدداً تلاش کنید." : "An error occurred. Please try again.");

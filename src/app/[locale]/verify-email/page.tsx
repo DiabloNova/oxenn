@@ -10,6 +10,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, CheckCircle2, ShieldAlert, ArrowLeft, ArrowRight, RotateCw } from "lucide-react";
 import { verifyEmailAction } from "@/app/actions/auth";
+import { requestVerification } from "@/app/actions/auth";
+
 
 
 export default function VerifyEmailPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -27,13 +29,15 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(60);
 
-  // Fill token from URL if available
+  // Fill token from URL if available, but only if it changed to prevent overwriting manual input unexpectedly
+  const [lastUrlToken, setLastUrlToken] = useState<string | null>(null);
   useEffect(() => {
     const tokenParam = searchParams?.get("token");
-    if (tokenParam) {
+    if (tokenParam && tokenParam !== lastUrlToken) {
       setCode(tokenParam);
+      setLastUrlToken(tokenParam);
     }
-  }, [searchParams]);
+  }, [searchParams, lastUrlToken]);
 
   // Resend code countdown timer
   useEffect(() => {
@@ -47,23 +51,23 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const strings = {
     title: isFa ? "تایید ایمیل سازمانی" : "Verify Your Email Address",
     desc: isFa
-      ? `یک کد تایید ۶ رقمی به آدرس ${emailParam || "ایمیل شما"} ارسال گردید. لطفاً آن را وارد نمایید.`
-      : `We sent a 6-digit confirmation code to ${emailParam || "your email"}. Enter it to continue.`,
-    codeLabel: isFa ? "کد تایید ۶ رقمی" : "6-Digit Verification Code",
-    codePlaceholder: isFa ? "مثلاً: ۱۲۳۴۵۶" : "e.g. 123456",
+      ? `یک لینک و توکن تایید به آدرس ${emailParam || "ایمیل شما"} ارسال گردید. لطفاً توکن را وارد نمایید.`
+      : `We sent a secure confirmation link to ${emailParam || "your email"}. Enter your token to continue.`,
+    codeLabel: isFa ? "توکن تایید" : "Verification Token",
+    codePlaceholder: isFa ? "توکن تایید را اینجا وارد کنید" : "Enter confirmation token here",
     submitBtn: isFa ? "تایید نهایی و فعال‌سازی" : "Verify & Activate Workspace",
-    loading: isFa ? "در حال اعتبارسنجی کد..." : "Validating code...",
-    resendBtn: isFa ? "ارسال مجدد کد تایید" : "Resend Verification Code",
+    loading: isFa ? "در حال اعتبارسنجی توکن..." : "Validating token...",
+    resendBtn: isFa ? "ارسال مجدد توکن" : "Resend Verification Token",
     resendWait: isFa
       ? `ارسال مجدد تا ${resendCooldown} ثانیه دیگر`
-      : `Resend code in ${resendCooldown}s`,
+      : `Resend token in ${resendCooldown}s`,
     successTitle: isFa ? "فعال‌سازی با موفقیت انجام شد!" : "Verification Complete!",
     successDesc: isFa
       ? "ایمیل سازمانی شما تایید گردید. در حال انتقال به پیشخوان کاربری..."
       : "Your workspace has been successfully verified. Entering the dashboard...",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
-    validationCodeRequired: isFa ? "وارد کردن کد تایید الزامی است." : "Verification code is required.",
-    validationCodeLength: isFa ? "کد تایید باید ۶ رقمی باشد." : "Code must be exactly 6 digits.",
+    validationCodeRequired: isFa ? "وارد کردن توکن تایید الزامی است." : "Verification token is required.",
+    validationCodeLength: isFa ? "توکن وارد شده معتبر نمی‌باشد." : "The token format is invalid.",
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,10 +79,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
       setCodeError(strings.validationCodeRequired);
       return;
     }
-    if (code.trim().length !== 6) {
-      setCodeError(strings.validationCodeLength);
-      return;
-    }
+    // we drop exact length requirements since it's an opaque token
 
     setIsLoading(true);
     try {
@@ -99,15 +100,21 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (resendCooldown > 0) return;
 
-    // Simulate backend sending a new code
-    setResendCooldown(60);
-    alert(isFa
-      ? "کد تایید جدید مجدداً ارسال شد."
-      : "A new confirmation code has been dispatched."
-    );
+    if (!emailParam) {
+      setSubmitError(isFa ? "آدرس ایمیل برای ارسال مجدد مشخص نیست." : "Email address is missing for resend.");
+      return;
+    }
+
+    try {
+      await requestVerification(emailParam);
+      setResendCooldown(60);
+      setSubmitError(""); // Clear any previous errors on success
+    } catch (e) {
+      setSubmitError(isFa ? "خطا در ارسال مجدد توکن." : "Failed to resend verification token.");
+    }
   };
 
   return (
@@ -159,15 +166,14 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 {/* Verification Code Input */}
                 <Input
                   type="text"
-                  maxLength={6}
                   label={strings.codeLabel}
                   placeholder={strings.codePlaceholder}
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => setCode(e.target.value)}
                   error={codeError}
                   disabled={isLoading}
                   required
-                  className="text-center text-lg font-mono tracking-[0.5em] focus:tracking-[0.5em]"
+                  className="text-center text-sm font-mono focus:tracking-normal"
                 />
 
                 {/* Submit Button */}
