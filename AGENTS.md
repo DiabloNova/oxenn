@@ -1268,3 +1268,7 @@ Any new system-context database access path MUST:
 5. Be mirrored in human-readable documentation at `docs/security/privileged-paths.md`.
 
 Adding a new privileged path is a sensitive operation that requires explicit justification. Any unregistered string passed as a purpose tag to `runWithSystemContext` will be rejected at runtime.
+
+## 15. Authorization and `super_admin` Policies
+- The `organization_members.role` column is the sole authoritative source of truth for authorization decisions. Agents must never use `session.user.role` (which represents a stale snapshot) to authorize access.
+- The `super_admin` role is strictly operator-only and must never be assigned or minted by normal application flows (e.g., registration, API). Assignment is exclusively managed via the dedicated CLI tool `scripts/auth/grant-super-admin.ts`.

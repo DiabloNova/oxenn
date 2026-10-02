@@ -10,6 +10,34 @@ import { revokeAllForUser } from "@/services/auth/session";
 
 import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/services/auth/passwords";
 
+import { PoolClient } from "pg";
+
+async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey: string, maxAttempts: number, windowMs: number): Promise<void> {
+    const expiresAt = new Date(Date.now() + windowMs);
+
+    // Fail-closed enforcement: if this throws, authentication is denied
+    const { rows } = await client.query(`
+        INSERT INTO auth_rate_limits (endpoint, bucket_key, attempts, expires_at)
+        VALUES ($1, $2, 1, $3)
+        ON CONFLICT (endpoint, bucket_key) DO UPDATE
+        SET
+            attempts = CASE
+                WHEN auth_rate_limits.expires_at <= NOW() THEN 1
+                ELSE auth_rate_limits.attempts + 1
+            END,
+            expires_at = CASE
+                WHEN auth_rate_limits.expires_at <= NOW() THEN EXCLUDED.expires_at
+                ELSE auth_rate_limits.expires_at
+            END
+        RETURNING attempts
+    `, [endpoint, bucketKey, expiresAt.toISOString()]);
+
+    const attempts = rows[0].attempts;
+    if (attempts > maxAttempts) {
+        throw new Error("TooManyRequests");
+    }
+}
+
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MINS = 15;
 
@@ -25,6 +53,14 @@ export async function loginAction(email: string, password: string): Promise<User
     const client = TenantContextManager.getDbClient();
     if (!client) {
         throw new Error("Failed to get DB client in system context");
+    }
+
+    // Rate limiting
+    try {
+        await enforceRateLimit(client, 'login', `login:${email.toLowerCase().trim()}`, 10, 15 * 60 * 1000);
+    } catch (err: any) {
+        if (err.message === "TooManyRequests") return { error: "TooManyRequests" };
+        throw err; // Fail-closed on DB errors
     }
 
     const { rows: userRows } = await client.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
@@ -121,7 +157,7 @@ export async function loginAction(email: string, password: string): Promise<User
 /**
  * Registers user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<User | { errorCode: "USER_EXISTS" }> {
+export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<User | { errorCode: "USER_EXISTS" | "TooManyRequests", error?: string }> {
   if (!password || !validatePasswordRequirements(password)) {
      throw new Error("Password must be between 10 and 255 characters");
   }
@@ -130,6 +166,14 @@ export async function registerAction(name: string, email: string, password: stri
     const client = TenantContextManager.getDbClient();
     if (!client) {
         throw new Error("Failed to get DB client in system context");
+    }
+
+    // Rate limiting: Without an IP, we rate limit per requested email globally
+    try {
+        await enforceRateLimit(client, 'register', `register:${email.toLowerCase().trim()}`, 5, 60 * 60 * 1000);
+    } catch (err: any) {
+        if (err.message === "TooManyRequests") return { error: "TooManyRequests", errorCode: "TooManyRequests" as const };
+        throw err; // Fail-closed on DB errors
     }
 
     // Check if user exists
@@ -287,10 +331,18 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
   return result;
 }
 
-export async function requestPasswordReset(email: string): Promise<{ success: boolean }> {
+export async function requestPasswordReset(email: string): Promise<{ success: boolean, error?: string }> {
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
+
+    // Rate limiting
+    try {
+        await enforceRateLimit(client, 'password-reset', `reset:${email.toLowerCase().trim()}`, 5, 60 * 60 * 1000);
+    } catch (err: any) {
+        if (err.message === "TooManyRequests") return { success: false, error: "TooManyRequests" };
+        throw err; // Fail-closed on DB errors
+    }
 
     const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
     const userRecord = userRows[0];

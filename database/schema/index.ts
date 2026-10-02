@@ -155,6 +155,16 @@ export const userCredentials = pgTable("user_credentials", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
 });
 
+export const authRateLimits = pgTable("auth_rate_limits", {
+  endpoint: text("endpoint").notNull(),
+  bucketKey: text("bucket_key").notNull(),
+  attempts: integer("attempts").notNull().default(1),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.endpoint, table.bucketKey] }),
+  index("idx_auth_rate_limits_expires").on(table.expiresAt)
+]);
+
 export const organizationMembers = pgTable("organization_members", {
   id: uuid("id").primaryKey().default(defaultUuid),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
@@ -185,6 +195,8 @@ export const organizationInvitations = pgTable("organization_invitations", {
 ]);
 
 // ==========================================
+// FROZEN-LEGACY: roles and permissions tables are no longer used for authorization decisions.
+// The source of truth for authorization is organization_members.role.
 export const roles = pgTable("roles", {
   id: uuid("id").primaryKey().default(defaultUuid),
   name: text("name").notNull().unique(),
@@ -194,6 +206,8 @@ export const roles = pgTable("roles", {
   index("idx_roles_name").on(table.name),
 ]);
 
+// FROZEN-LEGACY: roles and permissions tables are no longer used for authorization decisions.
+// The source of truth for authorization is organization_members.role.
 export const permissions = pgTable("permissions", {
   id: uuid("id").primaryKey().default(defaultUuid),
   roleId: uuid("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
