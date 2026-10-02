@@ -118,7 +118,9 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
-});
+}, (table) => [
+  index("idx_email_verification_tokens_user_unconsumed").on(table.userId).where(sql`consumed_at IS NULL`),
+]);
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -127,7 +129,9 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
-});
+}, (table) => [
+  index("idx_password_reset_tokens_user_unconsumed").on(table.userId).where(sql`consumed_at IS NULL`),
+]);
 
 export const sessions = pgTable("sessions", {
   id: uuid("id").primaryKey().default(defaultUuid),

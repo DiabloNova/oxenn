@@ -1,0 +1,2 @@
+CREATE INDEX "idx_email_verification_tokens_user_unconsumed" ON "email_verification_tokens" USING btree ("user_id") WHERE consumed_at IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_password_reset_tokens_user_unconsumed" ON "password_reset_tokens" USING btree ("user_id") WHERE consumed_at IS NULL;
