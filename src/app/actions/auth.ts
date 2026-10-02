@@ -73,7 +73,7 @@ export async function loginAction(email: string, password: string): Promise<User
         throw new Error("Failed to get DB client in system context");
     }
 
-    const { rows: userRows } = await client.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [normalizedEmail]);
+    const { rows: userRows } = await client.query("SELECT * FROM users WHERE lower(email) = $1 AND deleted_at IS NULL", [normalizedEmail]);
     const userRecord = userRows[0];
 
     // Dummy hash for missing user to mitigate timing attacks
@@ -202,7 +202,7 @@ export async function registerAction(name: string, email: string, password: stri
     }
 
     // Check if user exists
-    const { rows: existingUser } = await client.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
+    const { rows: existingUser } = await client.query("SELECT id FROM users WHERE lower(email) = $1", [normalizedEmail]);
     if (existingUser.length > 0) {
         return { errorCode: "USER_EXISTS" as const };
     }
@@ -273,7 +273,7 @@ export async function requestVerification(email: string): Promise<{ success: boo
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [normalizedEmail]);
+    const { rows: userRows } = await client.query("SELECT id FROM users WHERE lower(email) = $1 AND deleted_at IS NULL", [normalizedEmail]);
     const userRecord = userRows[0];
 
     if (!userRecord) {
@@ -383,7 +383,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [normalizedEmail]);
+    const { rows: userRows } = await client.query("SELECT id FROM users WHERE lower(email) = $1 AND deleted_at IS NULL", [normalizedEmail]);
     const userRecord = userRows[0];
 
     if (!userRecord) {

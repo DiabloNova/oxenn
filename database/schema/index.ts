@@ -109,7 +109,9 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("idx_users_lower_email").on(sql`lower(${table.email})`)
+]);
 
 export const emailVerificationTokens = pgTable("email_verification_tokens", {
   id: uuid("id").primaryKey().default(defaultUuid),

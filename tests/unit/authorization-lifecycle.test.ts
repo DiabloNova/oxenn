@@ -56,7 +56,7 @@ describe("Auth Lifecycle Tests", () => {
            capturedParams = params[4] as string;
            return { rowCount: 1 };
         }
-        if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
+        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
         if (sql.includes("SELECT * FROM user_credentials WHERE user_id")) {
            return { rows: [{
               user_id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
@@ -152,7 +152,9 @@ describe("Auth Lifecycle Tests", () => {
     vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
 
     await expect(loginAction("failclosed@example.com", "Password123")).rejects.toThrow("DB Connection Error");
-    it("regression: stale role_snapshot cannot authorize if DB role changes", async () => {
+  });
+
+  it("regression: stale role_snapshot cannot authorize if DB role changes", async () => {
       const PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
       const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
@@ -186,7 +188,7 @@ describe("Auth Lifecycle Tests", () => {
             return { rows: [{ attempts: calls }], rowCount: 1 };
           }
           // Fail login deliberately to test rate limit tripping without clearing the bucket
-          if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [], rowCount: 0 };
+        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 };
           if (sql.includes("INSERT INTO user_credentials")) return { rows: [], rowCount: 0 };
           return { rows: [], rowCount: 0 };
         }),
@@ -219,7 +221,7 @@ describe("Auth Lifecycle Tests", () => {
             bucketCleared = true;
             return { rowCount: 1 };
           }
-          if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com" }], rowCount: 1 };
+          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com" }], rowCount: 1 };
           if (sql.includes("SELECT * FROM user_credentials")) {
              return { rows: [{
                 user_id: "usr-1",
@@ -239,11 +241,16 @@ describe("Auth Lifecycle Tests", () => {
       // 10 successful logins
       for (let i = 0; i < 10; i++) {
           const res = await loginAction("trip@example.com", "Password123");
-          expect((res as any).error).toBeUndefined();
+          expect(res).toBeDefined();
+          if ('error' in res) {
+             throw new Error("Unexpected error");
+          }
       }
       // 11th should still succeed because the bucket is cleared every time
       const res = await loginAction("trip@example.com", "Password123");
-      expect((res as any).error).toBeUndefined();
+      expect(res).toBeDefined();
+      if ('error' in res) {
+         throw new Error("Unexpected error");
+      }
       expect(bucketCleared).toBe(true);
     });
-  });
