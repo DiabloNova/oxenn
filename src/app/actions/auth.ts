@@ -49,18 +49,26 @@ export async function loginAction(email: string, password: string): Promise<User
      throw new Error("Password is required");
   }
 
+  const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+      const c = TenantContextManager.getDbClient();
+      if (!c) throw new Error("Failed to get DB client in system context");
+      try {
+          await enforceRateLimit(c, 'login', `login:${email.toLowerCase().trim()}`, 10, 15 * 60 * 1000);
+          return null;
+      } catch (err: any) {
+          if (err.message === "TooManyRequests") return "TooManyRequests";
+          throw err;
+      }
+  });
+
+  if (rlError === "TooManyRequests") {
+      throw new Error("TooManyRequests");
+  }
+
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) {
         throw new Error("Failed to get DB client in system context");
-    }
-
-    // Rate limiting
-    try {
-        await enforceRateLimit(client, 'login', `login:${email.toLowerCase().trim()}`, 10, 15 * 60 * 1000);
-    } catch (err: any) {
-        if (err.message === "TooManyRequests") return { error: "TooManyRequests" };
-        throw err; // Fail-closed on DB errors
     }
 
     const { rows: userRows } = await client.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
@@ -124,6 +132,12 @@ export async function loginAction(email: string, password: string): Promise<User
         [userRecord.id]
     );
 
+    // Clear rate-limit bucket for successful login
+    await client.query(
+        "DELETE FROM auth_rate_limits WHERE endpoint = 'login' AND bucket_key = $1",
+        [`login:${email.toLowerCase().trim()}`]
+    );
+
     const { rows: memberRows } = await client.query(`
         SELECT m.organization_id as "workspaceId", m.role, o.name as "workspaceName"
         FROM organization_members m
@@ -162,18 +176,25 @@ export async function registerAction(name: string, email: string, password: stri
      throw new Error("Password must be between 10 and 255 characters");
   }
 
+  const rlError = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
+      const c = TenantContextManager.getDbClient();
+      if (!c) throw new Error("Failed to get DB client in system context");
+      try {
+          await enforceRateLimit(c, 'register', `register:${email.toLowerCase().trim()}`, 5, 60 * 60 * 1000);
+          return null;
+      } catch (err: any) {
+          if (err.message === "TooManyRequests") return "TooManyRequests";
+          throw err;
+      }
+  });
+  if (rlError === "TooManyRequests") {
+      return { error: "TooManyRequests", errorCode: "TooManyRequests" as const };
+  }
+
   const result = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) {
         throw new Error("Failed to get DB client in system context");
-    }
-
-    // Rate limiting: Without an IP, we rate limit per requested email globally
-    try {
-        await enforceRateLimit(client, 'register', `register:${email.toLowerCase().trim()}`, 5, 60 * 60 * 1000);
-    } catch (err: any) {
-        if (err.message === "TooManyRequests") return { error: "TooManyRequests", errorCode: "TooManyRequests" as const };
-        throw err; // Fail-closed on DB errors
     }
 
     // Check if user exists
@@ -241,7 +262,7 @@ export async function registerAction(name: string, email: string, password: stri
 
 const REQUIRE_EMAIL_VERIFICATION = false;
 
-export async function requestVerification(email: string): Promise<{ success: boolean }> {
+export async function requestVerification(email: string): Promise<{ success: boolean, error?: string }> {
   // Try to find the user
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
@@ -289,6 +310,10 @@ export async function requestVerification(email: string): Promise<{ success: boo
     }
   }
 
+  if (result && (result as any).error) {
+    return { success: false, error: (result as any).error };
+  }
+
   return { success: true };
 }
 
@@ -332,17 +357,24 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
 }
 
 export async function requestPasswordReset(email: string): Promise<{ success: boolean, error?: string }> {
+  const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+      const c = TenantContextManager.getDbClient();
+      if (!c) throw new Error("Failed to get DB client in system context");
+      try {
+          await enforceRateLimit(c, 'password-reset', `reset:${email.toLowerCase().trim()}`, 5, 60 * 60 * 1000);
+          return null;
+      } catch (err: any) {
+          if (err.message === "TooManyRequests") return "TooManyRequests";
+          throw err;
+      }
+  });
+  if (rlError === "TooManyRequests") {
+      return { success: false, error: "TooManyRequests" };
+  }
+
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
-
-    // Rate limiting
-    try {
-        await enforceRateLimit(client, 'password-reset', `reset:${email.toLowerCase().trim()}`, 5, 60 * 60 * 1000);
-    } catch (err: any) {
-        if (err.message === "TooManyRequests") return { success: false, error: "TooManyRequests" };
-        throw err; // Fail-closed on DB errors
-    }
 
     const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
     const userRecord = userRows[0];
@@ -384,6 +416,10 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     } catch(e) {
       console.error("Email sender creation error", e);
     }
+  }
+
+  if (result && (result as any).error) {
+    return { success: false, error: (result as any).error };
   }
 
   return { success: true };

@@ -187,6 +187,40 @@ describe("Auth Lifecycle Tests", () => {
           // Simulate threshold for login (10)
           return { rows: [{ attempts: calls }], rowCount: 1 };
         }
+        // Fail login deliberately to test rate limit tripping without clearing the bucket
+        if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [], rowCount: 0 };
+        if (sql.includes("INSERT INTO user_credentials")) return { rows: [], rowCount: 0 };
+        return { rows: [], rowCount: 0 };
+      }),
+      release: vi.fn(),
+    };
+
+    vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
+
+    // 10 failed logins
+    for (let i = 0; i < 10; i++) {
+        await expect(loginAction("trip@example.com", "WrongPassword")).rejects.toThrow("Invalid credentials");
+    }
+    // 11th should fail with TooManyRequests
+    await expect(loginAction("trip@example.com", "WrongPassword")).rejects.toThrow("TooManyRequests");
+  });
+
+  it("successful login resets the rate limit bucket", async () => {
+    const PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
+    const pgClient = PostgresClientModule.PostgresClient.getInstance();
+
+    let bucketCleared = false;
+    let calls = 0;
+    const mockClient = {
+      query: vi.fn().mockImplementation(async (sql: string, params: unknown[]) => {
+        if (sql.includes("INSERT INTO auth_rate_limits")) {
+          calls = bucketCleared ? 1 : calls + 1;
+          return { rows: [{ attempts: calls }], rowCount: 1 };
+        }
+        if (sql.includes("DELETE FROM auth_rate_limits")) {
+          bucketCleared = true;
+          return { rowCount: 1 };
+        }
         if (sql.includes("SELECT * FROM users WHERE email")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com" }], rowCount: 1 };
         if (sql.includes("SELECT * FROM user_credentials")) {
            return { rows: [{
@@ -204,11 +238,13 @@ describe("Auth Lifecycle Tests", () => {
 
     vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
 
-    // 10 successes
+    // 10 successful logins
     for (let i = 0; i < 10; i++) {
         const res = await loginAction("trip@example.com", "Password123");
         expect((res as any).error).toBeUndefined();
     }
-    // 11th should fail
-    await expect(loginAction("trip@example.com", "Password123")).rejects.toThrow("TooManyRequests");
+    // 11th should still succeed because the bucket is cleared every time
+    const res = await loginAction("trip@example.com", "Password123");
+    expect((res as any).error).toBeUndefined();
+    expect(bucketCleared).toBe(true);
   });
