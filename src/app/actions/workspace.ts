@@ -10,6 +10,8 @@ import { eq, and } from "drizzle-orm";
 import { randomUUID, createHash } from "crypto";
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { getEmailSender } from "@/services/email/adapters";
+
 import { UserRole } from "@/types/auth";
 
 export async function createWorkspaceAction(name: string) {
@@ -70,7 +72,17 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
-  return await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-invite-user", async () => {
+  // Test email setup before creating token
+  let sender;
+  try {
+    sender = getEmailSender();
+  } catch (e) {
+    // If it fails (e.g. no EMAIL_PROVIDER in prod), we will just fallback to returning the token directly.
+    console.error("Email sender creation error during invite (fallback to raw token response)", e);
+    sender = null;
+  }
+
+  const result = await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-invite-user", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
     const db = drizzle(client);
@@ -102,8 +114,32 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
         expiresAt
     });
 
-    return { success: true, token }; // Exposing for tests/dev, normally emailed
+    // Fetch workspace name for email
+    const orgs = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, workspaceId)).limit(1);
+    const workspaceName = orgs[0]?.name || "Workspace";
+
+    return { success: true, email, workspaceName, token, inviterName: session.user!.name };
   });
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  if (sender) {
+    // Do not await to avoid blocking response
+    sender.send({
+      to: result.email,
+      templateId: "workspace_invitation",
+      params: {
+        workspaceName: result.workspaceName,
+        inviterName: result.inviterName,
+        url: `${appUrl}/en/accept-invite?token=${result.token}` // Assuming some front-end route to handle it later
+      }
+    }).catch((e) => console.error("Email send async error", e));
+
+    return { success: true };
+  } else {
+    // Fallback: If no provider is available, we return the token in the response so admins can share it manually.
+    // This gates the email provider feature while preserving the prior acceptance loop logic in Production.
+    return { success: true, token: result.token };
+  }
 }
 
 export async function acceptInvitationAction(token: string) {

@@ -4,6 +4,10 @@ import { User, Session, UserRole } from "@/types/auth";
 import { createSession, invalidateSession, getSession } from "@/services/auth/session";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { randomUUID } from "crypto";
+import crypto from "crypto";
+import { getEmailSender } from "@/services/email/adapters";
+import { revokeAllForUser } from "@/services/auth/session";
+
 import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/services/auth/passwords";
 
 const LOCKOUT_THRESHOLD = 5;
@@ -32,7 +36,13 @@ export async function loginAction(email: string, password: string): Promise<User
         throw new Error("Invalid credentials or user not found.");
     }
 
+
+    if (REQUIRE_EMAIL_VERIFICATION && !userRecord.email_verified_at) {
+        throw new Error("Email must be verified before logging in.");
+    }
+
     const { rows: credRows } = await client.query("SELECT * FROM user_credentials WHERE user_id = $1 FOR UPDATE", [userRecord.id]);
+
     const credRecord = credRows[0];
 
     // Dummy hash for missing credential
@@ -68,6 +78,7 @@ export async function loginAction(email: string, password: string): Promise<User
         `, [LOCKOUT_THRESHOLD, userRecord.id]);
 
         // Return error object instead of throwing inside system context to prevent rollback of failed attempts update
+                // Return error object instead of throwing inside system context to prevent rollback of failed attempts update
         return { error: "Invalid credentials or user not found." };
     }
 
@@ -169,6 +180,11 @@ export async function registerAction(name: string, email: string, password: stri
     };
   });
 
+  // Trigger verification email asynchronously (do not block the registration response)
+  if (!('errorCode' in result)) {
+      requestVerification(email).catch(console.error);
+  }
+
   // DO NOT CREATE SESSION ON REGISTER per requirements
   // await createSession(result);
 
@@ -178,6 +194,194 @@ export async function registerAction(name: string, email: string, password: stri
 /**
  * Clears secure cookies and invalidates the session on logout.
  */
+
+const REQUIRE_EMAIL_VERIFICATION = false;
+
+export async function requestVerification(email: string): Promise<{ success: boolean }> {
+  // Try to find the user
+  const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+
+    const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
+    const userRecord = userRows[0];
+
+    if (!userRecord) {
+      return { success: true }; // Enumeration safe although less critical here than reset
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
+
+    // Invalidate previous unconsumed verification tokens
+    await client.query(`
+      UPDATE email_verification_tokens
+      SET consumed_at = NOW()
+      WHERE user_id = $1 AND consumed_at IS NULL
+    `, [userRecord.id]);
+
+    await client.query(`
+      INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
+      VALUES ($1, $2, $3)
+    `, [userRecord.id, tokenHash, expiresAt.toISOString()]);
+
+    return { success: true, rawToken, email };
+  });
+
+  if (result && result.rawToken) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    try {
+      const sender = getEmailSender();
+      sender.send({
+        to: result.email,
+        templateId: "verification",
+        params: {
+          url: `${appUrl}/en/verify-email?token=${result.rawToken}`
+        }
+      }).catch((e) => console.error("Email send async error", e));
+    } catch(e) {
+      console.error("Email sender creation error", e);
+    }
+  }
+
+  return { success: true };
+}
+
+export async function verifyEmailAction(token: string): Promise<{ success: boolean }> {
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+
+    await client.query('BEGIN');
+    try {
+      const { rows } = await client.query(`
+        UPDATE email_verification_tokens
+        SET consumed_at = NOW()
+        WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > NOW()
+        RETURNING user_id
+      `, [tokenHash]);
+
+      if (rows.length === 0) {
+        throw new Error("Invalid or expired token");
+      }
+
+      const userId = rows[0].user_id;
+
+      await client.query(`
+        UPDATE users
+        SET email_verified_at = NOW(), updated_at = NOW()
+        WHERE id = $1 AND email_verified_at IS NULL
+      `, [userId]);
+
+      await client.query('COMMIT');
+      return { success: true };
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    }
+  });
+
+  return result;
+}
+
+export async function requestPasswordReset(email: string): Promise<{ success: boolean }> {
+  const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+
+    const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
+    const userRecord = userRows[0];
+
+    if (!userRecord) {
+      return { success: true }; // Enumeration safe
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
+
+    // Invalidate previous unconsumed password reset tokens
+    await client.query(`
+      UPDATE password_reset_tokens
+      SET consumed_at = NOW()
+      WHERE user_id = $1 AND consumed_at IS NULL
+    `, [userRecord.id]);
+
+    await client.query(`
+      INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+      VALUES ($1, $2, $3)
+    `, [userRecord.id, tokenHash, expiresAt.toISOString()]);
+
+    return { success: true, rawToken, email };
+  });
+
+  if (result && result.rawToken) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    try {
+      const sender = getEmailSender();
+      sender.send({
+        to: result.email,
+        templateId: "password_reset",
+        params: {
+          url: `${appUrl}/en/forgot-password?token=${result.rawToken}`
+        }
+      }).catch((e) => console.error("Email send async error", e));
+    } catch(e) {
+      console.error("Email sender creation error", e);
+    }
+  }
+
+  return { success: true };
+}
+
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<{ success: boolean }> {
+  if (!newPassword || !validatePasswordRequirements(newPassword)) {
+     throw new Error("Password must be between 10 and 255 characters");
+  }
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const hashResult = await hashPassword(newPassword);
+
+  const userId = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+
+    await client.query('BEGIN');
+    try {
+      const { rows } = await client.query(`
+        UPDATE password_reset_tokens
+        SET consumed_at = NOW()
+        WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > NOW()
+        RETURNING user_id
+      `, [tokenHash]);
+
+      if (rows.length === 0) {
+        throw new Error("Invalid or expired token");
+      }
+
+      const userId = rows[0].user_id;
+
+      await client.query(`
+        UPDATE user_credentials
+        SET password_hash = $1, algorithm = $2, params = $3, updated_at = NOW(), failed_attempts = 0, locked_until = NULL
+        WHERE user_id = $4
+      `, [hashResult.hash, hashResult.algorithm, JSON.stringify(hashResult.params), userId]);
+
+      await client.query('COMMIT');
+      return userId;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    }
+  });
+
+  await revokeAllForUser(userId);
+  return { success: true };
+}
+
 export async function logoutAction() {
   await invalidateSession();
 }

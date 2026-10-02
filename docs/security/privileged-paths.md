@@ -4,8 +4,8 @@ This document outlines all permitted explicit system-context leases (`runWithSys
 
 | Purpose Tag | Allowed Tables | Caller Module | Justification |
 | :--- | :--- | :--- | :--- |
-| **sys-login** | `users`, `tenants`, `tenant_users` | `src/app/actions/auth.ts` | Requires user lookup across all tenants during authentication. |
-| **sys-register** | `users`, `tenants`, `tenant_users` | `src/app/actions/auth.ts` | Creates the initial user and tenant. |
+| **sys-login** | `users`, `tenants`, `tenant_users`, `email_verification_tokens`, `password_reset_tokens` | `src/app/actions/auth.ts` | Requires user lookup across all tenants during authentication, and issues or consumes global verification/reset tokens. |
+| **sys-register** | `users`, `tenants`, `tenant_users`, `email_verification_tokens` | `src/app/actions/auth.ts` | Creates the initial user and tenant, and triggers issuance of verification tokens. |
 | **sys-auth-check** | `users` | `src/services/auth/authorization.ts` | Verifies user existence/status globally. |
 | **sys-auth-role-check** | `tenant_users`, `roles` | `src/services/auth/authorization.ts` | Checks cross-tenant roles without a specific tenant lease. |
 | **sys-auth-api-check** | `users` | `src/services/auth/authorization.ts` | Verifies API user existence globally. |

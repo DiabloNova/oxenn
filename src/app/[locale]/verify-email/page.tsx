@@ -9,6 +9,10 @@ import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, CheckCircle2, ShieldAlert, ArrowLeft, ArrowRight, RotateCw } from "lucide-react";
+import { verifyEmailAction } from "@/app/actions/auth";
+import { requestVerification } from "@/app/actions/auth";
+
+
 
 export default function VerifyEmailPage({ params }: { params: Promise<{ locale: string }> }) {
   const resolvedParams = use(params);
@@ -16,7 +20,6 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const isFa = locale === "fa";
   const router = useRouter();
   const searchParams = useSearchParams();
-  const emailParam = searchParams?.get("email") || "";
 
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState("");
@@ -24,6 +27,24 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(60);
+  const [isResending, setIsResending] = useState(false);
+  const [showResendFlow, setShowResendFlow] = useState(false);
+  const [resendEmail, setResendEmail] = useState("");
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  // Fill token from URL if available, but only if it changed to prevent overwriting manual input unexpectedly
+  const tokenParam = searchParams?.get("token");
+  const [lastUrlToken, setLastUrlToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tokenParam && tokenParam !== lastUrlToken) {
+      // Defer state update slightly to avoid synchronous cascade warnings in some React configurations
+      setTimeout(() => {
+        setCode(tokenParam);
+        setLastUrlToken(tokenParam);
+      }, 0);
+    }
+  }, [tokenParam, lastUrlToken]);
 
   // Resend code countdown timer
   useEffect(() => {
@@ -37,23 +58,30 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const strings = {
     title: isFa ? "تایید ایمیل سازمانی" : "Verify Your Email Address",
     desc: isFa
-      ? `یک کد تایید ۶ رقمی به آدرس ${emailParam || "ایمیل شما"} ارسال گردید. لطفاً آن را وارد نمایید.`
-      : `We sent a 6-digit confirmation code to ${emailParam || "your email"}. Enter it to continue.`,
-    codeLabel: isFa ? "کد تایید ۶ رقمی" : "6-Digit Verification Code",
-    codePlaceholder: isFa ? "مثلاً: ۱۲۳۴۵۶" : "e.g. 123456",
+      ? `یک لینک و توکن تایید به آدرس ایمیل شما ارسال گردید. لطفاً توکن را وارد نمایید.`
+      : `We sent a secure confirmation link to your email. Enter your token to continue.`,
+    resendTitle: isFa ? "ارسال مجدد لینک تایید" : "Request New Verification Link",
+    resendDesc: isFa ? "ایمیل خود را وارد کنید تا لینک تایید جدیدی دریافت کنید." : "Enter your email to receive a new verification link.",
+    resendEmailLabel: isFa ? "آدرس ایمیل" : "Email Address",
+    resendEmailPlaceholder: isFa ? "ایمیل خود را وارد کنید" : "Enter your email",
+    resendSubmitBtn: isFa ? "ارسال لینک جدید" : "Send New Link",
+    resendSuccessTitle: isFa ? "لینک جدید ارسال شد" : "New Link Sent",
+    resendSuccessDesc: isFa ? "اگر ایمیل شما در سیستم ثبت شده باشد، لینک تایید جدیدی دریافت خواهید کرد." : "If your email is registered, you will receive a new verification link.",
+    codeLabel: isFa ? "توکن تایید" : "Verification Token",
+    codePlaceholder: isFa ? "توکن تایید را اینجا وارد کنید" : "Enter confirmation token here",
     submitBtn: isFa ? "تایید نهایی و فعال‌سازی" : "Verify & Activate Workspace",
-    loading: isFa ? "در حال اعتبارسنجی کد..." : "Validating code...",
-    resendBtn: isFa ? "ارسال مجدد کد تایید" : "Resend Verification Code",
+    loading: isFa ? "در حال اعتبارسنجی توکن..." : "Validating token...",
+    resendBtn: isFa ? "ارسال مجدد توکن" : "Resend Verification Token",
     resendWait: isFa
       ? `ارسال مجدد تا ${resendCooldown} ثانیه دیگر`
-      : `Resend code in ${resendCooldown}s`,
+      : `Resend token in ${resendCooldown}s`,
     successTitle: isFa ? "فعال‌سازی با موفقیت انجام شد!" : "Verification Complete!",
     successDesc: isFa
       ? "ایمیل سازمانی شما تایید گردید. در حال انتقال به پیشخوان کاربری..."
       : "Your workspace has been successfully verified. Entering the dashboard...",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
-    validationCodeRequired: isFa ? "وارد کردن کد تایید الزامی است." : "Verification code is required.",
-    validationCodeLength: isFa ? "کد تایید باید ۶ رقمی باشد." : "Code must be exactly 6 digits.",
+    validationCodeRequired: isFa ? "وارد کردن توکن تایید الزامی است." : "Verification token is required.",
+    validationCodeLength: isFa ? "توکن وارد شده معتبر نمی‌باشد." : "The token format is invalid.",
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,36 +93,42 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
       setCodeError(strings.validationCodeRequired);
       return;
     }
-    if (code.trim().length !== 6) {
-      setCodeError(strings.validationCodeLength);
-      return;
-    }
+    // we drop exact length requirements since it's an opaque token
 
     setIsLoading(true);
     try {
-      // Simulate backend API code check
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      setIsSuccess(true);
-      setTimeout(() => {
-        router.push(`/${locale}/dashboard`);
-      }, 1500);
+      // Use the actual backend action
+      const res = await verifyEmailAction(code.trim());
+      if (res && res.success) {
+        setIsSuccess(true);
+        setTimeout(() => {
+          router.push(`/${locale}/dashboard`);
+        }, 1500);
+      } else {
+        throw new Error("Invalid token");
+      }
     } catch (err: unknown) {
-      setSubmitError(isFa ? "کد تایید نامعتبر یا منقضی شده است." : "The verification code is invalid or has expired.");
+      setSubmitError(isFa ? "کد تایید نامعتبر یا منقضی شده است." : "The verification token is invalid or has expired.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleResend = () => {
-    if (resendCooldown > 0) return;
+  const handleResendRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendEmail.trim() || isResending) return;
 
-    // Simulate backend sending a new code
-    setResendCooldown(60);
-    alert(isFa
-      ? "کد تایید جدید مجدداً ارسال شد."
-      : "A new confirmation code has been dispatched."
-    );
+    setIsResending(true);
+    setSubmitError("");
+    try {
+      await requestVerification(resendEmail.trim());
+      setResendSuccess(true);
+      // Notice: token is intentionally not returned, so we avoid enumeration timing logic in actions/auth.ts
+    } catch (e) {
+      setSubmitError(isFa ? "خطا در ارسال مجدد توکن." : "Failed to resend verification token.");
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -120,10 +154,10 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
         <Card className="glass-panel border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-2xl rounded-3xl p-2 sm:p-4">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-xl font-black font-display text-[var(--text-primary)]">
-              {isSuccess ? strings.successTitle : strings.title}
+              {isSuccess ? strings.successTitle : (showResendFlow ? strings.resendTitle : strings.title)}
             </CardTitle>
             <CardDescription className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed mt-1">
-              {isSuccess ? strings.successDesc : strings.desc}
+              {isSuccess ? strings.successDesc : (showResendFlow ? strings.resendDesc : strings.desc)}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -134,6 +168,57 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 </div>
                 <div className="text-sm font-semibold text-[var(--text-primary)]">{isFa ? "درحال ورود به محیط داشبورد..." : "Loading Workspace Dashboard..."}</div>
               </div>
+            ) : showResendFlow ? (
+              resendSuccess ? (
+                 <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-fade-in text-center">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <CheckCircle2 size={36} />
+                  </div>
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">{strings.resendSuccessTitle}</div>
+                  <p className="text-xs text-[var(--text-muted)]">{strings.resendSuccessDesc}</p>
+                </div>
+              ) : (
+                <form onSubmit={handleResendRequest} className="space-y-4">
+                  {submitError && (
+                    <div className="p-3.5 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs flex items-start gap-2 animate-shake">
+                      <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                      <p className="font-bold">{submitError}</p>
+                    </div>
+                  )}
+                  <Input
+                    type="email"
+                    label={strings.resendEmailLabel}
+                    placeholder={strings.resendEmailPlaceholder}
+                    value={resendEmail}
+                    onChange={(e) => setResendEmail(e.target.value)}
+                    disabled={isResending}
+                    required
+                    className="text-center text-sm"
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={isResending}
+                    className="w-full py-3 mt-2 rounded-xl text-xs font-black flex items-center justify-center gap-2"
+                  >
+                    {isResending ? (
+                      <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={15} />
+                    )}
+                    <span>{strings.resendSubmitBtn}</span>
+                  </Button>
+                  <div className="pt-4 border-t border-[var(--border)] text-center flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowResendFlow(false)}
+                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-bold cursor-pointer"
+                    >
+                      {isFa ? "بازگشت به وارد کردن توکن" : "Back to token entry"}
+                    </button>
+                  </div>
+                </form>
+              )
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 {submitError && (
@@ -146,15 +231,14 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 {/* Verification Code Input */}
                 <Input
                   type="text"
-                  maxLength={6}
                   label={strings.codeLabel}
                   placeholder={strings.codePlaceholder}
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => setCode(e.target.value)}
                   error={codeError}
                   disabled={isLoading}
                   required
-                  className="text-center text-lg font-mono tracking-[0.5em] focus:tracking-[0.5em]"
+                  className="text-center text-sm font-mono focus:tracking-normal"
                 />
 
                 {/* Submit Button */}
@@ -181,12 +265,11 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 <div className="pt-4 border-t border-[var(--border)] text-center flex flex-col items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleResend}
-                    disabled={resendCooldown > 0 || isLoading}
-                    className="text-xs text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] transition-colors font-bold disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5 cursor-pointer"
+                    onClick={() => setShowResendFlow(true)}
+                    className="text-xs text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] transition-colors font-bold flex items-center gap-1.5 cursor-pointer"
                   >
-                    <RotateCw size={13} className={isLoading ? "animate-spin" : ""} />
-                    <span>{resendCooldown > 0 ? strings.resendWait : strings.resendBtn}</span>
+                    <RotateCw size={13} />
+                    <span>{isFa ? "توکن نامعتبر است؟ درخواست لینک جدید" : "Invalid token? Request a new link"}</span>
                   </button>
                 </div>
               </form>

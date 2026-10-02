@@ -7,43 +7,73 @@ import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle, Mail, KeyRound } from "lucide-react";
+import { requestPasswordReset, confirmPasswordReset } from "@/app/actions/auth";
+import { useSearchParams } from "next/navigation";
+
 
 export default function ForgotPasswordPage({ params }: { params: Promise<{ locale: string }> }) {
   const resolvedParams = use(params);
   const locale = resolvedParams.locale;
   const isFa = locale === "fa";
 
+  const searchParams = useSearchParams();
+  const token = searchParams?.get("token");
+  const isConfirmMode = !!token;
+
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const strings = {
     title: isFa ? "بازیابی رمز عبور" : "Reset Your Password",
-    desc: isFa ? "ایمیل سازمانی خود را وارد کنید تا لینک بازیابی رمز عبور برای شما ارسال شود." : "Enter your corporate email to receive security reset instructions.",
+    desc: isConfirmMode
+      ? (isFa ? "رمز عبور جدید خود را وارد کنید." : "Enter your new password.")
+      : (isFa ? "ایمیل سازمانی خود را وارد کنید تا لینک بازیابی رمز عبور برای شما ارسال شود." : "Enter your corporate email to receive security reset instructions."),
     emailLabel: isFa ? "آدرس ایمیل ثبت‌نام شده" : "Registered Email Address",
     emailPlaceholder: isFa ? "name@company.com" : "name@company.com",
-    submitBtn: isFa ? "ارسال لینک بازیابی" : "Send Reset Instructions",
-    loading: isFa ? "در حال ارسال ایمیل..." : "Sending email...",
+    passwordLabel: isFa ? "رمز عبور جدید" : "New Password",
+    passwordPlaceholder: isFa ? "حداقل ۱۰ کاراکتر" : "At least 10 characters",
+    submitBtn: isConfirmMode
+      ? (isFa ? "تغییر رمز عبور" : "Change Password")
+      : (isFa ? "ارسال لینک بازیابی" : "Send Reset Instructions"),
+    loading: isConfirmMode
+      ? (isFa ? "در حال تغییر رمز عبور..." : "Updating password...")
+      : (isFa ? "در حال ارسال ایمیل..." : "Sending email..."),
     backToLogin: isFa ? "بازگشت به صفحه ورود" : "Back to sign in",
-    successTitle: isFa ? "ایمیل بازیابی ارسال شد" : "Reset Link Sent",
-    successDesc: isFa
-      ? `اگر ایمیل ${email} در سیستم ثبت شده باشد، دستورالعمل‌های بازیابی رمز عبور را ظرف چند دقیقه دریافت خواهید کرد.`
-      : `If ${email} is registered with us, a secure password recovery message has been sent.`,
-    checkSpam: isFa ? "لطفاً پوشه Spam یا Junk ایمیل خود را نیز بررسی کنید." : "Be sure to check your spam/junk folder if it doesn't arrive.",
+    successTitle: isConfirmMode
+      ? (isFa ? "رمز عبور تغییر یافت" : "Password Updated")
+      : (isFa ? "ایمیل بازیابی ارسال شد" : "Reset Link Sent"),
+    successDesc: isConfirmMode
+      ? (isFa ? "رمز عبور شما با موفقیت تغییر یافت. اکنون می‌توانید وارد حساب خود شوید." : "Your password has been successfully updated. You can now sign in.")
+      : (isFa
+          ? `اگر ایمیل ${email} در سیستم ثبت شده باشد، دستورالعمل‌های بازیابی رمز عبور را ظرف چند دقیقه دریافت خواهید کرد.`
+          : `If ${email} is registered with us, a secure password recovery message has been sent.`),
+    checkSpam: isConfirmMode ? "" : (isFa ? "لطفاً پوشه Spam یا Junk ایمیل خود را نیز بررسی کنید." : "Be sure to check your spam/junk folder if it doesn't arrive."),
   };
 
   const validateForm = () => {
-    if (!email) {
-      setEmailError(isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.");
-      return false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setEmailError(isFa ? "لطفاً یک ایمیل معتبر وارد کنید." : "Please enter a valid email address.");
-      return false;
+    if (isConfirmMode) {
+      if (!password || password.length < 10) {
+        setPasswordError(isFa ? "رمز عبور باید حداقل ۱۰ کاراکتر باشد." : "Password must be at least 10 characters.");
+        return false;
+      }
+      setPasswordError("");
+      return true;
+    } else {
+      if (!email) {
+        setEmailError(isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.");
+        return false;
+      } else if (!/\S+@\S+\.\S+/.test(email)) {
+        setEmailError(isFa ? "لطفاً یک ایمیل معتبر وارد کنید." : "Please enter a valid email address.");
+        return false;
+      }
+      setEmailError("");
+      return true;
     }
-    setEmailError("");
-    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,11 +84,18 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
 
     setIsLoading(true);
     try {
-      // Simulate backend reset call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (isConfirmMode && token) {
+        await confirmPasswordReset(token, password);
+      } else {
+        await requestPasswordReset(email);
+      }
       setIsSuccess(true);
     } catch (err: unknown) {
-      setSubmitError(isFa ? "خطایی رخ داد. مجدداً تلاش کنید." : "An error occurred. Please try again.");
+      if (err instanceof Error && err.message.includes("Invalid or expired token")) {
+        setSubmitError(isFa ? "لینک بازیابی نامعتبر یا منقضی شده است." : "The reset link is invalid or has expired.");
+      } else {
+        setSubmitError(isFa ? "خطایی رخ داد. مجدداً تلاش کنید." : "An error occurred. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -119,17 +156,30 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
                   </div>
                 )}
 
-                {/* Email Input */}
-                <Input
-                  type="email"
-                  label={strings.emailLabel}
-                  placeholder={strings.emailPlaceholder}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  error={emailError}
-                  disabled={isLoading}
-                  required
-                />
+                {/* Input Fields */}
+                {isConfirmMode ? (
+                  <Input
+                    type="password"
+                    label={strings.passwordLabel}
+                    placeholder={strings.passwordPlaceholder}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    error={passwordError}
+                    disabled={isLoading}
+                    required
+                  />
+                ) : (
+                  <Input
+                    type="email"
+                    label={strings.emailLabel}
+                    placeholder={strings.emailPlaceholder}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    error={emailError}
+                    disabled={isLoading}
+                    required
+                  />
+                )}
 
                 {/* Submit Button */}
                 <Button

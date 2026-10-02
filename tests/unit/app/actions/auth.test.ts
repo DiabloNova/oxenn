@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { registerAction, loginAction } from "@/app/actions/auth";
+
+import { registerAction, loginAction, requestVerification, verifyEmailAction, requestPasswordReset, confirmPasswordReset } from "@/app/actions/auth";
+
+vi.mock("@/services/email/adapters", () => {
+  return {
+    getEmailSender: () => ({
+      send: vi.fn(),
+    }),
+  };
+});
+
 
 // A mock to intercept Postgres queries
 const mockQuery = vi.fn();
@@ -18,7 +28,7 @@ vi.mock("@/core/database/tenant-context", () => ({
 vi.mock("@/services/auth/session", () => ({
   createSession: vi.fn(),
   invalidateSession: vi.fn(),
-  getSession: vi.fn(),
+  getSession: vi.fn(), revokeAllForUser: vi.fn(),
 }));
 
 const mockHashPassword = vi.fn().mockResolvedValue({ hash: "dummy" });
@@ -74,4 +84,40 @@ describe("Authentication Actions", () => {
       });
     });
   });
+
+  describe("requestVerification", () => {
+    it("returns success without error if user not found (enumeration safe)", async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      await expect(requestVerification("missing@test.com")).resolves.toEqual({ success: true });
+    });
+  });
+
+  describe("requestPasswordReset", () => {
+    it("returns success without error if user not found (enumeration safe)", async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      await expect(requestPasswordReset("missing@test.com")).resolves.toEqual({ success: true });
+    });
+  });
+
 });
+
+  describe("Token consumption & Reset atomicity", () => {
+    it("verifyEmailAction updates user and consumes token", async () => {
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // BEGIN
+       mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'usr-1' }] }); // UPDATE token
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // UPDATE user
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // COMMIT
+       await expect(verifyEmailAction("token123")).resolves.toEqual({ success: true });
+       expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), expect.any(Array));
+    });
+
+    it("confirmPasswordReset updates credentials and consumes token", async () => {
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // BEGIN
+       mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'usr-1' }] }); // UPDATE token
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // UPDATE credentials
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // COMMIT
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // revoke session
+       await expect(confirmPasswordReset("token123", "NewPassword123!")).resolves.toEqual({ success: true });
+       expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("UPDATE user_credentials"), expect.any(Array));
+    });
+  });
