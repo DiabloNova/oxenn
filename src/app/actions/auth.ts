@@ -49,11 +49,13 @@ export async function loginAction(email: string, password: string): Promise<User
      throw new Error("Password is required");
   }
 
+  const normalizedEmail = email.toLowerCase().trim();
+
   const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
       const c = TenantContextManager.getDbClient();
       if (!c) throw new Error("Failed to get DB client in system context");
       try {
-          await enforceRateLimit(c, 'login', `login:${email.toLowerCase().trim()}`, 10, 15 * 60 * 1000);
+          await enforceRateLimit(c, 'login', `login:${normalizedEmail}`, 10, 15 * 60 * 1000);
           return null;
       } catch (err: any) {
           if (err.message === "TooManyRequests") return "TooManyRequests";
@@ -71,7 +73,7 @@ export async function loginAction(email: string, password: string): Promise<User
         throw new Error("Failed to get DB client in system context");
     }
 
-    const { rows: userRows } = await client.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
+    const { rows: userRows } = await client.query("SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL", [normalizedEmail]);
     const userRecord = userRows[0];
 
     // Dummy hash for missing user to mitigate timing attacks
@@ -176,11 +178,13 @@ export async function registerAction(name: string, email: string, password: stri
      throw new Error("Password must be between 10 and 255 characters");
   }
 
+  const normalizedEmail = email.toLowerCase().trim();
+
   const rlError = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
       const c = TenantContextManager.getDbClient();
       if (!c) throw new Error("Failed to get DB client in system context");
       try {
-          await enforceRateLimit(c, 'register', `register:${email.toLowerCase().trim()}`, 5, 60 * 60 * 1000);
+          await enforceRateLimit(c, 'register', `register:${normalizedEmail}`, 5, 60 * 60 * 1000);
           return null;
       } catch (err: any) {
           if (err.message === "TooManyRequests") return "TooManyRequests";
@@ -198,7 +202,7 @@ export async function registerAction(name: string, email: string, password: stri
     }
 
     // Check if user exists
-    const { rows: existingUser } = await client.query("SELECT id FROM users WHERE email = $1", [email]);
+    const { rows: existingUser } = await client.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
     if (existingUser.length > 0) {
         return { errorCode: "USER_EXISTS" as const };
     }
@@ -213,7 +217,7 @@ export async function registerAction(name: string, email: string, password: stri
     await client.query('BEGIN');
     try {
         // Create User
-        await client.query("INSERT INTO users (id, name, email) VALUES ($1, $2, $3)", [userId, name, email]);
+        await client.query("INSERT INTO users (id, name, email) VALUES ($1, $2, $3)", [userId, name, normalizedEmail]);
 
         // Create Credentials
         await client.query(
@@ -263,12 +267,13 @@ export async function registerAction(name: string, email: string, password: stri
 const REQUIRE_EMAIL_VERIFICATION = false;
 
 export async function requestVerification(email: string): Promise<{ success: boolean, error?: string }> {
+  const normalizedEmail = email.toLowerCase().trim();
   // Try to find the user
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
+    const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [normalizedEmail]);
     const userRecord = userRows[0];
 
     if (!userRecord) {
@@ -357,11 +362,13 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
 }
 
 export async function requestPasswordReset(email: string): Promise<{ success: boolean, error?: string }> {
+  const normalizedEmail = email.toLowerCase().trim();
+
   const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
       const c = TenantContextManager.getDbClient();
       if (!c) throw new Error("Failed to get DB client in system context");
       try {
-          await enforceRateLimit(c, 'password-reset', `reset:${email.toLowerCase().trim()}`, 5, 60 * 60 * 1000);
+          await enforceRateLimit(c, 'password-reset', `reset:${normalizedEmail}`, 5, 60 * 60 * 1000);
           return null;
       } catch (err: any) {
           if (err.message === "TooManyRequests") return "TooManyRequests";
@@ -376,7 +383,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
+    const { rows: userRows } = await client.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [normalizedEmail]);
     const userRecord = userRows[0];
 
     if (!userRecord) {
