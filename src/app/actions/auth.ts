@@ -78,12 +78,8 @@ export async function loginAction(email: string, password: string): Promise<User
         `, [LOCKOUT_THRESHOLD, userRecord.id]);
 
         // Return error object instead of throwing inside system context to prevent rollback of failed attempts update
-
-    // Trigger verification email asynchronously (do not block)
-    requestVerification(email).catch(console.error);
-
-    return {
- error: "Invalid credentials or user not found." };
+                // Return error object instead of throwing inside system context to prevent rollback of failed attempts update
+        return { error: "Invalid credentials or user not found." };
     }
 
     // Reset failures on success
@@ -184,6 +180,11 @@ export async function registerAction(name: string, email: string, password: stri
     };
   });
 
+  // Trigger verification email asynchronously (do not block the registration response)
+  if (!('errorCode' in result)) {
+      requestVerification(email).catch(console.error);
+  }
+
   // DO NOT CREATE SESSION ON REGISTER per requirements
   // await createSession(result);
 
@@ -230,14 +231,18 @@ export async function requestVerification(email: string): Promise<{ success: boo
 
   if (result && result.rawToken) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const sender = getEmailSender();
-    await sender.send({
-      to: result.email,
-      templateId: "verification",
-      params: {
-        url: `${appUrl}/en/verify-email?token=${result.rawToken}`
-      }
-    });
+    try {
+      const sender = getEmailSender();
+      sender.send({
+        to: result.email,
+        templateId: "verification",
+        params: {
+          url: `${appUrl}/en/verify-email?token=${result.rawToken}`
+        }
+      }).catch((e) => console.error("Email send async error", e));
+    } catch(e) {
+      console.error("Email sender creation error", e);
+    }
   }
 
   return { success: true };
@@ -315,14 +320,18 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
 
   if (result && result.rawToken) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const sender = getEmailSender();
-    await sender.send({
-      to: result.email,
-      templateId: "password_reset",
-      params: {
-        url: `${appUrl}/en/forgot-password?token=${result.rawToken}`
-      }
-    });
+    try {
+      const sender = getEmailSender();
+      sender.send({
+        to: result.email,
+        templateId: "password_reset",
+        params: {
+          url: `${appUrl}/en/forgot-password?token=${result.rawToken}`
+        }
+      }).catch((e) => console.error("Email send async error", e));
+    } catch(e) {
+      console.error("Email sender creation error", e);
+    }
   }
 
   return { success: true };

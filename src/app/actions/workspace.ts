@@ -72,7 +72,7 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
-  return await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-invite-user", async () => {
+  const result = await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-invite-user", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
     const db = drizzle(client);
@@ -108,21 +108,27 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
     const orgs = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, workspaceId)).limit(1);
     const workspaceName = orgs[0]?.name || "Workspace";
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    return { success: true, email, workspaceName, token, inviterName: session.user!.name };
+  });
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  try {
     const sender = getEmailSender();
     // Do not await to avoid blocking response
     sender.send({
-      to: email,
+      to: result.email,
       templateId: "workspace_invitation",
       params: {
-        workspaceName,
-        inviterName: session.user!.name,
-        url: `${appUrl}/en/accept-invite?token=${token}` // Assuming some front-end route to handle it later
+        workspaceName: result.workspaceName,
+        inviterName: result.inviterName,
+        url: `${appUrl}/en/accept-invite?token=${result.token}` // Assuming some front-end route to handle it later
       }
     }).catch(console.error);
+  } catch(e) {
+    console.error("Email sender creation error", e);
+  }
 
-    return { success: true };
-  });
+  return { success: true };
 }
 
 export async function acceptInvitationAction(token: string) {

@@ -319,7 +319,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Privileged Database Paths",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Privileged Database Paths  This document outlines all permitted explicit system-context leases (\`runWithSystemContext\`) that allow querying the database without a bound \`tenant_id\`.  | Purpose Tag | Allowed Tables | Caller Module | Justification | | :--- | :--- | :--- | :--- | | **sys-login** | \`users\`, \`tenants\`, \`tenant_users\` | \`src/app/actions/auth.ts\` | Requires user lookup across all tenants during authentication. | | **sys-register** | \`users\`, \`tenants\`, \`tenant_users\` | \`src/app/actio`
+    snippet: `# Privileged Database Paths  This document outlines all permitted explicit system-context leases (\`runWithSystemContext\`) that allow querying the database without a bound \`tenant_id\`.  | Purpose Tag | Allowed Tables | Caller Module | Justification | | :--- | :--- | :--- | :--- | | **sys-login** | \`users\`, \`tenants\`, \`tenant_users\`, \`email_verification_tokens\`, \`password_reset_tokens\` | \`src/app/actions/auth.ts\` | Requires user lookup across all tenants during authentication, and issues or consum`
   },
   {
     slug: "services",
