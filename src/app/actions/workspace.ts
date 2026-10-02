@@ -78,6 +78,7 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
     sender = getEmailSender();
   } catch (e) {
     // If it fails (e.g. no EMAIL_PROVIDER in prod), we will just fallback to returning the token directly.
+    console.error("Email sender creation error during invite (fallback to raw token response)", e);
     sender = null;
   }
 
