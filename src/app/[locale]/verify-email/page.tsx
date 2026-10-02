@@ -28,14 +28,21 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(60);
+  const [isResending, setIsResending] = useState(false);
 
   // Fill token from URL if available, but only if it changed to prevent overwriting manual input unexpectedly
   const tokenParam = searchParams?.get("token");
   const [lastUrlToken, setLastUrlToken] = useState<string | null>(null);
-  if (tokenParam && tokenParam !== lastUrlToken) {
-    setCode(tokenParam);
-    setLastUrlToken(tokenParam);
-  }
+
+  useEffect(() => {
+    if (tokenParam && tokenParam !== lastUrlToken) {
+      // Defer state update slightly to avoid synchronous cascade warnings in some React configurations
+      setTimeout(() => {
+        setCode(tokenParam);
+        setLastUrlToken(tokenParam);
+      }, 0);
+    }
+  }, [tokenParam, lastUrlToken]);
 
   // Resend code countdown timer
   useEffect(() => {
@@ -99,19 +106,22 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   };
 
   const handleResend = async () => {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || isResending) return;
 
     if (!emailParam) {
       setSubmitError(isFa ? "آدرس ایمیل برای ارسال مجدد مشخص نیست." : "Email address is missing for resend.");
       return;
     }
 
+    setIsResending(true);
     try {
       await requestVerification(emailParam);
       setResendCooldown(60);
       setSubmitError(""); // Clear any previous errors on success
     } catch (e) {
       setSubmitError(isFa ? "خطا در ارسال مجدد توکن." : "Failed to resend verification token.");
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -199,10 +209,10 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                   <button
                     type="button"
                     onClick={handleResend}
-                    disabled={resendCooldown > 0 || isLoading}
+                    disabled={resendCooldown > 0 || isLoading || isResending}
                     className="text-xs text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] transition-colors font-bold disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5 cursor-pointer"
                   >
-                    <RotateCw size={13} className={isLoading ? "animate-spin" : ""} />
+                    <RotateCw size={13} className={isResending ? "animate-spin" : ""} />
                     <span>{resendCooldown > 0 ? strings.resendWait : strings.resendBtn}</span>
                   </button>
                 </div>
