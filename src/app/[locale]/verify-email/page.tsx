@@ -19,21 +19,14 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const router = useRouter();
   const searchParams = useSearchParams();
   const emailParam = searchParams?.get("email") || "";
+  const tokenParam = searchParams?.get("token") || "";
 
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(tokenParam);
   const [codeError, setCodeError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(60);
-
-  // Fill token from URL if available
-  useEffect(() => {
-    const tokenParam = searchParams?.get("token");
-    if (tokenParam) {
-      setCode(tokenParam);
-    }
-  }, [searchParams]);
 
   // Resend code countdown timer
   useEffect(() => {
