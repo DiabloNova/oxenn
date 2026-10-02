@@ -30,14 +30,12 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [resendCooldown, setResendCooldown] = useState(60);
 
   // Fill token from URL if available, but only if it changed to prevent overwriting manual input unexpectedly
+  const tokenParam = searchParams?.get("token");
   const [lastUrlToken, setLastUrlToken] = useState<string | null>(null);
-  useEffect(() => {
-    const tokenParam = searchParams?.get("token");
-    if (tokenParam && tokenParam !== lastUrlToken) {
-      setCode(tokenParam);
-      setLastUrlToken(tokenParam);
-    }
-  }, [searchParams, lastUrlToken]);
+  if (tokenParam && tokenParam !== lastUrlToken) {
+    setCode(tokenParam);
+    setLastUrlToken(tokenParam);
+  }
 
   // Resend code countdown timer
   useEffect(() => {
