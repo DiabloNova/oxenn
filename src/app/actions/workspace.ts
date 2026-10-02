@@ -10,6 +10,8 @@ import { eq, and } from "drizzle-orm";
 import { randomUUID, createHash } from "crypto";
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { getEmailSender } from "@/services/email/adapters";
+
 import { UserRole } from "@/types/auth";
 
 export async function createWorkspaceAction(name: string) {
@@ -102,7 +104,24 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
         expiresAt
     });
 
-    return { success: true, token }; // Exposing for tests/dev, normally emailed
+    // Fetch workspace name for email
+    const orgs = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, workspaceId)).limit(1);
+    const workspaceName = orgs[0]?.name || "Workspace";
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const sender = getEmailSender();
+    // Do not await to avoid blocking response
+    sender.send({
+      to: email,
+      templateId: "workspace_invitation",
+      params: {
+        workspaceName,
+        inviterName: session.user!.name,
+        url: `${appUrl}/en/accept-invite?token=${token}` // Assuming some front-end route to handle it later
+      }
+    }).catch(console.error);
+
+    return { success: true };
   });
 }
 

@@ -20,12 +20,12 @@ export interface PrivilegedPathInfo {
 
 export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedPathInfo> = {
   "sys-login": {
-    allowedTables: ["users", "tenants", "tenant_users"],
+    allowedTables: ["users", "tenants", "tenant_users", "email_verification_tokens", "password_reset_tokens"],
     callerModule: "src/app/actions/auth.ts",
     justification: "Requires user lookup across all tenants during authentication."
   },
   "sys-register": {
-    allowedTables: ["users", "tenants", "tenant_users"],
+    allowedTables: ["users", "tenants", "tenant_users", "email_verification_tokens"],
     callerModule: "src/app/actions/auth.ts",
     justification: "Creates the initial user and tenant."
   },

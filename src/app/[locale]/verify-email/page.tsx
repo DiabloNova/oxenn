@@ -9,6 +9,8 @@ import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, CheckCircle2, ShieldAlert, ArrowLeft, ArrowRight, RotateCw } from "lucide-react";
+import { verifyEmailAction } from "@/app/actions/auth";
+
 
 export default function VerifyEmailPage({ params }: { params: Promise<{ locale: string }> }) {
   const resolvedParams = use(params);
@@ -24,6 +26,14 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(60);
+
+  // Fill token from URL if available
+  useEffect(() => {
+    const tokenParam = searchParams?.get("token");
+    if (tokenParam) {
+      setCode(tokenParam);
+    }
+  }, [searchParams]);
 
   // Resend code countdown timer
   useEffect(() => {
@@ -72,15 +82,18 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
 
     setIsLoading(true);
     try {
-      // Simulate backend API code check
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      setIsSuccess(true);
-      setTimeout(() => {
-        router.push(`/${locale}/dashboard`);
-      }, 1500);
+      // Use the actual backend action
+      const res = await verifyEmailAction(code.trim());
+      if (res && res.success) {
+        setIsSuccess(true);
+        setTimeout(() => {
+          router.push(`/${locale}/dashboard`);
+        }, 1500);
+      } else {
+        throw new Error("Invalid token");
+      }
     } catch (err: unknown) {
-      setSubmitError(isFa ? "کد تایید نامعتبر یا منقضی شده است." : "The verification code is invalid or has expired.");
+      setSubmitError(isFa ? "کد تایید نامعتبر یا منقضی شده است." : "The verification token is invalid or has expired.");
     } finally {
       setIsLoading(false);
     }
