@@ -195,7 +195,6 @@ export async function runAuthTests() {
 
   await invalidateSession();
 
-  __global.__mockSessionRevoked = true;
   mockCookieStore.store.set("oxenn_session", stolenCookie!);
   if (await getSession() !== null) throw new Error("Stolen cookie replay test failed.");
   console.log("  ✅ Stolen cookie replay rejected successfully.");
