@@ -99,6 +99,8 @@ export const organizations = pgTable("organizations", {
 
 // 1.1 USERS & MEMBERSHIPS (WORKSPACE MODEL)
 // ==========================================
+import { AnyPgColumn } from "drizzle-orm/pg-core";
+
 export const users = pgTable("users", {
   id: text("id").primaryKey(), // using text to match the existing usr-xxx pattern if needed
   name: text("name").notNull(),
@@ -106,6 +108,20 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
+export const sessions = pgTable("sessions", {
+  id: uuid("id").primaryKey().default(defaultUuid),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  workspaceId: uuid("workspace_id").references(() => organizations.id),
+  roleSnapshot: text("role_snapshot"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  replacedBy: uuid("replaced_by").references((): AnyPgColumn => sessions.id),
+  userAgent: text("user_agent"),
+  ip: text("ip"),
 });
 
 export const userCredentials = pgTable("user_credentials", {

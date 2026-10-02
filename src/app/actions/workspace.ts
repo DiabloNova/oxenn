@@ -1,13 +1,15 @@
 "use server";
 
 import { AuthorizationError } from "@/services/auth/authorization";
-import { requireSession, createSession } from "@/services/auth/session";
+import { requireSession, createSession, getCookieStore } from "@/services/auth/session";
 import { requireWorkspaceMembership, requireRole } from "@/services/auth/authorization";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { users, organizations, organizationMembers, organizationInvitations } from "../../../database/schema";
 import { eq, and } from "drizzle-orm";
 import { randomUUID, createHash } from "crypto";
+import crypto from "crypto";
+import { cookies } from "next/headers";
 import { UserRole } from "@/types/auth";
 
 export async function createWorkspaceAction(name: string) {
@@ -164,13 +166,27 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
     if (!client) throw new Error("Failed to get DB client in system context");
     const db = drizzle(client);
 
-    await db.delete(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.organizationId, workspaceId),
-          eq(organizationMembers.userId, memberId)
-        )
-      );
+    await client.query("BEGIN");
+    try {
+      await db.delete(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, workspaceId),
+            eq(organizationMembers.userId, memberId)
+          )
+        );
+
+      await client.query(`
+        UPDATE sessions
+        SET revoked_at = NOW()
+        WHERE user_id = $1 AND workspace_id = $2 AND revoked_at IS NULL
+      `, [memberId, workspaceId]);
+
+      await client.query("COMMIT");
+    } catch(e) {
+      await client.query("ROLLBACK");
+      throw e;
+    }
 
     return { success: true };
   });
@@ -206,32 +222,65 @@ export async function switchWorkspaceAction(workspaceId: string) {
 
   await requireWorkspaceMembership(session.user.id, workspaceId);
 
+  const cookieStore = await getCookieStore();
+  const cookie = cookieStore.get("oxenn_session");
+  if (!cookie || !cookie.value) throw new Error("Unauthorized");
+
+  const rawOldToken = cookie.value;
+  const oldTokenHash = crypto.createHash("sha256").update(rawOldToken).digest("hex");
+
+  const rawNewToken = crypto.randomBytes(32).toString("base64url");
+  const newTokenHash = crypto.createHash("sha256").update(rawNewToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
   // Re-fetch role for new workspace
   const newRole = await TenantContextManager.runWithSystemContext(session.user.id, "sys-switch-workspace", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
-    const db = drizzle(client);
 
-    const records = await db
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user!.id),
-          eq(organizationMembers.organizationId, workspaceId)
-        )
-      )
-      .limit(1);
+    await client.query("BEGIN");
+    try {
+      const { rows } = await client.query(`
+        SELECT role FROM organization_members
+        WHERE user_id = $1 AND organization_id = $2
+      `, [session.user!.id, workspaceId]);
 
-    return records[0].role;
+      const role = rows[0]?.role;
+      if (!role) throw new Error("Membership not found");
+
+      const { rows: newSessionRows } = await client.query(`
+        INSERT INTO sessions (user_id, token_hash, workspace_id, role_snapshot, expires_at)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+      `, [session.user!.id, newTokenHash, workspaceId, role, expiresAt.toISOString()]);
+
+      const newSessionId = newSessionRows[0].id;
+
+      const upd = await client.query(`
+        UPDATE sessions
+        SET revoked_at = NOW(), replaced_by = $1
+        WHERE token_hash = $2 AND user_id = $3 AND revoked_at IS NULL AND expires_at > NOW()
+      `, [newSessionId, oldTokenHash, session.user!.id]);
+
+      if (upd.rowCount !== 1) {
+        throw new Error("Unauthorized: session no longer valid");
+      }
+
+      await client.query("COMMIT");
+      return role;
+    } catch(e) {
+      await client.query("ROLLBACK");
+      throw e;
+    }
   });
 
-  const updatedUser = {
-    ...session.user,
-    role: newRole as UserRole,
-    workspaceId
-  };
+  cookieStore.set("oxenn_session", rawNewToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    expires: expiresAt,
+  });
 
-  await createSession(updatedUser);
   return { success: true, workspaceId };
 }

@@ -1,6 +1,7 @@
 import { cookies as nextCookies } from "next/headers";
 import crypto from "crypto";
 import { User, Session } from "@/types/auth";
+import { TenantContextManager } from "@/core/database/tenant-context";
 
 let cookiesFn = nextCookies;
 
@@ -11,52 +12,40 @@ export function setCookiesMock(mockFn: unknown) {
   cookiesFn = mockFn as typeof nextCookies;
 }
 
-// Resolve the session secret safely.
-// Generates a cryptographically secure random key if SESSION_SECRET is not configured in the environment.
-// This prevents silent use of any guessable, insecure hard-coded fallback secrets,
-// and ensures Next.js "pnpm run build" can execute page data collection successfully.
-const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
-const COOKIE_NAME = "seorchable_session";
+/**
+ * Exposes the active (or mocked) cookie store for session actions.
+ */
+export async function getCookieStore() {
+  return await cookiesFn();
+}
+
+const COOKIE_NAME = "oxenn_session";
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-interface SessionPayload {
-  user: User;
-  expiresAt: string;
-}
-
-export function signPayload(payloadStr: string): string {
-  return crypto.createHmac("sha256", SESSION_SECRET).update(payloadStr).digest("hex");
-}
-
-export function verifyPayload(payloadStr: string, signature: string): boolean {
-  const expected = signPayload(payloadStr);
-  if (signature.length !== expected.length) {
-    return false;
-  }
-  try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Creates a cryptographically signed, integrity-protected server session and sets secure cookies.
+ * Creates a DB-backed session and sets secure cookies.
  */
 export async function createSession(user: User): Promise<void> {
+  const rawToken = crypto.randomBytes(32).toString("base64url");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
-  const payload: SessionPayload = {
-    user,
-    expiresAt: expiresAt.toISOString(),
-  };
 
-  const payloadStr = JSON.stringify(payload);
-  const payloadBase64 = Buffer.from(payloadStr).toString("base64url");
-  const signature = signPayload(payloadBase64);
-  const cookieValue = `${payloadBase64}.${signature}`;
+  await TenantContextManager.runWithSystemContext(user.id, "sys-login", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) {
+      throw new Error("Failed to get DB client in system context");
+    }
+    await client.query(`
+      INSERT INTO sessions (
+        user_id, token_hash, workspace_id, role_snapshot, expires_at
+      ) VALUES (
+        $1, $2, $3, $4, $5
+      )
+    `, [user.id, tokenHash, user.workspaceId, user.role, expiresAt.toISOString()]);
+  });
 
   const cookieStore = await cookiesFn();
-  cookieStore.set(COOKIE_NAME, cookieValue, {
+  cookieStore.set(COOKIE_NAME, rawToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -64,7 +53,7 @@ export async function createSession(user: User): Promise<void> {
     expires: expiresAt,
   });
 
-  // Keep setting plain cookies for legacy compatibility, but they are NOT treated as authoritative on the server
+  // Keep setting plain cookies for legacy compatibility one-cycle deletion requirement
   cookieStore.set("tenant_id", user.workspaceId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -82,7 +71,7 @@ export async function createSession(user: User): Promise<void> {
 }
 
 /**
- * Parses and verifies the signed server session cookie, checking integrity and expiration.
+ * Parses and verifies the session token from the cookie, checking against the database.
  */
 export async function getSession(): Promise<Session | null> {
   try {
@@ -92,26 +81,40 @@ export async function getSession(): Promise<Session | null> {
       return null;
     }
 
-    const parts = cookie.value.split(".");
-    if (parts.length !== 2) {
-      return null;
-    }
+    const rawToken = cookie.value;
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
 
-    const [payloadBase64, signature] = parts;
-    if (!verifyPayload(payloadBase64, signature)) {
-      return null;
-    }
+    const sessionData = await TenantContextManager.runWithSystemContext(null, "sys-auth-check", async () => {
+      const client = TenantContextManager.getDbClient();
+      if (!client) {
+        throw new Error("Failed to get DB client in system context");
+      }
+      const { rows } = await client.query(`
+        SELECT s.id, s.user_id as "userId", s.workspace_id as "workspaceId", s.expires_at as "expiresAt", s.revoked_at as "revokedAt", s.replaced_by as "replacedBy",
+               u.email, u.name,
+               m.role
+        FROM sessions s
+        JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+        JOIN organizations o ON o.id = s.workspace_id AND o.deleted_at IS NULL
+        LEFT JOIN organization_members m ON s.workspace_id = m.organization_id AND s.user_id = m.user_id
+        WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
+      `, [tokenHash]);
 
-    const payloadStr = Buffer.from(payloadBase64, "base64url").toString("utf8");
-    const payload = JSON.parse(payloadStr) as SessionPayload;
+      return rows[0];
+    });
 
-    if (new Date(payload.expiresAt) < new Date()) {
-      return null; // Expired
-    }
+    if (!sessionData) return null;
+    if (!sessionData.role) return null; // No active membership for the workspace
 
     return {
-      user: payload.user,
-      expiresAt: payload.expiresAt,
+      user: {
+        id: sessionData.userId,
+        name: sessionData.name,
+        email: sessionData.email,
+        role: sessionData.role,
+        workspaceId: sessionData.workspaceId,
+      },
+      expiresAt: sessionData.expiresAt.toISOString(),
       status: "authenticated",
     };
   } catch (err) {
@@ -139,11 +142,44 @@ export async function getAuthenticatedUser(): Promise<User | null> {
 }
 
 /**
- * Invalidates the authoritative session on the server and expires the cookies.
+ * Invalidates the authoritative session on the server and deletes the cookies.
  */
 export async function invalidateSession(): Promise<void> {
   const cookieStore = await cookiesFn();
-  cookieStore.delete(COOKIE_NAME);
-  cookieStore.delete("tenant_id");
-  cookieStore.delete("user_id");
+  const cookie = cookieStore.get(COOKIE_NAME);
+
+  try {
+    if (cookie && cookie.value) {
+      const rawToken = cookie.value;
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+      await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+        const client = TenantContextManager.getDbClient();
+        if (!client) throw new Error("Failed to get DB client in system context");
+
+        await client.query(`
+          UPDATE sessions
+          SET revoked_at = NOW()
+          WHERE token_hash = $1 AND revoked_at IS NULL
+        `, [tokenHash]);
+      });
+    }
+  } finally {
+    cookieStore.delete(COOKIE_NAME);
+    cookieStore.delete("tenant_id");
+    cookieStore.delete("user_id");
+  }
+}
+
+export async function revokeAllForUser(userId: string): Promise<void> {
+  await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+
+    await client.query(`
+      UPDATE sessions
+      SET revoked_at = NOW()
+      WHERE user_id = $1 AND revoked_at IS NULL
+    `, [userId]);
+  });
 }

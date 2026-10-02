@@ -86,8 +86,9 @@ async function runProbe() {
     expiresAt: new Date(Date.now() + 3600000).toISOString()
   });
   const payloadBase64 = Buffer.from(payloadStr).toString("base64url");
-  const { signPayload } = await import("../../src/services/auth/session");
-  const signature = signPayload(payloadBase64);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+const crypto = require("crypto");
+    const signature = crypto.createHmac("sha256", process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex")).update(payloadBase64).digest("hex");
   const cookieValue = `${payloadBase64}.${signature}`;
 
   const store = await cookieMock();
