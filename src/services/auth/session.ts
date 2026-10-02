@@ -12,6 +12,9 @@ export function setCookiesMock(mockFn: unknown) {
   cookiesFn = mockFn as typeof nextCookies;
 }
 
+/**
+ * Exposes the active (or mocked) cookie store for session actions.
+ */
 export async function getCookieStore() {
   return await cookiesFn();
 }
@@ -101,9 +104,6 @@ export async function getSession(): Promise<Session | null> {
     });
 
     if (!sessionData) return null;
-    if (sessionData.revokedAt) return null;
-    if (sessionData.replacedBy) return null;
-    if (new Date(sessionData.expiresAt) < new Date()) return null;
     if (!sessionData.role) return null; // No active membership for the workspace
 
     return {
@@ -146,9 +146,9 @@ export async function getAuthenticatedUser(): Promise<User | null> {
  */
 export async function invalidateSession(): Promise<void> {
   const cookieStore = await cookiesFn();
+  const cookie = cookieStore.get(COOKIE_NAME);
 
   try {
-    const cookie = cookieStore.get(COOKIE_NAME);
     if (cookie && cookie.value) {
       const rawToken = cookie.value;
       const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -160,7 +160,7 @@ export async function invalidateSession(): Promise<void> {
         await client.query(`
           UPDATE sessions
           SET revoked_at = NOW()
-          WHERE token_hash = $1
+          WHERE token_hash = $1 AND revoked_at IS NULL
         `, [tokenHash]);
       });
     }

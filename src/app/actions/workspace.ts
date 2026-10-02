@@ -9,6 +9,7 @@ import { users, organizations, organizationMembers, organizationInvitations } fr
 import { eq, and } from "drizzle-orm";
 import { randomUUID, createHash } from "crypto";
 import crypto from "crypto";
+import { cookies } from "next/headers";
 import { UserRole } from "@/types/auth";
 
 export async function createWorkspaceAction(name: string) {
@@ -260,7 +261,10 @@ export async function switchWorkspaceAction(workspaceId: string) {
         SET revoked_at = NOW(), replaced_by = $1
         WHERE token_hash = $2 AND user_id = $3 AND revoked_at IS NULL AND expires_at > NOW()
       `, [newSessionId, oldTokenHash, session.user!.id]);
-      if (upd.rowCount !== 1) throw new Error("Unauthorized: session no longer valid");
+
+      if (upd.rowCount !== 1) {
+        throw new Error("Unauthorized: session no longer valid");
+      }
 
       await client.query("COMMIT");
       return role;

@@ -5,8 +5,6 @@ import {
   requireSession,
   getAuthenticatedUser,
   invalidateSession,
-
-
   setCookiesMock
 } from "../../../src/services/auth/session";
 import { User } from "../../../src/types/auth";
@@ -116,6 +114,7 @@ export async function runAuthTests() {
           const malformed = crypto.createHash('sha256').update('malformed_token').digest('hex');
           const another = crypto.createHash('sha256').update('another_malformed_token').digest('hex');
           if (params && (params[0] === malformed || params[0] === another)) return { rows: [] };
+          if (__global.__mockSessionRevoked) return { rows: [] };
           return { rows: [{
             id: 'mock-session-uuid',
             userId: mockUser.id,
@@ -128,16 +127,16 @@ export async function runAuthTests() {
             role: mockUser.role
           }]};
         }
-        if (sql.includes('UPDATE sessions') && sql.includes('revoked_at = NOW()')) {
+        if (sql.includes('UPDATE sessions')) {
           __global.__mockSessionRevoked = true;
-          return { rows: [] };
+          return { rows: [], rowCount: 1 };
         }
         if (sql.includes('SELECT role FROM organization_members')) {
           return { rows: [{ role: 'workspace_admin' }] };
         }
         if (sql.includes('SELECT 1 FROM organization_members')) {
-          if (params[0] === 'usr-test-123' && params[1] === 'ws-test-99') return { rows: [{}] };
-          if (params[0] === 'usr-test-123' && params[1] === 'ws-admin-home') return { rows: [{}] };
+          if (params && params[0] === 'usr-test-123' && params[1] === 'ws-test-99') return { rows: [{}] };
+          if (params && params[0] === 'usr-test-123' && params[1] === 'ws-admin-home') return { rows: [{}] };
           return { rows: [] };
         }
         if (sql.includes('SELECT m.role FROM organization_members')) {
@@ -155,6 +154,7 @@ export async function runAuthTests() {
 
   console.log("▶ SEC-REG-014 & 015: Testing Session Creation & Cookie Attributes...");
   mockCookieStore.clear();
+  __global.__mockSessionRevoked = false;
   await createSession(mockUser);
 
   const sessionCookie = mockCookieStore.store.get("oxenn_session");
@@ -195,6 +195,7 @@ export async function runAuthTests() {
 
   await invalidateSession();
 
+  __global.__mockSessionRevoked = true;
   mockCookieStore.store.set("oxenn_session", stolenCookie!);
   if (await getSession() !== null) throw new Error("Stolen cookie replay test failed.");
   console.log("  ✅ Stolen cookie replay rejected successfully.");
