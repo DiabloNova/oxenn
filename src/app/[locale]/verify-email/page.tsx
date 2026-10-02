@@ -20,7 +20,6 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const isFa = locale === "fa";
   const router = useRouter();
   const searchParams = useSearchParams();
-  const emailParam = searchParams?.get("email") || "";
 
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState("");
@@ -29,6 +28,9 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(60);
   const [isResending, setIsResending] = useState(false);
+  const [showResendFlow, setShowResendFlow] = useState(false);
+  const [resendEmail, setResendEmail] = useState("");
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   // Fill token from URL if available, but only if it changed to prevent overwriting manual input unexpectedly
   const tokenParam = searchParams?.get("token");
@@ -56,8 +58,15 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const strings = {
     title: isFa ? "تایید ایمیل سازمانی" : "Verify Your Email Address",
     desc: isFa
-      ? `یک لینک و توکن تایید به آدرس ${emailParam || "ایمیل شما"} ارسال گردید. لطفاً توکن را وارد نمایید.`
-      : `We sent a secure confirmation link to ${emailParam || "your email"}. Enter your token to continue.`,
+      ? `یک لینک و توکن تایید به آدرس ایمیل شما ارسال گردید. لطفاً توکن را وارد نمایید.`
+      : `We sent a secure confirmation link to your email. Enter your token to continue.`,
+    resendTitle: isFa ? "ارسال مجدد لینک تایید" : "Request New Verification Link",
+    resendDesc: isFa ? "ایمیل خود را وارد کنید تا لینک تایید جدیدی دریافت کنید." : "Enter your email to receive a new verification link.",
+    resendEmailLabel: isFa ? "آدرس ایمیل" : "Email Address",
+    resendEmailPlaceholder: isFa ? "ایمیل خود را وارد کنید" : "Enter your email",
+    resendSubmitBtn: isFa ? "ارسال لینک جدید" : "Send New Link",
+    resendSuccessTitle: isFa ? "لینک جدید ارسال شد" : "New Link Sent",
+    resendSuccessDesc: isFa ? "اگر ایمیل شما در سیستم ثبت شده باشد، لینک تایید جدیدی دریافت خواهید کرد." : "If your email is registered, you will receive a new verification link.",
     codeLabel: isFa ? "توکن تایید" : "Verification Token",
     codePlaceholder: isFa ? "توکن تایید را اینجا وارد کنید" : "Enter confirmation token here",
     submitBtn: isFa ? "تایید نهایی و فعال‌سازی" : "Verify & Activate Workspace",
@@ -105,19 +114,16 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
     }
   };
 
-  const handleResend = async () => {
-    if (resendCooldown > 0 || isResending) return;
-
-    if (!emailParam) {
-      setSubmitError(isFa ? "آدرس ایمیل برای ارسال مجدد مشخص نیست." : "Email address is missing for resend.");
-      return;
-    }
+  const handleResendRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendEmail.trim() || isResending) return;
 
     setIsResending(true);
+    setSubmitError("");
     try {
-      await requestVerification(emailParam);
-      setResendCooldown(60);
-      setSubmitError(""); // Clear any previous errors on success
+      await requestVerification(resendEmail.trim());
+      setResendSuccess(true);
+      // Notice: token is intentionally not returned, so we avoid enumeration timing logic in actions/auth.ts
     } catch (e) {
       setSubmitError(isFa ? "خطا در ارسال مجدد توکن." : "Failed to resend verification token.");
     } finally {
@@ -148,10 +154,10 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
         <Card className="glass-panel border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-2xl rounded-3xl p-2 sm:p-4">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-xl font-black font-display text-[var(--text-primary)]">
-              {isSuccess ? strings.successTitle : strings.title}
+              {isSuccess ? strings.successTitle : (showResendFlow ? strings.resendTitle : strings.title)}
             </CardTitle>
             <CardDescription className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed mt-1">
-              {isSuccess ? strings.successDesc : strings.desc}
+              {isSuccess ? strings.successDesc : (showResendFlow ? strings.resendDesc : strings.desc)}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -162,6 +168,57 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 </div>
                 <div className="text-sm font-semibold text-[var(--text-primary)]">{isFa ? "درحال ورود به محیط داشبورد..." : "Loading Workspace Dashboard..."}</div>
               </div>
+            ) : showResendFlow ? (
+              resendSuccess ? (
+                 <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-fade-in text-center">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <CheckCircle2 size={36} />
+                  </div>
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">{strings.resendSuccessTitle}</div>
+                  <p className="text-xs text-[var(--text-muted)]">{strings.resendSuccessDesc}</p>
+                </div>
+              ) : (
+                <form onSubmit={handleResendRequest} className="space-y-4">
+                  {submitError && (
+                    <div className="p-3.5 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs flex items-start gap-2 animate-shake">
+                      <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                      <p className="font-bold">{submitError}</p>
+                    </div>
+                  )}
+                  <Input
+                    type="email"
+                    label={strings.resendEmailLabel}
+                    placeholder={strings.resendEmailPlaceholder}
+                    value={resendEmail}
+                    onChange={(e) => setResendEmail(e.target.value)}
+                    disabled={isResending}
+                    required
+                    className="text-center text-sm"
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={isResending}
+                    className="w-full py-3 mt-2 rounded-xl text-xs font-black flex items-center justify-center gap-2"
+                  >
+                    {isResending ? (
+                      <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={15} />
+                    )}
+                    <span>{strings.resendSubmitBtn}</span>
+                  </Button>
+                  <div className="pt-4 border-t border-[var(--border)] text-center flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowResendFlow(false)}
+                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-bold cursor-pointer"
+                    >
+                      {isFa ? "بازگشت به وارد کردن توکن" : "Back to token entry"}
+                    </button>
+                  </div>
+                </form>
+              )
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 {submitError && (
@@ -208,12 +265,11 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 <div className="pt-4 border-t border-[var(--border)] text-center flex flex-col items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleResend}
-                    disabled={resendCooldown > 0 || isLoading || isResending}
-                    className="text-xs text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] transition-colors font-bold disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5 cursor-pointer"
+                    onClick={() => setShowResendFlow(true)}
+                    className="text-xs text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] transition-colors font-bold flex items-center gap-1.5 cursor-pointer"
                   >
-                    <RotateCw size={13} className={isResending ? "animate-spin" : ""} />
-                    <span>{resendCooldown > 0 ? strings.resendWait : strings.resendBtn}</span>
+                    <RotateCw size={13} />
+                    <span>{isFa ? "توکن نامعتبر است؟ درخواست لینک جدید" : "Invalid token? Request a new link"}</span>
                   </button>
                 </div>
               </form>

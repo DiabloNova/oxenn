@@ -112,7 +112,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
       setIsSuccess(true);
       // Let the user proceed to verify email or directly to dashboard
       setTimeout(() => {
-        router.push(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
+        router.push(`/${locale}/verify-email`);
       }, 1500);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;
