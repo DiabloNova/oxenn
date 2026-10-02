@@ -72,6 +72,15 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
+  // Test email setup before creating token
+  let sender;
+  try {
+    sender = getEmailSender();
+  } catch (e) {
+    // If it fails (e.g. no EMAIL_PROVIDER in prod), we will just fallback to returning the token directly.
+    sender = null;
+  }
+
   const result = await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-invite-user", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
@@ -112,8 +121,7 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
   });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  try {
-    const sender = getEmailSender();
+  if (sender) {
     // Do not await to avoid blocking response
     sender.send({
       to: result.email,
@@ -123,12 +131,14 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
         inviterName: result.inviterName,
         url: `${appUrl}/en/accept-invite?token=${result.token}` // Assuming some front-end route to handle it later
       }
-    }).catch(console.error);
-  } catch(e) {
-    console.error("Email sender creation error", e);
-  }
+    }).catch((e) => console.error("Email send async error", e));
 
-  return { success: true };
+    return { success: true };
+  } else {
+    // Fallback: If no provider is available, we return the token in the response so admins can share it manually.
+    // This gates the email provider feature while preserving the prior acceptance loop logic in Production.
+    return { success: true, token: result.token };
+  }
 }
 
 export async function acceptInvitationAction(token: string) {
