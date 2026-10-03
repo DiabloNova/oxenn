@@ -23,9 +23,19 @@ export default function ProfilePage() {
     setIsDeactivating(true);
     setDeactivateError("");
     try {
-      await deactivateAccountAction(deactivatePassword);
-      window.location.href = `/${language}/login`;
-    } catch (err: unknown) {
+      const res = await deactivateAccountAction(deactivatePassword);
+      if (res.success) {
+        window.location.href = `/${language}/login`;
+      } else {
+        if (res.errorCode === "INVALID_PASSWORD") {
+          setDeactivateError(isRtl ? "رمز عبور نامعتبر است." : "Invalid password.");
+        } else if (res.errorCode === "ACCOUNT_LOCKED") {
+          setDeactivateError(isRtl ? "حساب کاربری مسدود شده است." : "Account temporarily locked.");
+        } else {
+          setDeactivateError(isRtl ? "خطا در غیرفعال‌سازی." : "Deactivation failed.");
+        }
+      }
+    } catch (err) {
       setDeactivateError((err as Error).message || (isRtl ? "خطا در غیرفعال‌سازی." : "Deactivation failed."));
     } finally {
       setIsDeactivating(false);

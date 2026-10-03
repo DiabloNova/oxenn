@@ -12,15 +12,16 @@ import { eq, and } from "drizzle-orm";
  * Re-confirms password, revokes sessions, modifies memberships,
  * updates users.deleted_at, and writes audit records via established contexts.
  */
-export async function deactivateAccountAction(password: string) {
+export async function deactivateAccountAction(password: string): Promise<{ success: boolean; errorCode?: string }> {
   const session = await requireSession();
   if (!session.user) {
     throw new Error("Unauthorized");
   }
 
   const userId = session.user.id;
-    // 1. Password Verification using sys-login (which allows reading user_credentials)
-  await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
+
+  // 1. Password Verification using sys-login (which allows reading user_credentials)
+  const passwordError = await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
@@ -32,21 +33,47 @@ export async function deactivateAccountAction(password: string) {
     const credRecord = credRows[0];
     if (!credRecord) {
       await hashPassword(password); // mitigate timing attack
-      throw new Error("Invalid password");
+      return "INVALID_PASSWORD";
+    }
+
+    if (credRecord.locked_until && new Date(credRecord.locked_until) > new Date()) {
+      return "ACCOUNT_LOCKED";
     }
 
     const isPasswordValid = await verifyPassword(password, credRecord.password_hash, credRecord.params);
     if (!isPasswordValid) {
-      throw new Error("Invalid password");
+      await client.query(
+        "UPDATE user_credentials SET failed_attempts = failed_attempts + 1, updated_at = NOW() WHERE user_id = $1",
+        [userId]
+      );
+      return "INVALID_PASSWORD";
     }
+
+    await client.query(
+      "UPDATE user_credentials SET failed_attempts = 0, locked_until = NULL, updated_at = NOW() WHERE user_id = $1",
+      [userId]
+    );
+
+    return null;
   });
 
-  // 2. Discover user's current workspace memberships
-  // 3. Mark user as deactivated
-  // sys-auth-check is an existing context allowed to read/write the "users" table.
-  // Wait, wait, is there a context that is better? We will use sys-login as it already is used for mutating passwords and users (like confirmPasswordReset).
-  // I will use sys-login to run the whole sequence if possible? No, we will fetch orgs.
-  // Let's get the list of orgs first.
+  if (passwordError) {
+    return { success: false, errorCode: passwordError };
+  }
+
+  // 2. Mark users.deleted_at first, before mutating memberships
+  // We use sys-login context since it is allowed to touch users and is the canonical context used during auth mutations.
+  await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+
+    await client.query(
+      "UPDATE users SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1",
+      [userId]
+    );
+  });
+
+  // 3. Discover user's current workspace memberships
   const memberships = await TenantContextManager.runWithSystemContext(userId, "sys-list-workspaces", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
@@ -60,7 +87,7 @@ export async function deactivateAccountAction(password: string) {
     return rows;
   });
 
-  // For each organization, inspect other administrators and apply consequences
+  // 4. For each organization, inspect other administrators and apply consequences
   for (const membership of memberships) {
     const orgId = membership.organization_id;
 
@@ -70,56 +97,39 @@ export async function deactivateAccountAction(password: string) {
       if (!client) throw new Error("Failed to get DB client in tenant context");
       const db = drizzle(client);
 
-      // Check for other valid administrators
+      // Check for other valid administrators by using FOR UPDATE OF m within the tenant context's built-in transaction
+      // Note: Because we already updated deleted_at = NOW() for the current user, they won't be counted here!
       const { rows: adminRows } = await client.query(`
         SELECT count(*) as admin_count
-        FROM organization_members
-        WHERE organization_id = $1 AND role = 'workspace_admin'
+        FROM organization_members m
+        JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+        WHERE m.organization_id = $1 AND m.role = 'workspace_admin'
+        FOR UPDATE OF m
       `, [orgId]);
 
-      const totalAdmins = parseInt(adminRows[0].admin_count, 10);
+      const activeAdminsCount = parseInt(adminRows[0].admin_count, 10);
 
-      const isSoleAdmin = membership.role === 'workspace_admin' && totalAdmins === 1;
+      const isSoleAdmin = membership.role === 'workspace_admin' && activeAdminsCount === 0;
 
-      await client.query("BEGIN");
-      try {
-        if (isSoleAdmin) {
-          // Unresolved product decision: sole administrator account deactivation handling.
-          // Leaving the organization and membership untouched as per repository instructions.
-          console.warn(`[J-034] User ${userId} is the sole administrator of organization ${orgId}. Preserving existing membership state as an unresolved product/architecture decision.`);
-        } else {
-          // Safe to remove the user's membership as another admin exists (or user is not an admin)
-          await db.delete(organizationMembers)
-            .where(
-              and(
-                eq(organizationMembers.organizationId, orgId),
-                eq(organizationMembers.userId, userId)
-              )
-            );
-        }
-        await client.query("COMMIT");
-      } catch (e) {
-        await client.query("ROLLBACK");
-        throw e;
+      if (isSoleAdmin) {
+        // Unresolved product decision: sole administrator account deactivation handling.
+        // Leaving the organization and membership untouched as per repository instructions.
+        console.warn(`[J-034] User ${userId} is the sole administrator of organization ${orgId}. Preserving existing membership state as an unresolved product/architecture decision.`);
+      } else {
+        // Safe to remove the user's membership as another admin exists (or user is not an admin)
+        await db.delete(organizationMembers)
+          .where(
+            and(
+              eq(organizationMembers.organizationId, orgId),
+              eq(organizationMembers.userId, userId)
+            )
+          );
       }
     });
   }
 
-  // 4. Mark users.deleted_at
-  // We use sys-login context since it is allowed to touch users and is the canonical context used during auth mutations.
-  await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
-    const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Failed to get DB client in system context");
-
-    await client.query(
-      "UPDATE users SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1",
-      [userId]
-    );
-  });
-
   // 5. Revoke sessions
   await revokeAllForUser(userId);
-
 
   // 6. Explicitly record the account-deactivation audit event using sys-login context since no bespoke tag exists
   await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
@@ -147,5 +157,4 @@ export async function deactivateAccountAction(password: string) {
   });
 
   return { success: true };
-
 }

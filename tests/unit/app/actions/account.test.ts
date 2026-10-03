@@ -54,7 +54,8 @@ describe('deactivateAccountAction', () => {
 
     vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
 
-    await expect(deactivateAccountAction('wrongpass')).rejects.toThrow('Invalid password');
+    const result = await deactivateAccountAction('wrongpass');
+    expect(result).toEqual({ success: false, errorCode: 'INVALID_PASSWORD' });
   });
 
   it('successfully deactivates account and leaves sole admin alone', async () => {
@@ -84,13 +85,14 @@ describe('deactivateAccountAction', () => {
         ] };
       }
       if (sql.includes('SELECT count(*) as admin_count')) {
-        if (params && (params as string[])[0] === 'org-sole-admin') {
-          return { rows: [{ admin_count: '1' }] };
+        const paramsArray = params as string[];
+        if (paramsArray && paramsArray[0] === 'org-sole-admin') {
+          return { rows: [{ admin_count: '0' }] }; // Returns 0 because the user themselves was already soft-deleted in step 2!
         }
-        if (params && (params as string[])[0] === 'org-other-admin') {
-          return { rows: [{ admin_count: '2' }] };
+        if (paramsArray && paramsArray[0] === 'org-other-admin') {
+          return { rows: [{ admin_count: '1' }] }; // 1 other active admin exists
         }
-        if (params && (params as string[])[0] === 'org-viewer') {
+        if (paramsArray && paramsArray[0] === 'org-viewer') {
           return { rows: [{ admin_count: '1' }] };
         }
       }
@@ -114,7 +116,6 @@ describe('deactivateAccountAction', () => {
 
     // Make sure users table was updated
     expect(queryMock.mock.calls.some(call => typeof call[0] === 'string' && call[0].includes('UPDATE users SET deleted_at = NOW()'))).toBe(true);
-    expect(queryMock.mock.calls.some(call => typeof call[0] === 'string' && call[0].includes('INSERT INTO audit_records'))).toBe(true);
 
     // Make sure db.delete was called for org-other-admin and org-viewer, but NOT org-sole-admin
     const deleteCalls = queryMock.mock.calls.filter(call =>
@@ -122,5 +123,6 @@ describe('deactivateAccountAction', () => {
     );
     // 2 deletions (org-other-admin, org-viewer)
     expect(deleteCalls.length).toBe(2);
+    expect(queryMock.mock.calls.some(call => typeof call[0] === 'string' && call[0].includes('INSERT INTO audit_records'))).toBe(true);
   });
 });
