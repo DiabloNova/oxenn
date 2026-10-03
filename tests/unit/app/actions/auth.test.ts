@@ -48,7 +48,7 @@ describe("Authentication Actions", () => {
 
   describe("registerAction", () => {
     it("throws error if user already exists", async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [{ id: "usr-existing" }] }); // SELECT id FROM users WHERE email
+      mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [{ id: "usr-existing" }] }); // SELECT id FROM users WHERE email
 
       await expect(registerAction("Test", "test@test.com", "Password123")).resolves.toEqual({ errorCode: "USER_EXISTS" });
     });
@@ -65,7 +65,7 @@ describe("Authentication Actions", () => {
     });
 
     it("throws error if user not found (with dummy hash timing protection)", async () => {
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // SELECT FROM users
+       mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [] }); // SELECT FROM users
 
        await expect(loginAction("test@test.com", "Password123")).rejects.toThrow("Invalid credentials or user not found.");
 
@@ -75,7 +75,7 @@ describe("Authentication Actions", () => {
 
     describe("loginAction lockout constraints", () => {
       it("throws error when locked out", async () => {
-         mockQuery.mockResolvedValueOnce({ rows: [{ id: "usr-1" }] }); // SELECT FROM users
+         mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [{ id: "usr-1" }] }); // SELECT FROM users
 
          const lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
          mockQuery.mockResolvedValueOnce({ rows: [{ user_id: "usr-1", locked_until: lockedUntil }] }); // SELECT FROM user_credentials
@@ -94,7 +94,7 @@ describe("Authentication Actions", () => {
 
   describe("requestPasswordReset", () => {
     it("returns success without error if user not found (enumeration safe)", async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [] });
       await expect(requestPasswordReset("missing@test.com")).resolves.toEqual({ success: true });
     });
   });
