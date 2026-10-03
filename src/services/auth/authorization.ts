@@ -27,17 +27,23 @@ export async function requireWorkspaceMembership(userId: string, workspaceId: st
       throw new AuthorizationError(403, "Forbidden: User ID mismatch.");
   }
 
-  // A super_admin has access to all tenants/workspaces
-  if (session.user.role === "super_admin") {
-    return;
-  }
-
   // Authoritatively verify membership against the database using system context
   const hasAccess = await TenantContextManager.runWithSystemContext(session.user!.id, "sys-auth-check", async () => {
       const client = TenantContextManager.getDbClient();
       if (!client) {
           throw new Error("Failed to get DB client in system context");
       }
+
+      // Check if user is super_admin in their active workspace
+      const { rows: activeRows } = await client.query(
+          "SELECT m.role FROM organization_members m JOIN organizations o ON m.organization_id = o.id WHERE m.user_id = $1 AND m.organization_id = $2 AND o.deleted_at IS NULL",
+          [userId, session.user!.workspaceId]
+      );
+      if (activeRows.length > 0 && activeRows[0].role === "super_admin") {
+          return true; // A super_admin has access to all tenants/workspaces
+      }
+
+      // Normal membership check
       const { rows } = await client.query(
           "SELECT 1 FROM organization_members m JOIN organizations o ON m.organization_id = o.id WHERE m.user_id = $1 AND m.organization_id = $2 AND o.deleted_at IS NULL",
           [userId, workspaceId]
@@ -63,27 +69,40 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
     throw new AuthorizationError(401, "Unauthorized: No active session user.");
   }
 
-  let activeRole = session.user.role;
+  // Authoritatively fetch role from database instead of trusting session snapshot
+  const roleCheckWorkspace = targetWorkspaceId || session.user.workspaceId;
+  const dbRole = await TenantContextManager.runWithSystemContext(session.user!.id, "sys-auth-role-check", async () => {
+      const client = TenantContextManager.getDbClient();
+      if (!client) {
+          throw new Error("Failed to get DB client in system context");
+      }
+      // First check if they are super_admin in their active workspace
+      const { rows: activeRows } = await client.query(
+          "SELECT m.role FROM organization_members m JOIN organizations o ON m.organization_id = o.id WHERE m.user_id = $1 AND m.organization_id = $2 AND o.deleted_at IS NULL",
+          [session.user!.id, session.user!.workspaceId]
+      );
+      const activeRoleDb = activeRows.length > 0 ? activeRows[0].role : null;
 
-  // If a specific workspace is targeted, authoritatively fetch their role in that workspace
-  if (targetWorkspaceId && session.user.role !== "super_admin") {
-      const role = await TenantContextManager.runWithSystemContext(session.user!.id, "sys-auth-role-check", async () => {
-          const client = TenantContextManager.getDbClient();
-          if (!client) {
-              throw new Error("Failed to get DB client in system context");
-          }
-          const { rows } = await client.query(
+      if (activeRoleDb === "super_admin") {
+          return "super_admin";
+      }
+
+      // If targeting a different workspace and not super_admin, fetch role for target
+      if (targetWorkspaceId && targetWorkspaceId !== session.user!.workspaceId) {
+          const { rows: targetRows } = await client.query(
               "SELECT m.role FROM organization_members m JOIN organizations o ON m.organization_id = o.id WHERE m.user_id = $1 AND m.organization_id = $2 AND o.deleted_at IS NULL",
               [session.user!.id, targetWorkspaceId]
           );
-          return rows.length > 0 ? rows[0].role : null;
-      });
-
-      if (!role) {
-          throw new AuthorizationError(403, "Forbidden: User is not a member of the requested workspace.");
+          return targetRows.length > 0 ? targetRows[0].role : null;
       }
-      activeRole = role as UserRole;
+
+      return activeRoleDb;
+  });
+
+  if (!dbRole) {
+      throw new AuthorizationError(403, "Forbidden: User is not a member of the requested workspace.");
   }
+  const activeRole = dbRole as UserRole;
 
   const roleHierarchy: Record<UserRole, number> = {
     super_admin: 3,
