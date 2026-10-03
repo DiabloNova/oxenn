@@ -57,8 +57,8 @@ export async function loginAction(email: string, password: string): Promise<User
       try {
           await enforceRateLimit(c, 'login', `login:${normalizedEmail}`, 10, 15 * 60 * 1000);
           return null;
-      } catch (err: any) {
-          if (err.message === "TooManyRequests") return "TooManyRequests";
+      } catch (err: unknown) {
+          if (err instanceof Error && err.message === "TooManyRequests") return "TooManyRequests";
           throw err;
       }
   });
@@ -186,8 +186,8 @@ export async function registerAction(name: string, email: string, password: stri
       try {
           await enforceRateLimit(c, 'register', `register:${normalizedEmail}`, 5, 60 * 60 * 1000);
           return null;
-      } catch (err: any) {
-          if (err.message === "TooManyRequests") return "TooManyRequests";
+      } catch (err: unknown) {
+          if (err instanceof Error && err.message === "TooManyRequests") return "TooManyRequests";
           throw err;
       }
   });
@@ -370,8 +370,8 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
       try {
           await enforceRateLimit(c, 'password-reset', `reset:${normalizedEmail}`, 5, 60 * 60 * 1000);
           return null;
-      } catch (err: any) {
-          if (err.message === "TooManyRequests") return "TooManyRequests";
+      } catch (err: unknown) {
+          if (err instanceof Error && err.message === "TooManyRequests") return "TooManyRequests";
           throw err;
       }
   });
