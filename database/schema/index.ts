@@ -110,7 +110,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 }, (table) => [
-  index("idx_users_lower_email").on(sql`lower(${table.email})`)
+  uniqueIndex("idx_users_lower_email").on(sql`lower(${table.email})`)
 ]);
 
 export const emailVerificationTokens = pgTable("email_verification_tokens", {

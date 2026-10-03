@@ -69,6 +69,7 @@ export async function listWorkspacesAction() {
 export async function inviteUserAction(workspaceId: string, email: string, role: string) {
   const session = await requireSession();
   if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
+  if (role === "super_admin") throw new AuthorizationError(403, "Forbidden: super_admin can only be assigned by operators.");
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
@@ -231,6 +232,7 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
 export async function updateMemberRoleAction(workspaceId: string, memberId: string, role: string) {
   const session = await requireSession();
   if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
+  if (role === "super_admin") throw new AuthorizationError(403, "Forbidden: super_admin can only be assigned by operators.");
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 

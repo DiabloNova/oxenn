@@ -315,8 +315,8 @@ export async function requestVerification(email: string): Promise<{ success: boo
     }
   }
 
-  if (result && (result as any).error) {
-    return { success: false, error: (result as any).error };
+  if (result && ('error' in result)) {
+    return { success: false, error: (result as { error?: string }).error };
   }
 
   return { success: true };
@@ -425,8 +425,8 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     }
   }
 
-  if (result && (result as any).error) {
-    return { success: false, error: (result as any).error };
+  if (result && ('error' in result)) {
+    return { success: false, error: (result as { error?: string }).error };
   }
 
   return { success: true };

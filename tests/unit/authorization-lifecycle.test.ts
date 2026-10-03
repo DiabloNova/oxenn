@@ -242,14 +242,14 @@ describe("Auth Lifecycle Tests", () => {
       for (let i = 0; i < 10; i++) {
           const res = await loginAction("trip@example.com", "Password123");
           expect(res).toBeDefined();
-          if ('error' in res) {
+          if (res && typeof res === 'object' && 'error' in res) {
              throw new Error("Unexpected error");
           }
       }
       // 11th should still succeed because the bucket is cleared every time
       const res = await loginAction("trip@example.com", "Password123");
       expect(res).toBeDefined();
-      if ('error' in res) {
+      if (res && typeof res === 'object' && 'error' in res) {
          throw new Error("Unexpected error");
       }
       expect(bucketCleared).toBe(true);

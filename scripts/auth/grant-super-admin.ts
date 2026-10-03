@@ -21,37 +21,38 @@ async function main() {
     process.exit(1);
   }
 
-  const pgClient = PostgresClient.getInstance();
-  const client = await pgClient.connectSystemClient("sys-admin-run");
+  const { TenantContextManager } = await import("../../src/core/database/tenant-context");
 
   try {
-    await client.query("BEGIN");
+    await TenantContextManager.runWithSystemContext(null, "sys-admin-run", async () => {
+      const client = TenantContextManager.getDbClient();
+      if (!client) throw new Error("Failed to get DB client in system context");
 
-    const { rows } = await client.query(
-      "UPDATE organization_members SET role = 'super_admin' WHERE user_id = $1 AND organization_id = $2 RETURNING id",
-      [userId, workspaceId]
-    );
+      await client.query("BEGIN");
 
-    if (rows.length === 0) {
-      console.error(`User ${userId} is not a member of workspace ${workspaceId}.`);
-      await client.query("ROLLBACK");
-      process.exit(1);
-    }
+      const { rows } = await client.query(
+        "UPDATE organization_members SET role = 'super_admin' WHERE user_id = $1 AND organization_id = $2 RETURNING id",
+        [userId, workspaceId]
+      );
 
-    const auditId = randomUUID();
-    await client.query(
-      "INSERT INTO audit_records (id, action, actor_id, actor_email, actor_role, resource_type, resource_id, ip_address, user_agent, status, payload_after) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
-      [auditId, "grant_super_admin", "system", "system@local", "system", "organization_members", userId, "127.0.0.1", "cli", "success", JSON.stringify({ workspaceId, role: "super_admin" })]
-    );
+      if (rows.length === 0) {
+        console.error(`User ${userId} is not a member of workspace ${workspaceId}.`);
+        await client.query("ROLLBACK");
+        process.exit(1);
+      }
 
-    await client.query("COMMIT");
-    console.log(`Successfully granted super_admin to user ${userId} for workspace ${workspaceId}.`);
+      const auditId = randomUUID();
+      await client.query(
+        "INSERT INTO audit_records (id, action, actor_id, actor_email, actor_role, resource_type, resource_id, ip_address, user_agent, status, payload_after) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+        [auditId, "grant_super_admin", "system", "system@local", "system", "organization_members", rows[0].id, "127.0.0.1", "cli", "success", JSON.stringify({ workspaceId, role: "super_admin" })]
+      );
+
+      await client.query("COMMIT");
+      console.log(`Successfully granted super_admin to user ${userId} for workspace ${workspaceId}.`);
+    });
   } catch (err) {
-    await client.query("ROLLBACK");
     console.error("Failed to grant super_admin:", err);
     process.exit(1);
-  } finally {
-    client.release();
   }
 }
 
