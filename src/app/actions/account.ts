@@ -40,11 +40,19 @@ export async function deactivateAccountAction(password: string): Promise<{ succe
       return "ACCOUNT_LOCKED";
     }
 
+    const MAX_FAILED_ATTEMPTS = 5; // standard from auth
     const isPasswordValid = await verifyPassword(password, credRecord.password_hash, credRecord.params);
     if (!isPasswordValid) {
       await client.query(
-        "UPDATE user_credentials SET failed_attempts = failed_attempts + 1, updated_at = NOW() WHERE user_id = $1",
-        [userId]
+        `UPDATE user_credentials SET
+           failed_attempts = CASE WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN 1 ELSE failed_attempts + 1 END,
+           locked_until = CASE
+             WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN NULL
+             WHEN failed_attempts + 1 >= $2 THEN NOW() + interval '15 minutes'
+             ELSE locked_until END,
+           updated_at = NOW()
+         WHERE user_id = $1`,
+        [userId, MAX_FAILED_ATTEMPTS]
       );
       return "INVALID_PASSWORD";
     }
@@ -100,11 +108,13 @@ export async function deactivateAccountAction(password: string): Promise<{ succe
       // Check for other valid administrators by using FOR UPDATE OF m within the tenant context's built-in transaction
       // Note: Because we already updated deleted_at = NOW() for the current user, they won't be counted here!
       const { rows: adminRows } = await client.query(`
-        SELECT count(*) as admin_count
-        FROM organization_members m
-        JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
-        WHERE m.organization_id = $1 AND m.role = 'workspace_admin'
-        FOR UPDATE OF m
+        SELECT count(*) AS admin_count FROM (
+          SELECT m.user_id
+          FROM organization_members m
+          JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+          WHERE m.organization_id = $1 AND m.role = 'workspace_admin'
+          FOR UPDATE OF m
+        ) locked
       `, [orgId]);
 
       const activeAdminsCount = parseInt(adminRows[0].admin_count, 10);

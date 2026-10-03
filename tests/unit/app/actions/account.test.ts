@@ -84,7 +84,7 @@ describe('deactivateAccountAction', () => {
           { organization_id: 'org-viewer', role: 'viewer', org_name: 'Org 3' }
         ] };
       }
-      if (sql.includes('SELECT count(*) as admin_count')) {
+      if (sql.includes('SELECT count(*) AS admin_count FROM (')) {
         const paramsArray = params as string[];
         if (paramsArray && paramsArray[0] === 'org-sole-admin') {
           return { rows: [{ admin_count: '0' }] }; // Returns 0 because the user themselves was already soft-deleted in step 2!
