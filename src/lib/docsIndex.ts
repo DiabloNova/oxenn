@@ -282,6 +282,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Tenant Operations Guide  This document describes the administrative operations supporting multi-tenant lifecycle states, limits, and quotas.  ## Lifecycle States  - **Active**: The tenant runs normal crawl jobs, executes prompts, and accesses standard features. - **Suspended**: The tenant cannot process new crawl jobs or access features, but their database schemas and configurations are kept intact. - **Archived**: The tenant is soft-deleted, removing active schedules and preparing records for`
   },
   {
+    slug: "reference-matrix",
+    titleEn: "Database Reference Matrix",
+    titleFa: "Database Reference Matrix",
+    category: "database",
+    categoryFa: "Database",
+    snippet: `# Database Reference Matrix  | Table Name | Scope | RLS Enabled | Status | Consumers | |---|---|---|---|---| | \`admin_users\` | | \`aeo_analyses\` | | \`ai_engines\` | | \`ai_observations\` | | \`ai_provider_configs\` | | \`ai_visibility_audits\` | | \`api_keys\` | | \`audit_prompts\` | | \`audit_records\` | | \`auth_rate_limits\` | | \`brand_associations\` | | \`brand_mentions\` | | \`brands\` | | \`citation_occurrences\` | | \`citation_sources\` | | \`citations\` | | \`competitive_analyses\` | | \`competitive_seo_findings\` | | \`competitor_changes\` | | \`competitors\` | | \`crawl_cache\` | | \`crawl_jobs\` | | \`crawl_results\` | | \`crawl_snapshots\` | | \`credit_transactions\` | | \`diagnostic_finding_relationships\` | | \`diagnostic_findings\` | | \`document_embeddings\` | | \`email_verification_tokens\` | | \`entities\` | | \`entity_relationships\` | | \`faq_opportunities\` | | \`feature_flags\` | | \`historical_metrics\` | | \`keywords\` | | \`keywords_topics\` | | \`kg_alignments\` | | \`kg_entities\` | | \`kg_relationships\` | | \`monitoring_alerts\` | | \`monitoring_configs\` | | \`organization_invitations\` | | \`organization_members\` | | \`organizations\` | | \`pages\` | | \`pages_entities\` | | \`pages_keywords\` | | \`pages_topics\` | | \`password_reset_tokens\` | | \`permissions\` | | \`position_observations\` | | \`premium_audits\` | | \`prompt_definitions\` | | \`prompt_executions\` | | \`prompt_schedules\` | | \`prompts\` | | \`recommendation_observations\` | | \`recommendations\` | | \`roles\` | | \`sessions\` | | \`system_configurations\` | | \`technical_audits\` | | \`tenant_quotas\` | | \`tenant_subscriptions\` | | \`topics\` | | \`topics_entities\` | | \`user_credentials\` | | \`users\` | | \`visibility_scores\` | | \`websites\` |  ## Summary - Total Tables: 70 - WIRED Tables: 70 - ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 0 `
+  },
+  {
     slug: "product",
     titleEn: "Product Documentation",
     titleFa: "Product Documentation",

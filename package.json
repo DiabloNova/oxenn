@@ -17,7 +17,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "pnpm env:check migrate && tsx src/core/database/migrator.ts",
     "db:push": "tsx scripts/database/db-push-guard.ts && drizzle-kit push",
-    "test:isolation": "tsx tests/isolation/suite.ts"
+    "test:isolation": "tsx tests/isolation/suite.ts",
+    "docs:matrix": "tsx scripts/database/build-reference-matrix.ts",
+    "docs": "npm run docs:matrix"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.24",
