@@ -44,8 +44,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Build Reference Matrix
+        run: pnpm run docs:matrix
+
       - name: Verify generated tracked files (no drift)
-        run: git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts
+        run: git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts docs/database/reference-matrix.md
 
   isolation-suite:
     name: Isolation Suite

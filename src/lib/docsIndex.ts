@@ -282,6 +282,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Tenant Operations Guide  This document describes the administrative operations supporting multi-tenant lifecycle states, limits, and quotas.  ## Lifecycle States  - **Active**: The tenant runs normal crawl jobs, executes prompts, and accesses standard features. - **Suspended**: The tenant cannot process new crawl jobs or access features, but their database schemas and configurations are kept intact. - **Archived**: The tenant is soft-deleted, removing active schedules and preparing records for`
   },
   {
+    slug: "reference-matrix",
+    titleEn: "Database Reference Matrix",
+    titleFa: "Database Reference Matrix",
+    category: "database",
+    categoryFa: "Database",
+    snippet: `# Database Reference Matrix  | Table Name | Scope | RLS Enabled | Status | Consumers | |---|---|---|---|---| | \`admin_users\` | Global | ❌ | \`WIRED\` | \`index.ts\`, \`mock-db.ts\`, \`suite.ts\`, \`cqrs.test.ts\` | | \`aeo_analyses\` | Tenant-Scoped | ✅ | \`WIRED\` | \`index.ts\` | | \`ai_engines\` | Global | ❌ | \`WIRED\` | \`suite.ts\` | | \`ai_observations\` | Tenant-Scoped | ✅ | \`WIRED\` | \`index.ts\`, \`index.ts\`, \`diagnostic-engine.test.ts\`, \`security.test.ts\` | | \`ai_provider_configs\` | Global | ❌ | \`WIRED\` | \`inde`
+  },
+  {
     slug: "product",
     titleEn: "Product Documentation",
     titleFa: "Product Documentation",
