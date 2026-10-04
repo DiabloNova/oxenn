@@ -287,7 +287,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Database Reference Matrix",
     category: "database",
     categoryFa: "Database",
-    snippet: `# Database Reference Matrix  | Table Name | Scope | RLS Enabled | Status | Consumers | |---|---|---|---|---| | \`admin_users\` | Global | ❌ | \`WIRED\` | \`index.ts\`, \`mock-db.ts\`, \`suite.ts\`, \`cqrs.test.ts\` | | \`aeo_analyses\` | Tenant-Scoped | ✅ | \`WIRED\` | \`index.ts\` | | \`ai_engines\` | Global | ❌ | \`WIRED\` | \`suite.ts\` | | \`ai_observations\` | Tenant-Scoped | ✅ | \`WIRED\` | \`index.ts\`, \`index.ts\`, \`diagnostic-engine.test.ts\`, \`security.test.ts\` | | \`ai_provider_configs\` | Global | ❌ | \`WIRED\` | \`inde`
+    snippet: `# Database Reference Matrix  | Table Name | Scope | RLS Enabled | Status | Consumers | |---|---|---|---|---| | \`admin_users\` | Global | ❌ | \`WIRED\` | \`src/features/admin/infrastructure/mock-db.ts\`, \`src/features/admin/infrastructure/persistence/postgres/index.ts\`, \`tests/features/admin/cqrs.test.ts\`, \`tests/isolation/suite.ts\` | | \`aeo_analyses\` | Tenant-Scoped | ✅ | \`WIRED\` | \`src/features/ai-intelligence/repositories/index.ts\` | | \`ai_engines\` | Global | ❌ | \`WIRED\` | \`tests/isolation/suite.ts`
   },
   {
     slug: "product",

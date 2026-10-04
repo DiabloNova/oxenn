@@ -9,7 +9,7 @@ interface Journal {
 
 interface SnapshotTable {
   name: string;
-  policies?: any;
+  policies?: Record<string, unknown>;
 }
 
 interface Snapshot {
@@ -53,7 +53,7 @@ function findOrphanReferences(tables: string[]) {
         ]);
 
         let foundOrphans = 0;
-        let actualOrphans: string[] = [];
+        const actualOrphans: string[] = [];
         for (const line of results) {
             const parts = line.split(':');
             if (parts.length < 2) continue;
@@ -97,7 +97,7 @@ function generateMarkdown() {
   for (const t of tables) {
       const refs = findTableReferences(t.name);
 
-      const isTenantScoped = TENANT_SCOPED_TABLES.includes(t.name as any);
+      const isTenantScoped = TENANT_SCOPED_TABLES.includes(t.name as never);
       const scope = isTenantScoped ? "Tenant-Scoped" : "Global";
 
       const hasRls = t.policies && Object.keys(t.policies).length > 0;
