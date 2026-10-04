@@ -33,7 +33,7 @@ function findTableReferences(tableName: string) {
     try {
         const grepCmd = `grep -rlE "\\b${tableName}\\b|\\b${exportName || "NO_EXPORT_FOUND"}\\b" src/ scripts/ tests/ | grep -v "tenant-tables.generated.ts" | grep -v "docsIndex.ts" | grep -v "build-reference-matrix.ts" | grep -v "database/schema" | grep -v "docsData.ts" || true`;
         const result = execSync(grepCmd).toString().trim();
-        return result.split('\n').filter(Boolean);
+        return result.split('\n').filter(Boolean).sort();
     } catch(e) {
         return [];
     }
@@ -112,7 +112,7 @@ function generateMarkdown() {
           orphanTablesCount++;
       } else {
           status = "`WIRED`";
-          consumers = refs.map(r => `\`${r.split('/').pop()}\``).join(", ");
+          consumers = refs.map(r => `\`${r}\``).join(", ");
           wiredTablesCount++;
       }
 
