@@ -22,7 +22,7 @@
 ### 2. Contract Delta
 - **Criterion**: `verification/phase-5/contract-deltas.md` reflects actual implementation.
 - **Status**: PASS
-- **Evidence**: Created and verified against current `src/app/actions/auth.ts`, `src/services/auth/session.ts` and `src/app/actions/workspace.ts`. It correctly documents `registerAction`, `loginAction`, `oxenn_session`, invitation tokens, `AccountLocked` (string exception), `TooManyRequests` (string exception / string payload), and `retryAfterSeconds` (not implemented).
+- **Evidence**: Created and verified against current `src/app/actions/auth.ts`, `src/services/auth/session.ts` and `src/app/actions/workspace.ts`. It correctly documents `registerAction`, `loginAction`, `oxenn_session`, invitation tokens including the raw-token fallback, `AccountLocked` (string exception), `TooManyRequests` (string exception / string payload), and `retryAfterSeconds` (not implemented).
 
 ### 3. Full Lifecycle Replay
 - **Criterion**: Verify full lifecycle: REGISTER → VERIFY → LOGIN → SESSION → AUTHZ → SWITCH → INVITE → LOGOUT(revocation) → RESET → RATE-LIMIT → DEACTIVATE.
@@ -34,7 +34,7 @@
   - **SESSION**: Verified via `tests/services/auth/session.test.ts` (as reported in `j031.md`).
   - **AUTHZ**: Verified via `tests/unit/authorization-lifecycle.test.ts` line 94 (requireWorkspaceMembership).
   - **SWITCH / INVITE**: Verified via `tests/unit/app/actions/workspace-invitations.test.ts`.
-  - **LOGOUT(revocation)**: Verified via `revokeAllForUser` usages in `auth.ts` and `account.ts`.
+  - **LOGOUT(revocation)**: `logoutAction` (`src/app/actions/auth.ts`) calls `invalidateSession()`; verified via `tests/services/auth/session.test.ts` (invalidateSession revokes the DB row and clears the cookie). `revokeAllForUser` covers bulk revocation on reset/deactivate.
   - **RESET**: Verified via `tests/unit/app/actions/auth.test.ts`.
   - **RATE-LIMIT**: Verified via `tests/unit/authorization-lifecycle.test.ts` line 192 (trips at threshold).
   - **DEACTIVATE**: Verified via `tests/unit/app/actions/account.test.ts` and `auth-deactivated.test.ts`.

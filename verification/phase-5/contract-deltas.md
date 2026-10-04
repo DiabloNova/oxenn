@@ -13,8 +13,9 @@
 - Cookie `oxenn_session` holds raw 256-bit token string, expiry set to 24 hours.
 
 ## Invitation Token Response Behavior
-- URL delivery uses `EmailSender` without altering acceptance cryptography.
-- Token is verified against hashed version in `organization_invitations` table.
+- When an `EmailSender` is configured, the acceptance URL (`/en/accept-invite?token=...`) is emailed and the action returns `{ success: true }`.
+- When no sender is available, the action returns `{ success: true, token }`, so the raw invitation token is in the response for manual sharing.
+- The token is stored as a SHA-256 hash in `organization_invitations` (24h expiry) and checked against that hash on acceptance.
 
 ## AccountLocked
 - Handled internally by throwing `Error("Account is temporarily locked. Please try again later.")`.
