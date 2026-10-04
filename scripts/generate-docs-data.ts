@@ -60,7 +60,21 @@ function getAllDocs(basePath = "docs"): DocMeta[] {
             if (firstLine) {
                 title = firstLine.replace('# ', '').trim();
             }
-            contentSnippet = content.substring(0, 500).replace(/\n/g, ' ');
+            if (slug === "reference-matrix") {
+                // Strip consumer paths from the reference matrix snippet to ensure all table names fit
+                // in the searchable index without exceeding reasonable limits.
+                // Replace | `table` | Scope | ... | path, path | with | `table` |
+                const lines = content.split('\n');
+                const cleanLines = lines.map(line => {
+                    if (line.startsWith('| `')) {
+                        return line.split('|').slice(0, 2).join('|') + '|';
+                    }
+                    return line;
+                });
+                contentSnippet = cleanLines.join(' ').replace(/\n/g, ' ');
+            } else {
+                contentSnippet = content.substring(0, 500).replace(/\n/g, ' ');
+            }
         } catch (_e) {}
 
         docs.push({
