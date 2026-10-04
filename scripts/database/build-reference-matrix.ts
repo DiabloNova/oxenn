@@ -102,7 +102,7 @@ function findOrphanReferences(tables: string[]) {
             const parts = line.split(':');
             if (parts.length < 2) continue;
 
-            const match = parts.slice(1).join(':').match(/(FROM|JOIN|INTO|UPDATE)\\s+(([a-zA-Z0-9_]+)\\.)?([a-zA-Z0-9_]+)/i);
+            const match = parts.slice(1).join(':').match(/(FROM|JOIN|INTO|UPDATE)\s+(([a-zA-Z0-9_]+)\.)?([a-zA-Z0-9_]+)/i);
             if (match && match[4]) {
                 const tableName = match[4].toLowerCase();
                 if (!validTables.has(tableName) && !ignoreList.has(tableName)) {
