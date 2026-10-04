@@ -6,7 +6,7 @@
 
 ## loginAction
 - Authenticates and creates session via `createSession`.
-- Increments `failed_attempts` on failure, resets on success.
+- Increments `failed_attempts` on failure only for an existing, unlocked user with an invalid password. It does not increment for missing users or previously locked accounts. Resets on success.
 
 ## oxenn_session
 - Session implemented via DB-backed token stored in `sessions` table (hashed).
@@ -21,7 +21,7 @@
 - Handled internally by throwing `Error("Account is temporarily locked. Please try again later.")`.
 
 ## TooManyRequests
-- Returned as `errorCode: "TooManyRequests"` or thrown as `Error("TooManyRequests")`.
+- Returned as `errorCode: "TooManyRequests"` (for registration/login) or `{ success: false, error: "TooManyRequests" }` (for password reset), or thrown as `Error("TooManyRequests")`.
 
 ## retryAfterSeconds
-- Not implemented in current source code. Rate limiting uses a simple boolean cutoff based on threshold rather than providing a structured `retryAfterSeconds` response payload.
+- Not implemented in current source code. Rate limiting uses a database-backed counter with an expiry window (`auth_rate_limits` table with `expires_at` and `attempts` columns), but does not provide a structured `retryAfterSeconds` response payload.
