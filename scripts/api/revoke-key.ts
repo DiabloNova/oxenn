@@ -40,15 +40,16 @@ async function main() {
     process.exitCode = 1;
   }
 
-  // Return gracefully to let audit queries finish.
-  // Note: we're using setTimeout to allow the process to drain the event loop
-  // naturally so the async audit queries can flush to DB before shutdown.
-  setTimeout(() => {
-    process.exit(process.exitCode || 0);
-  }, 500);
+  // Close database pools so process can cleanly exit now that audit writes are awaited
+  const { PostgresClient } = await import("../../src/features/admin/infrastructure/persistence/postgres");
+  await PostgresClient.getInstance().closePools();
+
+  return;
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error("Error revoking API key:", err);
   process.exitCode = 1;
+  const { PostgresClient } = await import("../../src/features/admin/infrastructure/persistence/postgres");
+  await PostgresClient.getInstance().closePools();
 });

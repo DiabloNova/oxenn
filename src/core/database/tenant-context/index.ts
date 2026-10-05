@@ -122,30 +122,32 @@ export class TenantContextManager {
 
     const parentCtx = this.getContext();
 
-    const doAuditLog = (client: any, status: "success" | "error", nestedPurpose: PrivilegedPurposeTag, details?: string) => {
-      // Fire and forget autocommit insert. Must run outside the main transaction (or post commit/rollback)
+    const doAuditLog = async (client: any, status: "success" | "error", nestedPurpose: PrivilegedPurposeTag, details?: string) => {
+      // Autocommit insert. Must run outside the main transaction (or post commit/rollback)
       const pInfo = PRIVILEGED_PATHS_REGISTRY[nestedPurpose];
-      client.query(
-        `INSERT INTO audit_records (
-          id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
-        ) VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-        )`,
-        [
-          userId || "system", // actor_id
-          "system@oxenn.local", // actor_email
-          "system", // actor_role
-          nestedPurpose, // action
-          "privileged_db_access", // resource_type
-          pInfo.allowedTables.join(","), // resource_id
-          status, // status
-          details || null, // error_details
-          "0.0.0.0", // ip_address
-          "system-context" // user_agent
-        ]
-      ).catch((err: any) => {
+      try {
+        await client.query(
+          `INSERT INTO audit_records (
+            id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
+          ) VALUES (
+            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+          )`,
+          [
+            userId || "system", // actor_id
+            "system@oxenn.local", // actor_email
+            "system", // actor_role
+            nestedPurpose, // action
+            "privileged_db_access", // resource_type
+            pInfo.allowedTables.join(","), // resource_id
+            status, // status
+            details || null, // error_details
+            "0.0.0.0", // ip_address
+            "system-context" // user_agent
+          ]
+        );
+      } catch (err: any) {
         console.error(`[TenantContextManager] Failed to emit ${status} audit log for ${nestedPurpose}:`, err);
-      });
+      }
     };
 
     // Check if there is already an active transaction in the current async scope for system mode
@@ -199,13 +201,17 @@ export class TenantContextManager {
       const result = await this.storage.run(transactedCtx, work);
 
       await leasedClient.query("COMMIT");
-      doAuditLog(leasedClient, "success", purpose);
+
+      const flushPromises = [];
+      flushPromises.push(doAuditLog(leasedClient, "success", purpose));
 
       if (transactedCtx.pendingAudits) {
          for (const audit of transactedCtx.pendingAudits) {
-             doAuditLog(leasedClient, audit.status, audit.nestedPurpose, audit.details);
+             flushPromises.push(doAuditLog(leasedClient, audit.status, audit.nestedPurpose, audit.details));
          }
       }
+      await Promise.all(flushPromises);
+
       return result;
     } catch (err) {
       if (leasedClient) {
@@ -215,7 +221,9 @@ export class TenantContextManager {
           console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);
         }
         const outerMsg = err instanceof Error ? err.message : String(err);
-        doAuditLog(leasedClient, "error", purpose, outerMsg);
+
+        const flushPromises = [];
+        flushPromises.push(doAuditLog(leasedClient, "error", purpose, outerMsg));
 
         if (transactedCtx && transactedCtx.pendingAudits) {
            for (const audit of transactedCtx.pendingAudits) {
@@ -223,9 +231,10 @@ export class TenantContextManager {
                const resolvedDetails = audit.status === "success"
                  ? `rolled back with outer lease (${purpose}): ${outerMsg}`
                  : audit.details;
-               doAuditLog(leasedClient, resolvedStatus, audit.nestedPurpose, resolvedDetails);
+               flushPromises.push(doAuditLog(leasedClient, resolvedStatus, audit.nestedPurpose, resolvedDetails));
            }
         }
+        await Promise.all(flushPromises);
       }
       throw err;
     } finally {

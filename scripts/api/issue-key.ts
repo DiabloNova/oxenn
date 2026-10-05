@@ -44,13 +44,16 @@ async function main() {
   console.log(`Secret: ${secret}`);
   console.log(`\nIMPORTANT: The secret is shown only once and is not persisted. Save it now.`);
 
-  // Delay exit slightly to ensure audit queries from runWithSystemContext finish
-  setTimeout(() => {
-    process.exit(0);
-  }, 500);
+  // Close database pools so process can cleanly exit now that audit writes are awaited
+  const { PostgresClient } = await import("../../src/features/admin/infrastructure/persistence/postgres");
+  await PostgresClient.getInstance().closePools();
+
+  process.exitCode = 0;
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error("Error issuing API key:", err);
-  process.exit(1);
+  process.exitCode = 1;
+  const { PostgresClient } = await import("../../src/features/admin/infrastructure/persistence/postgres");
+  await PostgresClient.getInstance().closePools();
 });
