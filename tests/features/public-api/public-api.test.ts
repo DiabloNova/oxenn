@@ -17,6 +17,17 @@ describe("Public API & Integration", async () => {
   let rawSecret: string;
 
   before(async () => {
+    // Ensure test environment connects properly and throws if improperly configured
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is not set.");
+    }
+    if (!process.env.MIGRATION_DATABASE_URL) {
+      throw new Error("MIGRATION_DATABASE_URL is not set.");
+    }
+    if (process.env.MIGRATION_DATABASE_URL !== process.env.DATABASE_URL) {
+      throw new Error("Test environment requires MIGRATION_DATABASE_URL and DATABASE_URL to point to the same test database.");
+    }
+
     // Setup test DB pools
     migrationPool = new Pool({ connectionString: process.env.MIGRATION_DATABASE_URL });
 
@@ -187,14 +198,19 @@ describe("Public API & Integration", async () => {
     let exhausted = false;
     let rateLimitHeadersFound = false;
 
-    for (let i = 0; i < 105; i++) {
+    // Concurrently trigger requests to trip the rate limit immediately, bypassing latency limits
+    const requests = Array.from({ length: 105 }).map(async () => {
       const req = new NextRequest("http://localhost/api/v1/public/test", {
         headers: { "Authorization": `Bearer ${localSecret}` }
       });
-      const res = await withPublicApi(req, async () => {
+      return await withPublicApi(req, async () => {
         return NextResponse.json({ success: true }, { status: 200 });
       });
+    });
 
+    const responses = await Promise.all(requests);
+
+    for (const res of responses) {
       if (res.status === 429) {
         exhausted = true;
         rateLimitHeadersFound = res.headers.has("Retry-After") && res.headers.has("X-RateLimit-Remaining");
@@ -202,7 +218,7 @@ describe("Public API & Integration", async () => {
       }
     }
 
-    assert.ok(exhausted, "Rate limit should eventually be exhausted");
+    assert.ok(exhausted, "Rate limit should be exhausted");
     assert.ok(rateLimitHeadersFound, "Rate limit headers should be present on 429");
   });
 

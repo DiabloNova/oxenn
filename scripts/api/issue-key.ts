@@ -43,6 +43,11 @@ async function main() {
   console.log(`ID: ${apiKeyId}`);
   console.log(`Secret: ${secret}`);
   console.log(`\nIMPORTANT: The secret is shown only once and is not persisted. Save it now.`);
+
+  // Delay exit slightly to ensure audit queries from runWithSystemContext finish
+  setTimeout(() => {
+    process.exit(0);
+  }, 500);
 }
 
 main().catch((err) => {

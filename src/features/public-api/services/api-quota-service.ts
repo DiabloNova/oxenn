@@ -71,7 +71,7 @@ export class ApiQuotaService {
    * Throws if quota is exceeded.
    */
   public async enforceAndConsumeQuota(tenantId: string, tokensToConsume: number = 1): Promise<void> {
-    if (tokensToConsume <= 0) {
+    if (!Number.isInteger(tokensToConsume) || tokensToConsume <= 0) {
       throw new Error("Tokens to consume must be a positive integer.");
     }
 

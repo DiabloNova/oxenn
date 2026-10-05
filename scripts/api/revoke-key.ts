@@ -11,7 +11,8 @@ async function main() {
 
   if (!values["key-id"]) {
     console.error("Usage: tsx scripts/api/revoke-key.ts --key-id <key-id>");
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   const revoked = await TenantContextManager.runWithSystemContext(
@@ -36,11 +37,18 @@ async function main() {
     console.log(`API Key ${values["key-id"]} revoked successfully.`);
   } else {
     console.error(`API Key ${values["key-id"]} not found or already revoked.`);
-    process.exit(1);
+    process.exitCode = 1;
   }
+
+  // Return gracefully to let audit queries finish.
+  // Note: we're using setTimeout to allow the process to drain the event loop
+  // naturally so the async audit queries can flush to DB before shutdown.
+  setTimeout(() => {
+    process.exit(process.exitCode || 0);
+  }, 500);
 }
 
 main().catch((err) => {
   console.error("Error revoking API key:", err);
-  process.exit(1);
+  process.exitCode = 1;
 });
