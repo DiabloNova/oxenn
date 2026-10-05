@@ -82,8 +82,9 @@ same failures appear whether the choice is a database, a board, a caterer or a m
 3. **Hard limits** (under the budget, an open licence, available within the lead time) are pass
    or fail, not weights.
 4. **Build the comparison table:** options as rows, criteria as columns, each cell with its
-   evidence and source, hard limits marked. Never adjust the weights after scoring until the
-   favourite wins.
+   evidence and source, hard limits marked. Do not change weights within a scored comparison.
+   If priorities genuinely change, start a new recorded comparison with revised criteria, weights
+   and rationale set before fresh scoring; retain the prior comparison and rescore every option.
 
 ## Evidence
 

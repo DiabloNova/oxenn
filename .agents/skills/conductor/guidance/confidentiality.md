@@ -27,7 +27,9 @@ engine who the customer is.
 - **Write the rules in the project's confidentiality record,** with the internet gate
   (§Using the internet without revealing the work). Every later step checks against it.
 - **A confidential release goes only to the people its classes allow,** through channels that keep it
-  there: an internal link, a closed group, signed builds on the owner's own distribution.
+  there by enforced access control for allowed recipients or recipient-only encryption: an
+  authenticated internal link, a restricted group, or encrypted distribution by the owner.
+  Signing provides integrity and authenticity, not secrecy or confidentiality.
 
 ## Every channel that can carry the work out
 
@@ -68,10 +70,12 @@ it follows), or open by the owner's written decision. Walk all of these:
 ## Working offline
 
 - **Offline is proved by unplugging.** Block all outbound traffic at the firewall, or disconnect;
-  then, from a clean checkout, run every procedure in the operating model: build, test, the agent's
-  work on its local model, packaging, backup and restore. Anything that reaches for the network fails
-  loudly and is fixed: vendor it, mirror it, or cache it with its hash. A project said to run offline
-  that has not been run offline is not verified.
+  then, from a clean checkout, run every procedure claimed to work offline: build, test, the agent's
+  work on its local model, packaging, backup and restore. Record hosted-only limitations as such.
+  Anything claimed offline that reaches for the network fails loudly: vendor, mirror or cache it
+  with its hash where feasible, otherwise record the blocker. A project said to run offline that
+  has not been run offline is not verified; do not claim the whole project offline with essential
+  hosted-only steps.
 - **Version control** on the owner's own hardware or local network, or an encrypted remote where the
   host holds only ciphertext (client-side encryption for remotes and backups alike).
 - **Dependencies:** a lockfile with hashes, a local mirror or vendored copy of every package, and
@@ -81,16 +85,21 @@ it follows), or open by the owner's written decision. Walk all of these:
 - **Work records, CI and documentation locally:** the project's work records in a tool that runs
   offline (plain files in the repository if nothing else), checks run by a local runner, and
   documentation sets downloaded whole and read locally.
-- **A step that names a hosted service is done with the local equivalent, never skipped.**
+- **Use a local equivalent for a hosted step only when one genuinely exists.** Never invent a
+  replacement or silently skip the step. A strict offline requirement remains blocked when an
+  essential step cannot run offline.
 - **Services that need the internet by nature** (a vulnerability database, a store submission, a
   certification body): mirror what can be mirrored, and give each remaining use its own row in the
-  channel map.
+  channel map as an authorised channel, exercised only in an allowed connected or mixed mode.
+  Steps without a local equivalent are explicitly NOT VERIFIED OFFLINE.
 
 ## Using the internet without revealing the work
 
 - **One purpose, one sitting, one gate.** Decide before connecting what the session is for. Use a
-  machine, profile or container kept for this alone, with no sign-in, no sync and no extensions,
-  cleared at the end.
+  machine, profile or container kept isolated for this alone, with no personal sign-in, no sync
+  and no extensions, cleared at the end. Anonymous access is preferred where possible.
+  Authentication is allowed only with a dedicated authorised project account or token for a
+  named permitted service or model; record its identity and scope in the channel map, not raw secrets.
 - **Fetch broadly, then search locally.** Download a whole documentation set, a vendor's whole
   datasheet library, a full package mirror or a complete collection of papers on a topic, rather than
   the one page the work needs. A broad fetch shows a general interest; a run of narrow ones traces the

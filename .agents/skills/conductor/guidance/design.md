@@ -87,12 +87,13 @@ For each action the product offers:
   one place both paths pass through** (a limit checked only in the page's script is bypassed by
   every other caller);
 - **the level of automation as a setting,** per action: done by a person; suggested for a person
-  to confirm; done automatically with an undo and a record; or fully automatic. The product moves
-  between these without a redesign;
-- **a person can always see what an agent or automation did,** why, and undo or override it; an
-  agent can always read what a person did;
-- **what cannot be undone keeps the confirmation or standing limit the owner set,** whoever
-  operates it (`physical.md §Safety states and irreversible actions`).
+  to confirm; done automatically with undo only for reversible actions; or fully automatic, with
+  records at every level. The product moves between these without a redesign;
+- **a person can always see what an agent or automation did,** why, and undo or override reversible
+  actions; irreversible effects are not represented as undoable. An agent can always read what a
+  person did;
+- **what cannot be undone keeps exact confirmation or explicit scoped standing authority from
+  the owner,** whoever operates it (`physical.md §Safety states and irreversible actions`).
 
 A product only a person can use cannot be automated; one only an agent can use cannot be
 trusted. Designed together from the start, both cost little more than one.
@@ -125,8 +126,8 @@ trusted. Designed together from the start, both cost little more than one.
 ## Taste and evidence
 
 - **Taste is the owner's.** The look and the voice are partly taste: show two or three directions
-  rendered on a real screen of the product (not a mood board), each with its reason, and record the
-  owner's choice as a decision.
+  demonstrated in the actual product medium (a screen, audio or a working interface, not a mood
+  board), each with its reason, and record the owner's choice as a decision.
 - **Everything that can be measured is measured, never argued:** task success, time to complete,
   errors, contrast, size, speed. "Modern", "clean" and "users prefer" are not evidence; a
   measurement from people doing the task is.
@@ -149,10 +150,13 @@ trusted. Designed together from the start, both cost little more than one.
 
 ## Seeing the design
 
-- **Render every surface at the smallest, a middle and the largest supported size, in each theme,
-  and look at the images,** or have a model that can see look at them.
-- **Measure what can be measured from the running product:** contrast from the computed colours,
-  sideways overflow at the smallest width, target sizes from the layout, the accessibility tree,
-  the time from an action to its first visible response (acknowledge within 100 ms).
-- **A model that cannot see relies on those measurements and on people,** and says which surfaces
-  nobody has looked at.
+- **Inspect every surface in its actual medium.** For visual surfaces, render and inspect images
+  at the smallest, a middle and the largest supported size, and in supported themes where relevant.
+  Voice or audio requires listening to running or recorded output; an API or command line requires
+  inspecting real requests and responses or outputs; a device requires operating and observing its
+  controls. Do not invent visual evidence for a non-visual deliverable.
+- **Measure what applies to the medium from the running product:** visual contrast, layout,
+  target sizes and accessibility where applicable; the time from an action to its first visible,
+  audible or machine acknowledgement as relevant (acknowledge within 100 ms).
+- **The verifier must be competent in the medium,** using suitable observation capabilities or
+  people. Unavailable observation is marked not verified, naming the surfaces and the reason.

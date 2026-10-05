@@ -110,9 +110,11 @@ rollback unused, is the failure this prevents.
    journeys are back by walking them, not by the graph alone. If no restoring action exists, record
    that one is missing.
 4. **Tell the people affected, early and in their words:** what is affected, what to do meanwhile, and
-   when the next update will come, where they look (the status page, the product, their channel).
-   Update when promised; say when it is over and what happened. Sending to people is within the
-   standing limits for publishing.
+   when the next update will come, only within the project's written publishing authority and its
+   permitted destinations, audiences and limits; an incident is not authorisation. If authority
+   is missing, draft updates and obtain approval through a permitted route before sending.
+   Communicate promptly within those limits, update when promised, and say when it is over and
+   what happened.
 5. **Keep the evidence before it disappears:** copy the logs, traces, data state and configuration
    from the window of the incident before rotation or a restore overwrites them; record which change
    was live.
@@ -132,9 +134,12 @@ rollback unused, is the failure this prevents.
 2. **Fix through the normal gates:** a test seen to fail without the fix, the gates run, a review by
    someone other than the author. Only the restoring action itself may skip the gates, and it must be
    one that was already tried. A hot fix with the checks skipped is the next incident.
-3. **Put right what the incident did to people:** count every person, record and device affected,
-   from the data, not the error graph; refund, restore, resend or recover each one, and check each
-   was put right. It is not over while anyone is still harmed.
+3. **Put right what the incident did to people:** inventory each person, record, device and action
+   affected, from the data, not the error graph. Reconcile each actual outcome against the log and
+   observed state before selecting an authorised refund, restore, resend or recovery. Retry the
+   original action only when evidence proves it had no effect or it is safely idempotent; an
+   uncertain non-idempotent outcome is blocked and escalated, not blindly replayed. Verify the
+   actual corrective effect, not an acknowledgement. It is not over while anyone is still harmed.
 4. **Close the class, in the system:** for the cause and for each thing that made the incident longer
    (slow detection, a missing rollback, lost evidence, nobody told), add a test, an alert that fires
    before a person reports it, a limit, an idempotency key, or a tried procedure; record each against
@@ -147,7 +152,8 @@ rollback unused, is the failure this prevents.
 ## Backups and restore
 
 - **A backup nobody has restored is not yet a backup.** Restore on a schedule, into a scratch copy,
-  and check the restored data is usable (the application starts on it, the counts match).
+  and verify named critical journeys, integrity constraints and required records on the restored
+  data. Record the evidence and any gaps. Starting and matching counts alone do not prove usability.
 - **Backups are verified by their effect:** size, count and a restore, not the job's exit code
   (`software.md §Automations that report their own failure`).
 - **When fixing or writing a backup job, compare it with the runbook step by step** and list, in the

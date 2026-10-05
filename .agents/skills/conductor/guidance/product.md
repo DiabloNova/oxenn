@@ -86,13 +86,19 @@ batch of actions stood in for a vision.
 - **The journeys that must never fail** (§Journeys and threads).
 - **Acceptance criteria** for each deliverable: concrete, checkable, and agreed with the
   acceptor.
-- **Milestones** that each leave something a person can use and name the measures they move
+- **Milestones** that each leave something a person can use and name the objective or measure,
+  requirement, acceptance criterion or accepted decision they serve
   (`planning.md §Milestones as usable slices`).
-- **Every measure is served by something, and everything serves a measure.** A milestone that
-  moves no measure, or a measure nothing moves, is a finding.
+- **Every measure is served by something, and work and milestones have a valid trace target:**
+  an objective or measure, requirement, acceptance criterion or accepted decision, including
+  legal, security and certification work. Work with no valid trace target, or a measure nothing
+  serves, is a finding.
 - **Switch conditions** for the routes (§Alternative routes).
-- With no records yet, write the smallest set this work needs: the objective, and the measure
-  the current work moves.
+- With no records yet, for bounded work only, write the smallest set it needs: the objective,
+  the relevant measure, requirement, acceptance criterion or accepted decision, and readiness.
+  A whole-project request requires written VISION, PLAN and minima for every applicable aspect
+  before any action batch (`../SKILL.md §2`). Bounded work must not contradict the vision, drop
+  the floor or rename a weaker result as success.
 
 ## The vision, the plan and the business
 
@@ -113,8 +119,9 @@ changes.
   exchange.** Record each of these with its source:
   - the offer: what is exchanged, with whom, and why they choose it;
   - the price, the full cost to deliver one, and what remains;
-  - how money is collected and reconciled, and one completed exchange observed (a settled
-    invoice, a paid order, a wage received);
+  - how money is collected and reconciled, and one completed exchange observed: a settled customer
+    invoice or paid buyer order tied to the project's recorded offer and delivered promised product
+    or service. Unrelated employment income is never evidence of that exchange;
   - how a buyer hears of it, starts, pays and comes back;
   - the runway, and the latest date for the next money decision.
   Checkout, pricing copy, outreach or a payment integration while the offer is unset stays an
@@ -216,8 +223,8 @@ when it applies, with its minimum. Not applicable is a written reason (§Areas a
 ## Areas and owners
 
 For every area the product needs, record an owner (the owner, a person, an agent or a
-service), the first deliverable and the measure it serves, or one line on why it does not
-apply:
+service), the first deliverable and the objective or measure, requirement, acceptance criterion
+or accepted decision it serves, or one line on why it does not apply:
 
 - **Product:** the vision, the objective, the measures, the scope.
 - **Research:** evidence of need, and how feedback keeps arriving.
@@ -261,7 +268,8 @@ founded at the start.
 - **Thread each one through every area:** one table per journey, one row per step, recording
   what the person does, what they see or hear, the component or procedure that handles it, the
   data or record written, the evidence that proves it (a test, an inspection, a rehearsal), and
-  the measure it moves. An empty cell is a gap in the design. For a service or physical
+  the objective or measure, requirement, acceptance criterion or accepted decision it serves.
+  An empty cell is a gap in the design. For a service or physical
   delivery the "component" is the procedure, person or equipment that handles the step.
 - The threads keep the flow, the architecture and the data one design rather than three
   (`design.md §Threads to the architecture`).
@@ -330,7 +338,11 @@ client or audience: `service.md`.)
    have someone new do it with no help, and watch.
 3. **Make everything that is not the product true, before release day:**
    - listings, descriptions and pictures show what it does now, in its people's words;
-   - prices, payment and refunds work end to end, tested with a real small payment;
+   - only for products that take money, prices, payment and refunds work end to end, tested with
+     a real authorised small payment. Projects that take no money, including free open-source and
+     non-transactional projects, record this gate as not applicable with a reason, not as a pass.
+     Paid open-source products still run it. A must-earn project's business exchange requirement
+     remains separate; a free launch does not remove its commercial vision;
    - terms and the privacy notice say what the product actually does with data, checked against
      the code and a network log, not against intentions;
    - licences and certifications are in hand before it ships;

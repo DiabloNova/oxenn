@@ -71,25 +71,30 @@ not an installation; passing software tests is not system acceptance.
 2. **Install by the written procedure,** recording what was installed where, with serial numbers
    and versions (the as-built record).
 3. **Commission on site against a checklist written before the visit:** one row per function in
-   the acceptance criteria (each sensor, each alert, each failure path, the safe state), each run
-   on the installed configuration under the real conditions, with the result recorded. List
-   anything outstanding (a punch list) with owners. Write the as-built record and the handover the
-   same day, marking pending whatever a blocker still holds.
+   the acceptance criteria (each sensor, each alert, each failure path, the safe state), for the
+   installed configuration and conditions. Test live only safe authorised cases; otherwise use
+   controlled simulation or safe fault injection. Record each result, method, representativeness
+   and limits; explicitly label simulation, not as real installation or safety proof
+   (§Simulation and what it can establish). List anything outstanding (a punch list) with owners.
+   Write the as-built record and handover the same day, marking pending whatever a blocker holds.
 4. **Inspections the law requires** (electrical, gas, structural, radio, medical, food and the like)
    are done by a competent, qualified person and recorded; an agent's review never substitutes for
    them.
 5. **Acceptance** is the acceptor checking the installed result against the acceptance criteria and
    signing it off, with the punch list closed or agreed.
-6. **Act for real once, observed,** with confirmation where it is required, then record the verdict.
+6. **Act for real once, observed, only for safe authorised acceptance cases,** with confirmation
+   where required, then record the verdict. Unsafe required live acceptance stays pending for a
+   safe authorised route; simulation does not invent acceptance.
 7. **Handover:** `../templates/handover.md` (operator, manuals, spares, service schedule, warranty).
 
 ## Commands and observed outcomes
 
-**Reading is not commanding.** Reading a sensor, a status, a meter or a log changes nothing in
-the world, so it needs no action contract and no approval beyond access to the device.
-Commissioning, diagnosis and resumption start by reading the installed device. Only an action
-that changes the world (a relay, a valve, a motor, a payment, a message) needs the contract below
-and its authority.
+**Reading is not commanding only for verified read-only operations:** no writes, resets, sends,
+moves or other side effects. These need no action contract, but every read retains purpose and
+data authorisation and confidentiality checks; device access is not blanket permission to read
+its data. Commissioning, diagnosis and resumption start with authorised read-only observations.
+A side-effectful or unknown diagnostic or read endpoint is an action requiring the contract
+below and its authority before use, not an exemption.
 
 Before any command reaches the physical world, write its contract:
 
@@ -136,18 +141,20 @@ An action whose contract you cannot fill in is not ready to run. Then:
 
 ## Safety states and irreversible actions
 
-- **Decide the safe state for each actuator, and make every failure path go there:** unreadable
-  sensor, lost connection, unparseable reply, exception, timeout. A sensor that cannot be read must
-  never become a default value that keeps the heater on. Where "safe" depends on context (a door
-  that must stay unlocked for a fire exit, a heater protecting against frost), write that down and
-  escalate to a person instead of guessing. Fail toward stopped: when in doubt, do less.
+- **Decide the context-specific safe state for every actuator before operation, and make every
+  failure path go there:** unreadable sensor, lost connection, unparseable reply, exception,
+  timeout. A sensor that cannot be read must never become an invented default value that keeps
+  the heater on. Record the required state, including a door remaining unlocked for a fire exit
+  and a heater protecting against frost. If a safe state is unknown or missing, block commissioning
+  and operation and escalate to a competent authorised person. Never use a universal stopped fallback.
 - **Enforce limits below the agent:** clamp or refuse any setpoint outside the safe physical range
   in code, and confirm the device or hardware enforces its own limits independently. The agent must
   never be the only thing between a typo and full power.
 - **A watchdog on anything that runs until told to stop:** the device returns to its safe state if
   the controller does not refresh it within a bounded interval, or the command carries its own
-  duration. Prove it by killing the controlling process mid-run and observing the device stop.
-  Assume the agent will vanish mid-action.
+  duration. Demonstrate it by losing the controlling process and observing the decided safe state in a
+  safe authorised controlled test or simulation; label simulation and its limits
+  (§Simulation and what it can establish). Assume the agent will vanish mid-action.
 - **A person's yes for anything that cannot be undone:** spending money, sending something to a
   person, cutting, drilling, dispensing, deleting physical records, moving near people. Show the
   exact action and its parameters and wait for the yes; a standing authorisation is explicit,

@@ -17,12 +17,13 @@ and does not invent what it cannot see.
   offline project whose local model no available harness supports), and then prove it against the
   requirements; jules-prompts' `harness/conformance.py` is one such test.
 - **Make the way of working a setting, not a design.** The model endpoint, the package source and
-  every outside service have a local and a remote form, chosen by configuration, so the same project
-  runs fully offline, fully online or mixed without code changes; prove each mode the
-  confidentiality rules allow (`confidentiality.md §Working offline`). The same loop runs unattended,
+  outside services use available local or remote sources chosen by configuration. Record hosted-only
+  dependencies and offline limits; do not invent a local implementation. Prove only allowed,
+  supported modes (`confidentiality.md §Working offline`). The same loop runs unattended,
   supervised (each action shown for a yes) or by hand (a person following the state note), and any
   procedure can move between a model and a person, because every procedure and every decision is in
-  the records. A change of circumstance changes a setting, not the build.
+  the records. A change of circumstance changes a setting where that mode is supported, not a
+  claim that an unavailable mode exists.
 
 ## What a harness must do
 
@@ -36,8 +37,11 @@ built, meets each one with its own capabilities, and record how.
   conversation. What the next step needs (the task, the rules, the current records and state note,
   recent actions and results) can be rebuilt from files after a restart or a context reset,
   including on a small context window.
-- **Unreadable output is handled, not fatal:** a malformed action or reply is answered and
-  retried, not a crash.
+- **Unreadable output is handled, not fatal:** handle a malformed action or reply gracefully,
+  not by crashing. Before retrying, reconcile the action log and actual target state for every
+  action that could already have run in that reply. Retry only actions confirmed to have had no
+  effect or safely idempotent actions, within authority and safety limits; an uncertain
+  non-idempotent outcome is blocked and escalated, not replayed.
 - **Its boundaries do not depend on the model behaving:** where it may read and write, which
   commands and hosts it may reach, and the records only the person or the harness may write (the
   person's overrides, the harness's own log) are enforced by the harness or its environment.
@@ -222,8 +226,11 @@ they do not apply, not because the subject has not been examined.
 - Nothing is done until its gates pass, checked after the last change, and reviewed by someone
   other than its author.
 - Acting on the world: an acknowledgement is not an outcome; the default target is the simulator;
-  every failure goes to a decided safe state; never retry what may already have happened; nothing
-  irreversible without a person's yes to the exact action or explicit scoped standing authority.
+  every failure goes to a decided safe state. Reconcile the log and independently observed state
+  first; retry only what is confirmed not to have happened or safely idempotent, within its
+  contract and authority. A non-idempotent action that may already have happened must not be
+  retried; block and escalate uncertainty. Nothing irreversible without a person's yes to the
+  exact action or explicit scoped standing authority.
 - Confidential work: send nothing beyond <the confidentiality record>; remote models get only the
   released classes and the smallest excerpt; offline is proved by running offline.
 - Commands: install `<command>`, test `<command>`, required environment `<variables>`.

@@ -57,7 +57,8 @@ Each work package records, in the project's tool (§Work records in the project'
 
 - **Vertical slices, not layers.** "1: backend. 2: frontend. 3: hardware. 4: integration."
   leaves nothing anyone can use until the last layer, so the first setback leaves nothing. Each
-  milestone leaves something a person can use, and names the measures it moves.
+  milestone leaves something a person can use, and names the objective or measure, requirement,
+  acceptance criterion or accepted decision it serves.
 - **A walking skeleton before any breadth:** the thinnest version of the first journey, end to
   end through every stage (built from clean, a test seen to fail, released or deployed or
   installed, observed in use, and rolled back once). For a physical product, one real reading or
@@ -75,8 +76,10 @@ Across projects, link only real prerequisites and shared-resource constraints in
 records. Each project retains its own objective, authority and acceptance; being in one workspace
 does not make all adjacent or parked work commissioned (`../SKILL.md §1. Classify the project`).
 
-1. **Record each real prerequisite as a link** between work packages ("B cannot start until A is
-   done"; occasionally "cannot finish until", or a lag such as "concrete cures for 7 days").
+1. **Record each real prerequisite as a link** between work packages: its FS/SS/FF/SF relationship
+   (finish-to-start, start-to-start, finish-to-finish, start-to-finish), lag and lag calendar.
+   "Cannot finish until" must identify both start or finish endpoints, not imply finish-to-start.
+   Record waits such as "concrete cures for 7 days" as a lag on its stated calendar.
    Record outside handoffs (a supplier delivery, an approval, a client's content) as work
    packages or milestones owned by that party, with the date they committed to.
 2. **Estimate each duration** in working time, and note the calendar it runs on (a person's
@@ -90,10 +93,22 @@ does not make all adjacent or parked work commissioned (`../SKILL.md §1. Classi
 
 For a connected schedule, work out which delays move the finish:
 
-1. **Forward pass:** each package's earliest start is the latest earliest-finish of its
-   prerequisites; earliest finish = earliest start + duration.
-2. **Backward pass:** from the finish date, each package's latest finish is the earliest
-   latest-start of the work that depends on it; latest start = latest finish − duration.
+ES/EF are earliest start/finish; LS/LF are latest start/finish. For predecessor A, successor B
+and lag L, the constraints on a common time axis are:
+
+| Link | Forward bound | Backward bound |
+|---|---|---|
+| FS | `ES(B) >= EF(A) + L` | `LF(A) <= LS(B) - L` |
+| SS | `ES(B) >= ES(A) + L` | `LS(A) <= LS(B) - L` |
+| FF | `EF(B) >= EF(A) + L` | `LF(A) <= LF(B) - L` |
+| SF | `EF(B) >= ES(A) + L` | `LS(A) <= LF(B) - L` |
+
+1. **Forward pass:** apply all link bounds; convert a finish bound to a start bound by subtracting
+   the successor's duration. Take the maximum of these bounds, project start and release constraints;
+   earliest finish = earliest start + duration.
+2. **Backward pass:** anchor at the project finish, which no package may finish after. Convert
+   finish bounds to predecessor start bounds by subtracting its duration. Take the minimum of all
+   successor bounds and the project finish constraint; latest finish = latest start + duration.
 3. **Float** = latest start − earliest start. Packages with zero float form the critical path:
    any delay to them delays the finish. Near-zero float is nearly critical.
 4. **Check resources, not just arrows.** For each person, machine, room or budget, add up the
@@ -104,6 +119,11 @@ For a connected schedule, work out which delays move the finish:
    recompute, update the forecast, and tell the owner which milestones and acceptances move.
    Pick the next ready work from what the new schedule allows; do not mark delayed work done or
    rebuild unrelated work to look busy.
+
+Apply recorded working-time and calendar-time durations and lags through the native scheduling
+tool and its calendars; the arithmetic above illustrates a common time axis. For example, with
+A starting at day 0 for 2 days, a seven-day FS cure puts a 3-day B at ES 9, EF 12, not ES 2.
+An FF link with zero lag from a 10-day A to a 3-day B allows overlap: B has ES 7, EF 10.
 
 A timeline view in a tool is not a computed critical path or a resource-feasible schedule. If the
 project needs these and its tool cannot provide them, choose an existing scheduling tool on that
@@ -278,8 +298,9 @@ estimator. They are not a law for every trade. Say whose practice a threshold is
 
 **How a limit is written, so a check can see it**
 
-In the schedule record, under a heading `## Schedule`, each item uses one of these markers.
-The text after the colon is not empty.
+Use the native schedule, estimate and date fields with source fields in the project's tracker or
+spreadsheet. An optional Markdown fallback under `## Schedule` uses the equivalent markers below;
+there is no required migration. Each source field or marker carries non-empty evidence.
 
 - `measured:` the doer's own completed tasks, which velocities were kept, and the distribution
   that followed. For software, name Evidence-Based Scheduling when that is the method used.
@@ -289,11 +310,12 @@ The text after the colon is not empty.
 - `unscheduled:` why there is no history and no opened class. No date, quarter or duration on
   that item.
 
-`scripts/check_time_limits.py` reads that section. A date, a quarter or a duration with none of
-the first three markers fails, and the message names the claim. A marker with nothing after the
-colon fails. An unscheduled item that still states a date, a quarter or a duration fails. A
-file with no `## Schedule` section passes, because it claimed no schedule. The check has to be
-run. A rule that is not run does not block the work.
+The responsible verifier reviews every authoritative scheduled item, including dates, quarters
+and durations outside Markdown headings. Each must name one of the first three allowed sources
+with non-empty evidence; an empty field or marker fails. An unscheduled item with any date,
+quarter or duration fails. Record each finding and stop until corrected. Absence of a `## Schedule`
+heading is not a pass. Use native validation where available or an independent recorded review;
+no custom checker is required, and these instructions do not claim automated enforcement.
 
 **When the date slips**
 
