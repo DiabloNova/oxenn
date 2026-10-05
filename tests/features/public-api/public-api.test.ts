@@ -5,31 +5,26 @@ import { ApiService, ApiQuotaService, withPublicApi, AuthenticatedApiRequest } f
 import { createHash } from "crypto";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 describe("Public API & Integration", async () => {
   let apiService: ApiService;
   let apiQuotaService: ApiQuotaService;
 
-  let pgPool: Pool;
+  let migrationPool: Pool;
   let tenantId: string;
   let apiKeyId: string;
   let rawSecret: string;
 
   before(async () => {
-    // Setup test DB
-    pgPool = new Pool({ connectionString: process.env.MIGRATION_DATABASE_URL });
-
-    // We already migrated the database via the pre-script
-    // No need to run migrate(db) again since drizzle-kit generates the migrations.
+    // Setup test DB pools
+    migrationPool = new Pool({ connectionString: process.env.MIGRATION_DATABASE_URL });
 
     apiService = new ApiService();
     apiQuotaService = new ApiQuotaService();
 
-    // Create a tenant for testing
-    const client = await pgPool.connect();
+    // Create a tenant for testing bypassing RLS
+    const client = await migrationPool.connect();
     try {
       const randSlug = `test-org-${Math.random().toString(36).substring(7)}`;
       const tenantRes = await client.query(`
@@ -54,7 +49,16 @@ describe("Public API & Integration", async () => {
   });
 
   after(async () => {
-    await pgPool.end();
+    // Clean up created tenant and related objects
+    if (tenantId) {
+      const client = await migrationPool.connect();
+      try {
+        await client.query(`DELETE FROM organizations WHERE id = $1`, [tenantId]);
+      } finally {
+        client.release();
+      }
+    }
+    await migrationPool.end();
   });
 
   it("Issue API key securely", async () => {
@@ -64,15 +68,13 @@ describe("Public API & Integration", async () => {
     apiKeyId = res.id;
     rawSecret = res.secret;
 
-    const client = await pgPool.connect();
-    try {
+    await TenantContextManager.runWithSystemContext(null, "sys-admin-run", async () => {
+      const client = PostgresClient.getInstance();
       const dbRes = await client.query(`SELECT hash FROM api_keys WHERE id = $1`, [apiKeyId]);
       assert.notEqual(dbRes.rows[0].hash, res.secret);
       const expectedHash = createHash("sha256").update(res.secret).digest("hex");
       assert.equal(dbRes.rows[0].hash, expectedHash);
-    } finally {
-      client.release();
-    }
+    });
   });
 
   it("Middleware: Authentication & successful request (RAG/Ingest proxy)", async () => {
@@ -101,13 +103,11 @@ describe("Public API & Integration", async () => {
 
     assert.equal(res.status, 200);
 
-    const client = await pgPool.connect();
-    try {
+    await TenantContextManager.runWithSystemContext(null, "sys-admin-run", async () => {
+      const client = PostgresClient.getInstance();
       const dbRes = await client.query(`SELECT used_tokens_this_month FROM tenant_quotas WHERE tenant_id = $1`, [tenantId]);
       assert.equal(dbRes.rows[0].used_tokens_this_month, 100);
-    } finally {
-      client.release();
-    }
+    });
   });
 
   it("Concurrency test for atomic quota consumption", async () => {
@@ -146,22 +146,18 @@ describe("Public API & Integration", async () => {
     assert.equal(successCount, 9, "9 requests should succeed");
     assert.equal(limitExceededCount, 2, "2 requests should fail due to quota limit");
 
-    const client = await pgPool.connect();
-    try {
+    await TenantContextManager.runWithSystemContext(null, "sys-admin-run", async () => {
+      const client = PostgresClient.getInstance();
       const dbRes = await client.query(`SELECT used_tokens_this_month FROM tenant_quotas WHERE tenant_id = $1`, [tenantId]);
       assert.equal(dbRes.rows[0].used_tokens_this_month, 1000); // capped at limit
-    } finally {
-      client.release();
-    }
+    });
   });
 
   it("Revoked key -> 401", async () => {
-    const client = await pgPool.connect();
-    try {
+    await TenantContextManager.runWithSystemContext(null, "sys-admin-run", async () => {
+      const client = PostgresClient.getInstance();
       await client.query(`UPDATE api_keys SET revoked_at = NOW() WHERE id = $1`, [apiKeyId]);
-    } finally {
-      client.release();
-    }
+    });
 
     const req = new NextRequest("http://localhost/api/v1/public/test", {
       headers: { "Authorization": `Bearer ${rawSecret}` }

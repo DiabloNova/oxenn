@@ -90,6 +90,10 @@ export class ApiQuotaService {
         const res = await this.pg.query(sql, [tokensToConsume, tenantId]);
 
         if (res.rowCount === 0) {
+          const exists = await this.pg.query(`SELECT 1 FROM tenant_quotas WHERE tenant_id = $1 LIMIT 1;`, [tenantId]);
+          if (!exists.rows || exists.rows.length === 0) {
+            throw new Error("Quota Not Found");
+          }
           throw new Error("Usage Limit Exceeded");
         }
       }
