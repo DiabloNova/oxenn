@@ -6,7 +6,8 @@
   relationship and lag; whole-project startup and applicable commercial gates remain intact.
 - **Implementation:** issues 1–20 applied separately, in order, to the eight guidance files under
   `.agents/skills/conductor/guidance/`; final wording for issues 6 and 20 refined separately after
-  lead review. Only this report is added; no runtime enforcement is claimed.
+  lead review. `SKILL.md §3 Work records` was also updated to keep existing identifier schemes
+  such as J-XXX. This report is added; no runtime enforcement is claimed.
 - **Baseline:** clean detached HEAD `bfd64ee66bef880a80151f4424056258a683cdd9`.
 
 ## Issue completion and adversarial review
@@ -40,8 +41,10 @@ Each row is a semantic review of the revised instructions, not a live-world expe
 
 Temporary standard-library scripts and outputs are retained under `/tmp/opencode/`, not shipped.
 Application lint, type checks, build and tests: NOT RUN (docs-only change; no conductor suite).
-No application/database/networked tests, package installs, external procedures or docs generator
-were run. No credentials were inspected. No commits, pushes or submission actions were taken.
+No application/database/networked tests or external procedures were run. Documentation index
+was regenerated with `mise x node@latest -- npx tsx scripts/generate-docs-data.ts`. Mise installed
+Node, and npx fetched `tsx@4.23.15` because it was not present. No credentials were inspected.
+No push or submission actions were taken.
 
 Commands and observed contract-check summaries:
 
@@ -114,7 +117,7 @@ references and section headings, balanced fences and exact changed-file scope. E
 Local Markdown references/sections introduced or modified: 5 valid
 Introduced or modified headings: 3 unique
 Balanced fences: 9/9 files
-Change scope: exactly 8 guidance Markdown files + task report; no code, lockfile or generated changes
+Change scope: 8 guidance Markdown files + `SKILL.md` + task report + generated `src/lib/docsIndex.ts`; no lockfile changes
 ```
 
 Final Git checks: `git diff --check`,
