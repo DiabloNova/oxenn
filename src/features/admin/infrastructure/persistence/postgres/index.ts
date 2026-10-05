@@ -108,6 +108,17 @@ export class PostgresClient {
   /**
    * Safe connection leasing from Pool
    */
+  public async closePools(): Promise<void> {
+    try {
+      await Promise.all([
+        this.pool.end(),
+        this.authenticatorPool.end()
+      ]);
+    } catch (err) {
+      console.error("[PostgresClient] Error closing database pools", err);
+    }
+  }
+
   public async connectClient(): Promise<PoolClient> {
     let client: PoolClient;
     try {

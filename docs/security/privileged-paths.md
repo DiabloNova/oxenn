@@ -14,5 +14,7 @@ This document outlines all permitted explicit system-context leases (`runWithSys
 | **sys-accept-invitation** | `tenant_invitations`, `tenant_users` | `src/app/actions/workspace.ts` | Resolves a cross-tenant invitation. |
 | **sys-switch-workspace** | `tenant_users`, `roles` | `src/app/actions/workspace.ts` | Fetches user roles for target workspace before leasing. |
 | **sys-api-key-auth** | `api_keys`, `tenants` | `src/features/public-api/services/api-service.ts` | Looks up API key across tenants to establish identity. |
+| **api-key-issue** | `api_keys` | `scripts/api/issue-key.ts` | CLI command to issue a new API key without a specific tenant web session. |
+| **api-key-revoke** | `api_keys` | `scripts/api/revoke-key.ts` | CLI command to look up and revoke an API key globally by key ID. |
 | **sys-admin-run** | `*` | `tests/**` | System administrator/test runner privilege context for executing test suites. |
 | **test-req** | `*` | `verification/**` | System context test tag for verification probe. |
