@@ -9,6 +9,8 @@ export type PrivilegedPurposeTag =
   | "sys-accept-invitation"
   | "sys-switch-workspace"
   | "sys-api-key-auth"
+  | "api-key-issue"
+  | "api-key-revoke"
   | "sys-admin-run"
   | "test-req";
 
@@ -68,6 +70,16 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     allowedTables: ["api_keys", "tenants"],
     callerModule: "src/features/public-api/services/api-service.ts",
     justification: "Looks up API key across tenants to establish identity."
+  },
+  "api-key-issue": {
+    allowedTables: ["api_keys"],
+    callerModule: "scripts/api/issue-key.ts",
+    justification: "CLI command to issue a new API key without a specific tenant web session."
+  },
+  "api-key-revoke": {
+    allowedTables: ["api_keys"],
+    callerModule: "scripts/api/revoke-key.ts",
+    justification: "CLI command to lookup and revoke an API key globally by key ID."
   },
   "sys-admin-run": {
     allowedTables: ["*"],

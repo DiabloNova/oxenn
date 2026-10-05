@@ -1,127 +1,213 @@
-import { describe, it } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest, NextResponse } from "next/server";
-import { ApiService, ApiQuotaService, withPublicApi } from "@/features/public-api/index";
+import { ApiService, ApiQuotaService, withPublicApi, AuthenticatedApiRequest } from "@/features/public-api/index";
 import { createHash } from "crypto";
 import { TenantContextManager } from "@/core/database/tenant-context";
+import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 
 describe("Public API & Integration", async () => {
-  const apiService = new ApiService();
-  const apiQuotaService = new ApiQuotaService();
+  let apiService: ApiService;
+  let apiQuotaService: ApiQuotaService;
 
-  it("0015_api_keys.sql is integrated and no parallel migration system exists", () => {
-      assert.ok(true);
+  let pgPool: Pool;
+  let tenantId: string;
+  let apiKeyId: string;
+  let rawSecret: string;
+
+  before(async () => {
+    // Setup test DB
+    pgPool = new Pool({ connectionString: process.env.MIGRATION_DATABASE_URL });
+
+    // We already migrated the database via the pre-script
+    // No need to run migrate(db) again since drizzle-kit generates the migrations.
+
+    apiService = new ApiService();
+    apiQuotaService = new ApiQuotaService();
+
+    // Create a tenant for testing
+    const client = await pgPool.connect();
+    try {
+      const randSlug = `test-org-${Math.random().toString(36).substring(7)}`;
+      const tenantRes = await client.query(`
+        INSERT INTO organizations (name, slug, created_at, updated_at)
+        VALUES ('test-org', $1, NOW(), NOW()) RETURNING id
+      `, [randSlug]);
+      tenantId = tenantRes.rows[0].id;
+
+      // Ensure quota row exists
+      await client.query(`
+        INSERT INTO tenant_quotas (
+          tenant_id, monthly_token_limit, used_tokens_this_month,
+          max_users, max_brands, max_prompts,
+          max_observations_per_month, max_crawl_jobs_per_day, monthly_cost_limit_usd,
+          created_at, updated_at
+        )
+        VALUES ($1, 1000, 0, 10, 10, 10, 10, 10, 10, NOW(), NOW())
+      `, [tenantId]);
+    } finally {
+      client.release();
+    }
   });
 
-  it("Raw API keys are never persisted or logged", () => {
-      assert.ok(true);
+  after(async () => {
+    await pgPool.end();
   });
 
-  it("withPublicApi derives tenant context exclusively from authenticated server-side API-key", () => {
-      assert.ok(true);
-  });
+  it("Issue API key securely", async () => {
+    const res = await apiService.createApiKey({ organizationId: tenantId, name: "E2E Test Key" });
+    assert.equal(res.organizationId, tenantId);
+    assert.ok(res.secret.startsWith("seo_"));
+    apiKeyId = res.id;
+    rawSecret = res.secret;
 
-  it("should securely hash API key and not store plaintext secret", async () => {
-      let storedHash = "";
-      (apiService as unknown as { repository: { create: (data: unknown) => Promise<unknown> } })["repository"].create = async (data: unknown) => {
-        const payload = data as { hash: string };
-        storedHash = payload.hash;
-        return {
-          ...payload,
-          id: "fake-id",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-      };
-
-      // Mock runWithTenantContext to bypass PG pool requirement
-      TenantContextManager.runWithTenantContext = async (tenantId, userId, reason, work) => {
-        return await work();
-      }
-
-      const res = await apiService.createApiKey({ organizationId: "tenant-1", name: "Test Key" });
+    const client = await pgPool.connect();
+    try {
+      const dbRes = await client.query(`SELECT hash FROM api_keys WHERE id = $1`, [apiKeyId]);
+      assert.notEqual(dbRes.rows[0].hash, res.secret);
       const expectedHash = createHash("sha256").update(res.secret).digest("hex");
-      assert.equal(storedHash, expectedHash);
-      assert.notEqual(storedHash, res.secret);
+      assert.equal(dbRes.rows[0].hash, expectedHash);
+    } finally {
+      client.release();
+    }
   });
 
-  it("should enforce missing API key in middleware", async () => {
-      const req = new NextRequest("http://localhost/api/v1/public/brands");
-      const response = await withPublicApi(req, async () => { throw new Error("Should not reach"); });
-      assert.equal(response.status, 401);
-      const body = await response.json();
-      assert.equal(body.error.code, "UNAUTHORIZED");
+  it("Middleware: Authentication & successful request (RAG/Ingest proxy)", async () => {
+    const req = new NextRequest("http://localhost/api/v1/public/test", {
+      headers: { "Authorization": `Bearer ${rawSecret}` }
+    });
+
+    let resolvedTenantId = null;
+    const res = await withPublicApi(req, async (authReq: AuthenticatedApiRequest) => {
+      resolvedTenantId = authReq.tenantId;
+      return NextResponse.json({ success: true }, { status: 200 });
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(resolvedTenantId, tenantId);
   });
 
-  it("should reject an invalid API key", async () => {
-      const req = new NextRequest("http://localhost/api/v1/public/brands", {
-        headers: { "Authorization": "Bearer seo_invalidkey123" }
+  it("Middleware: Quota enforcement & consumption proxy", async () => {
+    const req = new NextRequest("http://localhost/api/v1/public/test", {
+      headers: { "Authorization": `Bearer ${rawSecret}` }
+    });
+
+    const res = await withPublicApi(req, async () => {
+      return NextResponse.json({ success: true }, { status: 200 });
+    }, { requireQuotaTokens: 100 });
+
+    assert.equal(res.status, 200);
+
+    const client = await pgPool.connect();
+    try {
+      const dbRes = await client.query(`SELECT used_tokens_this_month FROM tenant_quotas WHERE tenant_id = $1`, [tenantId]);
+      assert.equal(dbRes.rows[0].used_tokens_this_month, 100);
+    } finally {
+      client.release();
+    }
+  });
+
+  it("Concurrency test for atomic quota consumption", async () => {
+    // Current limit is 1000, used is 100.
+    // Try to consume 100 tokens 10 times concurrently (should succeed).
+    // Try 11 times concurrently -> 10 succeed, 1 fails with Usage Limit Exceeded.
+
+    const requests = Array.from({ length: 11 }).map(async () => {
+      const req = new NextRequest("http://localhost/api/v1/public/test", {
+        headers: { "Authorization": `Bearer ${rawSecret}` }
       });
-      TenantContextManager.runWithSystemContext = async (userId, reason, work) => await work();
-      (apiService as unknown as { repository: { findByPrefix: (prefix: string) => Promise<unknown> } })["repository"].findByPrefix = async () => null;
+      return await withPublicApi(req, async () => {
+        return NextResponse.json({ success: true }, { status: 200 });
+      }, { requireQuotaTokens: 100 });
+    });
 
-      const response = await withPublicApi(req, async () => { throw new Error("Should not reach"); });
-      assert.equal(response.status, 401);
-      const body = await response.json();
-      assert.equal(body.error.code, "UNAUTHORIZED");
-  });
+    const responses = await Promise.all(requests);
 
-  it("should exhaust rate limit safely", async () => {
-      for (let i = 0; i < 101; i++) {
-        const res = await apiQuotaService.checkRateLimit("tenant-1", 100, 60000);
-        if (i < 100) {
-          assert.ok(res.allowed);
-        } else {
-          assert.equal(res.allowed, false);
-          assert.equal(res.remaining, 0);
+    let successCount = 0;
+    let limitExceededCount = 0;
+
+    for (const r of responses) {
+      if (r.status === 200) {
+        successCount++;
+      } else if (r.status === 403) {
+        const body = await r.json();
+        if (body.error.code === "USAGE_LIMIT_EXCEEDED") {
+          limitExceededCount++;
         }
       }
+    }
+
+    // Limit was 1000. Used was 100. Remaining: 900.
+    // Each request consumes 100. So exactly 9 requests can succeed.
+    // Total success should be 9. Limit Exceeded should be 2.
+    assert.equal(successCount, 9, "9 requests should succeed");
+    assert.equal(limitExceededCount, 2, "2 requests should fail due to quota limit");
+
+    const client = await pgPool.connect();
+    try {
+      const dbRes = await client.query(`SELECT used_tokens_this_month FROM tenant_quotas WHERE tenant_id = $1`, [tenantId]);
+      assert.equal(dbRes.rows[0].used_tokens_this_month, 1000); // capped at limit
+    } finally {
+      client.release();
+    }
   });
 
-  it("should return correct HTTP 429 when rate limit exhausted in middleware", async () => {
-      const req = new NextRequest("http://localhost/api/v1/public/brands", {
-        headers: { "Authorization": "Bearer seo_validkeyhere456" }
+  it("Revoked key -> 401", async () => {
+    const client = await pgPool.connect();
+    try {
+      await client.query(`UPDATE api_keys SET revoked_at = NOW() WHERE id = $1`, [apiKeyId]);
+    } finally {
+      client.release();
+    }
+
+    const req = new NextRequest("http://localhost/api/v1/public/test", {
+      headers: { "Authorization": `Bearer ${rawSecret}` }
+    });
+    const res = await withPublicApi(req, async () => {
+      return NextResponse.json({ success: true }, { status: 200 });
+    });
+
+    assert.equal(res.status, 401);
+  });
+
+  it("Wrong key -> 401", async () => {
+    const req = new NextRequest("http://localhost/api/v1/public/test", {
+      headers: { "Authorization": `Bearer seo_invalidkey123` }
+    });
+    const res = await withPublicApi(req, async () => {
+      return NextResponse.json({ success: true }, { status: 200 });
+    });
+    assert.equal(res.status, 401);
+  });
+
+  it("Rate limit exhaustion -> 429", async () => {
+    // Generate a new key for this test to bypass the revoked status
+    const newKeyRes = await apiService.createApiKey({ organizationId: tenantId, name: "RL Key" });
+    const localSecret = newKeyRes.secret;
+
+    let exhausted = false;
+    let rateLimitHeadersFound = false;
+
+    for (let i = 0; i < 105; i++) {
+      const req = new NextRequest("http://localhost/api/v1/public/test", {
+        headers: { "Authorization": `Bearer ${localSecret}` }
       });
-      // Mock valid API key
-      const expectedHash = createHash("sha256").update("seo_validkeyhere456").digest("hex");
+      const res = await withPublicApi(req, async () => {
+        return NextResponse.json({ success: true }, { status: 200 });
+      });
 
-      TenantContextManager.runWithSystemContext = async (userId, reason, work) => await work();
-      TenantContextManager.runWithTenantContext = async (tenantId, userId, reason, work) => await work();
-
-      (apiService as unknown as { repository: { findByPrefix: (prefix: string) => Promise<unknown>, updateLastUsed: (id: string) => Promise<void> } })["repository"].findByPrefix = async () => {
-         return {
-          id: "key-1", organizationId: "tenant-1", name: "K1", prefix: "validkey", hash: expectedHash,
-          isActive: true, expiresAt: null, lastUsedAt: null, createdAt: new Date(), updatedAt: new Date(),
-          createdBy: "system", revokedAt: null
-        };
-      };
-
-      (apiService as unknown as { repository: { updateLastUsed: (id: string) => Promise<void> } })["repository"].updateLastUsed = async () => {};
-
-      // Replace the initialized service inside middleware to use the mocked repo methods
-      const proxyWithPublicApi = async (reqArg: NextRequest, handler: () => Promise<NextResponse>) => {
-        // mock inside the test the rate limit behavior
-        const authHeader = reqArg.headers.get("authorization");
-        const token = authHeader!.substring(7).trim();
-        const apiKey = await apiService.authenticateKey(token);
-
-        if (!apiKey) {
-          return NextResponse.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
-        }
-
-        const tenantId = apiKey.organizationId;
-        const rateLimit = await apiQuotaService.checkRateLimit(tenantId, 100, 60000);
-        if (!rateLimit.allowed) {
-          return NextResponse.json({ error: { code: "RATE_LIMIT_EXCEEDED" } }, { status: 429 });
-        }
-
-        return await handler();
+      if (res.status === 429) {
+        exhausted = true;
+        rateLimitHeadersFound = res.headers.has("Retry-After") && res.headers.has("X-RateLimit-Remaining");
+        break;
       }
+    }
 
-      const response = await proxyWithPublicApi(req, async () => { throw new Error("Should not reach"); });
-      assert.equal(response.status, 429);
-      const body = await response.json();
-      assert.equal(body.error.code, "RATE_LIMIT_EXCEEDED");
+    assert.ok(exhausted, "Rate limit should eventually be exhausted");
+    assert.ok(rateLimitHeadersFound, "Rate limit headers should be present on 429");
   });
 
 });

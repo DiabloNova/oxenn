@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from "crypto";
+import { randomBytes, createHash, timingSafeEqual } from "crypto";
 import { ApiKeyRepository } from "../repositories/api-key-repository";
 import { CreateApiKeyDto, ApiKeyCreatedResponse, ApiKey } from "../domain/types";
 import { TenantContextManager } from "../../../core/database/tenant-context";
@@ -72,18 +72,31 @@ export class ApiService {
     if (!apiKey.isActive || apiKey.revokedAt) return null;
     if (apiKey.expiresAt && new Date() > apiKey.expiresAt) return null;
 
-    const providedHash = createHash("sha256").update(providedSecret).digest("hex");
-    if (providedHash !== apiKey.hash) return null;
+    const providedHashHex = createHash("sha256").update(providedSecret).digest("hex");
+    const providedHashBuffer = Buffer.from(providedHashHex, "hex");
+    const storedHashBuffer = Buffer.from(apiKey.hash, "hex");
+
+    if (providedHashBuffer.length !== storedHashBuffer.length) {
+      return null;
+    }
+
+    if (!timingSafeEqual(providedHashBuffer, storedHashBuffer)) {
+      return null;
+    }
 
     // Update last used at, using the tenant context since the key is valid
-    await TenantContextManager.runWithTenantContext(
-      apiKey.organizationId,
-      apiKey.id,
-      "api-key-auth",
-      async () => {
-        await this.repository.updateLastUsed(apiKey.id);
-      }
-    );
+    try {
+      await TenantContextManager.runWithTenantContext(
+        apiKey.organizationId,
+        apiKey.id,
+        "api-key-auth",
+        async () => {
+          await this.repository.updateLastUsed(apiKey.id);
+        }
+      );
+    } catch (err) {
+      console.error("[ApiService] Failed to update last used timestamp for API key:", err);
+    }
 
     return apiKey;
   }
