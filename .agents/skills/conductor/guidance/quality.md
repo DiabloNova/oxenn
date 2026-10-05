@@ -47,8 +47,8 @@ costs; and the bad days already reported (issues, crash reports, complaints, ret
   is not accepted. Passing checks on some other aspect leave it unmet.
 - **The minimum stays when the means fall short.** A current technology, library, host,
   material, supplier, team habit or first design that runs does not lower a floor and does not
-  redefine the vision. If the means cannot meet the minimum, the route is short. The vision
-  stays.
+  redefine the vision. If the means cannot meet the minimum, the current route falls short.
+  The vision stays.
 - **Raise the means, or leave the gap open.** Search past what the project already uses:
   another design, a supplier, a standard, published research, or a method and a capability the
   project does not have yet. Record the search and the sources. Building that capability is in
