@@ -198,11 +198,12 @@ testable hypotheses and compare defensible alternatives (`guidance/decisions.md 
 - **Each work item records** the deliverable it belongs to, its owner, its acceptance
   criteria, its state, its dependencies and resource constraints, and, where useful, an
   estimate and dates. When it is done it links to its evidence. Use the tool's own fields,
-  identifiers and links; do not invent an ID scheme or a file format. In a plain file, which has
-  no identifiers of its own, number the rows and refer to them in words ("work item 3", "the
-  second measure"); do not create families of prefixed codes (G1, M2, J3, W4) or rules for
-  cross-referencing them: that recreates a private format everyone must learn
-  (`guidance/planning.md §Work records in the project's tool`).
+  identifiers and links; do not invent an ID scheme or a file format. An identifier scheme the
+  project already uses (for example Oxenn's J-XXX tasks and their `verification/` records) counts
+  as the tool's own: keep it, and do not rename or replace it. Only where a plain file has no
+  established scheme, number the rows and refer to them in words; do not introduce new families of
+  prefixed codes or cross-referencing rules (`guidance/planning.md §Work records in the project's
+  tool`).
 - **Views are views.** A board, a Gantt chart, a burn-down or a report is a view of the
   records, or an export marked with its source and date. Never edit an export as a second plan.
 - **Authority and settled core.** Name the current requirements, accepted decisions, delegated

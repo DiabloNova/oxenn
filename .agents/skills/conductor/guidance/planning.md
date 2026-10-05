@@ -310,10 +310,11 @@ the date. Do not edit the velocities to recover the old day.
   one row per work package with the same columns. Offline or with nothing else: one Markdown
   file with a table, kept in the repository.
 - **No invented ID scheme or file format.** Refer to items by the tool's own identifiers (an issue
-  number, a spreadsheet row). A plain file has none: number the rows of each table (1, 2, 3) and
-  refer to them in words, such as "work item 3" or "the second measure". Do not create families of
-  prefixed codes (G1, M2, J3, W4, Q5) or rules for cross-referencing them between files; that is
-  the private format this guidance exists to avoid.
+  number, a spreadsheet row). An identifier scheme the project already uses (for example
+  Oxenn's J-XXX tasks and their `verification/` records) counts as the tool's own: keep it, and
+  do not rename or replace it. Only where a plain file has no established scheme, number the rows
+  of each table (1, 2, 3) and refer to them in words; do not introduce new families of prefixed
+  codes or cross-referencing rules.
 - **Mark every export with its source and date,** and do not edit it as a separate plan.
 - **Use an existing linked view for shared state and takeover.** Show objective, authority,
   accepted core, active work, duty modes, evidence and exceptions from the authoritative records.
