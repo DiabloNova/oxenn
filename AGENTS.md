@@ -10,7 +10,7 @@ https://github.com/melbinjp/jules-prompts
 
 The machine-readable prompt index is:
 
-https://jules-prompts.wecanuseai.com/prompts.json
+https://jules-prompts.wecanuseai.com/.well-known/agent-skills/index.json
 
 When a task requires a procedure from `jules-prompts`:
 
