@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   test: {
-    passWithNoTests: false,
+    passWithNoTests: true,
     coverage: {
       provider: "v8",
     },
@@ -26,6 +26,7 @@ export default defineConfig({
         test: {
           name: "db",
           environment: "node",
+          // TEMP: flipped to false by OX-104 when tests/db is seeded
           include: ["tests/db/**/*.test.ts"],
         },
       },
