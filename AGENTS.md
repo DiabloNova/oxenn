@@ -6,28 +6,8 @@
 
 For reusable engineering procedures, the canonical external source is:
 
-https://github.com/melbinjp/jules-prompts
+[https://github.com/DiabloNova/oxenn/.agents/skills/conductor/SKILLS.md]
 
-The machine-readable prompt index is:
-
-https://jules-prompts.wecanuseai.com/.well-known/agent-skills/index.json
-
-When a task requires a procedure from `jules-prompts`:
-
-1. Retrieve the current `prompts.json`.
-2. Identify the applicable prompt.
-3. Retrieve the actual prompt content from its canonical `url` or `source_path`.
-4. Read and follow the retrieved procedure.
-5. Do not rely on a stale local copy when the canonical remote source is available.
-6. Do not claim that a `jules-prompts` procedure was retrieved or applied unless the current remote source was actually accessed.
-7. If the canonical source cannot be accessed, explicitly report that retrieval failed. Do not silently substitute an assumed or remembered procedure.
-
-When reporting use of a `jules-prompts` procedure, identify:
-- the prompt title;
-- its category;
-- its canonical source;
-- whether remote retrieval succeeded.
-  
 ---
 # Goal:
 
