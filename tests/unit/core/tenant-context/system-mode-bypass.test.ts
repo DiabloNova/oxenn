@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { TenantContextManager, TenantContextViolationException } from "../../../../src/core/database/tenant-context";
+import { TenantContextManager, TenantContextViolationException } from "@/core/database/tenant-context";
 
 // Ensure DATABASE_URL is set before importing PostgresClient
 if (!process.env.DATABASE_URL) {
@@ -7,10 +7,10 @@ if (!process.env.DATABASE_URL) {
 }
 
 describe("Defect 1: System Mode Bypass Verification Test Suite", () => {
-  let PostgresClientModule: typeof import("../../../../src/features/admin/infrastructure/persistence/postgres");
+  let PostgresClientModule: typeof import("@/features/admin/infrastructure/persistence/postgres");
 
   beforeEach(async () => {
-    PostgresClientModule = await import("../../../../src/features/admin/infrastructure/persistence/postgres");
+    PostgresClientModule = await import("@/features/admin/infrastructure/persistence/postgres");
   });
 
   afterEach(() => {

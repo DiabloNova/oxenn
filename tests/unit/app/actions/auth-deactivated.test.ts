@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { loginAction, registerAction } from '../../../../src/app/actions/auth';
-import { TenantContextManager } from '../../../../src/core/database/tenant-context';
+import { loginAction, registerAction } from "@/app/actions/auth";
+import { TenantContextManager } from "@/core/database/tenant-context";
 
 describe('Auth handling for deactivated users', () => {
   beforeEach(() => {
@@ -12,7 +12,7 @@ describe('Auth handling for deactivated users', () => {
   });
 
   it('rejects login for deleted user (handled by AND deleted_at IS NULL)', async () => {
-    const PostgresClientModule = await import("../../../../src/features/admin/infrastructure/persistence/postgres");
+    const PostgresClientModule = await import("@/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
     const mockClient = {
@@ -33,7 +33,7 @@ describe('Auth handling for deactivated users', () => {
   });
 
   it('rejects registration for deleted user (handled by unique constraint logic/existing query)', async () => {
-    const PostgresClientModule = await import("../../../../src/features/admin/infrastructure/persistence/postgres");
+    const PostgresClientModule = await import("@/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
     const mockClient = {

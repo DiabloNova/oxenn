@@ -28,24 +28,22 @@ We have fully migrated to Vitest. All test suites run under a single runner.
 You can add React component tests without installing any new dependencies.
 We already have `@testing-library/react`, `@testing-library/user-event`, and `@testing-library/jest-dom` set up.
 
-Simply create your test file in `tests/ui/` (e.g., `tests/ui/components/Button.test.tsx`):
+Simply create your test file in `tests/ui/` (e.g., `tests/ui/marketing/HeroAccessCard.test.tsx`):
 
 ```tsx
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Button } from '@/components/ui/button';
+import { HeroAccessCard } from '@/components/HeroAccessCard';
 import { expect, test } from 'vitest';
 
-test('Button renders and handles clicks', async () => {
+test('HeroAccessCard renders and handles inputs', async () => {
   const user = userEvent.setup();
-  render(<Button>Click me</Button>);
+  render(<HeroAccessCard />);
 
-  const btn = screen.getByRole('button', { name: /click me/i });
+  const btn = screen.getByRole('button');
   expect(btn).toBeInTheDocument();
-
-  await user.click(btn);
 });
 ```
 
 **Note on FE Logical-Property Linting:**
-The FE logical-property lint (banning `ml-`, `mr-`, `pl-`, `pr-`, `left-`, `right-` under `src/components/ui/**`) is considered a static analysis check. It should be implemented as a unit test and placed in the **unit** project (`tests/unit/linting/logical-properties.test.ts`).
+The FE logical-property lint (banning `ml-`, `mr-`, `pl-`, `pr-`, `left-`, `right-` in CSS modules or utility classes) is considered a static analysis check. It should be implemented as a unit test and placed in the **unit** project (`tests/unit/linting/logical-properties.test.ts`).

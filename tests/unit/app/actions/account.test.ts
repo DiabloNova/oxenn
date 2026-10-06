@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deactivateAccountAction } from '../../../../src/app/actions/account';
-import { requireSession } from '../../../../src/services/auth/session';
+import { deactivateAccountAction } from "@/app/actions/account";
+import { requireSession } from "@/services/auth/session";
 
 vi.mock('../../../../src/services/auth/session', () => ({
   requireSession: vi.fn(),
@@ -36,10 +36,10 @@ describe('deactivateAccountAction', () => {
   });
 
   it('fails if password verification fails', async () => {
-    const { verifyPassword } = await import('../../../../src/services/auth/passwords');
+    const { verifyPassword } = await import("@/services/auth/passwords");
     vi.mocked(verifyPassword).mockResolvedValue(false);
 
-    const PostgresClientModule = await import("../../../../src/features/admin/infrastructure/persistence/postgres");
+    const PostgresClientModule = await import("@/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
     const mockClient = {
@@ -59,11 +59,11 @@ describe('deactivateAccountAction', () => {
   });
 
   it('successfully deactivates account and leaves sole admin alone', async () => {
-    const { verifyPassword } = await import('../../../../src/services/auth/passwords');
-    const { revokeAllForUser } = await import('../../../../src/services/auth/session');
+    const { verifyPassword } = await import("@/services/auth/passwords");
+    const { revokeAllForUser } = await import("@/services/auth/session");
     vi.mocked(verifyPassword).mockResolvedValue(true);
 
-    const PostgresClientModule = await import("../../../../src/features/admin/infrastructure/persistence/postgres");
+    const PostgresClientModule = await import("@/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
     const queryMock = vi.fn().mockImplementation(async (sql: string, params: unknown) => {

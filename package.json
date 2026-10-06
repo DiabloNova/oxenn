@@ -12,14 +12,17 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:acquisition": "tsx tests/features/acquisition/run-all.ts",
     "env:check": "tsx scripts/env-check.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "pnpm env:check migrate && tsx src/core/database/migrator.ts",
     "db:push": "tsx scripts/database/db-push-guard.ts && drizzle-kit push",
-    "test:isolation": "tsx tests/isolation/suite.ts",
     "docs:matrix": "tsx scripts/database/build-reference-matrix.ts",
-    "docs": "npm run docs:matrix"
+    "docs": "npm run docs:matrix",
+    "test": "vitest run --project=unit --project=ui",
+    "test:unit": "vitest run --project=unit",
+    "test:db": "vitest run --project=db",
+    "test:ui": "vitest run --project=ui",
+    "test:all": "vitest run"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.24",
