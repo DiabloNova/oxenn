@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   test: {
-    passWithNoTests: false,
+    passWithNoTests: true,
     coverage: {
       provider: "v8",
     },
@@ -18,6 +18,8 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "node",
+          // @ts-expect-error Vitest ProjectConfig omits passWithNoTests in TypeScript types
+          passWithNoTests: false,
           include: ["tests/unit/**/*.test.ts", "tests/unit/**/*.test.tsx"],
         },
       },
@@ -26,6 +28,8 @@ export default defineConfig({
         test: {
           name: "db",
           environment: "node",
+          // @ts-expect-error Vitest ProjectConfig omits passWithNoTests in TypeScript types
+          passWithNoTests: true, // TEMP: flipped to false by OX-104 when tests/db is seeded
           include: ["tests/db/**/*.test.ts"],
         },
       },
@@ -35,6 +39,8 @@ export default defineConfig({
           name: "ui",
           environment: "jsdom",
           setupFiles: ["tests/setup/ui-setup.ts"],
+          // @ts-expect-error Vitest ProjectConfig omits passWithNoTests in TypeScript types
+          passWithNoTests: false,
           include: ["tests/ui/**/*.test.tsx", "tests/ui/**/*.test.ts"],
         },
       },
