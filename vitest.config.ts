@@ -8,7 +8,6 @@ export default defineConfig({
     },
   },
   test: {
-    passWithNoTests: false,
     coverage: {
       provider: "v8",
     },
@@ -19,6 +18,7 @@ export default defineConfig({
           name: "unit",
           environment: "node",
           include: ["tests/unit/**/*.test.ts", "tests/unit/**/*.test.tsx"],
+          passWithNoTests: false,
         },
       },
       {
@@ -27,6 +27,7 @@ export default defineConfig({
           name: "db",
           environment: "node",
           include: ["tests/db/**/*.test.ts"],
+          passWithNoTests: true, // TEMP: flipped to false by OX-104 when tests/db is seeded
         },
       },
       {
@@ -36,6 +37,7 @@ export default defineConfig({
           environment: "jsdom",
           setupFiles: ["tests/setup/ui-setup.ts"],
           include: ["tests/ui/**/*.test.tsx", "tests/ui/**/*.test.ts"],
+          passWithNoTests: false,
         },
       },
     ],
