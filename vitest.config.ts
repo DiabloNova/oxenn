@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   test: {
-    passWithNoTests: true,
+    passWithNoTests: false,
     coverage: {
       provider: "v8",
     },
