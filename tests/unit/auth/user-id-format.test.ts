@@ -37,6 +37,9 @@ describe('User ID Generation', () => {
                 if (query.includes("INSERT INTO users")) {
                     generatedId = params[0]; // Capture the user ID
                 }
+                if (query.includes("auth_rate_limits")) {
+                    return { rows: [{ attempts: 1 }] };
+                }
                 return { rows: [] };
             })
         } as unknown as { query: () => Promise<{rows: unknown[]}> });
@@ -71,6 +74,9 @@ describe('User ID Generation', () => {
                 }
                 if (query.includes("INSERT INTO users")) {
                     ids.add(params[0]);
+                }
+                if (query.includes("auth_rate_limits")) {
+                    return { rows: [{ attempts: 1 }] };
                 }
                 return { rows: [] };
             })
