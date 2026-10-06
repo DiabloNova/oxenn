@@ -338,14 +338,6 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Service Documentation  This section describes the internal application services, their boundaries, and responsibilities.  ## Status Dictionary - **Implemented**: Verified existing service. - **Partial**: Service exists but is missing functionality. - **Planned**: Not currently implemented.  ## Core Services  ### Asynchronous Job Processing (\`src/services/jobs/\`) Defines a canonical, infrastructure-agnostic background processing boundary via \`IJobQueue\`, \`IJobExecutor\`, and \`IJobRepository\` int`
   },
   {
-    slug: "conductor-review-fixes",
-    titleEn: "Conductor PR #57 review fixes",
-    titleFa: "Conductor PR #57 review fixes",
-    category: "tasks_reports",
-    categoryFa: "tasks_reports",
-    snippet: `# Conductor PR #57 review fixes  - **Status:** SUCCESS (documentation correction; controller review and writeback pending). - **Invariant:** retries require reconciliation; authority and confidentiality stay explicit;   evidence fits the medium; physical safety is context-specific; dependency arithmetic includes   relationship and lag; whole-project startup and applicable commercial gates remain intact. - **Implementation:** issues 1–20 applied separately, in order, to the eight guidance files u`
-  },
-  {
     slug: "user-guides",
     titleEn: "User Guides",
     titleFa: "User Guides",
