@@ -32,7 +32,7 @@ async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey:
         RETURNING attempts
     `, [endpoint, bucketKey, expiresAt.toISOString()]);
 
-    const attempts = rows[0].attempts;
+    const attempts = rows[0]?.attempts ?? 1;
     if (attempts > maxAttempts) {
         throw new Error("TooManyRequests");
     }

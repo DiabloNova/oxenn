@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
-    "test:db": "vitest run --project db --passWithNoTests",
+    "test:db": "vitest run --project db",
     "test:ui": "vitest run --project ui",
     "test:acquisition": "tsx tests/features/acquisition/run-all.ts",
     "env:check": "tsx scripts/env-check.ts",
