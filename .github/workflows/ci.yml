@@ -50,6 +50,31 @@ jobs:
       - name: Verify generated tracked files (no drift)
         run: git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts docs/database/reference-matrix.md
 
+  unit-tests:
+    name: Unit and UI Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        run: corepack enable pnpm
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm test:unit
+
+      - name: Run UI tests
+        run: pnpm test:ui
+
   isolation-suite:
     name: Isolation Suite
     runs-on: ubuntu-latest
