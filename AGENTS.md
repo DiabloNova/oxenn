@@ -2,7 +2,7 @@
 
 # Seorchable — Agent Operating Contract
 
-## jules-prompts Remote Procedure Source
+## mandatory first step:
 
 read the following link before do anything and follow the conductor for the task: 
 
