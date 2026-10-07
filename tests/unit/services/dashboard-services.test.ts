@@ -245,5 +245,7 @@ function runTests() {
   console.log("=========================================================================");
 }
 describe("dashboard-services", () => {
-  it("runs", () => { expect(true).toBeTruthy(); });
+  it("runs the suite", () => {
+    runTests();
+  });
 });
