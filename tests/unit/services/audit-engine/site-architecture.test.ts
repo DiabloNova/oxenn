@@ -1,21 +1,35 @@
-import * as assert from "assert";
-import { TenantContextManager } from "../../../src/core/database/tenant-context";
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = "postgres://postgres:postgres@localhost:5432/oxenn";
+}
+
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { TenantContextManager } from "@/core/database/tenant-context";
+import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
 import {
   SiteArchitectureAnalyzerService,
   normalizeGraphUrl
-} from "../../../src/features/ai-intelligence/services/site-architecture-analyzer-service";
-import { Page } from "../../../src/features/ai-intelligence/domain/types";
+} from "@/features/ai-intelligence/services/site-architecture-analyzer-service";
+import { Page } from "@/features/ai-intelligence/domain/types";
 
-export async function runSiteArchitectureTests() {
-  console.log("=========================================================================");
-  console.log("SITE ARCHITECTURE INTELLIGENCE (TASK 9.2) — TEST SUITE");
-  console.log("=========================================================================");
-
+describe("Site Architecture Intelligence", () => {
   const tenantA = "tenant-alpha-001";
   const tenantB = "tenant-beta-002";
   const websiteId = "web-site-arch-01";
 
   const analyzer = new SiteArchitectureAnalyzerService();
+
+  beforeEach(() => {
+    const mockClient = {
+      query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      release: vi.fn()
+    };
+    const pgClient = PostgresClient.getInstance();
+    vi.spyOn(pgClient, "connectClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   function createMockPage(url: string, path: string, title?: string): Page {
     return {
@@ -38,9 +52,7 @@ export async function runSiteArchitectureTests() {
     };
   }
 
-  try {
-    // Test 1: Crawl Depth Calculation
-    console.log("▶ TEST 1: Crawl Depth BFS Calculation...");
+  it("calculates crawl depth accurately via BFS", async () => {
     await TenantContextManager.runWithTenantContext(tenantA, "usr-1", "ctx-arch-1", async () => {
       const pages = [
         createMockPage("https://site.com/", "/"),
@@ -57,18 +69,17 @@ export async function runSiteArchitectureTests() {
 
       const res = analyzer.analyzeArchitecture(tenantA, websiteId, { pages, links, rootUrl: "https://site.com/" });
 
-      const depthMap = new Map(res.crawlDepths.map(cd => [normalizeGraphUrl(cd.url), cd.crawlDepth]));
+      const depthMap = new Map(res.crawlDepths.map((cd) => [normalizeGraphUrl(cd.url), cd.crawlDepth]));
 
-      assert.strictEqual(depthMap.get(normalizeGraphUrl("https://site.com/")), 0);
-      assert.strictEqual(depthMap.get(normalizeGraphUrl("https://site.com/section")), 1);
-      assert.strictEqual(depthMap.get(normalizeGraphUrl("https://site.com/section/topic")), 2);
-      assert.strictEqual(depthMap.get(normalizeGraphUrl("https://site.com/section/topic/page")), 3);
-      assert.strictEqual(res.metrics.maxCrawlDepth, 3);
+      expect(depthMap.get(normalizeGraphUrl("https://site.com/"))).toBe(0);
+      expect(depthMap.get(normalizeGraphUrl("https://site.com/section"))).toBe(1);
+      expect(depthMap.get(normalizeGraphUrl("https://site.com/section/topic"))).toBe(2);
+      expect(depthMap.get(normalizeGraphUrl("https://site.com/section/topic/page"))).toBe(3);
+      expect(res.metrics.maxCrawlDepth).toBe(3);
     });
-    console.log("  ✅ Crawl Depth BFS calculation verified successfully.");
+  });
 
-    // Test 2: Orphan Page Detection
-    console.log("▶ TEST 2: Orphan Page Detection...");
+  it("detects orphan pages", async () => {
     await TenantContextManager.runWithTenantContext(tenantA, "usr-1", "ctx-arch-2", async () => {
       const pages = [
         createMockPage("https://site.com/", "/"),
@@ -84,15 +95,16 @@ export async function runSiteArchitectureTests() {
 
       const res = analyzer.analyzeArchitecture(tenantA, websiteId, { pages, links, rootUrl: "https://site.com/" });
 
-      assert.strictEqual(res.orphanCandidates.includes("https://site.com/orphan"), true);
-      const orphanFinding = res.findings.find(f => f.code === "ERR_ORPHAN_PAGE_DETECTED" && f.affectedResource === "https://site.com/orphan");
-      assert.notStrictEqual(orphanFinding, undefined);
-      assert.strictEqual(orphanFinding!.severity, "high");
+      expect(res.orphanCandidates.includes("https://site.com/orphan")).toBe(true);
+      const orphanFinding = res.findings.find(
+        (f) => f.code === "ERR_ORPHAN_PAGE_DETECTED" && f.affectedResource === "https://site.com/orphan"
+      );
+      expect(orphanFinding).toBeDefined();
+      expect(orphanFinding?.severity).toBe("high");
     });
-    console.log("  ✅ Orphan Page Detection verified successfully.");
+  });
 
-    // Test 3: Weak Internal Linking
-    console.log("▶ TEST 3: Weak Internal Linking Analysis...");
+  it("identifies weak internal linking", async () => {
     await TenantContextManager.runWithTenantContext(tenantA, "usr-1", "ctx-arch-3", async () => {
       const pages = [
         createMockPage("https://site.com/", "/"),
@@ -115,21 +127,21 @@ export async function runSiteArchitectureTests() {
 
       const res = analyzer.analyzeArchitecture(tenantA, websiteId, { pages, links, rootUrl: "https://site.com/" });
 
-      const weakFinding = res.findings.find(f => f.code === "WARN_INTERNAL_LINK_WEAK" && f.affectedResource === "https://site.com/weak-page");
-      assert.notStrictEqual(weakFinding, undefined);
-      assert.strictEqual(weakFinding!.category, "internal-linking");
+      const weakFinding = res.findings.find(
+        (f) => f.code === "WARN_INTERNAL_LINK_WEAK" && f.affectedResource === "https://site.com/weak-page"
+      );
+      expect(weakFinding).toBeDefined();
+      expect(weakFinding?.category).toBe("internal-linking");
     });
-    console.log("  ✅ Weak Internal Linking analysis verified successfully.");
+  });
 
-    // Test 4: Content Hierarchy Analysis
-    console.log("▶ TEST 4: Content Hierarchy & Missing Parent Category Analysis...");
+  it("analyzes content hierarchy and identifies missing parent categories", async () => {
     await TenantContextManager.runWithTenantContext(tenantA, "usr-1", "ctx-arch-4", async () => {
       const pages = [
         createMockPage("https://site.com/", "/"),
         createMockPage("https://site.com/products", "/products"),
         createMockPage("https://site.com/products/a", "/products/a"),
         createMockPage("https://site.com/products/a/item", "/products/a/item"),
-        // Note: /guides/seo/audit exists, but /guides or /guides/seo is missing in catalog
         createMockPage("https://site.com/guides/seo/audit", "/guides/seo/audit")
       ];
 
@@ -142,14 +154,13 @@ export async function runSiteArchitectureTests() {
 
       const res = analyzer.analyzeArchitecture(tenantA, websiteId, { pages, links, rootUrl: "https://site.com/" });
 
-      const hierarchyFinding = res.findings.find(f => f.code === "WARN_HIERARCHY_PARENT_MISSING");
-      assert.notStrictEqual(hierarchyFinding, undefined);
-      assert.strictEqual(hierarchyFinding!.category, "content-hierarchy");
+      const hierarchyFinding = res.findings.find((f) => f.code === "WARN_HIERARCHY_PARENT_MISSING");
+      expect(hierarchyFinding).toBeDefined();
+      expect(hierarchyFinding?.category).toBe("content-hierarchy");
     });
-    console.log("  ✅ Content Hierarchy analysis verified successfully.");
+  });
 
-    // Test 5: Cyclic Graph Safety
-    console.log("▶ TEST 5: Cyclic Graph Safety (Infinite Loop Prevention)...");
+  it("handles cyclic graphs safely without infinite loops", async () => {
     await TenantContextManager.runWithTenantContext(tenantA, "usr-1", "ctx-arch-5", async () => {
       const pages = [
         createMockPage("https://site.com/", "/"),
@@ -158,7 +169,6 @@ export async function runSiteArchitectureTests() {
         createMockPage("https://site.com/c", "/c")
       ];
 
-      // Cyclic edges: / -> /a -> /b -> /c -> /a
       const links = [
         { sourceUrl: "https://site.com/", targetUrl: "https://site.com/a", normalizedTargetUrl: "https://site.com/a" },
         { sourceUrl: "https://site.com/a", targetUrl: "https://site.com/b", normalizedTargetUrl: "https://site.com/b" },
@@ -168,13 +178,12 @@ export async function runSiteArchitectureTests() {
 
       const res = analyzer.analyzeArchitecture(tenantA, websiteId, { pages, links, rootUrl: "https://site.com/" });
 
-      assert.strictEqual(res.crawlDepths.length, 4);
-      assert.strictEqual(res.crawlDepths.every(cd => cd.isReachableFromRoot), true);
+      expect(res.crawlDepths.length).toBe(4);
+      expect(res.crawlDepths.every((cd) => cd.isReachableFromRoot)).toBe(true);
     });
-    console.log("  ✅ Cyclic Graph Safety verified successfully.");
+  });
 
-    // Test 6: Determinism Verification
-    console.log("▶ TEST 6: Output Determinism (Identical Inputs -> Identical Results)...");
+  it("guarantees output determinism for identical inputs", async () => {
     await TenantContextManager.runWithTenantContext(tenantA, "usr-1", "ctx-arch-6", async () => {
       const pages = [
         createMockPage("https://site.com/", "/"),
@@ -189,57 +198,27 @@ export async function runSiteArchitectureTests() {
       const res1 = analyzer.analyzeArchitecture(tenantA, websiteId, { pages, links, rootUrl: "https://site.com/" });
       const res2 = analyzer.analyzeArchitecture(tenantA, websiteId, { pages, links, rootUrl: "https://site.com/" });
 
-      assert.strictEqual(JSON.stringify(res1), JSON.stringify(res2));
+      expect(JSON.stringify(res1)).toBe(JSON.stringify(res2));
     });
-    console.log("  ✅ Output Determinism verified successfully.");
+  });
 
-    // Test 7: Incomplete Data Handling
-    console.log("▶ TEST 7: Incomplete Data Handling...");
+  it("handles incomplete data gracefully without fabricating findings", async () => {
     await TenantContextManager.runWithTenantContext(tenantA, "usr-1", "ctx-arch-7", async () => {
       const pages = [
         createMockPage("https://site.com/", "/"),
         createMockPage("https://site.com/p1", "/p1")
       ];
-      // Note: Only 2 pages total, link dataset is empty
       const res = analyzer.analyzeArchitecture(tenantA, websiteId, { pages, links: [], rootUrl: "https://site.com/" });
 
-      // Because analyzed page count < 3, it does not fabricate orphan findings under incomplete dataset rules
-      assert.strictEqual(res.orphanCandidates.length, 0);
+      expect(res.orphanCandidates.length).toBe(0);
     });
-    console.log("  ✅ Incomplete Data Handling verified successfully.");
+  });
 
-    // Test 8: Multi-Tenant Zero-Trust Security Isolation
-    console.log("▶ TEST 8: Multi-Tenant Zero-Trust Security Isolation...");
-    try {
-      await TenantContextManager.runWithTenantContext(tenantB, "usr-2", "ctx-malicious", async () => {
-        // Requesting Tenant A analysis from Tenant B context must fail immediately
+  it("enforces multi-tenant zero-trust security isolation", async () => {
+    await expect(
+      TenantContextManager.runWithTenantContext(tenantB, "usr-2", "ctx-malicious", async () => {
         analyzer.analyzeArchitecture(tenantA, websiteId, { pages: [], links: [] });
-      });
-      throw new Error("Security Failure: Cross-tenant analysis request was erroneously allowed!");
-    } catch (err: unknown) {
-      const error = err as Error;
-      assert.strictEqual(error.message.includes("Tenant Context Violation"), true);
-    }
-    console.log("  ✅ Multi-Tenant Security Isolation verified successfully.");
-
-    console.log("=========================================================================");
-    console.log("✅ ALL SITE ARCHITECTURE INTELLIGENCE TESTS PASSED SUCCESSFULLY!");
-    console.log("=========================================================================");
-
-  } catch (err: unknown) {
-    console.error("❌ Test Suite failed:", err);
-    throw err;
-  }
-}
-
-// Support direct execution
-if (require.main === module) {
-  runSiteArchitectureTests()
-    .then(() => {
-      process.exit(0);
-    })
-    .catch((err) => {
-      console.error("Test execution failed:", err);
-      process.exit(1);
-    });
-}
+      })
+    ).rejects.toThrow(/Tenant Context Violation/);
+  });
+});
