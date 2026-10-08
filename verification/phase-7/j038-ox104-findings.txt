@@ -1,0 +1,10 @@
+Verified all candidates in tests/services/monitoring/ against verification/phase-7/j038.md.
+Inspected the complete local import graph for each candidate:
+- tests/services/monitoring/repository.test.ts
+- tests/services/monitoring/tenant-isolation.test.ts
+- tests/services/monitoring/website-monitoring.test.ts
+- tests/services/monitoring/run-all.ts
+
+None of the files directly or transitively import "pg" or "Pool", read "DATABASE_URL" or any migration DB environment variables, or import a module that establishes a database connection.
+All files in tests/services/monitoring/ are correctly classified as UNIT.
+No monitoring candidates require OX-104 deferral.
