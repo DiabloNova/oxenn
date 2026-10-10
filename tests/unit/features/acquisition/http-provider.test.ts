@@ -1,12 +1,13 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { createServer } from "node:http";
-import { HttpCrawlProvider } from "../../../src/features/acquisition/infrastructure/providers/http-crawl-provider";
-import { resolveCrawlPolicy } from "../../../src/features/acquisition/domain/policy";
-import { normalizeUrl } from "../../../src/features/acquisition/domain/url/normalizer";
-import type { CrawlRequest } from "../../../src/features/acquisition/domain/contracts";
-import type { Resolver } from "../../../src/features/acquisition/infrastructure/security/ssrf-guard";
+import { HttpCrawlProvider } from "@/features/acquisition/infrastructure/providers/http-crawl-provider";
+import { resolveCrawlPolicy } from "@/features/acquisition/domain/policy";
+import { normalizeUrl } from "@/features/acquisition/domain/url/normalizer";
+import type { CrawlRequest } from "@/features/acquisition/domain/contracts";
+import type { Resolver } from "@/features/acquisition/infrastructure/security/ssrf-guard";
 
-export async function testHttpProviderLimits(): Promise<void> {
+describe("testHttpProviderLimits", () => {
+  it("runs", async () => {
   let active = 0;
   let peak = 0;
   const starts = new Map<string, number[]>();
@@ -34,10 +35,10 @@ export async function testHttpProviderLimits(): Promise<void> {
     server.listen(0, "127.0.0.1", resolve);
   });
   const address = server.address();
-  assert.ok(address && typeof address !== "string");
+  expect(address && typeof address !== "string").toBeTruthy();
   port = address.port;
   const normalized = normalizeUrl(`http://a.test:${port}/`);
-  assert.ok(normalized.ok);
+  expect(normalized.ok).toBeTruthy();
   const request: CrawlRequest = {
     tenantId: "a0000000-0000-4000-8000-00000000000a",
     requestedUrl: normalized.value.canonical,
@@ -58,12 +59,13 @@ export async function testHttpProviderLimits(): Promise<void> {
     hostValidator: async () => ({ ok: true, ips: ["127.0.0.1"] })
   });
   const result = await provider.execute(request, request.policy, new AbortController().signal);
-  assert.equal(result.pageCount, 4);
-  assert.ok(peak <= 2);
+  expect(result.pageCount).toEqual(4);
+  expect(peak <= 2).toBeTruthy();
   for (const times of starts.values()) {
     for (let index = 1; index < times.length; index += 1) {
-      assert.ok(times[index] - times[index - 1] >= 90);
+      expect(times[index] - times[index - 1] >= 90).toBeTruthy();
     }
   }
   await new Promise<void>(resolve => server.close(() => resolve()));
-}
+  });
+});

@@ -1,11 +1,13 @@
+import { describe, it, expect } from "vitest";
 /**
  * Phase 7C.5 — Enterprise Admin Domain Layer Tests
  */
 
-import { Tenant, AdminUser, FeatureFlag } from "../../../src/features/admin/domain/types";
-import { TenantAggregate, AdminUserAggregate, FeatureFlagAggregate } from "../../../src/features/admin/domain/entities";
+import { Tenant, AdminUser, FeatureFlag } from "@/features/admin/domain/types";
+import { TenantAggregate, AdminUserAggregate, FeatureFlagAggregate } from "@/features/admin/domain/entities";
 
-export function testDomain() {
+describe("testDomain", () => {
+  it("runs", () => {
   console.log("▶ Running Admin Domain Layer Tests...");
 
   // 1. Test TenantAggregate
@@ -145,4 +147,5 @@ export function testDomain() {
   }
 
   console.log("✅ Admin Domain Layer Tests Passed Successfully!");
-}
+  });
+});

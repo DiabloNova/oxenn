@@ -1,9 +1,9 @@
-import assert from "node:assert/strict";
-import { FirecrawlCrawlProvider } from "../../../src/features/acquisition/infrastructure/providers/firecrawl/firecrawl-crawl-provider";
-import { CrawlError } from "../../../src/features/acquisition/domain/errors";
-import { resolveCrawlPolicy } from "../../../src/features/acquisition/domain/policy";
-import { normalizeUrl } from "../../../src/features/acquisition/domain/url/normalizer";
-import type { CrawlRequest } from "../../../src/features/acquisition/domain/contracts";
+import { describe, it, expect } from "vitest";
+import { FirecrawlCrawlProvider } from "@/features/acquisition/infrastructure/providers/firecrawl/firecrawl-crawl-provider";
+import { CrawlError } from "@/features/acquisition/domain/errors";
+import { resolveCrawlPolicy } from "@/features/acquisition/domain/policy";
+import { normalizeUrl } from "@/features/acquisition/domain/url/normalizer";
+import type { CrawlRequest } from "@/features/acquisition/domain/contracts";
 
 function request(): CrawlRequest {
   const normalized = normalizeUrl("https://example.com/");
@@ -19,7 +19,8 @@ function request(): CrawlRequest {
   };
 }
 
-export async function testProviders(): Promise<void> {
+describe("testProviders", () => {
+  it("runs", async () => {
   const provider = new FirecrawlCrawlProvider({
     crawlUrl: async () => ({
       success: true,
@@ -41,9 +42,9 @@ export async function testProviders(): Promise<void> {
       crawlRequest.policy,
       new AbortController().signal
     );
-    assert.equal(result.provider.id, "firecrawl");
-    assert.equal(result.documents[0]?.text, "hello");
-    assert.equal(result.partial, false);
+    expect(result.provider.id).toEqual("firecrawl");
+    expect(result.documents[0]?.text).toEqual("hello");
+    expect(result.partial).toEqual(false);
     const partial = new FirecrawlCrawlProvider({
       crawlUrl: async () => ({
         success: true,
@@ -51,39 +52,27 @@ export async function testProviders(): Promise<void> {
         data: [{ url: "https://example.com/", markdown: "partial" }]
       })
     });
-    assert.equal(
-      (await partial.execute(crawlRequest, crawlRequest.policy, new AbortController().signal))
-        .partial,
-      true
-    );
-    await assert.rejects(
-      () =>
-        new FirecrawlCrawlProvider({
+    expect((await partial.execute(crawlRequest, crawlRequest.policy, new AbortController().signal)).partial).toEqual(true);
+    await expect(() => new FirecrawlCrawlProvider({
           crawlUrl: async () => ({ success: false, error: "401 Unauthorized" })
         }).execute(request(), request().policy, new AbortController().signal),
       (error: unknown) =>
         error instanceof CrawlError && error.code === "AUTHENTICATION_ERROR"
     );
-    await assert.rejects(
-      () =>
-        new FirecrawlCrawlProvider({
+    await expect(() => new FirecrawlCrawlProvider({
           crawlUrl: async () => ({ success: true, data: "invalid" })
         }).execute(request(), request().policy, new AbortController().signal),
       (error: unknown) =>
         error instanceof CrawlError && error.code === "PROVIDER_ERROR"
     );
-    await assert.rejects(
-      () =>
-        new FirecrawlCrawlProvider({
+    await expect(() => new FirecrawlCrawlProvider({
           crawlUrl: async () => {
             throw new Error("request timed out");
           }
         }).execute(request(), request().policy, new AbortController().signal),
       (error: unknown) => error instanceof CrawlError && error.code === "TIMEOUT"
     );
-    await assert.rejects(
-      () =>
-        new FirecrawlCrawlProvider({
+    await expect(() => new FirecrawlCrawlProvider({
           crawlUrl: async () => ({ success: false, error: "429 Too Many Requests" })
         }).execute(request(), request().policy, new AbortController().signal),
       (error: unknown) => error instanceof CrawlError && error.code === "RATE_LIMITED"
@@ -95,4 +84,5 @@ export async function testProviders(): Promise<void> {
       process.env.FIRECRAWL_API_KEY = originalKey;
     }
   }
-}
+  });
+});

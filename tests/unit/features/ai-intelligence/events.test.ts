@@ -1,6 +1,8 @@
-import { eventBus, DomainEvent, IEventHandler } from "../../../src/features/ai-intelligence";
+import { describe, it, expect } from "vitest";
+import { eventBus, DomainEvent, IEventHandler } from "@/features/ai-intelligence";
 
-export function testEvents() {
+describe("test", () => {
+  it("runs", async () => {
   console.log("▶ Running Event-Driven Architecture Tests...");
 
   eventBus.clear();
@@ -50,5 +52,6 @@ export function testEvents() {
   }).catch((err) => {
     console.error("❌ Event Dispatcher Test Failed", err);
     process.exit(1);
+    });
   });
-}
+});

@@ -1,11 +1,11 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { createServer, type Server } from "node:http";
-import { CrawlError } from "../../../src/features/acquisition/domain/errors";
-import { resolveCrawlPolicy } from "../../../src/features/acquisition/domain/policy";
+import { CrawlError } from "@/features/acquisition/domain/errors";
+import { resolveCrawlPolicy } from "@/features/acquisition/domain/policy";
 import {
   createPinnedLookup,
   safeFetch
-} from "../../../src/features/acquisition/infrastructure/http/safe-fetcher";
+} from "@/features/acquisition/infrastructure/http/safe-fetcher";
 
 function listen(server: Server, host: string): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -21,7 +21,8 @@ function listen(server: Server, host: string): Promise<number> {
   });
 }
 
-export async function testFetcher(): Promise<void> {
+describe("testFetcher", () => {
+  it("runs", async () => {
   let remote = "";
   const server = createServer((request, response) => {
     remote = request.socket.remoteAddress ?? "";
@@ -60,10 +61,10 @@ export async function testFetcher(): Promise<void> {
     policy,
     hostValidator: async () => ({ ok: true, ips: ["127.0.0.1"] })
   });
-  assert.equal(remote, "127.0.0.1");
-  assert.equal(response.body.toString(), "ok");
-  assert.equal("set-cookie" in response.headers, false);
-  await assert.rejects(
+  expect(remote).toEqual("127.0.0.1");
+  expect(response.body.toString()).toEqual("ok");
+  expect("set-cookie" in response.headers).toEqual(false);
+  await expect(
     () =>
       safeFetch(`http://pinned.example:${port}/gzip`, {
         policy,
@@ -71,8 +72,8 @@ export async function testFetcher(): Promise<void> {
       }),
     (error: unknown) =>
       error instanceof CrawlError && error.code === "CONTENT_TYPE_UNSUPPORTED"
-  );
-  await assert.rejects(
+  ).rejects.toThrow();
+  await expect(
     () =>
       safeFetch(`http://pinned.example:${port}/large`, {
         policy: { ...policy, maxResponseBytes: 5 },
@@ -80,8 +81,8 @@ export async function testFetcher(): Promise<void> {
       }),
     (error: unknown) =>
       error instanceof CrawlError && error.code === "RESPONSE_TOO_LARGE"
-  );
-  await assert.rejects(
+  ).rejects.toThrow();
+  await expect(
     () =>
       safeFetch(`http://pinned.example:${port}/redirect`, {
         policy: { ...policy, maxRedirects: 0 },
@@ -89,7 +90,7 @@ export async function testFetcher(): Promise<void> {
       }),
     (error: unknown) =>
       error instanceof CrawlError && error.code === "REDIRECT_LIMIT"
-  );
+  ).rejects.toThrow();
   await new Promise<void>(resolve => server.close(() => resolve()));
 
   const lookup = createPinnedLookup(["127.0.0.1", "::1"]);
@@ -98,7 +99,7 @@ export async function testFetcher(): Promise<void> {
       if (error) {
         reject(error);
       } else {
-        assert.equal(Array.isArray(addresses), true);
+        expect(Array.isArray(addresses)).toEqual(true);
         resolve();
       }
     })
@@ -108,10 +109,11 @@ export async function testFetcher(): Promise<void> {
       if (error) {
         reject(error);
       } else {
-        assert.equal(address, "127.0.0.1");
-        assert.equal(family, 4);
+        expect(address).toEqual("127.0.0.1");
+        expect(family).toEqual(4);
         resolve();
       }
     })
   );
-}
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isQueryTenantScoped } from "../../../src/core/database/tenant-context";
+import { isQueryTenantScoped } from "@/core/database/tenant-context";
 
 describe("isQueryTenantScoped Matcher Test Suite", () => {
   it("case 1: matches unquoted table name", () => {

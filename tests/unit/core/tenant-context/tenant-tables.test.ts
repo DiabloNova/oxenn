@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { TENANT_SCOPED_TABLES } from "../../../src/core/database/tenant-context";
-import { verifyTenantTables } from "../../../scripts/database/verify-tenant-tables";
+import { TENANT_SCOPED_TABLES } from "@/core/database/tenant-context";
+import { verifyTenantTables } from "../../../../scripts/database/verify-tenant-tables";
 
 describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
   it("TENANT_SCOPED_TABLES is an Object.frozen immutable array", () => {
