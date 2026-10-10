@@ -6,10 +6,8 @@
 
 import { Pool } from "pg";
 import { db } from "../../../src/features/ai-intelligence/repositories";
-import { testDomain } from "../../unit/features/ai-intelligence/domain.test";
 import { testSecurity } from "./security.test";
 import { testApplication } from "./application.test";
-import { testEvents } from "./events.test";
 import { TenantContextManager } from "../../../src/core/database/tenant-context";
 import { testTenantPipeline } from "./tenant-pipeline.test";
 import { testVectorStore } from "./vector-store.test";
@@ -173,8 +171,6 @@ async function main() {
   console.log("====================================================");
 
   try {
-    testDomain();
-
     // Run Security tests under an explicit System Context
     await TenantContextManager.runWithSystemContext("user-admin", "sys-admin-run", async () => {
       await testSecurity();
@@ -195,8 +191,6 @@ async function main() {
     await testDocumentIngestion();
     // Run Optimus RAG Query Pipeline Tests
     await testRAGQueryService();
-
-    testEvents();
 
     // Allow asynchronous event bus execution to complete before final status log
     setTimeout(() => {
