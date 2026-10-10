@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { POST, FreeAuditResponse } from "@/app/api/v1/audit/free/route";
 import { firecrawlApp } from "@/lib/firecrawl";
 
-import type { CrawlResponse } from "@mendable/firecrawl-js";
+import type { Document } from "@mendable/firecrawl-js";
 
 describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
   const originalScrapeUrl = firecrawlApp.scrapeUrl;
@@ -15,9 +15,8 @@ describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
 
   it("Scenario A: Testing Perfect Score (100) & Grade A", async () => {
     vi.spyOn(firecrawlApp, "scrapeUrl").mockImplementation(async (url: string, options?: unknown) => {
-      if (!url || !options) return { success: false, error: "Mock failure" } as CrawlResponse;
+      if (!url || !options) return {};
       return {
-        success: true,
         markdown: "# Welcome to Optimus AI\nThis is a beautiful page content.",
         metadata: {
           title: "تحلیل پیشرفته سئو معنایی و هوشمندسازی کسب‌وکار آنلاین",
@@ -25,7 +24,7 @@ describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
           language: "fa",
           robots: "index, follow",
         },
-      } as CrawlResponse;
+      } satisfies Document;
     });
 
     const reqA = new NextRequest("http://localhost/api/v1/audit/free", {
@@ -44,9 +43,8 @@ describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
 
   it("Scenario B: Testing Poor Score & Grade F", async () => {
     vi.spyOn(firecrawlApp, "scrapeUrl").mockImplementation(async (url: string, options?: unknown) => {
-      if (!url || !options) return { success: false, error: "Mock failure" } as CrawlResponse;
+      if (!url || !options) return {};
       return {
-        success: true,
         markdown: "No header content at all.",
         metadata: {
           title: "",
@@ -54,7 +52,7 @@ describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
           language: "",
           robots: "noindex, nofollow",
         },
-      } as CrawlResponse;
+      } satisfies Document;
     });
 
     const reqB = new NextRequest("http://localhost/api/v1/audit/free", {
