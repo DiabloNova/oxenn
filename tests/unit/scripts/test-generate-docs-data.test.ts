@@ -1,7 +1,7 @@
-import { test } from "node:test";
-import assert from "node:assert";
+import { describe, it, expect } from "vitest";
 
-test("escaping docs data correctly", () => {
+describe("escaping docs data correctly", () => {
+  it("escapes properly", () => {
     const titleRaw = 'Title with "quotes" and \\';
     const contentSnippetRaw = 'Snippet with "quotes", `backticks`, \\ and ${var}\nnewline';
 
@@ -13,8 +13,8 @@ test("escaping docs data correctly", () => {
     snippet: \`${snippet}\`
   }`;
 
-    // Attempt to evaluate output
     const evalResult = eval(`(() => { return ${output} })()`);
-    assert.strictEqual(evalResult.titleEn, titleRaw);
-    assert.strictEqual(evalResult.snippet, contentSnippetRaw);
+    expect(evalResult.titleEn).toBe(titleRaw);
+    expect(evalResult.snippet).toBe(contentSnippetRaw);
+  });
 });

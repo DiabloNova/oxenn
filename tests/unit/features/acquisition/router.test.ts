@@ -1,13 +1,13 @@
-import assert from "node:assert/strict";
-import { CrawlError } from "../../../src/features/acquisition/domain/errors";
-import { resolveCrawlPolicy } from "../../../src/features/acquisition/domain/policy";
+import { describe, it, expect } from "vitest";
+import { CrawlError } from "@/features/acquisition/domain/errors";
+import { resolveCrawlPolicy } from "@/features/acquisition/domain/policy";
 import type {
   CrawlProvider,
   CrawlRequest,
   CrawlResult
-} from "../../../src/features/acquisition/domain/contracts";
-import { ProviderRouter } from "../../../src/features/acquisition/application/provider-router";
-import { normalizeUrl } from "../../../src/features/acquisition/domain/url/normalizer";
+} from "@/features/acquisition/domain/contracts";
+import { ProviderRouter } from "@/features/acquisition/application/provider-router";
+import { normalizeUrl } from "@/features/acquisition/domain/url/normalizer";
 
 function request(): CrawlRequest {
   const normalized = normalizeUrl("https://example.com/");
@@ -40,7 +40,8 @@ function result(id: string): CrawlResult {
   };
 }
 
-export async function testRouter(): Promise<void> {
+describe("testRouter", () => {
+  it("runs", async () => {
   const crawlRequest = request();
   let blockedCalls = 0;
   const blocked: CrawlProvider = {
@@ -60,11 +61,9 @@ export async function testRouter(): Promise<void> {
     id: "fallback",
     execute: async () => result("fallback")
   };
-  await assert.rejects(
-    () => new ProviderRouter([blocked, fallback]).execute(crawlRequest, new AbortController().signal),
-    (error: unknown) => error instanceof CrawlError && error.code === "SSRF_BLOCKED"
-  );
-  assert.equal(blockedCalls, 1);
+  await expect(new ProviderRouter([blocked, fallback]).execute(crawlRequest, new AbortController().signal))
+    .rejects.toMatchObject({ code: "SSRF_BLOCKED" });
+  expect(blockedCalls).toEqual(1);
 
   let attempts = 0;
   const retryable: CrawlProvider = {
@@ -78,10 +77,7 @@ export async function testRouter(): Promise<void> {
       return result("retryable");
     }
   };
-  assert.equal(
-    (await new ProviderRouter([retryable], 1, 2).execute(crawlRequest, new AbortController().signal))
-      .provider.id,
-    "retryable"
-  );
-  assert.equal(attempts, 2);
-}
+  expect((await new ProviderRouter([retryable], 1, 2).execute(crawlRequest, new AbortController().signal)).provider.id).toEqual("retryable");
+  expect(attempts).toEqual(2);
+  });
+});

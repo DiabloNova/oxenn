@@ -1,8 +1,10 @@
-import { BrandEntity } from "../../../src/features/ai-intelligence/domain/entities/brand-entity";
-import { ObservationAggregate } from "../../../src/features/ai-intelligence/domain/models/observation-aggregate";
-import { AeoScoreEngine } from "../../../src/features/ai-intelligence/domain/services/aeo-score-engine";
+import { describe, it, expect } from "vitest";
+import { BrandEntity } from "@/features/ai-intelligence/domain/entities/brand-entity";
+import { ObservationAggregate } from "@/features/ai-intelligence/domain/models/observation-aggregate";
+import { AeoScoreEngine } from "@/features/ai-intelligence/domain/services/aeo-score-engine";
 
-export function testDomain() {
+describe("testDomain", () => {
+  it("runs", () => {
   console.log("▶ Running Domain Layer Tests...");
 
   const auditMock = {
@@ -100,4 +102,5 @@ export function testDomain() {
   if (aggregate.getDominantSentiment() !== "positive") throw new Error("Expected positive dominant sentiment");
 
   console.log("✅ Domain Layer Tests Passed Successfully!");
-}
+  });
+});
