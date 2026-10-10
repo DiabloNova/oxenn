@@ -1,3 +1,4 @@
+import { describe, it, expect, vi } from "vitest";
 import {
   SERVICE_CATALOG,
   getWorkspacePlan,
@@ -6,9 +7,9 @@ import {
   getMarketplaceData,
   registerWorkspacePlan,
   clearWorkspacePlans
-} from "../../src/services/dashboard-services";
+} from "@/services/dashboard-services";
 
-function runTests() {
+describe("dashboard-services", () => { it("runs all tests", () => {
   console.log("=========================================================================");
   console.log("SEORCHABLE — SERVICE MARKETPLACE ARCHITECTURE TEST SUITE");
   console.log("=========================================================================");
@@ -241,12 +242,5 @@ function runTests() {
   console.log("=========================================================================");
   console.log("✅ ALL SERVICE MARKETPLACE INTEGRATION TESTS COMPLETED SUCCESSFULLY!");
   console.log("=========================================================================");
-}
-
-try {
-  runTests();
-} catch (error: unknown) {
-  const errorMsg = error instanceof Error ? error.message : String(error);
-  console.error("❌ TEST RUN FAILED:", errorMsg);
-  process.exit(1);
-}
+  });
+});

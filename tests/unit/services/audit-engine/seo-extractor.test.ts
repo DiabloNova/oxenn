@@ -5,9 +5,10 @@
  * content structure, and performance.
  */
 
-import { extractSeoSignals } from "../../../src/lib/audit-engine/seo-extractor";
-import { CrawlResult } from "../../../src/types/audit";
-import * as assert from "assert";
+import { extractSeoSignals } from "@/lib/audit-engine/seo-extractor";
+import { CrawlResult } from "@/types/audit";
+import { describe, it, expect } from "vitest";
+
 
 // Helper to construct a standard CrawlResult
 function makeCrawl(options: Partial<CrawlResult> & { rawHtml?: string }): CrawlResult {
@@ -64,7 +65,8 @@ function restoreSitemapFetchMock() {
   globalThis.fetch = originalFetch;
 }
 
-export async function runSeoExtractorTests() {
+describe("seo-extractor", () => {
+  it("runs all tests", async () => {
   console.log("=========================================================================");
   console.log("SEO SIGNAL EXTRACTION LAYER — AUTOMATED UNIT & INTEGRATION TEST SUITE");
   console.log("=========================================================================");
@@ -80,9 +82,9 @@ export async function runSeoExtractorTests() {
     // Case: Missing Title & Description
     const crawlMetaEmpty = makeCrawl({ rawHtml: "<html><head></head><body></body></html>" });
     const signalsMetaEmpty = await extractSeoSignals(crawlMetaEmpty);
-    assert.strictEqual(signalsMetaEmpty.metadata.title.present, false);
-    assert.strictEqual(signalsMetaEmpty.metadata.description.present, false);
-    assert.strictEqual(signalsMetaEmpty.metadata.title.count, 0);
+    expect(signalsMetaEmpty.metadata.title.present).toBe(false);
+    expect(signalsMetaEmpty.metadata.description.present).toBe(false);
+    expect(signalsMetaEmpty.metadata.title.count).toBe(0);
 
     // Case: Title & Description Present, OG/Twitter fallbacks, duplicate title
     const crawlMetaFull = makeCrawl({
@@ -102,18 +104,18 @@ export async function runSeoExtractorTests() {
       `
     });
     const signalsMetaFull = await extractSeoSignals(crawlMetaFull);
-    assert.strictEqual(signalsMetaFull.metadata.title.present, true);
-    assert.strictEqual(signalsMetaFull.metadata.title.value, "My Primary Title");
-    assert.strictEqual(signalsMetaFull.metadata.title.count, 2);
-    assert.strictEqual(signalsMetaFull.metadata.title.source, "tag");
+    expect(signalsMetaFull.metadata.title.present).toBe(true);
+    expect(signalsMetaFull.metadata.title.value).toBe("My Primary Title");
+    expect(signalsMetaFull.metadata.title.count).toBe(2);
+    expect(signalsMetaFull.metadata.title.source).toBe("tag");
 
-    assert.strictEqual(signalsMetaFull.metadata.description.present, true);
-    assert.strictEqual(signalsMetaFull.metadata.description.value, "My primary description.");
-    assert.strictEqual(signalsMetaFull.metadata.description.count, 1);
+    expect(signalsMetaFull.metadata.description.present).toBe(true);
+    expect(signalsMetaFull.metadata.description.value).toBe("My primary description.");
+    expect(signalsMetaFull.metadata.description.count).toBe(1);
 
-    assert.strictEqual(signalsMetaFull.metadata.viewport.present, true);
-    assert.strictEqual(signalsMetaFull.metadata.viewport.value, "width=device-width, initial-scale=1.0");
-    assert.strictEqual(signalsMetaFull.metadata.charset, "utf-8");
+    expect(signalsMetaFull.metadata.viewport.present).toBe(true);
+    expect(signalsMetaFull.metadata.viewport.value).toBe("width=device-width, initial-scale=1.0");
+    expect(signalsMetaFull.metadata.charset).toBe("utf-8");
     console.log("  ✅ Metadata Extraction verified successfully.");
 
     // ----------------------------------------------------
@@ -124,8 +126,8 @@ export async function runSeoExtractorTests() {
     // Case: No Headings
     const crawlHeadEmpty = makeCrawl({ rawHtml: "<html><body></body></html>" });
     const signalsHeadEmpty = await extractSeoSignals(crawlHeadEmpty);
-    assert.strictEqual(signalsHeadEmpty.headings.sequence.length, 0);
-    assert.strictEqual(signalsHeadEmpty.headings.counts.h1, 0);
+    expect(signalsHeadEmpty.headings.sequence.length).toBe(0);
+    expect(signalsHeadEmpty.headings.counts.h1).toBe(0);
 
     // Case: Multi-level, document order, multiple H1s
     const crawlHeadHierarchy = makeCrawl({
@@ -142,15 +144,15 @@ export async function runSeoExtractorTests() {
       `
     });
     const signalsHeadHierarchy = await extractSeoSignals(crawlHeadHierarchy);
-    assert.strictEqual(signalsHeadHierarchy.headings.counts.h1, 2);
-    assert.strictEqual(signalsHeadHierarchy.headings.counts.h2, 1);
-    assert.strictEqual(signalsHeadHierarchy.headings.counts.h6, 1);
+    expect(signalsHeadHierarchy.headings.counts.h1).toBe(2);
+    expect(signalsHeadHierarchy.headings.counts.h2).toBe(1);
+    expect(signalsHeadHierarchy.headings.counts.h6).toBe(1);
 
     // Validate sequence preserves document order
-    assert.strictEqual(signalsHeadHierarchy.headings.sequence[0].text, "Second Heading");
-    assert.strictEqual(signalsHeadHierarchy.headings.sequence[0].level, 2);
-    assert.strictEqual(signalsHeadHierarchy.headings.sequence[1].text, "Main H1 First");
-    assert.strictEqual(signalsHeadHierarchy.headings.sequence[1].level, 1);
+    expect(signalsHeadHierarchy.headings.sequence[0].text).toBe("Second Heading");
+    expect(signalsHeadHierarchy.headings.sequence[0].level).toBe(2);
+    expect(signalsHeadHierarchy.headings.sequence[1].text).toBe("Main H1 First");
+    expect(signalsHeadHierarchy.headings.sequence[1].level).toBe(1);
     console.log("  ✅ Heading Hierarchy verified successfully.");
 
     // ----------------------------------------------------
@@ -161,8 +163,8 @@ export async function runSeoExtractorTests() {
     // Case: Missing Canonical
     const crawlCanEmpty = makeCrawl({ rawHtml: "<html><body></body></html>" });
     const signalsCanEmpty = await extractSeoSignals(crawlCanEmpty);
-    assert.strictEqual(signalsCanEmpty.canonical.present, false);
-    assert.strictEqual(signalsCanEmpty.canonical.url, null);
+    expect(signalsCanEmpty.canonical.present).toBe(false);
+    expect(signalsCanEmpty.canonical.url).toBe(null);
 
     // Case: Multiple canonicals, invalid URL, relative URL
     const crawlCanComplex = makeCrawl({
@@ -178,12 +180,12 @@ export async function runSeoExtractorTests() {
       `
     });
     const signalsCanComplex = await extractSeoSignals(crawlCanComplex);
-    assert.strictEqual(signalsCanComplex.canonical.present, true);
-    assert.strictEqual(signalsCanComplex.canonical.url, "https://example.com/subpage");
-    assert.strictEqual(signalsCanComplex.canonical.multiple, true);
-    assert.strictEqual(signalsCanComplex.canonical.isValid, true);
-    assert.strictEqual(signalsCanComplex.canonical.matchesPageUrl, true);
-    assert.strictEqual(signalsCanComplex.canonical.occurrences.length, 2);
+    expect(signalsCanComplex.canonical.present).toBe(true);
+    expect(signalsCanComplex.canonical.url).toBe("https://example.com/subpage");
+    expect(signalsCanComplex.canonical.multiple).toBe(true);
+    expect(signalsCanComplex.canonical.isValid).toBe(true);
+    expect(signalsCanComplex.canonical.matchesPageUrl).toBe(true);
+    expect(signalsCanComplex.canonical.occurrences.length).toBe(2);
     console.log("  ✅ Canonical Link Extraction verified successfully.");
 
     // ----------------------------------------------------
@@ -204,12 +206,12 @@ export async function runSeoExtractorTests() {
       `
     });
     const signalsRobots = await extractSeoSignals(crawlRobots);
-    assert.deepStrictEqual(signalsRobots.robots.metaDirectives, ["noindex", "follow"]);
-    assert.deepStrictEqual(signalsRobots.robots.headerDirectives, ["noarchive", "noimageindex"]);
-    assert.strictEqual(signalsRobots.robots.directives.includes("noindex"), true);
-    assert.strictEqual(signalsRobots.robots.directives.includes("noarchive"), true);
-    assert.strictEqual(signalsRobots.robots.indexAllowed, false);
-    assert.strictEqual(signalsRobots.robots.followAllowed, true);
+    expect(signalsRobots.robots.metaDirectives).toEqual(["noindex", "follow"]);
+    expect(signalsRobots.robots.headerDirectives).toEqual(["noarchive", "noimageindex"]);
+    expect(signalsRobots.robots.directives.includes("noindex")).toBe(true);
+    expect(signalsRobots.robots.directives.includes("noarchive")).toBe(true);
+    expect(signalsRobots.robots.indexAllowed).toBe(false);
+    expect(signalsRobots.robots.followAllowed).toBe(true);
     console.log("  ✅ Robots Directives Parsing verified successfully.");
 
     // ----------------------------------------------------
@@ -221,9 +223,9 @@ export async function runSeoExtractorTests() {
     sitemapMockData["https://example.com/sitemap.xml"] = { status: 404, body: "Not Found" };
     const crawlSitemap404 = makeCrawl({ url: "https://example.com" });
     const signalsSitemap404 = await extractSeoSignals(crawlSitemap404);
-    assert.strictEqual(signalsSitemap404.sitemap.discovered, false);
-    assert.strictEqual(signalsSitemap404.sitemap.status, 404);
-    assert.strictEqual(signalsSitemap404.sitemap.parsedSuccessfully, false);
+    expect(signalsSitemap404.sitemap.discovered).toBe(false);
+    expect(signalsSitemap404.sitemap.status).toBe(404);
+    expect(signalsSitemap404.sitemap.parsedSuccessfully).toBe(false);
 
     // Case B: Valid standard Sitemap URL Set
     sitemapMockData["https://example.com/sitemap.xml"] = {
@@ -242,11 +244,11 @@ export async function runSeoExtractorTests() {
       `
     };
     const signalsSitemap200 = await extractSeoSignals(crawlSitemap404);
-    assert.strictEqual(signalsSitemap200.sitemap.discovered, true);
-    assert.strictEqual(signalsSitemap200.sitemap.isIndex, false);
-    assert.strictEqual(signalsSitemap200.sitemap.urlsCount, 2);
-    assert.strictEqual(signalsSitemap200.sitemap.lastModified, "2026-08-11");
-    assert.deepStrictEqual(signalsSitemap200.sitemap.entries, [
+    expect(signalsSitemap200.sitemap.discovered).toBe(true);
+    expect(signalsSitemap200.sitemap.isIndex).toBe(false);
+    expect(signalsSitemap200.sitemap.urlsCount).toBe(2);
+    expect(signalsSitemap200.sitemap.lastModified).toBe("2026-08-11");
+    expect(signalsSitemap200.sitemap.entries).toEqual([
       "https://example.com/home",
       "https://example.com/blog"
     ]);
@@ -264,10 +266,10 @@ export async function runSeoExtractorTests() {
       `
     };
     const signalsSitemapIndex = await extractSeoSignals(crawlSitemap404);
-    assert.strictEqual(signalsSitemapIndex.sitemap.discovered, true);
-    assert.strictEqual(signalsSitemapIndex.sitemap.isIndex, true);
-    assert.strictEqual(signalsSitemapIndex.sitemap.urlsCount, 1);
-    assert.strictEqual(signalsSitemapIndex.sitemap.entries[0], "https://example.com/sub-sitemap-1.xml");
+    expect(signalsSitemapIndex.sitemap.discovered).toBe(true);
+    expect(signalsSitemapIndex.sitemap.isIndex).toBe(true);
+    expect(signalsSitemapIndex.sitemap.urlsCount).toBe(1);
+    expect(signalsSitemapIndex.sitemap.entries[0]).toBe("https://example.com/sub-sitemap-1.xml");
 
     // Case D: Malformed XML (Parse resilience)
     sitemapMockData["https://example.com/sitemap.xml"] = {
@@ -275,9 +277,9 @@ export async function runSeoExtractorTests() {
       body: "<invalid-xml><url><loc>broken"
     };
     const signalsSitemapMalformed = await extractSeoSignals(crawlSitemap404);
-    assert.strictEqual(signalsSitemapMalformed.sitemap.discovered, true);
+    expect(signalsSitemapMalformed.sitemap.discovered).toBe(true);
     // Cheerio/xmlMode parses broken tags leniently
-    assert.strictEqual(signalsSitemapMalformed.sitemap.parsedSuccessfully, true);
+    expect(signalsSitemapMalformed.sitemap.parsedSuccessfully).toBe(true);
     console.log("  ✅ XML Sitemap Processing verified successfully.");
 
     // ----------------------------------------------------
@@ -311,25 +313,25 @@ export async function runSeoExtractorTests() {
       `
     });
     const signalsStructured = await extractSeoSignals(crawlStructured);
-    assert.strictEqual(signalsStructured.structuredData.hasJsonLd, true);
-    assert.strictEqual(signalsStructured.structuredData.blocksCount, 2);
+    expect(signalsStructured.structuredData.hasJsonLd).toBe(true);
+    expect(signalsStructured.structuredData.blocksCount).toBe(2);
 
     // Block 0: Valid Product block
-    assert.strictEqual(signalsStructured.structuredData.blocks[0].isParsed, true);
-    assert.strictEqual(signalsStructured.structuredData.blocks[0].type, "Product");
+    expect(signalsStructured.structuredData.blocks[0].isParsed).toBe(true);
+    expect(signalsStructured.structuredData.blocks[0].type).toBe("Product");
 
     // Block 1: Malformed block
-    assert.strictEqual(signalsStructured.structuredData.blocks[1].isParsed, false);
-    assert.notStrictEqual(signalsStructured.structuredData.blocks[1].parseError, null);
+    expect(signalsStructured.structuredData.blocks[1].isParsed).toBe(false);
+    expect(signalsStructured.structuredData.blocks[1].parseError).not.toBe(null);
 
     // Schema Types Collected
-    assert.deepStrictEqual(signalsStructured.structuredData.schemaTypes, ["Product"]);
+    expect(signalsStructured.structuredData.schemaTypes).toEqual(["Product"]);
 
     // Microdata Extraction
-    assert.strictEqual(signalsStructured.structuredData.microdata.length, 1);
-    assert.strictEqual(signalsStructured.structuredData.microdata[0].type, "https://schema.org/LocalBusiness");
-    assert.strictEqual(signalsStructured.structuredData.microdata[0].properties.name, "Snapp HQ");
-    assert.strictEqual(signalsStructured.structuredData.microdata[0].properties.telephone, "021-12345");
+    expect(signalsStructured.structuredData.microdata.length).toBe(1);
+    expect(signalsStructured.structuredData.microdata[0].type).toBe("https://schema.org/LocalBusiness");
+    expect(signalsStructured.structuredData.microdata[0].properties.name).toBe("Snapp HQ");
+    expect(signalsStructured.structuredData.microdata[0].properties.telephone).toBe("021-12345");
     console.log("  ✅ Structured Data Extraction verified successfully.");
 
     // ----------------------------------------------------
@@ -354,15 +356,15 @@ export async function runSeoExtractorTests() {
       `
     });
     const signalsLinks = await extractSeoSignals(crawlLinks);
-    assert.strictEqual(signalsLinks.internalLinks.links.length, 6);
-    assert.strictEqual(signalsLinks.internalLinks.internalCount, 5); // /pricing, ./about, contact, fragment, duplicate
-    assert.strictEqual(signalsLinks.internalLinks.externalCount, 1); // different-site.com
-    assert.strictEqual(signalsLinks.internalLinks.relativeCount, 3); // /pricing, ./about, duplicate pricing
-    assert.strictEqual(signalsLinks.internalLinks.fragmentOnlyCount, 1); // #section-2
+    expect(signalsLinks.internalLinks.links.length).toBe(6);
+    expect(signalsLinks.internalLinks.internalCount).toBe(5); // /pricing, ./about, contact, fragment, duplicate
+    expect(signalsLinks.internalLinks.externalCount).toBe(1); // different-site.com
+    expect(signalsLinks.internalLinks.relativeCount).toBe(3); // /pricing, ./about, duplicate pricing
+    expect(signalsLinks.internalLinks.fragmentOnlyCount).toBe(1); // #section-2
 
     // Unique targets count (no duplicates)
-    assert.strictEqual(signalsLinks.internalLinks.uniqueTargets.includes("https://sub.my-site.com:8080/pricing"), true);
-    assert.strictEqual(signalsLinks.internalLinks.uniqueTargets.includes("https://different-site.com/home"), true);
+    expect(signalsLinks.internalLinks.uniqueTargets.includes("https://sub.my-site.com:8080/pricing")).toBe(true);
+    expect(signalsLinks.internalLinks.uniqueTargets.includes("https://different-site.com/home")).toBe(true);
     console.log("  ✅ Links Classification verified successfully.");
 
     // ----------------------------------------------------
@@ -373,15 +375,15 @@ export async function runSeoExtractorTests() {
     // Case 1: HTTP 200 OK
     const crawl200 = makeCrawl({ statusCode: 200 });
     const signals200 = await extractSeoSignals(crawl200);
-    assert.strictEqual(signals200.http.statusCode, 200);
-    assert.strictEqual(signals200.http.isSuccess, true);
-    assert.strictEqual(signals200.http.isRedirect, false);
+    expect(signals200.http.statusCode).toBe(200);
+    expect(signals200.http.isSuccess).toBe(true);
+    expect(signals200.http.isRedirect).toBe(false);
 
     // Case 2: HTTP 404 Client Error
     const crawl404 = makeCrawl({ statusCode: 404 });
     const signals404 = await extractSeoSignals(crawl404);
-    assert.strictEqual(signals404.http.statusCode, 404);
-    assert.strictEqual(signals404.http.isClientError, true);
+    expect(signals404.http.statusCode).toBe(404);
+    expect(signals404.http.isClientError).toBe(true);
 
     // Case 3: Redirect loops & chains
     const crawlRedirectChain = makeCrawl({
@@ -391,11 +393,11 @@ export async function runSeoExtractorTests() {
       redirectDepth: 2
     });
     const signalsRedirect = await extractSeoSignals(crawlRedirectChain);
-    assert.strictEqual(signalsRedirect.redirects.redirectCount, 2);
-    assert.strictEqual(signalsRedirect.redirects.initialUrl, "https://example.com/start");
-    assert.strictEqual(signalsRedirect.redirects.finalUrl, "https://example.com/final");
-    assert.strictEqual(signalsRedirect.redirects.isLoop, false);
-    assert.strictEqual(signalsRedirect.redirects.excessiveCount, false);
+    expect(signalsRedirect.redirects.redirectCount).toBe(2);
+    expect(signalsRedirect.redirects.initialUrl).toBe("https://example.com/start");
+    expect(signalsRedirect.redirects.finalUrl).toBe("https://example.com/final");
+    expect(signalsRedirect.redirects.isLoop).toBe(false);
+    expect(signalsRedirect.redirects.excessiveCount).toBe(false);
 
     // Case 4: Redirect Loop
     const crawlRedirectLoop = makeCrawl({
@@ -405,7 +407,7 @@ export async function runSeoExtractorTests() {
       redirectDepth: 2
     });
     const signalsRedirectLoop = await extractSeoSignals(crawlRedirectLoop);
-    assert.strictEqual(signalsRedirectLoop.redirects.isLoop, true);
+    expect(signalsRedirectLoop.redirects.isLoop).toBe(true);
     console.log("  ✅ HTTP & Redirects verified successfully.");
 
     // ----------------------------------------------------
@@ -418,22 +420,22 @@ export async function runSeoExtractorTests() {
       rawHtml: "<html><head><title>OK</title></head><body></body></html>"
     });
     const signalsIndexable = await extractSeoSignals(crawlIndexable);
-    assert.strictEqual(signalsIndexable.indexability.isIndexable, true);
-    assert.strictEqual(signalsIndexable.indexability.status, "indexable");
+    expect(signalsIndexable.indexability.isIndexable).toBe(true);
+    expect(signalsIndexable.indexability.status).toBe("indexable");
 
     // Case B: Success 200, meta noindex → Noindex
     const crawlNoIndex = makeCrawl({
       rawHtml: '<html><head><meta name="robots" content="noindex"></head><body></body></html>'
     });
     const signalsNoIndex = await extractSeoSignals(crawlNoIndex);
-    assert.strictEqual(signalsNoIndex.indexability.isIndexable, false);
-    assert.strictEqual(signalsNoIndex.indexability.status, "noindex");
+    expect(signalsNoIndex.indexability.isIndexable).toBe(false);
+    expect(signalsNoIndex.indexability.status).toBe("noindex");
 
     // Case C: non-200 Status
     const crawlNon200 = makeCrawl({ statusCode: 500, rawHtml: "Error" });
     const signalsNon200 = await extractSeoSignals(crawlNon200);
-    assert.strictEqual(signalsNon200.indexability.isIndexable, false);
-    assert.strictEqual(signalsNon200.indexability.status, "non_200_status");
+    expect(signalsNon200.indexability.isIndexable).toBe(false);
+    expect(signalsNon200.indexability.status).toBe("non_200_status");
     console.log("  ✅ Indexability Evidence verified successfully.");
 
     // ----------------------------------------------------
@@ -464,14 +466,14 @@ export async function runSeoExtractorTests() {
       `
     });
     const signalsContent = await extractSeoSignals(crawlContentStructure);
-    assert.strictEqual(signalsContent.contentStructure.hasBody, true);
-    assert.strictEqual(signalsContent.contentStructure.hasMain, true);
-    assert.strictEqual(signalsContent.contentStructure.paragraphCount, 2);
-    assert.strictEqual(signalsContent.contentStructure.listCount, 1);
-    assert.strictEqual(signalsContent.contentStructure.tableCount, 1);
-    assert.strictEqual(signalsContent.contentStructure.imageCount, 1);
-    assert.strictEqual(signalsContent.contentStructure.videoCount, 1);
-    assert.strictEqual(signalsContent.contentStructure.wordCount > 10, true);
+    expect(signalsContent.contentStructure.hasBody).toBe(true);
+    expect(signalsContent.contentStructure.hasMain).toBe(true);
+    expect(signalsContent.contentStructure.paragraphCount).toBe(2);
+    expect(signalsContent.contentStructure.listCount).toBe(1);
+    expect(signalsContent.contentStructure.tableCount).toBe(1);
+    expect(signalsContent.contentStructure.imageCount).toBe(1);
+    expect(signalsContent.contentStructure.videoCount).toBe(1);
+    expect(signalsContent.contentStructure.wordCount > 10).toBe(true);
     console.log("  ✅ Content Structure verified successfully.");
 
     // ----------------------------------------------------
@@ -482,16 +484,16 @@ export async function runSeoExtractorTests() {
     // Case A: Performance data measured
     const crawlPerf = makeCrawl({ bodySize: 1024 });
     const signalsPerf = await extractSeoSignals(crawlPerf, { responseTimeMs: 420, downloadDurationMs: 80 });
-    assert.strictEqual(signalsPerf.performance.isMeasured, true);
-    assert.strictEqual(signalsPerf.performance.responseTimeMs, 420);
-    assert.strictEqual(signalsPerf.performance.downloadDurationMs, 80);
-    assert.strictEqual(signalsPerf.performance.responseSize, 1024);
+    expect(signalsPerf.performance.isMeasured).toBe(true);
+    expect(signalsPerf.performance.responseTimeMs).toBe(420);
+    expect(signalsPerf.performance.downloadDurationMs).toBe(80);
+    expect(signalsPerf.performance.responseSize).toBe(1024);
 
     // Case B: Performance data missing/unavailable
     const signalsPerfMissing = await extractSeoSignals(crawlPerf);
-    assert.strictEqual(signalsPerfMissing.performance.isMeasured, false);
-    assert.strictEqual(signalsPerfMissing.performance.responseTimeMs, null);
-    assert.strictEqual(signalsPerfMissing.performance.downloadDurationMs, null);
+    expect(signalsPerfMissing.performance.isMeasured).toBe(false);
+    expect(signalsPerfMissing.performance.responseTimeMs).toBe(null);
+    expect(signalsPerfMissing.performance.downloadDurationMs).toBe(null);
     console.log("  ✅ Performance Timing verified successfully.");
 
     console.log("=========================================================================");
@@ -501,16 +503,6 @@ export async function runSeoExtractorTests() {
   } finally {
     restoreSitemapFetchMock();
   }
-}
+  });
+});
 
-// Support executing directly
-if (require.main === module) {
-  runSeoExtractorTests()
-    .then(() => {
-      process.exit(0);
-    })
-    .catch((err) => {
-      console.error("Test execution failed:", err);
-      process.exit(1);
-    });
-}

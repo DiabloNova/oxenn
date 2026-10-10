@@ -1,7 +1,9 @@
-import { dashboardNavigation, NavigationItem } from "../../src/config/dashboardNavigation";
-import { Session } from "../../src/types/auth";
+import { describe, it, expect, vi } from "vitest";
+import { dashboardNavigation, NavigationItem } from "@/config/dashboardNavigation";
+import { Session } from "@/types/auth";
 
-export async function runDashboardShellTests() {
+describe("dashboard-shell", () => {
+  it("runs all tests", async () => {
   console.log("=========================================================================");
   console.log("SEORCHABLE — DASHBOARD SHELL ARCHITECTURE TEST SUITE");
   console.log("=========================================================================");
@@ -133,11 +135,5 @@ export async function runDashboardShellTests() {
   console.log("=========================================================================");
   console.log("✅ ALL DASHBOARD SHELL INTEGRATION TESTS COMPLETED SUCCESSFULLY!");
   console.log("=========================================================================");
-}
-
-if (require.main === module) {
-  runDashboardShellTests().catch((err) => {
-    console.error("❌ Test Suite Failed with Error:", err);
-    process.exit(1);
   });
-}
+});

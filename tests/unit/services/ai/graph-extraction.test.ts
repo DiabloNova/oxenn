@@ -2,9 +2,12 @@
  * Test suite for Graph Extraction Service
  */
 
-import { extractGraphEntities } from "../../../src/services/ai/graph-extraction";
+import { extractGraphEntities } from "@/services/ai/graph-extraction";
 
-export async function testGraphExtraction() {
+import { describe, it, expect, vi } from "vitest";
+
+describe("graph-extraction", () => {
+  it("runs all tests", async () => {
   console.log("▶ Running Graph Extraction Service Tests...");
 
   // Test with 'optimus' text
@@ -43,12 +46,5 @@ export async function testGraphExtraction() {
   }
 
   console.log("✅ Graph Extraction Service Tests Passed Successfully!");
-}
-
-// If run directly
-if (require.main === module) {
-  testGraphExtraction().catch(err => {
-    console.error(err);
-    process.exit(1);
   });
-}
+});

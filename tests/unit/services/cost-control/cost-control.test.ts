@@ -1,7 +1,8 @@
-import { BudgetService } from "../../../src/services/cost-control/budget";
-import { CostCalculator, pricingCatalog } from "../../../src/services/cost-control/pricing";
-import { UsageRecord, RequestBudget } from "../../../src/services/cost-control/types";
-import { setCookiesMock } from "../../../src/services/auth/session";
+import { describe, it, expect, vi } from "vitest";
+import { BudgetService } from "@/services/cost-control/budget";
+import { CostCalculator, pricingCatalog } from "@/services/cost-control/pricing";
+import { UsageRecord, RequestBudget } from "@/services/cost-control/types";
+import { setCookiesMock } from "@/services/auth/session";
 
 // Mock cookie store for session resolution during cost/budget tests
 const mockCookieStore = {
@@ -22,7 +23,8 @@ const mockCookieStore = {
 
 setCookiesMock(() => Promise.resolve(mockCookieStore));
 
-export async function runCostControlTests() {
+describe("cost-control", () => {
+  it("runs all tests", async () => {
   console.log("=========================================================================");
   console.log("SEORCHABLE — SECURE AI COST GOVERNANCE & BUDGET INTEGRATION SUITE");
   console.log("=========================================================================");
@@ -176,11 +178,5 @@ export async function runCostControlTests() {
   console.log("=========================================================================");
   console.log("✅ ALL COST-CONTROL TEST SCENARIOS PASSED SUCCESSFULLY!");
   console.log("=========================================================================");
-}
-
-if (require.main === module) {
-  runCostControlTests().catch((err) => {
-    console.error("❌ Test Suite Failed with Error:", err);
-    process.exit(1);
   });
-}
+});

@@ -1,9 +1,11 @@
+import { describe, it, expect, vi } from "vitest";
 import assert from 'node:assert';
-import { chunkText } from '../../../src/services/ai/text-chunker';
-import { getLLMClient, MockLLMClient } from '../../../src/services/ai/llm-client';
-import { analyzeSentiment } from '../../../src/services/ai/sentiment-analysis';
+import { chunkText } from '@/services/ai/text-chunker';
+import { getLLMClient, MockLLMClient } from '@/services/ai/llm-client';
+import { analyzeSentiment } from '@/services/ai/sentiment-analysis';
 
-export async function testAiOrchestration() {
+describe("ai", () => {
+  it("runs all tests", async () => {
   console.log("▶ Running AI Orchestration Layer Tests...");
 
   // 1. Persian Text Chunker Tests
@@ -18,7 +20,7 @@ export async function testAiOrchestration() {
   const chunkWithHalfSpace = chunkText(halfSpaceText, 25, 0);
   assert.ok(chunkWithHalfSpace.length > 0, "Chunk should be produced");
   const hasBrokenHalfSpace = chunkWithHalfSpace.some(c => c.startsWith('\u200C') || c.endsWith('\u200C'));
-  assert.strictEqual(hasBrokenHalfSpace, false, "Should not break text exactly at zero-width non-joiner boundary");
+  expect(hasBrokenHalfSpace).toBe(false, "Should not break text exactly at zero-width non-joiner boundary");
 
   // Persian quotes preservation test
   const quoteText = 'او گفت: «این محصول عالی است» و سپس خارج شد.';
@@ -52,19 +54,14 @@ export async function testAiOrchestration() {
 
   for (const { text, expectedLabel } of testCases) {
     const result = await analyzeSentiment(text);
-    assert.strictEqual(result.label, expectedLabel, `Expected sentiment label to be "${expectedLabel}" but got "${result.label}"`);
+    expect(result.label).toBe(expectedLabel, `Expected sentiment label to be "${expectedLabel}" but got "${result.label}"`);
     assert.ok(result.score >= -1 && result.score <= 1, "Sentiment score should be between -1 and 1");
     assert.ok(result.confidence >= 0 && result.confidence <= 1, "Sentiment confidence should be between 0 and 1");
     assert.ok(Array.isArray(result.emotions), "Emotions must be returned as an array of strings");
   }
 
   console.log("✅ AI Orchestration Layer Tests Passed Successfully!");
-}
+  });
+});
 
 // Execute directly if run via tsx directly
-if (require.main === module) {
-  testAiOrchestration().catch(err => {
-    console.error("❌ AI Orchestration Layer Tests Failed:", err);
-    process.exit(1);
-  });
-}

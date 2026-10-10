@@ -1,3 +1,4 @@
+import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import {
   createSession,
@@ -6,12 +7,12 @@ import {
   getAuthenticatedUser,
   invalidateSession,
   setCookiesMock
-} from "../../../src/services/auth/session";
-import { User } from "../../../src/types/auth";
-import { TenantContextManager } from "../../../src/core/database/tenant-context";
-import { ingestDocumentAction } from "../../../src/app/actions/ingestion";
-import { queryKnowledgeGraphAction } from "../../../src/app/actions/query";
-import { requireWorkspaceMembership, requireRole, authorizeApiRequest } from "../../../src/services/auth/authorization";
+} from "@/services/auth/session";
+import { User } from "@/types/auth";
+import { TenantContextManager } from "@/core/database/tenant-context";
+import { ingestDocumentAction } from "@/app/actions/ingestion";
+import { queryKnowledgeGraphAction } from "@/app/actions/query";
+import { requireWorkspaceMembership, requireRole, authorizeApiRequest } from "@/services/auth/authorization";
 
 interface MockCookieItem {
   value: string;
@@ -83,7 +84,7 @@ function updateCompetitiveAnalysisRLS(activeTenantId: string, rowId: string, upd
   return true;
 }
 
-export async function runAuthTests() {
+describe("Auth Services Session", () => { it("runs all security regression scenarios", async () => {
   console.log("=========================================================================");
   console.log("SEORCHABLE — PERMANENT SECURITY REGRESSION TEST SUITE (PHASE 2)");
   console.log("=========================================================================");
@@ -243,11 +244,5 @@ export async function runAuthTests() {
   console.log("=========================================================================");
   console.log("✅ ALL REQUIRED SECURITY REGRESSION SCENARIOS PASSED SUCCESSFULLY!");
   console.log("=========================================================================");
-}
-
-if (require.main === module) {
-  runAuthTests().catch((err) => {
-    console.error("❌ Test Suite Failed with Error:", err);
-    process.exit(1);
   });
-}
+});

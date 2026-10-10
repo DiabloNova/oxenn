@@ -1,13 +1,14 @@
+import { describe, it, expect, vi } from "vitest";
 /**
  * Automated Enterprise Test Suite for Core Intelligence Audit Engine.
  * Verifies URL normalization, SSRF/IP defenses, timeout limits, response size limits,
  * HTML data extraction, schema validation, deterministic scoring, and API response payload contracts.
  */
 
-import { normalizeUrl, isSafeUrl } from "../../../src/lib/audit-engine/url-validator";
-import { normalizeFeatures } from "../../../src/lib/audit-engine/normalizer";
-import { executeAudit } from "../../../src/lib/audit-engine/builder";
-import { AuditLogger } from "../../../src/lib/audit-engine/logger";
+import { normalizeUrl, isSafeUrl } from "@/lib/audit-engine/url-validator";
+import { normalizeFeatures } from "@/lib/audit-engine/normalizer";
+import { executeAudit } from "@/lib/audit-engine/builder";
+import { AuditLogger } from "@/lib/audit-engine/logger";
 
 // Standard Mock Pages for crawl interception
 const MOCK_PAGES: Record<string, { status: number; body: string; headers?: Record<string, string> }> = {
@@ -193,7 +194,8 @@ function restoreFetchMock() {
   globalThis.fetch = originalFetch;
 }
 
-export async function testAuditEngineSuite() {
+describe("engine", () => {
+  it("runs all tests", async () => {
   console.log("▶ Running Core Intelligence Audit Engine Tests...");
   setupFetchMock();
 
@@ -379,17 +381,7 @@ export async function testAuditEngineSuite() {
   } finally {
     restoreFetchMock();
   }
-}
+  });
+});
 
 // Support executing directly
-if (require.main === module) {
-  testAuditEngineSuite()
-    .then(() => {
-      console.log("Test execution finished.");
-      process.exit(0);
-    })
-    .catch((err) => {
-      console.error("Test execution failed:", err);
-      process.exit(1);
-    });
-}

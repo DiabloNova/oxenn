@@ -1,8 +1,10 @@
+import { describe, it, expect, vi } from "vitest";
 import assert from "node:assert/strict";
-import { TenantContextManager } from "../../../src/core/database/tenant-context";
-import { isQueryTenantScoped, TENANT_SCOPED_TABLES } from "../../../src/core/database/tenant-context";
+import { TenantContextManager } from "@/core/database/tenant-context";
+import { isQueryTenantScoped, TENANT_SCOPED_TABLES } from "@/core/database/tenant-context";
 
-export async function testTenantIsolationBehaviors() {
+describe("tenant-isolation", () => {
+  it("runs all tests", async () => {
   console.log("Running Monitoring Tenant Isolation Pattern Verification...");
 
   assert.equal(
@@ -39,4 +41,5 @@ export async function testTenantIsolationBehaviors() {
   assert.equal(throwsWithoutTenant, true, "Fetching tenant scoped repo without explicit context wrapper MUST throw an exception immediately.");
 
   console.log("✅ Tenant Isolation Behavioral Pattern tests passed (strictly follows zero-trust boundaries)!");
-}
+  });
+});

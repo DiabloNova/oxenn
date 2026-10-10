@@ -1,8 +1,10 @@
+import { describe, it, expect, vi } from "vitest";
 import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as path from "path";
 
-export async function testRepositoryBehaviors() {
+describe("repository", () => {
+  it("runs all tests", async () => {
   console.log("Running Repository Behavioral Pattern Verification...");
 
   const repoFiles = [
@@ -20,4 +22,5 @@ export async function testRepositoryBehaviors() {
   }
 
   console.log("✅ Repository Behavioral Pattern tests passed (strictly follows TenantContextManager constraints)!");
-}
+  });
+});

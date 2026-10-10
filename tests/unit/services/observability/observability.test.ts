@@ -1,8 +1,10 @@
-import { ObservabilityContextManager } from "../../../src/services/observability/context";
-import { ObservabilityTracker } from "../../../src/services/observability/tracker";
-import { ObservabilityContext } from "../../../src/services/observability/types";
+import { describe, it, expect, vi } from "vitest";
+import { ObservabilityContextManager } from "@/services/observability/context";
+import { ObservabilityTracker } from "@/services/observability/tracker";
+import { ObservabilityContext } from "@/services/observability/types";
 
-export async function runObservabilityTests() {
+describe("observability", () => {
+  it("runs all tests", async () => {
   console.log("=========================================================================");
   console.log("SEORCHABLE — SECURE OBSERVABILITY & TELEMETRY INTEGRATION SUITE");
   console.log("=========================================================================");
@@ -158,11 +160,5 @@ export async function runObservabilityTests() {
   console.log("=========================================================================");
   console.log("✅ ALL OBSERVABILITY & CONTEXT PROPAGATION SCENARIOS PASSED!");
   console.log("=========================================================================");
-}
-
-if (require.main === module) {
-  runObservabilityTests().catch((err) => {
-    console.error("❌ Test Suite Failed with Error:", err);
-    process.exit(1);
   });
-}
+});

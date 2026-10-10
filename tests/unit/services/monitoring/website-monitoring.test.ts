@@ -1,9 +1,11 @@
+import { describe, it, expect, vi } from "vitest";
 import assert from "node:assert/strict";
-import { ChangeDetectionService } from "../../../src/features/monitoring/services/change-detection-service";
-import { RegressionDetectionService } from "../../../src/features/monitoring/services/regression-detection-service";
-import { CrawlSnapshot } from "../../../src/features/monitoring/domain/types";
+import { ChangeDetectionService } from "@/features/monitoring/services/change-detection-service";
+import { RegressionDetectionService } from "@/features/monitoring/services/regression-detection-service";
+import { CrawlSnapshot } from "@/features/monitoring/domain/types";
 
-export async function testWebsiteMonitoringFoundation() {
+describe("website-monitoring", () => {
+  it("runs all tests", async () => {
   console.log("Running Website Monitoring Foundation Tests...");
 
   const changeService = new ChangeDetectionService();
@@ -121,4 +123,5 @@ export async function testWebsiteMonitoringFoundation() {
   assert.equal(reg4.isRegression, false);
 
   console.log("✅ Website Monitoring Foundation Tests Passed!");
-}
+  });
+});
