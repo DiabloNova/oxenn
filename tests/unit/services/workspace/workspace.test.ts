@@ -1,9 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 
 describe('Workspace Service Unit Tests', () => {
-  it('logs placeholder status when test database is not attached', () => {
-    // Preserves legacy placeholder behavior for workspace service unit spec
-    const msg = "Workspace tests are currently not executable in this environment without a test database.";
-    expect(msg).toContain("Workspace tests");
-  });
+  // Not executable in this environment without a test database (legacy file had no assertions).
+  it.todo('workspace service behaviour (requires test database)');
 });
