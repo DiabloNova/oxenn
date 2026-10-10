@@ -35,10 +35,14 @@ describe("testHttpProviderLimits", () => {
     server.listen(0, "127.0.0.1", resolve);
   });
   const address = server.address();
-  expect(address && typeof address !== "string").toBeTruthy();
+  if (!address || typeof address === "string") {
+    throw new Error("server did not bind");
+  }
   port = address.port;
   const normalized = normalizeUrl(`http://a.test:${port}/`);
-  expect(normalized.ok).toBeTruthy();
+  if (!normalized.ok) {
+    throw normalized.error;
+  }
   const request: CrawlRequest = {
     tenantId: "a0000000-0000-4000-8000-00000000000a",
     requestedUrl: normalized.value.canonical,

@@ -10,7 +10,7 @@ describe("testSecurity", () => {
     "fc00::1", "fe80::1", "ff02::1", "ff00::1", "2001:db8::1",
     "::ffff:127.0.0.1", "::127.0.0.1", "2130706433", "0177.0.0.1"
   ]) {
-    expect(isBlockedIp(ip).blocked).toEqual(true, ip);
+    expect(isBlockedIp(ip).blocked).toEqual(true);
   }
   expect(isBlockedIp("2606:4700::1111").blocked).toEqual(false);
   expect(isBlockedIp("::ffff:8.8.8.8").blocked).toEqual(false);
@@ -23,7 +23,7 @@ describe("testSecurity", () => {
     "x.home.arpa", "singlelabel"
   ]) {
     const result = await resolveAndValidateHost(host, async () => []);
-    expect(result.ok).toEqual(false, host);
+    expect(result.ok).toEqual(false);
   }
   const dnsFailure = await resolveAndValidateHost(
     "missing.example",

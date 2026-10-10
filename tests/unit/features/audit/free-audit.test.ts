@@ -3,8 +3,7 @@ import { NextRequest } from "next/server";
 import { POST, FreeAuditResponse } from "@/app/api/v1/audit/free/route";
 import { firecrawlApp } from "@/lib/firecrawl";
 
-// ScrapeResponse is exported from '@mendable/firecrawl-js'
-import type { ScrapeResponse } from "@mendable/firecrawl-js";
+import type { CrawlResponse } from "@mendable/firecrawl-js";
 
 describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
   const originalScrapeUrl = firecrawlApp.scrapeUrl;
@@ -16,7 +15,7 @@ describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
 
   it("Scenario A: Testing Perfect Score (100) & Grade A", async () => {
     vi.spyOn(firecrawlApp, "scrapeUrl").mockImplementation(async (url: string, options?: unknown) => {
-      if (!url || !options) return { success: false, error: "Mock failure" } as ScrapeResponse;
+      if (!url || !options) return { success: false, error: "Mock failure" } as CrawlResponse;
       return {
         success: true,
         markdown: "# Welcome to Optimus AI\nThis is a beautiful page content.",
@@ -26,7 +25,7 @@ describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
           language: "fa",
           robots: "index, follow",
         },
-      } as ScrapeResponse;
+      } as CrawlResponse;
     });
 
     const reqA = new NextRequest("http://localhost/api/v1/audit/free", {
@@ -45,7 +44,7 @@ describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
 
   it("Scenario B: Testing Poor Score & Grade F", async () => {
     vi.spyOn(firecrawlApp, "scrapeUrl").mockImplementation(async (url: string, options?: unknown) => {
-      if (!url || !options) return { success: false, error: "Mock failure" } as ScrapeResponse;
+      if (!url || !options) return { success: false, error: "Mock failure" } as CrawlResponse;
       return {
         success: true,
         markdown: "No header content at all.",
@@ -55,7 +54,7 @@ describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
           language: "",
           robots: "noindex, nofollow",
         },
-      } as ScrapeResponse;
+      } as CrawlResponse;
     });
 
     const reqB = new NextRequest("http://localhost/api/v1/audit/free", {

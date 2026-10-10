@@ -61,7 +61,8 @@ describe("testRouter", () => {
     id: "fallback",
     execute: async () => result("fallback")
   };
-  await expect(() => new ProviderRouter([blocked, fallback]).execute(crawlRequest, new AbortController().signal)).rejects.toThrow();
+  await expect(new ProviderRouter([blocked, fallback]).execute(crawlRequest, new AbortController().signal))
+    .rejects.toMatchObject({ code: "SSRF_BLOCKED" });
   expect(blockedCalls).toEqual(1);
 
   let attempts = 0;
@@ -76,11 +77,7 @@ describe("testRouter", () => {
       return result("retryable");
     }
   };
-  expect(
-    (await new ProviderRouter([retryable], 1, 2).execute(crawlRequest, new AbortController().signal))
-      .provider.id,
-    "retryable"
-  );
+  expect((await new ProviderRouter([retryable], 1, 2).execute(crawlRequest, new AbortController().signal)).provider.id).toEqual("retryable");
   expect(attempts).toEqual(2);
   });
 });

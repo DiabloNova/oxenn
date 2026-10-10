@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { createServer, type Server } from "node:http";
-import { CrawlError } from "@/features/acquisition/domain/errors";
 import { resolveCrawlPolicy } from "@/features/acquisition/domain/policy";
 import {
   createPinnedLookup,
@@ -64,33 +63,16 @@ describe("testFetcher", () => {
   expect(remote).toEqual("127.0.0.1");
   expect(response.body.toString()).toEqual("ok");
   expect("set-cookie" in response.headers).toEqual(false);
-  await expect(
-    () =>
-      safeFetch(`http://pinned.example:${port}/gzip`, {
-        policy,
-        hostValidator: async () => ({ ok: true, ips: ["127.0.0.1"] })
-      }),
-    (error: unknown) =>
-      error instanceof CrawlError && error.code === "CONTENT_TYPE_UNSUPPORTED"
-  ).rejects.toThrow();
-  await expect(
-    () =>
-      safeFetch(`http://pinned.example:${port}/large`, {
-        policy: { ...policy, maxResponseBytes: 5 },
-        hostValidator: async () => ({ ok: true, ips: ["127.0.0.1"] })
-      }),
-    (error: unknown) =>
-      error instanceof CrawlError && error.code === "RESPONSE_TOO_LARGE"
-  ).rejects.toThrow();
-  await expect(
-    () =>
-      safeFetch(`http://pinned.example:${port}/redirect`, {
-        policy: { ...policy, maxRedirects: 0 },
-        hostValidator: async () => ({ ok: true, ips: ["127.0.0.1"] })
-      }),
-    (error: unknown) =>
-      error instanceof CrawlError && error.code === "REDIRECT_LIMIT"
-  ).rejects.toThrow();
+  await expect(safeFetch(`http://pinned.example:${port}/gzip`, { policy, hostValidator: async () => ({ ok: true, ips: ["127.0.0.1"] }) }))
+    .rejects.toMatchObject({ code: "CONTENT_TYPE_UNSUPPORTED" });
+  await expect(safeFetch(`http://pinned.example:${port}/large`, {
+    policy: { ...policy, maxResponseBytes: 5 },
+    hostValidator: async () => ({ ok: true, ips: ["127.0.0.1"] })
+  })).rejects.toMatchObject({ code: "RESPONSE_TOO_LARGE" });
+  await expect(safeFetch(`http://pinned.example:${port}/redirect`, {
+    policy: { ...policy, maxRedirects: 0 },
+    hostValidator: async () => ({ ok: true, ips: ["127.0.0.1"] })
+  })).rejects.toMatchObject({ code: "REDIRECT_LIMIT" });
   await new Promise<void>(resolve => server.close(() => resolve()));
 
   const lookup = createPinnedLookup(["127.0.0.1", "::1"]);

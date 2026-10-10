@@ -15,7 +15,7 @@ describe("testStateMachine", () => {
   for (const status of statuses) {
     for (const target of statuses) {
       if (!canTransition(status, target)) {
-        expect(() => assertTransition(status, target)).toThrowError();
+        expect(() => assertTransition(status, target)).toThrow(expect.objectContaining({ code: "POLICY_VIOLATION" }));
       }
     }
   }

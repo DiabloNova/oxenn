@@ -16,7 +16,7 @@
     "test:unit": "vitest run --project unit",
     "test:db": "vitest run --project db",
     "test:ui": "vitest run --project ui",
-    "test:acquisition": "tsx tests/features/acquisition/run-all.ts",
+    "test:acquisition": "vitest run --project unit tests/unit/features/acquisition",
     "env:check": "tsx scripts/env-check.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "pnpm env:check migrate && tsx src/core/database/migrator.ts",

@@ -53,30 +53,24 @@ describe("testProviders", () => {
       })
     });
     expect((await partial.execute(crawlRequest, crawlRequest.policy, new AbortController().signal)).partial).toEqual(true);
-    await expect(() => new FirecrawlCrawlProvider({
-          crawlUrl: async () => ({ success: false, error: "401 Unauthorized" })
-        }).execute(request(), request().policy, new AbortController().signal),
-      (error: unknown) =>
-        error instanceof CrawlError && error.code === "AUTHENTICATION_ERROR"
-    );
-    await expect(() => new FirecrawlCrawlProvider({
-          crawlUrl: async () => ({ success: true, data: "invalid" })
-        }).execute(request(), request().policy, new AbortController().signal),
-      (error: unknown) =>
-        error instanceof CrawlError && error.code === "PROVIDER_ERROR"
-    );
-    await expect(() => new FirecrawlCrawlProvider({
-          crawlUrl: async () => {
-            throw new Error("request timed out");
-          }
-        }).execute(request(), request().policy, new AbortController().signal),
-      (error: unknown) => error instanceof CrawlError && error.code === "TIMEOUT"
-    );
-    await expect(() => new FirecrawlCrawlProvider({
-          crawlUrl: async () => ({ success: false, error: "429 Too Many Requests" })
-        }).execute(request(), request().policy, new AbortController().signal),
-      (error: unknown) => error instanceof CrawlError && error.code === "RATE_LIMITED"
-    );
+    await expect(new FirecrawlCrawlProvider({
+      crawlUrl: async () => ({ success: false, error: "401 Unauthorized" })
+    }).execute(request(), request().policy, new AbortController().signal))
+      .rejects.toSatisfy((e: unknown) => e instanceof CrawlError && e.code === "AUTHENTICATION_ERROR");
+    await expect(new FirecrawlCrawlProvider({
+      crawlUrl: async () => ({ success: true, data: "invalid" })
+    }).execute(request(), request().policy, new AbortController().signal))
+      .rejects.toSatisfy((e: unknown) => e instanceof CrawlError && e.code === "PROVIDER_ERROR");
+    await expect(new FirecrawlCrawlProvider({
+      crawlUrl: async () => {
+        throw new Error("request timed out");
+      }
+    }).execute(request(), request().policy, new AbortController().signal))
+      .rejects.toSatisfy((e: unknown) => e instanceof CrawlError && e.code === "TIMEOUT");
+    await expect(new FirecrawlCrawlProvider({
+      crawlUrl: async () => ({ success: false, error: "429 Too Many Requests" })
+    }).execute(request(), request().policy, new AbortController().signal))
+      .rejects.toSatisfy((e: unknown) => e instanceof CrawlError && e.code === "RATE_LIMITED");
   } finally {
     if (originalKey === undefined) {
       delete process.env.FIRECRAWL_API_KEY;
