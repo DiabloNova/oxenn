@@ -6,7 +6,7 @@
 
 import { Pool } from "pg";
 import { db } from "../../../src/features/ai-intelligence/repositories";
-import { testDomain } from "./domain.test";
+import { testDomain } from "../../unit/features/ai-intelligence/domain.test";
 import { testSecurity } from "./security.test";
 import { testApplication } from "./application.test";
 import { testEvents } from "./events.test";
