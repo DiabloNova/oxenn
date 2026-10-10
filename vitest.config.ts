@@ -29,7 +29,7 @@ export default defineConfig({
           name: "db",
           environment: "node",
           // @ts-expect-error Vitest ProjectConfig omits passWithNoTests in TypeScript types
-          passWithNoTests: true, // TEMP: flipped to false by OX-104 when tests/db is seeded
+          passWithNoTests: false, // Flipped to false by OX-104 as tests/db is now seeded
           include: ["tests/db/**/*.test.ts"],
         },
       },

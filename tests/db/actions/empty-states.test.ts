@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies before imports
-vi.mock("../../src/services/auth/session", () => ({
+vi.mock("../../../src/services/auth/session", () => ({
   requireSession: vi.fn().mockResolvedValue({ user: { id: "user-1", workspaceId: "tenant-1" } })
 }));
 
-vi.mock("../../src/services/auth/authorization", () => ({
+vi.mock("../../../src/services/auth/authorization", () => ({
   requireWorkspaceMembership: vi.fn().mockResolvedValue(true)
 }));
 
-import { getBrandIntelligenceOverviewAction } from "../../src/app/actions/brand-intelligence";
-import { getCitationsDashboardDataAction } from "../../src/app/actions/citation-intelligence";
+import { getBrandIntelligenceOverviewAction } from "../../../src/app/actions/brand-intelligence";
+import { getCitationsDashboardDataAction } from "../../../src/app/actions/citation-intelligence";
 
-import { BrandRepository, CitationIntelligenceRepository } from "../../src/features/ai-intelligence/repositories";
+import { BrandRepository, CitationIntelligenceRepository } from "../../../src/features/ai-intelligence/repositories";
 
 // Set fake DB URL to bypass pg initialization failing
 process.env.DATABASE_URL = "postgres://dummy:dummy@localhost:5432/dummy";

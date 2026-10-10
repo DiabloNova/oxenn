@@ -112,3 +112,67 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
           MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
+
+  db-tests:
+    name: DB Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        run: corepack enable pnpm
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply bootstrap.sql
+        run: psql postgresql://postgres:postgres@localhost:5432/postgres -f database/bootstrap.sql
+        env:
+          PGPASSWORD: postgres
+
+      - name: Run database migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+      - name: Provision runtime test role
+        run: |
+          psql postgresql://postgres:postgres@localhost:5432/postgres -c "CREATE ROLE ci_runtime LOGIN PASSWORD 'ci_runtime' IN ROLE app_runtime NOBYPASSRLS;" \
+            -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_runtime;" \
+            -c "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO app_runtime;"
+        env:
+          PGPASSWORD: postgres
+
+      - name: Run test:db
+        run: pnpm test:db
+        env:
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/postgres
+
+      - name: Run registered legacy db runners
+        run: |
+          npx tsx tests/features/admin/run-all.ts
+          npx tsx tests/features/ai-intelligence/run-all.ts
+          npx tsx tests/features/acquisition/integration/run-all.ts
+        env:
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/postgres

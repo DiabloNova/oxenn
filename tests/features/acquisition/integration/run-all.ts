@@ -100,6 +100,12 @@ async function cleanup(pool: Pool, tenantId: string): Promise<void> {
 
 async function main(): Promise<void> {
   if (!databaseUrl) {
+    if (process.env.CI === "true") {
+      console.error(
+        "❌ acquisition integration suite failed: DATABASE_URL is not set in CI environment"
+      );
+      process.exit(1);
+    }
     console.log(
       "⚠️ acquisition integration suite skipped: DATABASE_URL is not set"
     );
