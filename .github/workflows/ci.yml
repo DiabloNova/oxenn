@@ -156,16 +156,18 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
           MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
 
+      - name: Provision runtime test role
+        run: |
+          psql postgresql://postgres:postgres@localhost:5432/postgres -c "CREATE ROLE ci_runtime LOGIN PASSWORD 'ci_runtime' IN ROLE app_runtime NOBYPASSRLS;" \
+            -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_runtime;" \
+            -c "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO app_runtime;"
+        env:
+          PGPASSWORD: postgres
+
       - name: Run test:db
         run: pnpm test:db
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-
-      - name: Run test:isolation
-        run: pnpm test:isolation
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-          MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/postgres
 
       - name: Run registered legacy db runners
         run: |
@@ -173,4 +175,4 @@ jobs:
           npx tsx tests/features/ai-intelligence/run-all.ts
           npx tsx tests/features/acquisition/integration/run-all.ts
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/postgres
