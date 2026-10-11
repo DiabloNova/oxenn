@@ -15,8 +15,12 @@ async function main() {
   console.log("====================================================");
 
   try {
-    // All administrative operations must execute within an explicit System Context
-    await TenantContextManager.runWithSystemContext("admin-user-super", "sys-admin-run", async () => {
+    // Admin checks run under an explicit tenant context (test tenant UUID)
+    await TenantContextManager.runWithTenantContext(
+      "00000000-0000-4000-8000-000000000001",
+      "admin-user-super",
+      "req-admin-run",
+      async () => {
       await testCQRS();
       testSecurity();
       await testInfrastructure();
