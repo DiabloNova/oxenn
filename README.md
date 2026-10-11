@@ -63,6 +63,9 @@ Under our single-runner doctrine, database migrations exist exclusively in `data
 - `tests/`: Automated test suites covering core logic and features.
 - `docs/`: Extensive project documentation and historical artifacts.
 
+[![Maintainability](https://qlty.sh/gh/DiabloNova/projects/oxenn/maintainability.svg)](https://qlty.sh/gh/DiabloNova/projects/oxenn)
+[![Code Coverage](https://qlty.sh/gh/DiabloNova/projects/oxenn/coverage.svg)](https://qlty.sh/gh/DiabloNova/projects/oxenn)  
+
 ## 7. Documentation Portal
 
 Access all internal architecture specs, task executions, and historical reports in the **[Docs Portal](./docs/)**.
