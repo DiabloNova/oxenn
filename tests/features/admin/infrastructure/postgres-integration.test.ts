@@ -5,6 +5,7 @@
 
 import { PostgresClient, PostgresTenantRepository, PostgresAdminUserRepository, OptimisticLockingError } from "../../../../src/features/admin/infrastructure/persistence/postgres";
 import { Tenant, AdminUser } from "../../../../src/features/admin/domain/types";
+import { TenantContextManager } from "../../../../src/core/database/tenant-context";
 
 export async function testPostgresIntegration() {
   console.log("▶ Running PostgreSQL Integration Tests...");
@@ -12,6 +13,13 @@ export async function testPostgresIntegration() {
   const pg = PostgresClient.getInstance();
   const tenantRepo = new PostgresTenantRepository(pg);
   const userRepo = new PostgresAdminUserRepository(pg);
+  const inTenant = <T>(tenantId: string, work: () => Promise<T>): Promise<T> =>
+    TenantContextManager.runWithTenantContext(
+      tenantId,
+      "integration-test",
+      "req-postgres-integration",
+      work
+    );
 
   // Clear and reset the repository store
   PostgresTenantRepository.seed([]);
@@ -61,26 +69,26 @@ export async function testPostgresIntegration() {
     }
   };
 
-  await tenantRepo.save(tenant);
-  const saved = await tenantRepo.findById(tenant.id);
+  await inTenant(tenant.id, () => tenantRepo.save(tenant));
+  const saved = await inTenant(tenant.id, () => tenantRepo.findById(tenant.id));
   if (!saved || saved.name !== "Enterprise Defense Inc") {
     throw new Error(`Postgres Test Failed: Tenant save or find did not persist correctly.`);
   }
 
   // 2. Verify Optimistic Concurrency updates using version column
-  const inst1 = await tenantRepo.findById(tenant.id);
-  const inst2 = await tenantRepo.findById(tenant.id);
+  const inst1 = await inTenant(tenant.id, () => tenantRepo.findById(tenant.id));
+  const inst2 = await inTenant(tenant.id, () => tenantRepo.findById(tenant.id));
 
   if (!inst1 || !inst2) {
     throw new Error(`Postgres Test Failed: Could not fetch two distinct instances for concurrent update test.`);
   }
 
   inst1.name = "Conner Advanced Systems";
-  await tenantRepo.save(inst1); // Version increases to 2 in the database
+  await inTenant(tenant.id, () => tenantRepo.save(inst1)); // Version increases to 2 in the database
 
   inst2.name = "Conner Automated Armaments";
   try {
-    await tenantRepo.save(inst2); // Outdated version 1 should throw OptimisticLockingError
+    await inTenant(tenant.id, () => tenantRepo.save(inst2)); // Outdated version 1 should throw OptimisticLockingError
     throw new Error(`Postgres Test Failed: Expected OptimisticLockingError but update was allowed.`);
   } catch (error: unknown) {
     if (!(error instanceof OptimisticLockingError)) {
@@ -90,8 +98,8 @@ export async function testPostgresIntegration() {
   }
 
   // 3. Verify Soft deletion filter queries
-  await tenantRepo.delete(tenant.id);
-  const deletedFetch = await tenantRepo.findById(tenant.id);
+  await inTenant(tenant.id, () => tenantRepo.delete(tenant.id));
+  const deletedFetch = await inTenant(tenant.id, () => tenantRepo.findById(tenant.id));
   if (deletedFetch !== null) {
     throw new Error(`Postgres Test Failed: Soft deleted tenant was fetched in findById.`);
   }
@@ -132,12 +140,12 @@ export async function testPostgresIntegration() {
     name: "Transacted Postgres Corp",
     audit: { ...tenant.audit, version: 1 }
   };
-  await tenantRepo.save(txTenant);
+  await inTenant(txTenant.id, () => tenantRepo.save(txTenant));
 
   // Force rollback
   await pg.rollback();
 
-  const rolledBackCheck = await tenantRepo.findById("00000000-0000-4000-8000-000000000004");
+  const rolledBackCheck = await inTenant(txTenant.id, () => tenantRepo.findById(txTenant.id));
   if (rolledBackCheck !== null) {
     throw new Error(`Postgres Test Failed: Transacted changes were committed instead of rolled back.`);
   }
