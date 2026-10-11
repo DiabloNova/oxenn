@@ -19,7 +19,7 @@ export async function testInfrastructure() {
 
   // 1. Test Base Persistence (Save and Find)
   const tenant: Tenant = {
-    id: "tenant-conner-uuid",
+    id: "00000000-0000-4000-8000-000000000001",
     name: "Conner Defense",
     slug: "conner-def",
     status: "active",
@@ -118,7 +118,7 @@ export async function testInfrastructure() {
       // 1. Perform database mutation
       const txTenant: Tenant = {
         ...tenant,
-        id: "tx-test-tenant",
+        id: "00000000-0000-4000-8000-000000000002",
         name: "TX Sandbox Corp",
         audit: { ...tenant.audit, version: 1 }
       };

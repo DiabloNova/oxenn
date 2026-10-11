@@ -19,7 +19,7 @@ export async function testPostgresIntegration() {
 
   // 1. Verify UUID-based Persistence & Save
   const tenant: Tenant = {
-    id: "tenant-real-pg-uuid",
+    id: "00000000-0000-4000-8000-000000000003",
     name: "Enterprise Defense Inc",
     slug: "defense-saas",
     status: "active",
@@ -128,7 +128,7 @@ export async function testPostgresIntegration() {
   await pg.begin();
   const txTenant: Tenant = {
     ...tenant,
-    id: "tx-postgres-sandbox",
+    id: "00000000-0000-4000-8000-000000000004",
     name: "Transacted Postgres Corp",
     audit: { ...tenant.audit, version: 1 }
   };
@@ -137,7 +137,7 @@ export async function testPostgresIntegration() {
   // Force rollback
   await pg.rollback();
 
-  const rolledBackCheck = await tenantRepo.findById("tx-postgres-sandbox");
+  const rolledBackCheck = await tenantRepo.findById("00000000-0000-4000-8000-000000000004");
   if (rolledBackCheck !== null) {
     throw new Error(`Postgres Test Failed: Transacted changes were committed instead of rolled back.`);
   }

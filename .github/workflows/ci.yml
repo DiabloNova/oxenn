@@ -176,3 +176,4 @@ jobs:
           npx tsx tests/features/acquisition/integration/run-all.ts
         env:
           DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/postgres
+          NODE_ENV: test

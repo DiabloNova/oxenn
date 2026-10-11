@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   CreateTenantCommand,
   SuspendTenantCommand,
@@ -74,7 +75,7 @@ export class ApplicationAdminCommandHandler {
   public async handleCreateTenant(command: CreateTenantCommand): Promise<TenantDTO> {
     return this.uow.runInTransaction(async () => {
       const tenant: Tenant = {
-        id: `tenant-${command.slug}-uuid`,
+        id: randomUUID(),
         name: command.name,
         slug: command.slug,
         status: "active",
