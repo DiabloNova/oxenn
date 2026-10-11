@@ -6,6 +6,7 @@ import { UnitOfWork } from "../../../../src/features/admin/infrastructure/persis
 import { PostgresTenantRepository, PostgresClient, OptimisticLockingError } from "../../../../src/features/admin/infrastructure/persistence/postgres";
 import { Tenant } from "../../../../src/features/admin/domain/types";
 import { coreEventBus } from "../../../../src/core/events";
+import { TenantContextManager } from "../../../../src/core/database/tenant-context";
 
 export async function testInfrastructure() {
   console.log("▶ Running Administrative Infrastructure Integration Tests...");
@@ -13,6 +14,13 @@ export async function testInfrastructure() {
   const pg = PostgresClient.getInstance();
   const uow = new UnitOfWork(pg);
   const tenantRepo = new PostgresTenantRepository(pg, uow);
+  const inTenant = <T>(tenantId: string, work: () => Promise<T>): Promise<T> =>
+    TenantContextManager.runWithTenantContext(
+      tenantId,
+      "integration-test",
+      "req-persistence-1",
+      work
+    );
 
   // Reset the static store
   PostgresTenantRepository.seed([]);
@@ -60,10 +68,10 @@ export async function testInfrastructure() {
     }
   };
 
-  // Save entity
-  await tenantRepo.save(tenant);
+  // Save entity within its tenant RLS context
+  await inTenant(tenant.id, () => tenantRepo.save(tenant));
 
-  const found = await tenantRepo.findById(tenant.id);
+  const found = await inTenant(tenant.id, () => tenantRepo.findById(tenant.id));
   if (!found || found.name !== "Conner Defense") {
     throw new Error(`Integration Test Failed: Repository save or find did not persist entity correctly.`);
   }
@@ -74,12 +82,12 @@ export async function testInfrastructure() {
 
   // Modify copy 1 and save
   copy1.name = "Conner Security Group";
-  await tenantRepo.save(copy1); // Version increments to 2
+  await inTenant(tenant.id, () => tenantRepo.save(copy1)); // Version increments to 2
 
   // Modify copy 2 (with outdated version 1) and attempt to save
   copy2.name = "Conner Advanced Robotics";
   try {
-    await tenantRepo.save(copy2);
+    await inTenant(tenant.id, () => tenantRepo.save(copy2));
     throw new Error(`Integration Test Failed: Outdated version should have thrown OptimisticLockingError.`);
   } catch (error: unknown) {
     if (!(error instanceof OptimisticLockingError)) {
@@ -89,8 +97,8 @@ export async function testInfrastructure() {
   }
 
   // 3. Test Soft Delete Strategy
-  await tenantRepo.delete(tenant.id);
-  const fetchedDeleted = await tenantRepo.findById(tenant.id);
+  await inTenant(tenant.id, () => tenantRepo.delete(tenant.id));
+  const fetchedDeleted = await inTenant(tenant.id, () => tenantRepo.findById(tenant.id));
   if (fetchedDeleted !== null) {
     throw new Error(`Integration Test Failed: Soft deleted tenant should not be fetched by default findById.`);
   }
