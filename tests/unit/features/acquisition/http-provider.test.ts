@@ -52,7 +52,7 @@ describe("testHttpProviderLimits", () => {
       maxPages: 4,
       maxDepth: 2,
       maxConcurrency: 2,
-      perHostRequestsPerSecond: 10
+      perHostRequestsPerSecond: 2
     }),
     priority: 0
   };
@@ -67,7 +67,7 @@ describe("testHttpProviderLimits", () => {
   expect(peak <= 2).toBeTruthy();
   for (const times of starts.values()) {
     for (let index = 1; index < times.length; index += 1) {
-      expect(times[index] - times[index - 1] >= 90).toBeTruthy();
+      expect(times[index] - times[index - 1] >= 450).toBeTruthy();
     }
   }
   await new Promise<void>(resolve => server.close(() => resolve()));

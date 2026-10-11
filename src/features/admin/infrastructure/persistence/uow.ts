@@ -6,6 +6,7 @@
 import { IUnitOfWork } from "../../../../core/database/unit-of-work";
 import { DomainEvent } from "../../../../core/events";
 import { coreEventBus } from "../../../../core/events";
+import { TenantContextManager } from "../../../../core/database/tenant-context";
 
 export interface IPostgresClient {
   begin(): Promise<void>;
@@ -37,9 +38,43 @@ export class UnitOfWork implements IUnitOfWork {
     this.pendingOperations = [];
     this.deferredEvents = [];
 
-    // Lease dedicated transacted client thread-safely
-    this.activeClient = await this.pg.connectClient();
-    await this.pg.begin();
+    let postgresTransactionStarted = false;
+    try {
+      // Lease dedicated transacted client thread-safely
+      this.activeClient = await this.pg.connectClient();
+      await this.pg.begin();
+      postgresTransactionStarted = true;
+
+      const client = this.activeClient as {
+        query(sql: string, params?: unknown[]): Promise<unknown>;
+      };
+      await client.query("BEGIN");
+      const tenantId = TenantContextManager.getContext()?.tenantId;
+      if (tenantId) {
+        await client.query("SELECT set_config('app.current_tenant_id', $1, true)", [tenantId]);
+      }
+    } catch (error) {
+      const client = this.activeClient as {
+        query(sql: string, params?: unknown[]): Promise<unknown>;
+        release?: () => void;
+      } | null;
+      if (client) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (rollbackError) {
+          console.error("[UnitOfWork] Failed to roll back transaction startup", rollbackError);
+        }
+        client.release?.();
+      }
+      if (postgresTransactionStarted) {
+        await this.pg.rollback();
+      }
+      this.isTransactionActive = false;
+      this.pendingOperations = [];
+      this.deferredEvents = [];
+      this.activeClient = null;
+      throw error;
+    }
   }
 
   public registerOperation(op: () => Promise<void>): void {
@@ -75,8 +110,12 @@ export class UnitOfWork implements IUnitOfWork {
         await op();
       }
 
-      // Commit actual Postgres transaction
+      // Commit the deferred operations and the transaction on the leased client
       await this.pg.commit();
+      const client = this.activeClient as {
+        query(sql: string, params?: unknown[]): Promise<unknown>;
+      };
+      await client.query("COMMIT");
 
       // Publish all deferred events now that transaction committed successfully
       for (const event of this.deferredEvents) {
@@ -99,17 +138,26 @@ export class UnitOfWork implements IUnitOfWork {
   }
 
   public async rollback(): Promise<void> {
-    if (this.isTransactionActive) {
-      await this.pg.rollback();
+    try {
+      if (this.isTransactionActive) {
+        await this.pg.rollback();
+        const client = this.activeClient as {
+          query(sql: string, params?: unknown[]): Promise<unknown>;
+        } | null;
+        if (client) {
+          await client.query("ROLLBACK");
+        }
+      }
+    } finally {
+      this.isTransactionActive = false;
+      this.pendingOperations = [];
+      this.deferredEvents = [];
+      const clientObj = this.activeClient as Record<string, unknown> | null;
+      if (clientObj && typeof clientObj.release === "function") {
+        (clientObj.release as () => void)();
+      }
+      this.activeClient = null;
     }
-    this.isTransactionActive = false;
-    this.pendingOperations = [];
-    this.deferredEvents = [];
-    const clientObj = this.activeClient as Record<string, unknown> | null;
-    if (clientObj && typeof clientObj.release === "function") {
-      (clientObj.release as () => void)();
-    }
-    this.activeClient = null;
   }
 
   public async runInTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {

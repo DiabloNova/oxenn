@@ -122,7 +122,7 @@ export async function testInfrastructure() {
   coreEventBus.subscribe("test.transaction.event", testHandler);
 
   try {
-    await uow.runInTransaction(async (tx) => {
+    await inTenant("00000000-0000-4000-8000-000000000002", () => uow.runInTransaction(async (tx) => {
       // 1. Perform database mutation
       const txTenant: Tenant = {
         ...tenant,
@@ -151,7 +151,7 @@ export async function testInfrastructure() {
 
       // 3. Force rollback by throwing exception
       throw new Error("Simulated Transaction Failure");
-    });
+    }));
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
     if (errMsg !== "Simulated Transaction Failure") {
@@ -160,7 +160,7 @@ export async function testInfrastructure() {
   }
 
   // Verify database state is untouched (rolled back)
-  const txTenantCheck = PostgresTenantRepository.getRawStore().get("tx-test-tenant");
+  const txTenantCheck = PostgresTenantRepository.getRawStore().get("00000000-0000-4000-8000-000000000002");
   if (txTenantCheck !== undefined) {
     throw new Error(`Integration Test Failed: Transacted changes were not rolled back upon exception.`);
   }
@@ -171,10 +171,10 @@ export async function testInfrastructure() {
   }
 
   // 5. Test Successful Commit and Event Deferred Publication
-  await uow.runInTransaction(async (tx) => {
+  await inTenant("00000000-0000-4000-8000-000000000003", () => uow.runInTransaction(async (tx) => {
     const txTenant: Tenant = {
       ...tenant,
-      id: "tx-commit-tenant",
+      id: "00000000-0000-4000-8000-000000000003",
       name: "TX Committed Corp",
       audit: { ...tenant.audit, version: 1 }
     };
@@ -195,10 +195,10 @@ export async function testInfrastructure() {
       payload: {}
     };
     tx.registerDeferredEvent(testEvent);
-  });
+  }));
 
   // Verify database contains committed tenant
-  const txCommitCheck = PostgresTenantRepository.getRawStore().get("tx-commit-tenant");
+  const txCommitCheck = PostgresTenantRepository.getRawStore().get("00000000-0000-4000-8000-000000000003");
   if (!txCommitCheck || txCommitCheck.name !== "TX Committed Corp") {
     throw new Error(`Integration Test Failed: Tenant was not committed to database successfully.`);
   }
