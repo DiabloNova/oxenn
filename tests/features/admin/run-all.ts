@@ -17,7 +17,7 @@ async function main() {
   try {
     // Ensure the system context guard knows this is a test environment
     if (!process.env.NODE_ENV) {
-      process.env.NODE_ENV = "test";
+      process.env["NODE_ENV"] = "test";
     }
 
     // All administrative operations must execute within an explicit System Context
