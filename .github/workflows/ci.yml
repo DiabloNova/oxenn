@@ -75,6 +75,75 @@ jobs:
       - name: Run UI tests
         run: pnpm test:ui
 
+  db-tests:
+    name: DB Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        run: corepack enable pnpm
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create Test Database
+        run: PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c 'CREATE DATABASE db_tests;'
+
+      - name: Apply Bootstrap
+        run: PGPASSWORD=postgres psql -h localhost -U postgres -d db_tests -f database/bootstrap.sql
+
+      - name: Run Database Migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+          MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+
+      - name: Run DB tests
+        run: pnpm test:db
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+
+      - name: Run isolation suite
+        run: pnpm run test:isolation
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+
+      - name: Run Admin Legacy Suite
+        run: pnpm tsx tests/features/admin/run-all.ts
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+
+      - name: Run AI Intelligence Legacy Suite
+        run: pnpm tsx tests/features/ai-intelligence/run-all.ts
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+
+      - name: Run Acquisition Legacy Suite
+        run: pnpm tsx tests/features/acquisition/integration/run-all.ts
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+
   isolation-suite:
     name: Isolation Suite
     runs-on: ubuntu-latest
