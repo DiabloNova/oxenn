@@ -67,7 +67,7 @@ describe("testHttpProviderLimits", () => {
   expect(peak <= 2).toBeTruthy();
   for (const times of starts.values()) {
     for (let index = 1; index < times.length; index += 1) {
-      expect(times[index] - times[index - 1] >= 80).toBeTruthy();
+      expect(times[index] - times[index - 1] >= 90).toBeTruthy();
     }
   }
   await new Promise<void>(resolve => server.close(() => resolve()));

@@ -113,36 +113,46 @@ jobs:
       - name: Apply Bootstrap
         run: PGPASSWORD=postgres psql -h localhost -U postgres -d db_tests -f database/bootstrap.sql
 
+      - name: Create CI roles
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d db_tests -c "CREATE ROLE ci_runtime LOGIN PASSWORD 'ci_runtime' NOSUPERUSER NOBYPASSRLS IN ROLE app_runtime;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d db_tests -c "CREATE ROLE ci_owner LOGIN PASSWORD 'ci_owner' IN ROLE app_owner;"
+
       - name: Run Database Migrations
         run: pnpm db:migrate
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
-          MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+          DATABASE_URL: postgresql://ci_owner:ci_owner@localhost:5432/db_tests
+          MIGRATION_DATABASE_URL: postgresql://ci_owner:ci_owner@localhost:5432/db_tests
 
       - name: Run DB tests
         run: pnpm test:db
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/db_tests
+          AUTHENTICATOR_DATABASE_URL: postgresql://ci_owner:ci_owner@localhost:5432/db_tests
 
       - name: Run isolation suite
         run: pnpm run test:isolation
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/db_tests
+          AUTHENTICATOR_DATABASE_URL: postgresql://ci_owner:ci_owner@localhost:5432/db_tests
 
       - name: Run Admin Legacy Suite
         run: pnpm tsx tests/features/admin/run-all.ts
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/db_tests
+          AUTHENTICATOR_DATABASE_URL: postgresql://ci_owner:ci_owner@localhost:5432/db_tests
 
       - name: Run AI Intelligence Legacy Suite
         run: pnpm tsx tests/features/ai-intelligence/run-all.ts
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/db_tests
+          AUTHENTICATOR_DATABASE_URL: postgresql://ci_owner:ci_owner@localhost:5432/db_tests
 
       - name: Run Acquisition Legacy Suite
         run: pnpm tsx tests/features/acquisition/integration/run-all.ts
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/db_tests
+          DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/db_tests
+          AUTHENTICATOR_DATABASE_URL: postgresql://ci_owner:ci_owner@localhost:5432/db_tests
 
   isolation-suite:
     name: Isolation Suite
