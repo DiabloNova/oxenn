@@ -879,7 +879,7 @@ export class PostgresAuditRecordRepository implements IAuditRecordRepository {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
       `;
       if (!entity.id) {
-        entity.id = `audit-${Math.random().toString(36).substr(2, 9)}`;
+        entity.id = randomUUID();
       }
 
       await this.getExecutor().query(sql, [
