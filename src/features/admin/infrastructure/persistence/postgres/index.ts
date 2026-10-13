@@ -4,6 +4,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { randomUUID } from "node:crypto";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 import {
   ITenantRepository,
@@ -460,7 +461,7 @@ export class PostgresTenantRepository implements ITenantRepository {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
         `;
         if (!entity.id) {
-          entity.id = `tenant-${Math.random().toString(36).substr(2, 9)}-uuid`;
+          entity.id = randomUUID();
         }
         entity.audit.version = 1;
         entity.audit.createdAt = new Date().toISOString();

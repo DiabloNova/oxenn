@@ -116,7 +116,7 @@ export async function testCQRS() {
   // 6. Test EnableFeatureFlagCommand
   const flagDto = await commandHandler.handleEnableFeatureFlag({
     flagKey: "phase-1-fa-optimized",
-    tenantIdOverride: "tenant-acme-uuid",
+    tenantIdOverride: "a0000000-0000-4000-8000-000000000001",
     actorId: "admin-user-super",
     actorEmail: "super.admin@aeo-platform.internal",
     actorRole: "Super Admin",
