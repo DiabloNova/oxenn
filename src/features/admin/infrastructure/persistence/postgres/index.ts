@@ -878,7 +878,7 @@ export class PostgresAuditRecordRepository implements IAuditRecordRepository {
         INSERT INTO audit_records (id, timestamp, actor_id, actor_email, actor_role, action, resource_type, resource_id, ip_address, user_agent, payload_before, payload_after, status, error_details)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
       `;
-      if (!entity.id) {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entity.id)) {
         entity.id = randomUUID();
       }
 
