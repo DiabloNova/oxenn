@@ -353,4 +353,12 @@ export const DOCS_INDEX: DocMeta[] = [
     categoryFa: "User Guides",
     snippet: `# User Guides  This section provides user-facing documentation for navigating and operating Seorchable.  ## Status Dictionary - **Implemented**: Verified user workflows supported by the UI/backend. - **Partial**: Workflow is accessible but missing edge cases or polished UI. - **Planned**: Not currently implemented.  ## Core Concepts & Workflows  ### Dashboard Navigation The platform offers an authenticated unified Dashboard Shell with collapsible responsive sidebars, directional support (RTL/LTR`
   },
+  {
+    slug: "target-market-analysis",
+    titleEn: "Target Market, Ideal Customer Profile, and Go-to-Market Strategy",
+    titleFa: "Target Market, Ideal Customer Profile, and Go-to-Market Strategy",
+    category: "product",
+    categoryFa: "Product",
+    snippet: `# Target Market, Ideal Customer Profile, and Go-to-Market Strategy  **Status:** Investor working section — evidence-led, not a validated forecast   **Prepared:** 12 October 2026   **Product evidence reviewed:** public repository \`DiabloNova/oxenn\`, default branch \`main\`; \`README.md\`, \`docs/product/README.md\`, \`docs/architecture/README.md\`, \`docs/user-guides/README.md\`, \`docs/services/README.md\`, \`database/schema/index.ts\`, \`src/app/[locale]/page.tsx\`, and \`package.json\`.   **Integration note:** `
+  },
 ];
