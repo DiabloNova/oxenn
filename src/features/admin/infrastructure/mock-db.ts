@@ -145,7 +145,7 @@ export class AdminMockDatabase {
     };
 
     const admin2: AdminUser = {
-      id: "admin-user-support",
+      id: "a0000000-0000-4000-8000-000000000013",
       email: "support.agent@aeo-platform.internal",
       fullName: "John Doe",
       role: "Support",
