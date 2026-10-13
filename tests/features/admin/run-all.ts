@@ -15,12 +15,13 @@ async function main() {
   console.log("====================================================");
 
   try {
-    // Admin checks run under an explicit tenant context (test tenant UUID)
-    await TenantContextManager.runWithTenantContext(
-      "00000000-0000-4000-8000-000000000001",
-      "admin-user-super",
-      "req-admin-run",
-      async () => {
+    // Ensure the system context guard knows this is a test environment
+    if (!process.env.NODE_ENV) {
+      Object.defineProperty(process.env, "NODE_ENV", { value: "test", writable: true, configurable: true, enumerable: true });
+    }
+
+    // All administrative operations must execute within an explicit System Context
+    await TenantContextManager.runWithSystemContext("admin-user-super", "sys-admin-run", async () => {
       await testCQRS();
       testSecurity();
       await testInfrastructure();

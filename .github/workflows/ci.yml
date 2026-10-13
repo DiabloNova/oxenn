@@ -158,9 +158,14 @@ jobs:
 
       - name: Provision runtime test role
         run: |
-          psql postgresql://postgres:postgres@localhost:5432/postgres -c "CREATE ROLE ci_runtime LOGIN PASSWORD 'ci_runtime' IN ROLE app_runtime NOBYPASSRLS;" \
+          psql postgresql://postgres:postgres@localhost:5432/postgres -c "DROP ROLE IF EXISTS ci_runtime;" \
+            -c "CREATE ROLE ci_runtime LOGIN PASSWORD 'ci_runtime' IN ROLE app_runtime NOBYPASSRLS;" \
+            -c "DROP ROLE IF EXISTS ci_authenticator;" \
+            -c "CREATE ROLE ci_authenticator LOGIN PASSWORD 'ci_authenticator' IN ROLE app_owner BYPASSRLS;" \
             -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_runtime;" \
-            -c "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO app_runtime;"
+            -c "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO app_runtime;" \
+            -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_owner;" \
+            -c "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO app_owner;"
         env:
           PGPASSWORD: postgres
 
@@ -168,6 +173,7 @@ jobs:
         run: pnpm test:db
         env:
           DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/postgres
+          AUTHENTICATOR_DATABASE_URL: postgresql://ci_authenticator:ci_authenticator@localhost:5432/postgres
 
       - name: Run registered legacy db runners
         run: |
@@ -176,4 +182,4 @@ jobs:
           npx tsx tests/features/acquisition/integration/run-all.ts
         env:
           DATABASE_URL: postgresql://ci_runtime:ci_runtime@localhost:5432/postgres
-          NODE_ENV: test
+          AUTHENTICATOR_DATABASE_URL: postgresql://ci_authenticator:ci_authenticator@localhost:5432/postgres

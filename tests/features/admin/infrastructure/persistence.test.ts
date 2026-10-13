@@ -6,7 +6,6 @@ import { UnitOfWork } from "../../../../src/features/admin/infrastructure/persis
 import { PostgresTenantRepository, PostgresClient, OptimisticLockingError } from "../../../../src/features/admin/infrastructure/persistence/postgres";
 import { Tenant } from "../../../../src/features/admin/domain/types";
 import { coreEventBus } from "../../../../src/core/events";
-import { TenantContextManager } from "../../../../src/core/database/tenant-context";
 
 export async function testInfrastructure() {
   console.log("▶ Running Administrative Infrastructure Integration Tests...");
@@ -14,20 +13,13 @@ export async function testInfrastructure() {
   const pg = PostgresClient.getInstance();
   const uow = new UnitOfWork(pg);
   const tenantRepo = new PostgresTenantRepository(pg, uow);
-  const inTenant = <T>(tenantId: string, work: () => Promise<T>): Promise<T> =>
-    TenantContextManager.runWithTenantContext(
-      tenantId,
-      "integration-test",
-      "req-persistence-1",
-      work
-    );
 
   // Reset the static store
   PostgresTenantRepository.seed([]);
 
   // 1. Test Base Persistence (Save and Find)
   const tenant: Tenant = {
-    id: "00000000-0000-4000-8000-000000000001",
+    id: "tenant-conner-uuid",
     name: "Conner Defense",
     slug: "conner-def",
     status: "active",
@@ -68,10 +60,10 @@ export async function testInfrastructure() {
     }
   };
 
-  // Save entity within its tenant RLS context
-  await inTenant(tenant.id, () => tenantRepo.save(tenant));
+  // Save entity
+  await tenantRepo.save(tenant);
 
-  const found = await inTenant(tenant.id, () => tenantRepo.findById(tenant.id));
+  const found = await tenantRepo.findById(tenant.id);
   if (!found || found.name !== "Conner Defense") {
     throw new Error(`Integration Test Failed: Repository save or find did not persist entity correctly.`);
   }
@@ -82,12 +74,12 @@ export async function testInfrastructure() {
 
   // Modify copy 1 and save
   copy1.name = "Conner Security Group";
-  await inTenant(tenant.id, () => tenantRepo.save(copy1)); // Version increments to 2
+  await tenantRepo.save(copy1); // Version increments to 2
 
   // Modify copy 2 (with outdated version 1) and attempt to save
   copy2.name = "Conner Advanced Robotics";
   try {
-    await inTenant(tenant.id, () => tenantRepo.save(copy2));
+    await tenantRepo.save(copy2);
     throw new Error(`Integration Test Failed: Outdated version should have thrown OptimisticLockingError.`);
   } catch (error: unknown) {
     if (!(error instanceof OptimisticLockingError)) {
@@ -97,8 +89,8 @@ export async function testInfrastructure() {
   }
 
   // 3. Test Soft Delete Strategy
-  await inTenant(tenant.id, () => tenantRepo.delete(tenant.id));
-  const fetchedDeleted = await inTenant(tenant.id, () => tenantRepo.findById(tenant.id));
+  await tenantRepo.delete(tenant.id);
+  const fetchedDeleted = await tenantRepo.findById(tenant.id);
   if (fetchedDeleted !== null) {
     throw new Error(`Integration Test Failed: Soft deleted tenant should not be fetched by default findById.`);
   }
@@ -122,11 +114,11 @@ export async function testInfrastructure() {
   coreEventBus.subscribe("test.transaction.event", testHandler);
 
   try {
-    await inTenant("00000000-0000-4000-8000-000000000002", () => uow.runInTransaction(async (tx) => {
+    await uow.runInTransaction(async (tx) => {
       // 1. Perform database mutation
       const txTenant: Tenant = {
         ...tenant,
-        id: "00000000-0000-4000-8000-000000000002",
+        id: "tx-test-tenant",
         name: "TX Sandbox Corp",
         audit: { ...tenant.audit, version: 1 }
       };
@@ -151,7 +143,7 @@ export async function testInfrastructure() {
 
       // 3. Force rollback by throwing exception
       throw new Error("Simulated Transaction Failure");
-    }));
+    });
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
     if (errMsg !== "Simulated Transaction Failure") {
@@ -160,7 +152,7 @@ export async function testInfrastructure() {
   }
 
   // Verify database state is untouched (rolled back)
-  const txTenantCheck = PostgresTenantRepository.getRawStore().get("00000000-0000-4000-8000-000000000002");
+  const txTenantCheck = PostgresTenantRepository.getRawStore().get("tx-test-tenant");
   if (txTenantCheck !== undefined) {
     throw new Error(`Integration Test Failed: Transacted changes were not rolled back upon exception.`);
   }
@@ -171,10 +163,10 @@ export async function testInfrastructure() {
   }
 
   // 5. Test Successful Commit and Event Deferred Publication
-  await inTenant("00000000-0000-4000-8000-000000000003", () => uow.runInTransaction(async (tx) => {
+  await uow.runInTransaction(async (tx) => {
     const txTenant: Tenant = {
       ...tenant,
-      id: "00000000-0000-4000-8000-000000000003",
+      id: "tx-commit-tenant",
       name: "TX Committed Corp",
       audit: { ...tenant.audit, version: 1 }
     };
@@ -195,10 +187,10 @@ export async function testInfrastructure() {
       payload: {}
     };
     tx.registerDeferredEvent(testEvent);
-  }));
+  });
 
   // Verify database contains committed tenant
-  const txCommitCheck = PostgresTenantRepository.getRawStore().get("00000000-0000-4000-8000-000000000003");
+  const txCommitCheck = PostgresTenantRepository.getRawStore().get("tx-commit-tenant");
   if (!txCommitCheck || txCommitCheck.name !== "TX Committed Corp") {
     throw new Error(`Integration Test Failed: Tenant was not committed to database successfully.`);
   }
