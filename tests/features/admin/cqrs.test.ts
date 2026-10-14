@@ -99,7 +99,7 @@ export async function testCQRS() {
 
   // 5. Test ChangeUserRoleCommand
   const userDto = await commandHandler.handleChangeUserRole({
-    userId: "admin-user-support",
+    userId: "00000000-0000-4000-8000-000000000017",
     newRole: "Operations",
     permissions: ["config:write", "ai:manage"],
     actorId: "admin-user-super",
