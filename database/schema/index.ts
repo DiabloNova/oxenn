@@ -223,17 +223,12 @@ export const adminUsers = pgTable("admin_users", {
   id: uuid("id").primaryKey().default(defaultUuid),
   email: text("email").notNull().unique(),
   fullName: text("full_name").notNull(),
-  roleId: uuid("role_id").references(() => roles.id, { onDelete: "restrict" }), // Softened to nullable to support phase 7 inline JSON transition
-  role: text("role").notNull().default("Read-Only Observer"),
-  permissions: jsonb("permissions").notNull().default([]),
-  ssoIdentities: jsonb("sso_identities").default([]),
+  roleId: uuid("role_id").notNull().references(() => roles.id, { onDelete: "restrict" }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   version: integer("version").notNull().default(1),
-  createdBy: text("created_by").notNull().default("system"),
-  updatedBy: text("updated_by").notNull().default("system"),
 }, (table) => [
   index("idx_admin_users_email").on(table.email),
   index("idx_admin_users_deleted_at").on(table.deletedAt).where(sql`deleted_at IS NULL`),
@@ -269,7 +264,6 @@ export const featureFlags = pgTable("feature_flags", {
   tenantOverrides: text("tenant_overrides").notNull().default("{}"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
-  version: integer("version").notNull().default(1),
 }, (table) => [
   index("idx_feature_flags_key").on(table.key),
 ]);

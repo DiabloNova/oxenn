@@ -33,7 +33,7 @@ export async function testCQRS() {
     name: "Cyberdyne Systems",
     slug: "cyberdyne",
     plan: "enterprise",
-    actorId: "admin-user-super",
+    actorId: "e55d6645-e92d-4ac1-88eb-82370a6c05df",
     actorEmail: "super.admin@aeo-platform.internal",
     actorRole: "Super Admin",
     ipAddress: "127.0.0.1",
@@ -51,7 +51,7 @@ export async function testCQRS() {
   const suspendDto = await commandHandler.handleSuspendTenant({
     tenantId: createDto.id,
     reason: "Late billing payment",
-    actorId: "admin-user-super",
+    actorId: "e55d6645-e92d-4ac1-88eb-82370a6c05df",
     actorEmail: "super.admin@aeo-platform.internal",
     actorRole: "Super Admin",
     ipAddress: "127.0.0.1",
@@ -64,7 +64,7 @@ export async function testCQRS() {
 
   // 3. Verify Audits were appended immutably
   const audits = await queryHandler.handleGetUserAuditHistory({
-    actorId: "admin-user-super",
+    actorId: "e55d6645-e92d-4ac1-88eb-82370a6c05df",
     targetTenantId: createDto.id
   });
 
@@ -86,7 +86,7 @@ export async function testCQRS() {
   const quotaDto = await commandHandler.handleUpdateTenantQuota({
     tenantId: createDto.id,
     quota: { maxUsers: 999 },
-    actorId: "admin-user-super",
+    actorId: "e55d6645-e92d-4ac1-88eb-82370a6c05df",
     actorEmail: "super.admin@aeo-platform.internal",
     actorRole: "Super Admin",
     ipAddress: "127.0.0.1",
@@ -99,10 +99,10 @@ export async function testCQRS() {
 
   // 5. Test ChangeUserRoleCommand
   const userDto = await commandHandler.handleChangeUserRole({
-    userId: "00000000-0000-4000-8000-000000000017",
+    userId: "20801dc6-10ff-4360-9b6d-ba2387156a2e",
     newRole: "Operations",
     permissions: ["config:write", "ai:manage"],
-    actorId: "admin-user-super",
+    actorId: "e55d6645-e92d-4ac1-88eb-82370a6c05df",
     actorEmail: "super.admin@aeo-platform.internal",
     actorRole: "Super Admin",
     ipAddress: "127.0.0.1",
@@ -116,8 +116,8 @@ export async function testCQRS() {
   // 6. Test EnableFeatureFlagCommand
   const flagDto = await commandHandler.handleEnableFeatureFlag({
     flagKey: "phase-1-fa-optimized",
-    tenantIdOverride: "tenant-acme-uuid",
-    actorId: "admin-user-super",
+    tenantIdOverride: "f2c5e2f2-f8bf-41ce-9450-f623f96697e1",
+    actorId: "e55d6645-e92d-4ac1-88eb-82370a6c05df",
     actorEmail: "super.admin@aeo-platform.internal",
     actorRole: "Super Admin",
     ipAddress: "127.0.0.1",

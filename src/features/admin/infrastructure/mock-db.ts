@@ -36,7 +36,7 @@ export class AdminMockDatabase {
   private seed(): void {
     // 1. Seed Tenants
     const tenant1: Tenant = {
-      id: "tenant-acme-uuid",
+      id: "f2c5e2f2-f8bf-41ce-9450-f623f96697e1",
       name: "Acme Corp",
       slug: "acme",
       status: "active",
@@ -78,7 +78,7 @@ export class AdminMockDatabase {
     };
 
     const tenant2: Tenant = {
-      id: "tenant-globex-uuid",
+      id: "08c65282-5676-4c58-b86f-3fec05ddaa16",
       name: "Globex Iran Branch",
       slug: "globex-fa",
       status: "active",
@@ -125,7 +125,7 @@ export class AdminMockDatabase {
 
     // 2. Seed Admin Users (Strict separation from regular customers)
     const admin1: AdminUser = {
-      id: "admin-user-super",
+      id: "e55d6645-e92d-4ac1-88eb-82370a6c05df",
       email: "super.admin@aeo-platform.internal",
       fullName: "Sarah Connor",
       role: "Super Admin",
@@ -145,7 +145,7 @@ export class AdminMockDatabase {
     };
 
     const admin2: AdminUser = {
-      id: "00000000-0000-4000-8000-000000000017",
+      id: "20801dc6-10ff-4360-9b6d-ba2387156a2e",
       email: "support.agent@aeo-platform.internal",
       fullName: "John Doe",
       role: "Support",
@@ -165,13 +165,13 @@ export class AdminMockDatabase {
 
     // 3. Seed Feature Flags
     const flag1: FeatureFlag = {
-      id: "flag-aeo-geo-iran",
+      id: "6a5d01c2-c5b6-4d23-87f7-4234a3d667ae",
       key: "phase-1-fa-optimized",
       name: "Persian Language Optimization",
       description: "Enables special crawling & localized prompt parsing for Persian LLM challenges",
       isEnabledGlobally: false,
       tenantOverrides: {
-        "tenant-globex-uuid": true
+        "08c65282-5676-4c58-b86f-3fec05ddaa16": true
       },
       audit: {
         createdAt: "2026-01-10T00:00:00Z",
@@ -183,7 +183,7 @@ export class AdminMockDatabase {
     };
 
     const flag2: FeatureFlag = {
-      id: "flag-auto-rec",
+      id: "8b25c795-1248-4567-94dd-ed1a48c5e9fc",
       key: "auto-recommendations-v4",
       name: "Auto-Recommendation Generator",
       description: "Generates high-precision recommendations using multi-stage analysis",
@@ -203,7 +203,7 @@ export class AdminMockDatabase {
 
     // 4. Seed AI Providers
     const provider1: AIProviderConfiguration = {
-      id: "ai-provider-openai",
+      id: "31b5594b-2a97-4925-ab35-45890da34bbb",
       providerName: "OpenAI",
       endpointUrl: "https://api.openai.com/v1",
       apiKeyMasked: "sk-proj-...A1b2",
@@ -222,7 +222,7 @@ export class AdminMockDatabase {
     };
 
     const provider2: AIProviderConfiguration = {
-      id: "ai-provider-anthropic",
+      id: "66659551-88e6-4f5e-98bb-33e7b2723d82",
       providerName: "Anthropic",
       endpointUrl: "https://api.anthropic.com/v1",
       apiKeyMasked: "sk-ant-...XyZ9",

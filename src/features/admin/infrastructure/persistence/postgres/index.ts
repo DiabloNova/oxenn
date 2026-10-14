@@ -1,10 +1,10 @@
+import * as crypto from 'crypto';
 /**
  * Phase 7C.5 — Enterprise PostgreSQL Persistence Adapter Layer
  * Implements real SQL queries, connection leasing, transactions, optimistic concurrency, and soft delete.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { randomUUID } from "crypto";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 import {
   ITenantRepository,
@@ -461,7 +461,7 @@ export class PostgresTenantRepository implements ITenantRepository {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
         `;
         if (!entity.id) {
-          entity.id = `tenant-${Math.random().toString(36).substr(2, 9)}-uuid`;
+          entity.id = crypto.randomUUID();
         }
         entity.audit.version = 1;
         entity.audit.createdAt = new Date().toISOString();
@@ -640,7 +640,7 @@ export class PostgresAdminUserRepository implements IAdminUserRepository {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
         `;
         if (!entity.id) {
-          entity.id = `admin-user-${Math.random().toString(36).substr(2, 9)}`;
+          entity.id = crypto.randomUUID();
         }
         entity.audit.version = 1;
         entity.audit.createdAt = new Date().toISOString();
@@ -784,7 +784,7 @@ export class PostgresFeatureFlagRepository implements IFeatureFlagRepository {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
         `;
         if (!entity.id) {
-          entity.id = `flag-${Math.random().toString(36).substr(2, 9)}`;
+          entity.id = crypto.randomUUID();
         }
         entity.audit.version = 1;
         entity.audit.createdAt = new Date().toISOString();
@@ -879,7 +879,7 @@ export class PostgresAuditRecordRepository implements IAuditRecordRepository {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
       `;
       if (!entity.id) {
-        entity.id = randomUUID();
+        entity.id = crypto.randomUUID();
       }
 
       await this.getExecutor().query(sql, [
@@ -1013,7 +1013,7 @@ export class PostgresAIProviderConfigurationRepository implements IAIProviderCon
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
         `;
         if (!entity.id) {
-          entity.id = `ai-provider-${Math.random().toString(36).substr(2, 9)}`;
+          entity.id = crypto.randomUUID();
         }
         entity.audit.version = 1;
         entity.audit.createdAt = new Date().toISOString();
