@@ -27,6 +27,9 @@ BEGIN
 END
 $$;
 
+-- Grant schema creation rights to app_owner
+GRANT CREATE ON SCHEMA public TO app_owner;
+
 -- Grant basic usage to app_runtime on public schema
 GRANT USAGE ON SCHEMA public TO app_runtime;
 
