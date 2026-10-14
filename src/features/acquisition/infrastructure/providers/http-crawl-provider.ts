@@ -148,7 +148,7 @@ export class HttpCrawlProvider implements CrawlProvider {
     let bytesProcessed = 0;
 
     const requestHost = async (host: string): Promise<void> => {
-      const spacing = 1000 / policy.perHostRequestsPerSecond;
+      const spacing = 1000 / policy.perHostRequestsPerSecond + 10;
       const previous = hostLocks.get(host) ?? Promise.resolve();
       let release!: () => void;
       const current = new Promise<void>(resolve => {
