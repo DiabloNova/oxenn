@@ -269,6 +269,7 @@ export const featureFlags = pgTable("feature_flags", {
   tenantOverrides: text("tenant_overrides").notNull().default("{}"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
+  version: integer("version").notNull().default(1),
 }, (table) => [
   index("idx_feature_flags_key").on(table.key),
 ]);
