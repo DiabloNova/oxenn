@@ -4,7 +4,6 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { randomUUID } from "node:crypto";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 import {
   ITenantRepository,
@@ -461,7 +460,7 @@ export class PostgresTenantRepository implements ITenantRepository {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
         `;
         if (!entity.id) {
-          entity.id = randomUUID();
+          entity.id = `tenant-${Math.random().toString(36).substr(2, 9)}-uuid`;
         }
         entity.audit.version = 1;
         entity.audit.createdAt = new Date().toISOString();
@@ -878,8 +877,8 @@ export class PostgresAuditRecordRepository implements IAuditRecordRepository {
         INSERT INTO audit_records (id, timestamp, actor_id, actor_email, actor_role, action, resource_type, resource_id, ip_address, user_agent, payload_before, payload_after, status, error_details)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
       `;
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entity.id)) {
-        entity.id = randomUUID();
+      if (!entity.id) {
+        entity.id = `audit-${Math.random().toString(36).substr(2, 9)}`;
       }
 
       await this.getExecutor().query(sql, [

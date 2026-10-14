@@ -36,7 +36,7 @@ export class AdminMockDatabase {
   private seed(): void {
     // 1. Seed Tenants
     const tenant1: Tenant = {
-      id: "a0000000-0000-4000-8000-000000000001",
+      id: "tenant-acme-uuid",
       name: "Acme Corp",
       slug: "acme",
       status: "active",
@@ -78,7 +78,7 @@ export class AdminMockDatabase {
     };
 
     const tenant2: Tenant = {
-      id: "a0000000-0000-4000-8000-000000000002",
+      id: "tenant-globex-uuid",
       name: "Globex Iran Branch",
       slug: "globex-fa",
       status: "active",
@@ -145,7 +145,7 @@ export class AdminMockDatabase {
     };
 
     const admin2: AdminUser = {
-      id: "a0000000-0000-4000-8000-000000000013",
+      id: "admin-user-support",
       email: "support.agent@aeo-platform.internal",
       fullName: "John Doe",
       role: "Support",
@@ -171,7 +171,7 @@ export class AdminMockDatabase {
       description: "Enables special crawling & localized prompt parsing for Persian LLM challenges",
       isEnabledGlobally: false,
       tenantOverrides: {
-        "a0000000-0000-4000-8000-000000000002": true
+        "tenant-globex-uuid": true
       },
       audit: {
         createdAt: "2026-01-10T00:00:00Z",

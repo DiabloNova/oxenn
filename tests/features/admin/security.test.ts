@@ -100,7 +100,7 @@ export function testSecurity() {
   };
 
   const tenantA: Tenant = {
-    id: "60000000-0000-4000-8000-000000000001",
+    id: "tenant-a-uuid",
     name: "Tenant A",
     slug: "tenant-shared-slug",
     status: "active",
@@ -111,7 +111,7 @@ export function testSecurity() {
   };
 
   const tenantB: Tenant = {
-    id: "60000000-0000-4000-8000-000000000002",
+    id: "tenant-b-uuid",
     name: "Tenant B",
     slug: "tenant-shared-slug", // Conflict slug
     status: "active",

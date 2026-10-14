@@ -99,7 +99,7 @@ export async function testCQRS() {
 
   // 5. Test ChangeUserRoleCommand
   const userDto = await commandHandler.handleChangeUserRole({
-    userId: "a0000000-0000-4000-8000-000000000013",
+    userId: "admin-user-support",
     newRole: "Operations",
     permissions: ["config:write", "ai:manage"],
     actorId: "admin-user-super",
@@ -116,7 +116,7 @@ export async function testCQRS() {
   // 6. Test EnableFeatureFlagCommand
   const flagDto = await commandHandler.handleEnableFeatureFlag({
     flagKey: "phase-1-fa-optimized",
-    tenantIdOverride: "a0000000-0000-4000-8000-000000000001",
+    tenantIdOverride: "tenant-acme-uuid",
     actorId: "admin-user-super",
     actorEmail: "super.admin@aeo-platform.internal",
     actorRole: "Super Admin",

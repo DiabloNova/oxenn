@@ -19,7 +19,7 @@ export async function testPostgresIntegration() {
 
   // 1. Verify UUID-based Persistence & Save
   const tenant: Tenant = {
-    id: "50000000-0000-4000-8000-000000000001",
+    id: "tenant-real-pg-uuid",
     name: "Enterprise Defense Inc",
     slug: "defense-saas",
     status: "active",

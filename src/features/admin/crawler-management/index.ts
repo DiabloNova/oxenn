@@ -35,7 +35,7 @@ export class CrawlerOperationsConsole {
   private seed() {
     const job1: CrawlJob = {
       jobId: "job-crawl-acme-home",
-      tenantId: "a0000000-0000-4000-8000-000000000001",
+      tenantId: "tenant-acme-uuid",
       targetUrl: "https://acme-saas.com/blog/generative-ai",
       status: "completed",
       retryCount: 0,
@@ -47,7 +47,7 @@ export class CrawlerOperationsConsole {
 
     const job2: CrawlJob = {
       jobId: "job-crawl-globex-fail",
-      tenantId: "a0000000-0000-4000-8000-000000000002",
+      tenantId: "tenant-globex-uuid",
       targetUrl: "https://globex-corp.ir/products/aeo-pricing",
       status: "failed",
       retryCount: 3,
