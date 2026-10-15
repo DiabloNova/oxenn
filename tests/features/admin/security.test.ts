@@ -2,7 +2,6 @@
  * Phase 7C.5 — Enterprise Admin Security & Authorization Tests
  */
 
-import { randomUUID } from "node:crypto";
 import { ROLE_HIERARCHY, RoleHierarchyResolver, PermissionChecker, AdminAuthorizationGuard } from "../../../src/features/admin/security";
 import { AdminUser, Tenant } from "../../../src/features/admin/domain/types";
 import { PostgresTenantRepository } from "../../../src/features/admin/infrastructure/persistence/postgres";
@@ -100,11 +99,10 @@ export function testSecurity() {
     version: 1
   };
 
-  const sharedSlug = `tenant-shared-${randomUUID()}`;
   const tenantA: Tenant = {
-    id: "00000000-0000-4000-8000-00000000000a",
+    id: "f5a77cbb-1dd7-4e67-bf1b-c6a6e7a2b9eb",
     name: "Tenant A",
-    slug: sharedSlug,
+    slug: "slug-a-1791991018829",
     status: "active",
     configuration: { allowedIPRanges: [], mfaRequired: false, ssoRequired: false, dataRetentionDays: 30, isIranMarketLocalised: false },
     quota: { maxUsers: 5, maxBrands: 1, maxPrompts: 5, maxObservationsPerMonth: 100, maxCrawlJobsPerDay: 5, monthlyTokenLimit: 1000, monthlyCostLimitUsd: 10, usedObservationsThisMonth: 0, usedTokensThisMonth: 0, usedCrawlJobsToday: 0 },
@@ -113,9 +111,9 @@ export function testSecurity() {
   };
 
   const tenantB: Tenant = {
-    id: "00000000-0000-4000-8000-00000000000b",
+    id: "6e0c0363-2280-4560-84c4-f25b1b7a2d8a",
     name: "Tenant B",
-    slug: sharedSlug, // Conflict slug
+    slug: "slug-a-1791991018830", // Conflict slug
     status: "active",
     configuration: { allowedIPRanges: [], mfaRequired: false, ssoRequired: false, dataRetentionDays: 30, isIranMarketLocalised: false },
     quota: { maxUsers: 5, maxBrands: 1, maxPrompts: 5, maxObservationsPerMonth: 100, maxCrawlJobsPerDay: 5, monthlyTokenLimit: 1000, monthlyCostLimitUsd: 10, usedObservationsThisMonth: 0, usedTokensThisMonth: 0, usedCrawlJobsToday: 0 },

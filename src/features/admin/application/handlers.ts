@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import * as crypto from 'crypto';
 import {
   CreateTenantCommand,
   SuspendTenantCommand,
@@ -61,7 +61,7 @@ export class ApplicationAdminCommandHandler {
 
   private async appendAudit(record: Omit<AuditRecord, "id" | "timestamp">): Promise<AuditRecord> {
     const auditRecord: AuditRecord = {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
       ...record
     };
@@ -75,7 +75,7 @@ export class ApplicationAdminCommandHandler {
   public async handleCreateTenant(command: CreateTenantCommand): Promise<TenantDTO> {
     return this.uow.runInTransaction(async () => {
       const tenant: Tenant = {
-        id: randomUUID(),
+        id: crypto.randomUUID(),
         name: command.name,
         slug: command.slug,
         status: "active",
