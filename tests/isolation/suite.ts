@@ -158,7 +158,7 @@ async function runTest() {
           const qual = typeof policy.qual === "string" ? policy.qual : "";
           const withCheck = typeof policy.with_check === "string" ? policy.with_check : "";
           const usesTenantContext = (expression: string) =>
-            /current_setting\s*\(\s*'app\\.current_tenant_id'\s*,\s*true\s*\)/i.test(expression);
+            /current_setting\s*\(\s*'app\.current_tenant_id'\s*,\s*true\s*\)/i.test(expression);
 
           if (expressionRequirement === "qual") return usesTenantContext(qual);
           if (expressionRequirement === "with_check") return usesTenantContext(withCheck);
