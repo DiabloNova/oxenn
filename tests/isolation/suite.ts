@@ -175,8 +175,9 @@ async function runTest() {
     }
 
     if (policyFailures.length > 0) {
+      const samplePolicies = policiesByTable.get("aeo_analyses") ?? [];
       throw new Error(
-        `RLS policy catalog verification failed: tenant-context policies are missing or incomplete for ${policyFailures.join(", ")}`,
+        `RLS policy catalog verification failed: tenant-context policies are missing or incomplete for ${policyFailures.join(", ")}. Sample catalog policies: ${JSON.stringify(samplePolicies.slice(0, 4))}`,
       );
     }
     console.log(`RLS policy catalog verification passed: SELECT/INSERT/UPDATE/DELETE tenant-context policies verified on all ${TENANT_SCOPED_TABLES.length} tenant tables.`);
