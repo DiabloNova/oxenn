@@ -61,17 +61,21 @@ function getAllDocs(basePath = "docs"): DocMeta[] {
                 title = firstLine.replace('# ', '').trim();
             }
             if (slug === "reference-matrix") {
-                // Strip consumer paths from the reference matrix snippet to ensure all table names fit
-                // in the searchable index without exceeding reasonable limits.
-                // Replace | `table` | Scope | ... | path, path | with | `table` |
-                const lines = content.split('\n');
-                const cleanLines = lines.map(line => {
-                    if (line.startsWith('| `')) {
-                        return line.split('|').slice(0, 2).join('|') + '|';
-                    }
-                    return line;
-                });
-                contentSnippet = cleanLines.join(' ').replace(/\n/g, ' ');
+                // Keep search metadata compact without discarding useful table names and security metadata.
+                contentSnippet = content
+                    .split("\n")
+                    .filter(line =>
+                        line === "# Database Reference Matrix" ||
+                        line.startsWith("## Table: ") ||
+                        line.startsWith("- **Scope:** ") ||
+                        line.startsWith("- **RLS Policies Defined:** ") ||
+                        line.startsWith("- **Status:** ") ||
+                        line.startsWith("## Summary") ||
+                        line.startsWith("- Total Tables: ") ||
+                        line.startsWith("- WIRED Tables: ") ||
+                        line.startsWith("- ORPHAN-TABLE")
+                    )
+                    .join(" ");
             } else {
                 contentSnippet = content.substring(0, 500).replace(/\n/g, ' ');
             }
