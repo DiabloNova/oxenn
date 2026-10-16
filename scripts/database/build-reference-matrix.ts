@@ -14,6 +14,13 @@ interface IndexColumn {
   nulls?: string;
 }
 
+interface IndexColumn {
+  expression: string;
+  isExpression: boolean;
+  asc?: boolean;
+  nulls?: string;
+}
+
 interface SnapshotTable {
   name: string;
   columns: Record<string, {
