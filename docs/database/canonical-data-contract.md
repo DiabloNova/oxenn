@@ -17,7 +17,7 @@ While `database/schema/index.ts` is the source, it is compiled into several crit
 
 2. **Runtime Tenant Scoped Tables Map** (`src/core/database/tenant-tables.generated.ts`):
    - A deterministic, generated array of all tables configured with at least one Row Level Security (RLS) policy in the current Drizzle snapshot.
-   - Verified in CI via `scripts/database/verify-tenant-tables.ts` to ensure the application logic (e.g. `isTenantScopedTable` checks) does not drift from actual enforced policies.
+   - Verified in CI via `scripts/database/verify-tenant-tables.ts` to ensure the runtime table list matches the tables with declared policies in the latest Drizzle snapshot. This check does not verify RLS activation in a live database.
 
 3. **Reference Matrix Documentation** (`docs/database/reference-matrix.md`):
    - An auto-generated matrix mapping tables to their scope (Global vs. Tenant-Scoped), declared RLS policies, indexes, constraints, foreign keys, and known consumers in the codebase.
@@ -32,7 +32,7 @@ Tables are partitioned into two strictly distinct security models based on multi
 ### 1. Global Tables
 Global tables contain core application configurations, user identities, system metadata, or definitions that apply identically across all tenants.
 
-- **RLS Disabled (❌):** They do not have `tenant_id` boundaries.
+- **RLS Disabled (❌):** This is an intended schema classification, not a runtime guarantee. A table is global only when it is absent from the policy-bearing tenant-scoped table map; `organizations` is tenant-scoped because its own `id` is protected by tenant RLS.
 - **Access Rule:** Can be accessed via standard database clients. No special `tenant_id` context injection is needed, though application-level logic must still verify role permissions.
 
 ### 2. Tenant-Scoped Tables
@@ -51,7 +51,7 @@ The data contract is verified via multiple independent testing paths:
 1. **Unit Testing & The Internal Simulator (`tests/unit/*`)**
    - Pure, stateless behavior.
    - Relies on application-layer isolation assertions and mocking. It *does not* prove that data is actually secure on disk, only that domain logic attempts to pass the correct arguments to repositories.
-   - **Environment:** No database connection attached (`DATABASE_URL` is undefined).
+   - **Environment:** CI does not provision a database service for the unit-test job; individual tests may set `DATABASE_URL` for their own mocks or fixtures.
 
 2. **Tenant Isolation Testing (`tests/isolation/suite.ts`)**
    - Connects to a live ephemeral PostgreSQL instance.
@@ -76,4 +76,4 @@ Certain database behaviors are enforced directly by PostgreSQL but are difficult
 - **Unique Indexes with Functions:** Indexes such as `uniqueIndex("idx_users_lower_email").on(sql\`lower(${table.email})\`)` are enforced by the Postgres b-tree constraint system. The simulator may replicate basic string lowering, but the authoritative proof remains in the SQL schema.
 - **Check Constraints:** Specialized data integrity rules (e.g., JSONB structure validation or numeric boundaries) defined via `check(...)`.
 
-When testing these invariants, developers must classify the test as a `test:db` or add it to the isolation suite to ensure accurate verification against the real engine.
+When testing these invariants, add assertions to the CI-run isolation suite, or explicitly wire the `test:db` project into CI. Merely naming a test `test:db` does not make CI execute it.
