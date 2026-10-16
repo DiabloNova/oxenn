@@ -358,17 +358,17 @@
 | `endpoint` | `text` | ✅ | ❌ | NULL |
 | `expires_at` | `timestamp with time zone` | ✅ | ❌ | NULL |
 
-### Indexes
-
-| Name | Columns | Unique | Predicate |
-|---|---|---|---|
-| `idx_auth_rate_limits_expires` | `expires_at` | ❌ | — |
-
 ### Composite Primary Keys
 
 | Name | Columns |
 |---|---|
 | `auth_rate_limits_endpoint_bucket_key_pk` | `endpoint, bucket_key` |
+
+### Indexes
+
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_auth_rate_limits_expires` | `expires_at` | ❌ | — |
 
 ---
 
@@ -1349,17 +1349,17 @@
 | `organization_id` | `uuid` | ✅ | ❌ | NULL |
 | `topic_id` | `uuid` | ✅ | ❌ | NULL |
 
-### Indexes
-
-| Name | Columns | Unique | Predicate |
-|---|---|---|---|
-| `idx_keywords_topics_org` | `organization_id` | ❌ | — |
-
 ### Composite Primary Keys
 
 | Name | Columns |
 |---|---|
 | `keywords_topics_keyword_id_topic_id_pk` | `keyword_id, topic_id` |
+
+### Indexes
+
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_keywords_topics_org` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1731,17 +1731,17 @@
 | `page_id` | `uuid` | ✅ | ❌ | NULL |
 | `salience` | `double precision` | ✅ | ❌ | `1` |
 
-### Indexes
-
-| Name | Columns | Unique | Predicate |
-|---|---|---|---|
-| `idx_pages_entities_org` | `organization_id` | ❌ | — |
-
 ### Composite Primary Keys
 
 | Name | Columns |
 |---|---|
 | `pages_entities_page_id_entity_id_pk` | `page_id, entity_id` |
+
+### Indexes
+
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_pages_entities_org` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1770,17 +1770,17 @@
 | `organization_id` | `uuid` | ✅ | ❌ | NULL |
 | `page_id` | `uuid` | ✅ | ❌ | NULL |
 
-### Indexes
-
-| Name | Columns | Unique | Predicate |
-|---|---|---|---|
-| `idx_pages_keywords_org` | `organization_id` | ❌ | — |
-
 ### Composite Primary Keys
 
 | Name | Columns |
 |---|---|
 | `pages_keywords_page_id_keyword_id_pk` | `page_id, keyword_id` |
+
+### Indexes
+
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_pages_keywords_org` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1809,17 +1809,17 @@
 | `score` | `double precision` | ✅ | ❌ | `1` |
 | `topic_id` | `uuid` | ✅ | ❌ | NULL |
 
-### Indexes
-
-| Name | Columns | Unique | Predicate |
-|---|---|---|---|
-| `idx_pages_topics_org` | `organization_id` | ❌ | — |
-
 ### Composite Primary Keys
 
 | Name | Columns |
 |---|---|
 | `pages_topics_page_id_topic_id_pk` | `page_id, topic_id` |
+
+### Indexes
+
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_pages_topics_org` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2492,17 +2492,17 @@
 | `organization_id` | `uuid` | ✅ | ❌ | NULL |
 | `topic_id` | `uuid` | ✅ | ❌ | NULL |
 
-### Indexes
-
-| Name | Columns | Unique | Predicate |
-|---|---|---|---|
-| `idx_topics_entities_org` | `organization_id` | ❌ | — |
-
 ### Composite Primary Keys
 
 | Name | Columns |
 |---|---|
 | `topics_entities_topic_id_entity_id_pk` | `topic_id, entity_id` |
+
+### Indexes
+
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_topics_entities_org` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
