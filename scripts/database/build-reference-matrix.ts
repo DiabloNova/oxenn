@@ -14,13 +14,6 @@ interface IndexColumn {
   nulls?: string;
 }
 
-interface IndexColumn {
-  expression: string;
-  isExpression: boolean;
-  asc?: boolean;
-  nulls?: string;
-}
-
 interface SnapshotTable {
   name: string;
   columns: Record<string, {
@@ -98,14 +91,14 @@ function findTableReferences(tableName: string): string[] {
   const exportName = getExportNameForTable(tableName);
   try {
     const grepCmd = `grep -rlE "\\\\b${tableName}\\\\b|\\\\b${exportName || "NO_EXPORT_FOUND"}\\\\b" src/ scripts/ tests/ | grep -v "tenant-tables.generated.ts" | grep -v "docsIndex.ts" | grep -v "build-reference-matrix.ts" | grep -v "database/schema" | grep -v "docsData.ts" || true`;
-    return execSync(grepCmd).toString().trim().split("\\n").filter(Boolean).sort();
+    return execSync(grepCmd).toString().trim().split("\n").filter(Boolean).sort();
   } catch {
     return [];
   }
 }
 
 function escapeMarkdownCell(value: string): string {
-  return value.replace(/\\|/g, "\\\\|").replace(/\|/g, "\\|");
+  return value.replace(/\|/g, "\\|");
 }
 
 function getIndexColumnName(column: IndexColumn): string {
@@ -117,7 +110,7 @@ function generateMarkdown(): void {
   const snapshot: Snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
   const tables = Object.values(snapshot.tables).sort((a, b) => a.name.localeCompare(b.name));
 
-  let md = "# Database Reference Matrix\\n\\n";
+  let md = "# Database Reference Matrix\n\n";
   let orphanTablesCount = 0;
   let wiredTablesCount = 0;
 
@@ -128,74 +121,74 @@ function generateMarkdown(): void {
     const hasPolicies = Object.keys(table.policies || {}).length > 0;
     const policyStatus = hasPolicies ? "✅" : "❌";
     const status = refs.length === 0 ? "`ORPHAN-TABLE` (LEGACY-CANDIDATE)" : "`WIRED`";
-    const consumers = refs.length === 0 ? "-" : refs.map((ref) => `\\`${ref}\\``).join(", ");
+    const consumers = refs.length === 0 ? "-" : refs.map((ref) => `\`${ref}\``).join(", ");
 
     if (refs.length === 0) orphanTablesCount++;
     else wiredTablesCount++;
 
-    md += `## Table: \\`${table.name}\\`\\n\\n`;
-    md += `- **Scope:** ${scope}\\n`;
-    md += `- **RLS Policies Defined:** ${policyStatus}\\n`;
-    md += `- **Status:** ${status}\\n`;
-    md += `- **Consumers:** ${consumers}\\n\\n`;
-    md += "### Columns\\n\\n";
-    md += "| Name | Type | Not Null | Primary Key | Default |\\n";
-    md += "|---|---|---|---|---|\\n";
+    md += `## Table: \`${table.name}\`\n\n`;
+    md += `- **Scope:** ${scope}\n`;
+    md += `- **RLS Policies Defined:** ${policyStatus}\n`;
+    md += `- **Status:** ${status}\n`;
+    md += `- **Consumers:** ${consumers}\n\n`;
+    md += "### Columns\n\n";
+    md += "| Name | Type | Not Null | Primary Key | Default |\n";
+    md += "|---|---|---|---|---|\n";
 
     for (const column of Object.values(table.columns).sort((a, b) => a.name.localeCompare(b.name))) {
       const notNull = column.notNull ? "✅" : "❌";
       const primaryKey = column.primaryKey ? "✅" : "❌";
-      const defaultValue = column.default !== undefined ? `\\`${String(column.default)}\\`` : "NULL";
-      md += `| \\`${column.name}\\` | \\`${column.type}\\` | ${notNull} | ${primaryKey} | ${defaultValue} |\\n`;
+      const defaultValue = column.default !== undefined ? `\`${String(column.default)}\`` : "NULL";
+      md += `| \`${column.name}\` | \`${column.type}\` | ${notNull} | ${primaryKey} | ${defaultValue} |\n`;
     }
 
     const compositeKeys = Object.values(table.compositePrimaryKeys || {}).sort((a, b) => a.name.localeCompare(b.name));
     if (compositeKeys.length > 0) {
-      md += "\\n### Composite Primary Keys\\n\\n";
-      md += "| Name | Columns |\\n|---|---|\\n";
+      md += "\n### Composite Primary Keys\n\n";
+      md += "| Name | Columns |\n|---|---|\n";
       for (const key of compositeKeys) {
-        md += `| \\`${key.name}\\` | \\`${key.columns.join(", ")}\\` |\\n`;
+        md += `| \`${key.name}\` | \`${key.columns.join(", ")}\` |\n`;
       }
     }
 
     const indexes = Object.values(table.indexes || {}).sort((a, b) => a.name.localeCompare(b.name));
     if (indexes.length > 0) {
-      md += "\\n### Indexes\\n\\n";
-      md += "| Name | Columns | Unique | Predicate |\\n|---|---|---|---|\\n";
+      md += "\n### Indexes\n\n";
+      md += "| Name | Columns | Unique | Predicate |\n|---|---|---|---|\n";
       for (const index of indexes) {
         const columns = index.columns.map(getIndexColumnName).join(", ");
         const unique = index.isUnique ? "✅" : "❌";
-        const predicate = index.where ? `\\`${escapeMarkdownCell(index.where)}\\`` : "—";
-        md += `| \\`${index.name}\\` | \\`${escapeMarkdownCell(columns)}\\` | ${unique} | ${predicate} |\\n`;
+        const predicate = index.where ? `\`${escapeMarkdownCell(index.where)}\`` : "—";
+        md += `| \`${index.name}\` | \`${escapeMarkdownCell(columns)}\` | ${unique} | ${predicate} |\n`;
       }
     }
 
     const uniqueConstraints = Object.values(table.uniqueConstraints || {}).sort((a, b) => a.name.localeCompare(b.name));
     if (uniqueConstraints.length > 0) {
-      md += "\\n### Unique Constraints\\n\\n";
-      md += "| Name | Columns | Nulls Not Distinct |\\n|---|---|---|\\n";
+      md += "\n### Unique Constraints\n\n";
+      md += "| Name | Columns | Nulls Not Distinct |\n|---|---|---|\n";
       for (const constraint of uniqueConstraints) {
         const nullsNotDistinct = constraint.nullsNotDistinct ? "✅" : "❌";
-        md += `| \\`${constraint.name}\\` | \\`${constraint.columns.join(", ")}\\` | ${nullsNotDistinct} |\\n`;
+        md += `| \`${constraint.name}\` | \`${constraint.columns.join(", ")}\` | ${nullsNotDistinct} |\n`;
       }
     }
 
     const foreignKeys = Object.values(table.foreignKeys || {}).sort((a, b) => a.name.localeCompare(b.name));
     if (foreignKeys.length > 0) {
-      md += "\\n### Foreign Keys\\n\\n";
-      md += "| Name | Columns | Foreign Table | Foreign Columns | On Delete |\\n|---|---|---|---|---|\\n";
+      md += "\n### Foreign Keys\n\n";
+      md += "| Name | Columns | Foreign Table | Foreign Columns | On Delete |\n|---|---|---|---|---|\n";
       for (const foreignKey of foreignKeys) {
         const onDelete = foreignKey.onDelete || "NO ACTION";
-        md += `| \\`${foreignKey.name}\\` | \\`${foreignKey.columnsFrom.join(", ")}\\` | \\`${foreignKey.tableTo}\\` | \\`${foreignKey.columnsTo.join(", ")}\\` | ${onDelete} |\\n`;
+        md += `| \`${foreignKey.name}\` | \`${foreignKey.columnsFrom.join(", ")}\` | \`${foreignKey.tableTo}\` | \`${foreignKey.columnsTo.join(", ")}\` | ${onDelete} |\n`;
       }
     }
-    md += "\\n---\\n\\n";
+    md += "\n---\n\n";
   }
 
-  md += "\\n## Summary\\n";
-  md += `- Total Tables: ${tables.length}\\n`;
-  md += `- WIRED Tables: ${wiredTablesCount}\\n`;
-  md += `- ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: ${orphanTablesCount}\\n`;
+  md += "\n## Summary\n";
+  md += `- Total Tables: ${tables.length}\n`;
+  md += `- WIRED Tables: ${wiredTablesCount}\n`;
+  md += `- ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: ${orphanTablesCount}\n`;
 
   const outputPath = path.join(process.cwd(), "docs/database/reference-matrix.md");
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
