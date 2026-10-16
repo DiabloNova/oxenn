@@ -99,7 +99,7 @@ function findTableReferences(tableName: string): string[] {
 }
 
 function escapeMarkdownCell(value: string): string {
-  return value.replace(/\|/g, "\\|");
+  return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
 }
 
 function getIndexColumnName(column: IndexColumn): string {
