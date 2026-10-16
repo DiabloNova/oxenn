@@ -47,7 +47,7 @@ function main(): void {
     .map((table) => normalizeTableName(table.name))
     .sort();
 
-  const migrationSql = readSqlFiles(path.join(root, "database/drizzle")).join("\\n");
+  const migrationSql = readSqlFiles(path.join(root, "database/drizzle")).join("\n");
   const enabled = collectTables(migrationSql, "ENABLE");
   const forced = collectTables(migrationSql, "FORCE");
   const missingEnable = policyTables.filter((table) => !enabled.has(table));
