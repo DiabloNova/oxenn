@@ -60,10 +60,10 @@ The data contract is verified via multiple independent testing paths:
    - Verifies that raw SQL commands run as the `app_runtime` role are successfully repelled by RLS policies when crossing tenant boundaries or omitting the tenant context.
    - **Environment:** Requires a running PostgreSQL instance. Uses explicit role separation (`app_owner` vs `app_runtime`) as defined in `database/bootstrap.sql`.
 
-3. **Schema Policy Verification (`tests/db/*` and `verify-tenant-tables.ts`)**
-   - Compares the `pgPolicy` blocks embedded in `database/schema/index.ts` against the list of `TENANT_SCOPED_TABLES`.
-   - Halts CI (`SCHEMA DRIFT DETECTED`) if a developer creates a tenant table without generating its policy map.
-   - RLS activation itself is configured in migration SQL (including `database/drizzle/0005_force_rls.sql`); validate the live database separately when proving enforcement.
+3. **Schema Policy and Migration Verification** (`verify-tenant-tables.ts` and `verify-rls-migrations.ts`)
+   - `verify-tenant-tables.ts` compares policy-bearing table names in the latest Drizzle snapshot with `TENANT_SCOPED_TABLES`; it does not compare source `pgPolicy` expressions or inspect a live database.
+   - `verify-rls-migrations.ts` checks the checked-in migration history for `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` statements for every policy-bearing table. This is a static migration audit, not proof that migrations have been applied to production.
+   - The `test:isolation` CI job provisions ephemeral PostgreSQL and exercises tenant isolation. The `test:db` script is not currently invoked by CI; SQL invariants must be included in the isolation suite or the workflow must be updated before claiming those tests run.
 
 ---
 
