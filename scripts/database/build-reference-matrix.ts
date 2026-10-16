@@ -40,6 +40,7 @@ interface SnapshotTable {
     columns: string[];
     nullsNotDistinct?: boolean;
   }>;
+  checkConstraints?: Record<string, { name: string; value: string }>;
   foreignKeys?: Record<string, {
     name: string;
     tableTo: string;
@@ -154,7 +155,7 @@ function generateMarkdown(): void {
     const indexes = Object.values(table.indexes || {}).sort((a, b) => a.name.localeCompare(b.name));
     if (indexes.length > 0) {
       md += "\n### Indexes\n\n";
-      md += "| Name | Columns | Unique | Predicate |\n|---|---|---|---|\n";
+      md += "| Name | Columns | Method | Unique | Predicate |\n|---|---|---|---|---|\n";
       for (const index of indexes) {
         const columns = index.columns.map(getIndexColumnName).join(", ");
         const unique = index.isUnique ? "✅" : "❌";
@@ -170,6 +171,15 @@ function generateMarkdown(): void {
       for (const constraint of uniqueConstraints) {
         const nullsNotDistinct = constraint.nullsNotDistinct ? "✅" : "❌";
         md += `| \`${constraint.name}\` | \`${constraint.columns.join(", ")}\` | ${nullsNotDistinct} |\n`;
+      }
+    }
+
+    const checkConstraints = Object.values(table.checkConstraints || {}).sort((a, b) => a.name.localeCompare(b.name));
+    if (checkConstraints.length > 0) {
+      md += "\\n### Check Constraints\\n\\n";
+      md += "| Name | Expression |\\n|---|---|\\n";
+      for (const constraint of checkConstraints) {
+        md += `| \`${constraint.name}\` | \`${escapeMarkdownCell(constraint.value)}\` |\\n`;
       }
     }
 
