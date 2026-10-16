@@ -2,7 +2,7 @@
 
 ## Architecture & Governance
 
-The Oxenn database is defined strictly through **Drizzle ORM**. There is exactly one canonical representation of the truth: the runtime schema declarations located in `database/schema/index.ts`. All changes to the database structure, policy enforcement, and domain types originate here.
+The Oxenn database is defined strictly through **Drizzle ORM**. There is exactly one canonical representation of the application schema: the Drizzle declarations located in `database/schema/index.ts`. Physical database behavior is realized by the migration history, including SQL-only operations such as enabling and forcing row-level security (RLS). Schema changes should originate in the declarations; migration files remain the record of how those changes are applied.
 
 ### Quarantined Legacy Definitions
 The `database/schema/_legacy/` directory contains legacy object-based schemas (`TableDefinition`). These are physically quarantined. They **must not** be imported or used as authoritative representations of the data model. `database/schema/index.ts` is the single source of truth.
@@ -20,7 +20,7 @@ While `database/schema/index.ts` is the source, it is compiled into several crit
    - Verified in CI via `scripts/database/verify-tenant-tables.ts` to ensure the application logic (e.g. `isTenantScopedTable` checks) does not drift from actual enforced policies.
 
 3. **Reference Matrix Documentation** (`docs/database/reference-matrix.md`):
-   - An auto-generated matrix mapping tables to their scope (Global vs. Tenant-Scoped), RLS status, and known consumers in the codebase.
+   - An auto-generated matrix mapping tables to their scope (Global vs. Tenant-Scoped), declared RLS policies, indexes, constraints, foreign keys, and known consumers in the codebase.
    - Generated via `scripts/database/build-reference-matrix.ts`.
 
 ---
@@ -38,8 +38,8 @@ Global tables contain core application configurations, user identities, system m
 ### 2. Tenant-Scoped Tables
 Tenant-scoped tables contain domain data belonging to a specific workspace or organization.
 
-- **RLS Enabled (✅):** They *must* have a Postgres Policy defined linking access to `current_setting('app.current_tenant', true)`.
-- **Access Rule:** Can only be queried by non-owner roles (e.g., `app_runtime`) when the session has properly set the `app.current_tenant` parameter using `set_config`. Attempting to query these without a context will result in empty result sets or RLS constraint violations (42501).
+- **Tenant RLS policy declared (✅):** They *must* have a PostgreSQL policy linking access to `current_setting('app.current_tenant_id', true)`.
+- **Access Rule:** Can only be queried by non-owner roles (e.g., `app_runtime`) when the session has properly set the `app.current_tenant_id` parameter using `set_config`. Attempting to query these without a context will result in empty result sets or RLS constraint violations (42501).
 - **Isolation Enforcement:** Directly validated via `tests/isolation/suite.ts` which provisions a real database and executes assertions proving that cross-tenant read/write/update/delete operations are explicitly blocked by the database layer.
 
 ---
@@ -63,6 +63,7 @@ The data contract is verified via multiple independent testing paths:
 3. **Schema Policy Verification (`tests/db/*` and `verify-tenant-tables.ts`)**
    - Compares the `pgPolicy` blocks embedded in `database/schema/index.ts` against the list of `TENANT_SCOPED_TABLES`.
    - Halts CI (`SCHEMA DRIFT DETECTED`) if a developer creates a tenant table without generating its policy map.
+   - RLS activation itself is configured in migration SQL (including `database/drizzle/0005_force_rls.sql`); validate the live database separately when proving enforcement.
 
 ---
 
