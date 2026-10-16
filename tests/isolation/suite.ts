@@ -152,24 +152,42 @@ async function runTest() {
     for (const tableName of TENANT_SCOPED_TABLES) {
       const policies = policiesByTable.get(tableName) ?? [];
       for (const [operation, expressionRequirement] of Object.entries(requiredPolicyExpressions)) {
-        const matchingPolicy = policies.some((policy) => {
-          const command = String(policy.cmd).toUpperCase();
+        const appliesToRuntime = (policy: (typeof policies)[number]) => {
           const roles = (policy.roles as string[] | null) ?? [];
-          const appliesToRuntime = roles.includes("public") || roles.includes("app_runtime");
-          if (!appliesToRuntime || (command !== operation && command !== "ALL")) return false;
+          return roles.includes("public") || roles.includes("app_runtime");
+        };
+        const commandApplies = (policy: (typeof policies)[number]) => {
+          const command = String(policy.cmd).toUpperCase();
+          return command === operation || command === "ALL";
+        };
+        const applicablePermissivePolicies = policies.filter((policy) =>
+          String(policy.permissive).toUpperCase() === "PERMISSIVE" &&
+          appliesToRuntime(policy) &&
+          commandApplies(policy)
+        );
 
-          const qual = typeof policy.qual === "string" ? policy.qual : "";
-          const withCheck = typeof policy.with_check === "string" ? policy.with_check : "";
-          const usesTenantContext = (expression: string) =>
-            /current_setting\s*\(\s*'app\.current_tenant_id'(?:\s*::\s*text)?\s*,\s*true\s*\)/i.test(expression);
+        const usesTenantContext = (expression: unknown) =>
+          typeof expression === "string" &&
+          /current_setting\s*\(\s*'app\.current_tenant_id'(?:\s*::\s*text)?\s*,\s*true\s*\)/i.test(expression);
+        const policyHasTenantContext = (policy: (typeof policies)[number]) => {
+          if (expressionRequirement === "qual") return usesTenantContext(policy.qual);
+          if (expressionRequirement === "with_check") return usesTenantContext(policy.with_check);
+          return usesTenantContext(policy.qual) && usesTenantContext(policy.with_check);
+        };
 
-          if (expressionRequirement === "qual") return usesTenantContext(qual);
-          if (expressionRequirement === "with_check") return usesTenantContext(withCheck);
-          return usesTenantContext(qual) && usesTenantContext(withCheck);
-        });
-
-        if (!matchingPolicy) {
-          policyFailures.push(`${tableName}:${operation}`);
+        // PostgreSQL ORs PERMISSIVE policies together. Every applicable
+        // permissive policy must be tenant-scoped, not merely one of them.
+        if (applicablePermissivePolicies.length === 0) {
+          policyFailures.push(`${tableName}:${operation}:no-applicable-permissive-policy`);
+        } else {
+          const unscopedPolicies = applicablePermissivePolicies.filter(
+            (policy) => !policyHasTenantContext(policy),
+          );
+          if (unscopedPolicies.length > 0) {
+            policyFailures.push(
+              `${tableName}:${operation}:unscoped-permissive-policy(${unscopedPolicies.map((policy) => policy.policyname).join(", ")})`,
+            );
+          }
         }
       }
     }
