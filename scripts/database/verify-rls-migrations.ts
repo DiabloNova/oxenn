@@ -16,7 +16,7 @@ interface RlsState {
   forced: boolean;
 }
 
-const IDENTIFIER = String.raw`(?:"(?:""|[^"])*"|[a-zA-Z_][\\w$]*)`;
+const IDENTIFIER = String.raw`(?:"(?:""|[^"])*"|[a-zA-Z_][\w$]*)`;
 
 function normalizeTableName(name: string): string {
   return name.replaceAll('"', "").replaceAll('""', '"').toLowerCase();
@@ -107,7 +107,7 @@ function unquoteIdentifier(identifier: string): string {
 
 function getPublicTableName(target: string): string | null {
   const qualified = target.trim().match(
-    new RegExp(String.raw`^(?:(?:"public"|public)\\s*\\.\\s*)?(${IDENTIFIER})$`, "i"),
+    new RegExp(String.raw`^(?:(?:"public"|public)\s*\.\s*)?(${IDENTIFIER})$`, "i"),
   );
   if (!qualified) return null;
   return normalizeTableName(unquoteIdentifier(qualified[1]));
@@ -118,7 +118,7 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
   if (!sql) return;
 
   const createMatch = sql.match(
-    new RegExp(String.raw`^CREATE\\s+(?:UNLOGGED\\s+|TEMP(?:ORARY)?\\s+)?TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(?:(?:"public"|public)\\s*\\.\\s*)?(${IDENTIFIER})(?!\\s*\\.)`, "i"),
+    new RegExp(String.raw`^CREATE\s+(?:UNLOGGED\s+|TEMP(?:ORARY)?\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:(?:"public"|public)\s*\.\s*)?(${IDENTIFIER})(?!\s*\.)`, "i"),
   );
   if (createMatch) {
     const table = normalizeTableName(unquoteIdentifier(createMatch[1]));
@@ -126,9 +126,9 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
     return;
   }
 
-  const dropMatch = sql.match(/^DROP\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?([\\s\\S]+)$/i);
+  const dropMatch = sql.match(/^DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?([\s\S]+)$/i);
   if (dropMatch) {
-    const targets = dropMatch[1].replace(/\\s+(?:CASCADE|RESTRICT)\\s*$/i, "");
+    const targets = dropMatch[1].replace(/\s+(?:CASCADE|RESTRICT)\s*$/i, "");
     for (const target of targets.split(",")) {
       const table = getPublicTableName(target);
       if (table && state.has(table)) state.set(table, { enabled: false, forced: false });
@@ -138,7 +138,7 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
 
   const alterMatch = sql.match(
     new RegExp(
-      String.raw`^ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?(?:(?:"public"|public)\\s*\\.\\s*)?(${IDENTIFIER})(?!\\s*\\.)\\s+(ENABLE|DISABLE|FORCE|NO\\s+FORCE)\\s+ROW\\s+LEVEL\\s+SECURITY\\b`,
+      String.raw`^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:(?:"public"|public)\s*\.\s*)?(${IDENTIFIER})(?!\s*\.)\s+(ENABLE|DISABLE|FORCE|NO\s+FORCE)\s+ROW\s+LEVEL\s+SECURITY\b`,
       "i",
     ),
   );
@@ -146,7 +146,7 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
 
   const table = normalizeTableName(unquoteIdentifier(alterMatch[1]));
   if (!state.has(table)) return;
-  const action = alterMatch[2].toUpperCase().replace(/\\s+/g, " ");
+  const action = alterMatch[2].toUpperCase().replace(/\s+/g, " ");
   const current = state.get(table)!;
   if (action === "ENABLE") current.enabled = true;
   else if (action === "DISABLE") current.enabled = false;
