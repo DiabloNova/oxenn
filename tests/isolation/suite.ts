@@ -106,11 +106,14 @@ async function runTest() {
       `,
       [TENANT_SCOPED_TABLES],
     );
-    const rlsByTable = new Map(
+    const rlsByTable = new Map<
+      string,
+      { table_name: string; relrowsecurity: boolean; relforcerowsecurity: boolean }
+    >(
       rlsState.rows.map((row: { table_name: string; relrowsecurity: boolean; relforcerowsecurity: boolean }) => [
         row.table_name,
         row,
-      ]),
+      ] as const),
     );
     const missingRlsState = TENANT_SCOPED_TABLES.filter((tableName) => {
       const state = rlsByTable.get(tableName);
