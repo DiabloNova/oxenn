@@ -47,7 +47,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
 
 ### Columns
 
