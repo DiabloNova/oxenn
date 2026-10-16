@@ -25,8 +25,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_admin_users_deleted_at` | `deleted_at` | ❌ | `deleted_at IS NULL` |
-| `idx_admin_users_email` | `email` | ❌ | — |
+| `idx_admin_users_deleted_at` | `deleted_at` | `btree` | ❌ | `deleted_at IS NULL` |
+| `idx_admin_users_email` | `email` | `btree` | ❌ | — |
 
 ### Unique Constraints
 
@@ -72,8 +72,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_aeo_analyses_tenant` | `tenant_id` | ❌ | — |
-| `idx_aeo_analyses_url` | `url` | ❌ | — |
+| `idx_aeo_analyses_tenant` | `tenant_id` | `btree` | ❌ | — |
+| `idx_aeo_analyses_url` | `url` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -139,9 +139,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_ai_observations_engine` | `engine_id` | ❌ | — |
-| `idx_ai_observations_organization` | `organization_id` | ❌ | — |
-| `idx_ai_observations_prompt` | `prompt_id` | ❌ | — |
+| `idx_ai_observations_engine` | `engine_id` | `btree` | ❌ | — |
+| `idx_ai_observations_organization` | `organization_id` | `btree` | ❌ | — |
+| `idx_ai_observations_prompt` | `prompt_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -177,7 +177,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_ai_provider_configs_active` | `is_active` | ❌ | — |
+| `idx_ai_provider_configs_active` | `is_active` | `btree` | ❌ | — |
 
 ---
 
@@ -214,9 +214,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_ai_vis_audits_brand` | `target_brand_name` | ❌ | — |
-| `idx_ai_vis_audits_org` | `organization_id` | ❌ | — |
-| `idx_ai_vis_audits_status` | `status` | ❌ | — |
+| `idx_ai_vis_audits_brand` | `target_brand_name` | `btree` | ❌ | — |
+| `idx_ai_vis_audits_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_ai_vis_audits_status` | `status` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -254,8 +254,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_api_keys_organization` | `organization_id` | ❌ | — |
-| `idx_api_keys_prefix` | `prefix` | ❌ | — |
+| `idx_api_keys_organization` | `organization_id` | `btree` | ❌ | — |
+| `idx_api_keys_prefix` | `prefix` | `btree` | ❌ | — |
 
 ### Unique Constraints
 
@@ -294,8 +294,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_audit_prompts_audit` | `audit_id` | ❌ | — |
-| `idx_audit_prompts_org` | `organization_id` | ❌ | — |
+| `idx_audit_prompts_audit` | `audit_id` | `btree` | ❌ | — |
+| `idx_audit_prompts_org` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -336,9 +336,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_audit_records_actor` | `actor_id` | ❌ | — |
-| `idx_audit_records_resource` | `resource_type, resource_id` | ❌ | — |
-| `idx_audit_records_timestamp` | `timestamp` | ❌ | — |
+| `idx_audit_records_actor` | `actor_id` | `btree` | ❌ | — |
+| `idx_audit_records_resource` | `resource_type, resource_id` | `btree` | ❌ | — |
+| `idx_audit_records_timestamp` | `timestamp` | `btree` | ❌ | — |
 
 ---
 
@@ -368,7 +368,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_auth_rate_limits_expires` | `expires_at` | ❌ | — |
+| `idx_auth_rate_limits_expires` | `expires_at` | `btree` | ❌ | — |
 
 ---
 
@@ -397,8 +397,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_brand_associations_brand` | `brand_id` | ❌ | — |
-| `idx_brand_associations_tenant` | `organization_id` | ❌ | — |
+| `idx_brand_associations_brand` | `brand_id` | `btree` | ❌ | — |
+| `idx_brand_associations_tenant` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -438,8 +438,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_brand_mentions_brand` | `brand_id` | ❌ | — |
-| `idx_brand_mentions_organization` | `organization_id` | ❌ | — |
+| `idx_brand_mentions_brand` | `brand_id` | `btree` | ❌ | — |
+| `idx_brand_mentions_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -480,8 +480,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_brands_domain` | `canonical_domain` | ❌ | — |
-| `idx_brands_organization` | `organization_id` | ❌ | — |
+| `idx_brands_domain` | `canonical_domain` | `btree` | ❌ | — |
+| `idx_brands_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -518,8 +518,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_citation_occurrences_source` | `source_id` | ❌ | — |
-| `idx_citation_occurrences_tenant` | `organization_id` | ❌ | — |
+| `idx_citation_occurrences_source` | `source_id` | `btree` | ❌ | — |
+| `idx_citation_occurrences_tenant` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -557,8 +557,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_citation_sources_tenant` | `organization_id` | ❌ | — |
-| `idx_citation_sources_url_org` | `organization_id, url` | ✅ | — |
+| `idx_citation_sources_tenant` | `organization_id` | `btree` | ❌ | — |
+| `idx_citation_sources_url_org` | `organization_id, url` | `btree` | ✅ | — |
 
 ### Foreign Keys
 
@@ -597,9 +597,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_citations_domain` | `domain` | ❌ | — |
-| `idx_citations_observation` | `observation_id` | ❌ | — |
-| `idx_citations_organization` | `organization_id` | ❌ | — |
+| `idx_citations_domain` | `domain` | `btree` | ❌ | — |
+| `idx_citations_observation` | `observation_id` | `btree` | ❌ | — |
+| `idx_citations_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -668,9 +668,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_comp_seo_findings_comp` | `competitor_id` | ❌ | — |
-| `idx_comp_seo_findings_tenant` | `tenant_id` | ❌ | — |
-| `idx_comp_seo_findings_type` | `finding_type` | ❌ | — |
+| `idx_comp_seo_findings_comp` | `competitor_id` | `btree` | ❌ | — |
+| `idx_comp_seo_findings_tenant` | `tenant_id` | `btree` | ❌ | — |
+| `idx_comp_seo_findings_type` | `finding_type` | `btree` | ❌ | — |
 
 
 ### Check Constraints
@@ -713,9 +713,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_competitor_changes_comp` | `competitor_id` | ❌ | — |
-| `idx_competitor_changes_tenant` | `tenant_id` | ❌ | — |
-| `idx_competitor_changes_type` | `change_type` | ❌ | — |
+| `idx_competitor_changes_comp` | `competitor_id` | `btree` | ❌ | — |
+| `idx_competitor_changes_tenant` | `tenant_id` | `btree` | ❌ | — |
+| `idx_competitor_changes_type` | `change_type` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -755,8 +755,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_competitors_domain_org` | `organization_id, domain` | ✅ | `deleted_at IS NULL` |
-| `idx_competitors_organization` | `organization_id` | ❌ | — |
+| `idx_competitors_domain_org` | `organization_id, domain` | `btree` | ✅ | `deleted_at IS NULL` |
+| `idx_competitors_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -790,7 +790,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_crawl_cache_key` | `tenant_id, cache_scope, cache_key` | ✅ | — |
+| `idx_crawl_cache_key` | `tenant_id, cache_scope, cache_key` | `btree` | ✅ | — |
 
 
 ### Check Constraints
@@ -858,11 +858,11 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_crawl_jobs_active_dedup` | `tenant_id, dedup_key` | ✅ | `status IN ('PENDING', 'QUEUED', 'RUNNING')` |
-| `idx_crawl_jobs_provider_job_id` | `provider_job_id` | ❌ | — |
-| `idx_crawl_jobs_status_scheduled` | `status, scheduled_for` | ❌ | `status = 'QUEUED'` |
-| `idx_crawl_jobs_tenant_created` | `tenant_id, created_at` | ❌ | — |
-| `idx_crawl_jobs_tenant_status` | `tenant_id, status` | ❌ | — |
+| `idx_crawl_jobs_active_dedup` | `tenant_id, dedup_key` | `btree` | ✅ | `status IN ('PENDING', 'QUEUED', 'RUNNING')` |
+| `idx_crawl_jobs_provider_job_id` | `provider_job_id` | `btree` | ❌ | — |
+| `idx_crawl_jobs_status_scheduled` | `status, scheduled_for` | `btree` | ❌ | `status = 'QUEUED'` |
+| `idx_crawl_jobs_tenant_created` | `tenant_id, created_at` | `btree` | ❌ | — |
+| `idx_crawl_jobs_tenant_status` | `tenant_id, status` | `btree` | ❌ | — |
 
 
 ### Check Constraints
@@ -904,8 +904,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `crawl_results_job_unique` | `job_id` | ✅ | — |
-| `crawl_results_tenant_job_unique` | `tenant_id, job_id` | ✅ | — |
+| `crawl_results_job_unique` | `job_id` | `btree` | ✅ | — |
+| `crawl_results_tenant_job_unique` | `tenant_id, job_id` | `btree` | ✅ | — |
 
 ### Foreign Keys
 
@@ -940,9 +940,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_crawl_snapshots_captured` | `captured_at` | ❌ | — |
-| `idx_crawl_snapshots_config` | `monitoring_config_id` | ❌ | — |
-| `idx_crawl_snapshots_org` | `organization_id` | ❌ | — |
+| `idx_crawl_snapshots_captured` | `captured_at` | `btree` | ❌ | — |
+| `idx_crawl_snapshots_config` | `monitoring_config_id` | `btree` | ❌ | — |
+| `idx_crawl_snapshots_org` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -977,7 +977,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_credit_transactions_tenant` | `tenant_id` | ❌ | — |
+| `idx_credit_transactions_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1009,9 +1009,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_diagnostic_rel_child` | `child_finding_id` | ❌ | — |
-| `idx_diagnostic_rel_org` | `organization_id` | ❌ | — |
-| `idx_diagnostic_rel_parent` | `parent_finding_id` | ❌ | — |
+| `idx_diagnostic_rel_child` | `child_finding_id` | `btree` | ❌ | — |
+| `idx_diagnostic_rel_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_diagnostic_rel_parent` | `parent_finding_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1053,9 +1053,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_diagnostic_findings_domain` | `domain` | ❌ | — |
-| `idx_diagnostic_findings_org` | `organization_id` | ❌ | — |
-| `idx_diagnostic_findings_status` | `status` | ❌ | — |
+| `idx_diagnostic_findings_domain` | `domain` | `btree` | ❌ | — |
+| `idx_diagnostic_findings_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_diagnostic_findings_status` | `status` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1087,8 +1087,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_document_embeddings_embedding` | `embedding` | ❌ | — |
-| `idx_document_embeddings_tenant` | `tenant_id` | ❌ | — |
+| `idx_document_embeddings_embedding` | `embedding` | `hnsw` | ❌ | — |
+| `idx_document_embeddings_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1158,8 +1158,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_entities_organization` | `organization_id` | ❌ | — |
-| `idx_entities_type` | `entity_type` | ❌ | — |
+| `idx_entities_organization` | `organization_id` | `btree` | ❌ | — |
+| `idx_entities_type` | `entity_type` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1197,9 +1197,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_entity_relationships_org` | `organization_id` | ❌ | — |
-| `idx_entity_relationships_source` | `source_entity_id` | ❌ | — |
-| `idx_entity_relationships_target` | `target_entity_id` | ❌ | — |
+| `idx_entity_relationships_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_entity_relationships_source` | `source_entity_id` | `btree` | ❌ | — |
+| `idx_entity_relationships_target` | `target_entity_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1235,8 +1235,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_faq_opps_analysis` | `aeo_analysis_id` | ❌ | — |
-| `idx_faq_opps_tenant` | `tenant_id` | ❌ | — |
+| `idx_faq_opps_analysis` | `aeo_analysis_id` | `btree` | ❌ | — |
+| `idx_faq_opps_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1271,7 +1271,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_feature_flags_key` | `key` | ❌ | — |
+| `idx_feature_flags_key` | `key` | `btree` | ❌ | — |
 
 ### Unique Constraints
 
@@ -1306,8 +1306,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_historical_metrics_lookup` | `organization_id, entity_type, entity_id, metric_name` | ❌ | — |
-| `idx_historical_metrics_time` | `recorded_at` | ❌ | — |
+| `idx_historical_metrics_lookup` | `organization_id, entity_type, entity_id, metric_name` | `btree` | ❌ | — |
+| `idx_historical_metrics_time` | `recorded_at` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1347,8 +1347,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_keywords_organization` | `organization_id` | ❌ | — |
-| `idx_keywords_term_org` | `organization_id, normalized_term` | ✅ | `deleted_at IS NULL` |
+| `idx_keywords_organization` | `organization_id` | `btree` | ❌ | — |
+| `idx_keywords_term_org` | `organization_id, normalized_term` | `btree` | ✅ | `deleted_at IS NULL` |
 
 ### Foreign Keys
 
@@ -1384,7 +1384,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_keywords_topics_org` | `organization_id` | ❌ | — |
+| `idx_keywords_topics_org` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1421,8 +1421,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_kg_alignments_analysis` | `aeo_analysis_id` | ❌ | — |
-| `idx_kg_alignments_tenant` | `tenant_id` | ❌ | — |
+| `idx_kg_alignments_analysis` | `aeo_analysis_id` | `btree` | ❌ | — |
+| `idx_kg_alignments_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1456,8 +1456,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_kg_entities_name` | `name` | ❌ | — |
-| `idx_kg_entities_tenant` | `tenant_id` | ❌ | — |
+| `idx_kg_entities_name` | `name` | `btree` | ❌ | — |
+| `idx_kg_entities_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1491,9 +1491,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_kg_relationships_source` | `source_entity_id` | ❌ | — |
-| `idx_kg_relationships_target` | `target_entity_id` | ❌ | — |
-| `idx_kg_relationships_tenant` | `tenant_id` | ❌ | — |
+| `idx_kg_relationships_source` | `source_entity_id` | `btree` | ❌ | — |
+| `idx_kg_relationships_target` | `target_entity_id` | `btree` | ❌ | — |
+| `idx_kg_relationships_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1531,9 +1531,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_monitoring_alerts_config` | `monitoring_config_id` | ❌ | — |
-| `idx_monitoring_alerts_dedup` | `organization_id, dedup_key` | ✅ | — |
-| `idx_monitoring_alerts_org` | `organization_id` | ❌ | — |
+| `idx_monitoring_alerts_config` | `monitoring_config_id` | `btree` | ❌ | — |
+| `idx_monitoring_alerts_dedup` | `organization_id, dedup_key` | `btree` | ✅ | — |
+| `idx_monitoring_alerts_org` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1569,8 +1569,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_monitoring_configs_org` | `organization_id` | ❌ | — |
-| `idx_monitoring_configs_website` | `website_id` | ❌ | — |
+| `idx_monitoring_configs_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_monitoring_configs_website` | `website_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1606,8 +1606,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_org_invitations_email` | `email` | ❌ | — |
-| `idx_org_invitations_token` | `token_hash` | ❌ | — |
+| `idx_org_invitations_email` | `email` | `btree` | ❌ | — |
+| `idx_org_invitations_token` | `token_hash` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1639,8 +1639,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_org_members_user_id` | `user_id` | ❌ | — |
-| `idx_org_members_user_org` | `organization_id, user_id` | ✅ | — |
+| `idx_org_members_user_id` | `user_id` | `btree` | ❌ | — |
+| `idx_org_members_user_org` | `organization_id, user_id` | `btree` | ✅ | — |
 
 ### Foreign Keys
 
@@ -1677,7 +1677,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_organizations_slug` | `slug` | ✅ | `deleted_at IS NULL` |
+| `idx_organizations_slug` | `slug` | `btree` | ✅ | `deleted_at IS NULL` |
 
 ### Unique Constraints
 
@@ -1726,9 +1726,9 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_pages_organization` | `organization_id` | ❌ | — |
-| `idx_pages_url_org` | `organization_id, normalized_url` | ✅ | `deleted_at IS NULL` |
-| `idx_pages_website` | `website_id` | ❌ | — |
+| `idx_pages_organization` | `organization_id` | `btree` | ❌ | — |
+| `idx_pages_url_org` | `organization_id, normalized_url` | `btree` | ✅ | `deleted_at IS NULL` |
+| `idx_pages_website` | `website_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1766,7 +1766,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_pages_entities_org` | `organization_id` | ❌ | — |
+| `idx_pages_entities_org` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1805,7 +1805,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_pages_keywords_org` | `organization_id` | ❌ | — |
+| `idx_pages_keywords_org` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1844,7 +1844,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_pages_topics_org` | `organization_id` | ❌ | — |
+| `idx_pages_topics_org` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1908,7 +1908,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_permissions_role_id` | `role_id` | ❌ | — |
+| `idx_permissions_role_id` | `role_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1945,7 +1945,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_position_obs_tenant` | `organization_id` | ❌ | — |
+| `idx_position_obs_tenant` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1982,7 +1982,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_premium_audits_organization` | `organization_id` | ❌ | — |
+| `idx_premium_audits_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2028,7 +2028,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_prompt_definitions_tenant` | `organization_id` | ❌ | — |
+| `idx_prompt_definitions_tenant` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2074,8 +2074,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_prompt_executions_status` | `status` | ❌ | — |
-| `idx_prompt_executions_tenant` | `organization_id` | ❌ | — |
+| `idx_prompt_executions_status` | `status` | `btree` | ❌ | — |
+| `idx_prompt_executions_tenant` | `organization_id` | `btree` | ❌ | — |
 
 
 ### Check Constraints
@@ -2122,7 +2122,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_prompt_schedules_tenant` | `organization_id` | ❌ | — |
+| `idx_prompt_schedules_tenant` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2162,8 +2162,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_prompts_brand` | `brand_id` | ❌ | — |
-| `idx_prompts_organization` | `organization_id` | ❌ | — |
+| `idx_prompts_brand` | `brand_id` | `btree` | ❌ | — |
+| `idx_prompts_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2201,8 +2201,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_recommendation_obs_brand` | `brand_id` | ❌ | — |
-| `idx_recommendation_obs_tenant` | `organization_id` | ❌ | — |
+| `idx_recommendation_obs_brand` | `brand_id` | `btree` | ❌ | — |
+| `idx_recommendation_obs_tenant` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2245,8 +2245,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_recommendations_brand` | `brand_id` | ❌ | — |
-| `idx_recommendations_organization` | `organization_id` | ❌ | — |
+| `idx_recommendations_brand` | `brand_id` | `btree` | ❌ | — |
+| `idx_recommendations_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2277,7 +2277,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_roles_name` | `name` | ❌ | — |
+| `idx_roles_name` | `name` | `btree` | ❌ | — |
 
 ### Unique Constraints
 
@@ -2349,7 +2349,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_system_configurations_key` | `key` | ❌ | — |
+| `idx_system_configurations_key` | `key` | `btree` | ❌ | — |
 
 ### Unique Constraints
 
@@ -2421,7 +2421,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_tenant_quotas_tenant` | `tenant_id` | ❌ | — |
+| `idx_tenant_quotas_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2458,7 +2458,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_tenant_subscriptions_tenant` | `tenant_id` | ❌ | — |
+| `idx_tenant_subscriptions_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2496,8 +2496,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_topics_name_org` | `organization_id, name` | ✅ | `deleted_at IS NULL` |
-| `idx_topics_organization` | `organization_id` | ❌ | — |
+| `idx_topics_name_org` | `organization_id, name` | `btree` | ✅ | `deleted_at IS NULL` |
+| `idx_topics_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2534,7 +2534,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_topics_entities_org` | `organization_id` | ❌ | — |
+| `idx_topics_entities_org` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2604,7 +2604,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_users_lower_email` | `lower("email")` | ✅ | — |
+| `idx_users_lower_email` | `lower("email")` | `btree` | ✅ | — |
 
 ### Unique Constraints
 
@@ -2645,8 +2645,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_visibility_scores_brand` | `brand_id` | ❌ | — |
-| `idx_visibility_scores_organization` | `organization_id` | ❌ | — |
+| `idx_visibility_scores_brand` | `brand_id` | `btree` | ❌ | — |
+| `idx_visibility_scores_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2688,8 +2688,8 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
-| `idx_websites_domain_org` | `organization_id, domain` | ✅ | `deleted_at IS NULL` |
-| `idx_websites_organization` | `organization_id` | ❌ | — |
+| `idx_websites_domain_org` | `organization_id, domain` | `btree` | ✅ | `deleted_at IS NULL` |
+| `idx_websites_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
