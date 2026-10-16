@@ -158,6 +158,7 @@ function generateMarkdown(): void {
       md += "| Name | Columns | Method | Unique | Predicate |\n|---|---|---|---|---|\n";
       for (const index of indexes) {
         const columns = index.columns.map(getIndexColumnName).join(", ");
+        const method = index.method || "unknown";
         const unique = index.isUnique ? "✅" : "❌";
         const predicate = index.where ? `\`${escapeMarkdownCell(index.where)}\`` : "—";
         md += `| \`${index.name}\` | \`${escapeMarkdownCell(columns)}\` | ${unique} | ${predicate} |\n`;
