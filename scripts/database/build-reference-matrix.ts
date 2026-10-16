@@ -177,10 +177,10 @@ function generateMarkdown(): void {
 
     const checkConstraints = Object.values(table.checkConstraints || {}).sort((a, b) => a.name.localeCompare(b.name));
     if (checkConstraints.length > 0) {
-      md += "\\n### Check Constraints\\n\\n";
-      md += "| Name | Expression |\\n|---|---|\\n";
+      md += "\n### Check Constraints\n\n";
+      md += "| Name | Expression |\n|---|---|\n";
       for (const constraint of checkConstraints) {
-        md += `| \`${constraint.name}\` | \`${escapeMarkdownCell(constraint.value)}\` |\\n`;
+        md += `| \`${constraint.name}\` | \`${escapeMarkdownCell(constraint.value)}\` |\n`;
       }
     }
 
