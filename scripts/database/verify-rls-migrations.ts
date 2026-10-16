@@ -22,8 +22,8 @@ function normalizeTableName(name: string): string {
 function collectTables(sql: string, action: "ENABLE" | "FORCE"): Set<string> {
   const tables = new Set<string>();
   const pattern = new RegExp(
-    "ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:\\"?public\\"?\\s*\\.\\s*)?\\"?([a-zA-Z_][\\w$]*)\\"?\\s+" +
-      action + "\\s+ROW\\s+LEVEL\\s+SECURITY\\b",
+    'ALTER\\\\s+TABLE\\\\s+"?([a-zA-Z_][\\\\w$]*)"?\\\\s+' +
+      action + '\\\\s+ROW\\\\s+LEVEL\\\\s+SECURITY\\\\b',
     "gi",
   );
   for (const match of sql.matchAll(pattern)) tables.add(normalizeTableName(match[1]));
