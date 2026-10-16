@@ -92,6 +92,92 @@ async function runTest() {
     }
     console.log("Role verification passed: app_runtime is not the table owner.");
 
+    // Verify the effective PostgreSQL catalog state after applying migrations.
+    // This complements static migration checks: a migration can exist while the
+    // resulting database is missing RLS flags or has incomplete policy coverage.
+    const rlsState = await client.query(
+      `
+        SELECT c.relname AS table_name, c.relrowsecurity, c.relforcerowsecurity
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relkind IN ('r', 'p')
+          AND c.relname = ANY($1::text[])
+      `,
+      [TENANT_SCOPED_TABLES],
+    );
+    const rlsByTable = new Map(
+      rlsState.rows.map((row: { table_name: string; relrowsecurity: boolean; relforcerowsecurity: boolean }) => [
+        row.table_name,
+        row,
+      ]),
+    );
+    const missingRlsState = TENANT_SCOPED_TABLES.filter((tableName) => {
+      const state = rlsByTable.get(tableName);
+      return !state || !state.relrowsecurity || !state.relforcerowsecurity;
+    });
+    if (missingRlsState.length > 0) {
+      throw new Error(
+        `RLS catalog verification failed: ENABLE and FORCE must both be active for every tenant table. Invalid tables: ${missingRlsState.join(", ")}`,
+      );
+    }
+    console.log(`RLS catalog verification passed: ENABLE and FORCE active on all ${TENANT_SCOPED_TABLES.length} tenant tables.`);
+
+    const policyState = await client.query(
+      `
+        SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+        FROM pg_catalog.pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = ANY($1::text[])
+      `,
+      [TENANT_SCOPED_TABLES],
+    );
+    const policiesByTable = new Map<string, typeof policyState.rows>();
+    for (const policy of policyState.rows) {
+      const tablePolicies = policiesByTable.get(policy.tablename) ?? [];
+      tablePolicies.push(policy);
+      policiesByTable.set(policy.tablename, tablePolicies);
+    }
+
+    const requiredPolicyExpressions: Record<string, "qual" | "with_check" | "both"> = {
+      SELECT: "qual",
+      INSERT: "with_check",
+      UPDATE: "both",
+      DELETE: "qual",
+    };
+    const policyFailures: string[] = [];
+    for (const tableName of TENANT_SCOPED_TABLES) {
+      const policies = policiesByTable.get(tableName) ?? [];
+      for (const [operation, expressionRequirement] of Object.entries(requiredPolicyExpressions)) {
+        const matchingPolicy = policies.some((policy) => {
+          const command = String(policy.cmd).toUpperCase();
+          const roles = (policy.roles as string[] | null) ?? [];
+          const appliesToRuntime = roles.includes("public") || roles.includes("app_runtime");
+          if (!appliesToRuntime || (command !== operation && command !== "ALL")) return false;
+
+          const qual = typeof policy.qual === "string" ? policy.qual : "";
+          const withCheck = typeof policy.with_check === "string" ? policy.with_check : "";
+          const usesTenantContext = (expression: string) =>
+            /current_setting\s*\(\s*'app\\.current_tenant_id'\s*,\s*true\s*\)/i.test(expression);
+
+          if (expressionRequirement === "qual") return usesTenantContext(qual);
+          if (expressionRequirement === "with_check") return usesTenantContext(withCheck);
+          return usesTenantContext(qual) && usesTenantContext(withCheck);
+        });
+
+        if (!matchingPolicy) {
+          policyFailures.push(`${tableName}:${operation}`);
+        }
+      }
+    }
+
+    if (policyFailures.length > 0) {
+      throw new Error(
+        `RLS policy catalog verification failed: tenant-context policies are missing or incomplete for ${policyFailures.join(", ")}`,
+      );
+    }
+    console.log(`RLS policy catalog verification passed: SELECT/INSERT/UPDATE/DELETE tenant-context policies verified on all ${TENANT_SCOPED_TABLES.length} tenant tables.`);
+
     const res = await client.query(`
       SELECT
         c.table_name,
