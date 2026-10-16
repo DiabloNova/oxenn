@@ -9,7 +9,26 @@ interface Journal {
 
 interface SnapshotTable {
   name: string;
+  columns: Record<string, {
+    name: string;
+    type: string;
+    notNull: boolean;
+    default?: unknown;
+    primaryKey: boolean;
+  }>;
   policies?: Record<string, unknown>;
+  indexes?: Record<string, {
+    name: string;
+    columns: string[];
+    isUnique: boolean;
+  }>;
+  foreignKeys?: Record<string, {
+    name: string;
+    tableTo: string;
+    columnsFrom: string[];
+    columnsTo: string[];
+    onDelete?: string;
+  }>;
 }
 
 interface Snapshot {
@@ -28,7 +47,6 @@ function getLatestSnapshotPath(): string {
 function getExportNameForTable(tableName: string): string | null {
     const schemaDir = path.join(process.cwd(), "database/schema");
 
-    // Recursive directory read
     function getAllFiles(dirPath: string, arrayOfFiles: string[] = []) {
         const files = fs.readdirSync(dirPath);
         for (const file of files) {
@@ -65,65 +83,6 @@ function findTableReferences(tableName: string) {
     }
 }
 
-function findOrphanReferences(tables: string[]) {
-    try {
-        const grepCmd = `grep -iroE "(FROM|JOIN|INTO|UPDATE)\\s+([a-zA-Z0-9_]+\\.)?[a-zA-Z0-9_]+" src/ scripts/ tests/ | grep -v "docsIndex.ts" | grep -v "build-reference-matrix.ts" || true`;
-        const results = execSync(grepCmd).toString().trim().split('\n').filter(Boolean);
-
-        const validTables = new Set(tables);
-        const ignoreList = new Set([
-            "select", "values", "array", "now", "generate_series", "jsonb_array_elements", "jsonb_each",
-            "set", "of", "with", "public", "information_schema", "pg_catalog", "pg_tables", "on", "checks",
-            "query", "isolation", "foo", "table", "homepage_stats", "monitoring_configs_history", "token",
-            "user", "credentials", "organization_id", "localstorage", "hydration", "clean", "premium", "scratch",
-            "foundational", "generative", "website", "the", "semantic", "static", "url", "slightly", "landing",
-            "secure", "auth", "var", "0deg", "a", "database", "sql", "consuming", "globals", "change",
-            "authenticator", "pool", "regular", "ai", "urls", "an", "llm", "page", "kg", "historical",
-            "prompt", "several", "executions", "homepage", "higher", "analyzed", "any", "relevant", "related",
-            "dynamic", "all", "competitive", "response", "numbered", "monitored", "tenant", "notes", "actual",
-            "raw", "0", "elements", "markdown", "future", "four", "usage", "this", "latency", "english", "basic",
-            "legacy", "custom", "migrations", "customer", "strongly", "domain", "distinct", "services", "reads",
-            "rich", "its", "that", "calculated", "drizzle", "graphnode", "tables", "billing", "cheerio", "path",
-            "structured", "collected", "technicalhealth", "contentquality", "entitysignals", "structureddatasignals",
-            "crawl", "word", "document", "existing", "snapp", "associations", "session", "tenantcontextmanager",
-            "context", "multiple", "navigation", "seo", "unknown", "free", "other", "metadata", "own", "columns",
-            "output", "src", "test", "was", "performing", "admin", "quality", "authenticated", "ir", "1",
-            "db", "leaking", "edge", "environment", "seed", "14", "standard", "vector",
-            "segments", "previous", "finding", "one", "robots", "those", "sitemap", "your",
-            "each", "records", "server", "postgresql", "chunk", "brand", "exactly", "chatgpt",
-            "setup", "top", "12", "10", "7", "6", "center", "canvas", "positive", "unauthenticated",
-            "request", "header", "recommendation", "dec", "our", "defaults", "library", "local",
-            "claim_crawl_jobs", "recover_expired_crawl_jobs", "last", "80", "pg_database", "update", "txt", "8", "5"
-        ]);
-
-        let foundOrphans = 0;
-        const actualOrphans: string[] = [];
-        for (const line of results) {
-            const parts = line.split(':');
-            if (parts.length < 2) continue;
-
-            const match = parts.slice(1).join(':').match(/(FROM|JOIN|INTO|UPDATE)\s+(([a-zA-Z0-9_]+)\.)?([a-zA-Z0-9_]+)/i);
-            if (match && match[4]) {
-                const tableName = match[4].toLowerCase();
-                if (!validTables.has(tableName) && !ignoreList.has(tableName)) {
-                    actualOrphans.push(line);
-                    foundOrphans++;
-                }
-            }
-        }
-
-        if (actualOrphans.length > 0) {
-            console.log("\nPotential ORPHAN-REFERENCE details:");
-            actualOrphans.forEach(o => console.log(o));
-        }
-
-        return foundOrphans;
-    } catch(e) {
-        console.error(e);
-        return 0;
-    }
-}
-
 function generateMarkdown() {
   const snapshotPath = getLatestSnapshotPath();
   const snapshot: Snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
@@ -132,8 +91,6 @@ function generateMarkdown() {
   const tableNames = tables.map(t => t.name);
 
   let md = `# Database Reference Matrix\n\n`;
-  md += `| Table Name | Scope | RLS Enabled | Status | Consumers |\n`;
-  md += `|---|---|---|---|---|\n`;
 
   let orphanTablesCount = 0;
   let wiredTablesCount = 0;
@@ -160,7 +117,46 @@ function generateMarkdown() {
           wiredTablesCount++;
       }
 
-      md += `| \`${t.name}\` | ${scope} | ${rlsStatus} | ${status} | ${consumers} |\n`;
+      md += `## Table: \`${t.name}\`\n\n`;
+      md += `- **Scope:** ${scope}\n`;
+      md += `- **RLS Enabled:** ${rlsStatus}\n`;
+      md += `- **Status:** ${status}\n`;
+      md += `- **Consumers:** ${consumers}\n\n`;
+      md += `### Columns\n\n`;
+      md += `| Name | Type | Not Null | Primary Key | Default |\n`;
+      md += `|---|---|---|---|---|\n`;
+
+      const cols = Object.values(t.columns).sort((a,b) => a.name.localeCompare(b.name));
+      for (const c of cols) {
+        const isNotNull = c.notNull ? "✅" : "❌";
+        const isPk = c.primaryKey ? "✅" : "❌";
+        const defaultVal = c.default !== undefined ? `\`${c.default}\`` : "NULL";
+        md += `| \`${c.name}\` | \`${c.type}\` | ${isNotNull} | ${isPk} | ${defaultVal} |\n`;
+      }
+
+      if (t.indexes && Object.keys(t.indexes).length > 0) {
+        md += `\n### Indexes\n\n`;
+        md += `| Name | Columns | Unique |\n`;
+        md += `|---|---|---|\n`;
+        const idxs = Object.values(t.indexes).sort((a,b) => a.name.localeCompare(b.name));
+        for (const idx of idxs) {
+            const isUnique = idx.isUnique ? "✅" : "❌";
+            md += `| \`${idx.name}\` | \`${idx.columns.join(", ")}\` | ${isUnique} |\n`;
+        }
+      }
+
+      if (t.foreignKeys && Object.keys(t.foreignKeys).length > 0) {
+        md += `\n### Foreign Keys\n\n`;
+        md += `| Name | Columns | Foreign Table | Foreign Columns | On Delete |\n`;
+        md += `|---|---|---|---|---|\n`;
+        const fks = Object.values(t.foreignKeys).sort((a,b) => a.name.localeCompare(b.name));
+        for (const fk of fks) {
+            const onDelete = fk.onDelete || "NO ACTION";
+            md += `| \`${fk.name}\` | \`${fk.columnsFrom.join(", ")}\` | \`${fk.tableTo}\` | \`${fk.columnsTo.join(", ")}\` | ${onDelete} |\n`;
+        }
+      }
+
+      md += "\n---\n\n";
   }
 
   md += `\n## Summary\n`;
@@ -172,15 +168,6 @@ function generateMarkdown() {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, md);
   console.log(`Generated docs/database/reference-matrix.md`);
-
-  // Also run orphan reference check
-  console.log("Checking for ORPHAN-REFERENCE...");
-  const orphans = findOrphanReferences(tableNames);
-  if (orphans > 0) {
-      console.log(`WARNING: Found ${orphans} potential orphan references! (Could be false positives)`);
-  } else {
-      console.log(`SUCCESS: 0 ORPHAN-REFERENCE found.`);
-  }
 }
 
 generateMarkdown();
