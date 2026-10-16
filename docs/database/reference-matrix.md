@@ -672,7 +672,6 @@
 | `idx_comp_seo_findings_tenant` | `tenant_id` | `btree` | ❌ | — |
 | `idx_comp_seo_findings_type` | `finding_type` | `btree` | ❌ | — |
 
-
 ### Check Constraints
 
 | Name | Expression |
@@ -792,7 +791,6 @@
 |---|---|---|---|---|
 | `idx_crawl_cache_key` | `tenant_id, cache_scope, cache_key` | `btree` | ✅ | — |
 
-
 ### Check Constraints
 
 | Name | Expression |
@@ -863,7 +861,6 @@
 | `idx_crawl_jobs_status_scheduled` | `status, scheduled_for` | `btree` | ❌ | `status = 'QUEUED'` |
 | `idx_crawl_jobs_tenant_created` | `tenant_id, created_at` | `btree` | ❌ | — |
 | `idx_crawl_jobs_tenant_status` | `tenant_id, status` | `btree` | ❌ | — |
-
 
 ### Check Constraints
 
@@ -2076,7 +2073,6 @@
 |---|---|---|---|---|
 | `idx_prompt_executions_status` | `status` | `btree` | ❌ | — |
 | `idx_prompt_executions_tenant` | `organization_id` | `btree` | ❌ | — |
-
 
 ### Check Constraints
 
