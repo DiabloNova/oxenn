@@ -3,7 +3,7 @@
 ## Table: `admin_users`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/mock-db.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `tests/features/admin/cqrs.test.ts`, `tests/isolation/suite.ts`
 
@@ -23,10 +23,16 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_admin_users_deleted_at` | `deleted_at` | ❌ | `deleted_at IS NULL` |
+| `idx_admin_users_email` | `email` | ❌ | — |
+
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
 |---|---|---|
-| `idx_admin_users_deleted_at` | `[object Object]` | ❌ |
-| `idx_admin_users_email` | `[object Object]` | ❌ |
+| `admin_users_email_unique` | `email` | ❌ |
 
 ### Foreign Keys
 
@@ -39,7 +45,7 @@
 ## Table: `aeo_analyses`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -64,10 +70,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_aeo_analyses_tenant` | `[object Object]` | ❌ |
-| `idx_aeo_analyses_url` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_aeo_analyses_tenant` | `tenant_id` | ❌ | — |
+| `idx_aeo_analyses_url` | `url` | ❌ | — |
 
 ### Foreign Keys
 
@@ -80,7 +86,7 @@
 ## Table: `ai_engines`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `tests/isolation/suite.ts`
 
@@ -106,7 +112,7 @@
 ## Table: `ai_observations`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/domain/types/index.ts`, `src/services/diagnostic-engine/index.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/services/audit-engine/diagnostic-engine.test.ts`
 
@@ -131,11 +137,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_ai_observations_engine` | `[object Object]` | ❌ |
-| `idx_ai_observations_organization` | `[object Object]` | ❌ |
-| `idx_ai_observations_prompt` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_ai_observations_engine` | `engine_id` | ❌ | — |
+| `idx_ai_observations_organization` | `organization_id` | ❌ | — |
+| `idx_ai_observations_prompt` | `prompt_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -150,7 +156,7 @@
 ## Table: `ai_provider_configs`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`, `tests/isolation/suite.ts`
 
@@ -169,16 +175,16 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_ai_provider_configs_active` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_ai_provider_configs_active` | `is_active` | ❌ | — |
 
 ---
 
 ## Table: `ai_visibility_audits`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`
 
@@ -206,11 +212,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_ai_vis_audits_brand` | `[object Object]` | ❌ |
-| `idx_ai_vis_audits_org` | `[object Object]` | ❌ |
-| `idx_ai_vis_audits_status` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_ai_vis_audits_brand` | `target_brand_name` | ❌ | — |
+| `idx_ai_vis_audits_org` | `organization_id` | ❌ | — |
+| `idx_ai_vis_audits_status` | `status` | ❌ | — |
 
 ### Foreign Keys
 
@@ -223,7 +229,7 @@
 ## Table: `api_keys`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `scripts/api/issue-key.ts`, `scripts/api/revoke-key.ts`, `src/core/database/privileged-paths.ts`, `src/features/public-api/repositories/api-key-repository.ts`, `tests/features/public-api/public-api.test.ts`, `tests/unit/core/tenant-context/system-mode-bypass.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -246,10 +252,16 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_api_keys_organization` | `organization_id` | ❌ | — |
+| `idx_api_keys_prefix` | `prefix` | ❌ | — |
+
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
 |---|---|---|
-| `idx_api_keys_organization` | `[object Object]` | ❌ |
-| `idx_api_keys_prefix` | `[object Object]` | ❌ |
+| `api_keys_prefix_unique` | `prefix` | ❌ |
 
 ### Foreign Keys
 
@@ -262,7 +274,7 @@
 ## Table: `audit_prompts`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -280,10 +292,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_audit_prompts_audit` | `[object Object]` | ❌ |
-| `idx_audit_prompts_org` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_audit_prompts_audit` | `audit_id` | ❌ | — |
+| `idx_audit_prompts_org` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -297,7 +309,7 @@
 ## Table: `audit_records`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/core/database/tenant-context/index.ts`, `src/features/admin/infrastructure/mock-db.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `tests/features/admin/cqrs.test.ts`, `tests/isolation/suite.ts`, `tests/unit/app/actions/account.test.ts`, `tests/unit/core/tenant-context/privileged-paths.test.ts`
 
@@ -322,18 +334,18 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_audit_records_actor` | `[object Object]` | ❌ |
-| `idx_audit_records_resource` | `[object Object], [object Object]` | ❌ |
-| `idx_audit_records_timestamp` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_audit_records_actor` | `actor_id` | ❌ | — |
+| `idx_audit_records_resource` | `resource_type, resource_id` | ❌ | — |
+| `idx_audit_records_timestamp` | `timestamp` | ❌ | — |
 
 ---
 
 ## Table: `auth_rate_limits`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`, `tests/unit/app/actions/auth-deactivated.test.ts`, `tests/unit/auth/user-id-format.test.ts`, `tests/unit/authorization-lifecycle.test.ts`
 
@@ -348,16 +360,22 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_auth_rate_limits_expires` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_auth_rate_limits_expires` | `expires_at` | ❌ | — |
+
+### Composite Primary Keys
+
+| Name | Columns |
+|---|---|
+| `auth_rate_limits_endpoint_bucket_key_pk` | `endpoint, bucket_key` |
 
 ---
 
 ## Table: `brand_associations`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -377,10 +395,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_brand_associations_brand` | `[object Object]` | ❌ |
-| `idx_brand_associations_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_brand_associations_brand` | `brand_id` | ❌ | — |
+| `idx_brand_associations_tenant` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -394,7 +412,7 @@
 ## Table: `brand_mentions`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/dashboard/aeo/audits/page.tsx`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/services/audit-engine/ai-visibility.test.ts`
 
@@ -418,10 +436,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_brand_mentions_brand` | `[object Object]` | ❌ |
-| `idx_brand_mentions_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_brand_mentions_brand` | `brand_id` | ❌ | — |
+| `idx_brand_mentions_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -436,7 +454,7 @@
 ## Table: `brands`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/about/page.tsx`, `src/app/[locale]/dashboard/aeo/audits/page.tsx`, `src/app/[locale]/dashboard/aeo/playground/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/[locale]/pricing/page.tsx`, `src/app/actions/ai-visibility-audit.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/entity-service.ts`, `src/lib/audit-engine/extractor.ts`, `src/services/ai/ai-visibility-provider.ts`, `src/services/ai/graph-extraction.ts`, `tests/features/ai-intelligence/application.test.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/ai-intelligence/tenant-pipeline.test.ts`
 
@@ -460,10 +478,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_brands_domain` | `[object Object]` | ❌ |
-| `idx_brands_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_brands_domain` | `canonical_domain` | ❌ | — |
+| `idx_brands_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -476,7 +494,7 @@
 ## Table: `citation_occurrences`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -498,10 +516,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_citation_occurrences_source` | `[object Object]` | ❌ |
-| `idx_citation_occurrences_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_citation_occurrences_source` | `source_id` | ❌ | — |
+| `idx_citation_occurrences_tenant` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -515,7 +533,7 @@
 ## Table: `citation_sources`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/competitive-radar-service.ts`
 
@@ -537,10 +555,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_citation_sources_tenant` | `[object Object]` | ❌ |
-| `idx_citation_sources_url_org` | `[object Object], [object Object]` | ✅ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_citation_sources_tenant` | `organization_id` | ❌ | — |
+| `idx_citation_sources_url_org` | `organization_id, url` | ✅ | — |
 
 ### Foreign Keys
 
@@ -553,7 +571,7 @@
 ## Table: `citations`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/about/page.tsx`, `src/app/[locale]/dashboard/aeo/audits/page.tsx`, `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/[locale]/dashboard/audits/[id]/page.tsx`, `src/app/[locale]/dashboard/intelligence/page.tsx`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/[locale]/solutions/geo/page.tsx`, `src/components/features/dashboard-home/DashboardKpiGrid.tsx`, `src/components/features/graph/LiveKnowledgeGraph.tsx`, `src/components/marketing/HeroSection.tsx`, `src/components/marketing/MetricsSection.tsx`, `src/components/marketing/ProcessSection.tsx`, `src/config/dashboardNavigation.ts`, `src/features/ai-intelligence/application/handlers/index.ts`, `src/features/ai-intelligence/domain/models/observation-aggregate.ts`, `src/features/ai-intelligence/domain/services/aeo-score-engine.ts`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`, `src/features/ai-intelligence/services/citation-service.ts`, `src/features/ai-intelligence/services/observation-service.ts`, `src/features/ai-intelligence/services/prompt-intelligence-service.ts`, `src/services/ai/ai-visibility-provider.ts`, `src/services/auditService.ts`, `src/services/dashboard-services/index.ts`, `src/services/diagnostic-engine/index.ts`, `src/services/intelligence/index.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/services/audit-engine/ai-visibility.test.ts`, `tests/services/audit-engine/competitive-ai.test.ts`, `tests/services/audit-engine/competitive-radar.test.ts`, `tests/services/audit-engine/intelligence-model.test.ts`, `tests/unit/services/dashboard-services.test.ts`
 
@@ -577,11 +595,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_citations_domain` | `[object Object]` | ❌ |
-| `idx_citations_observation` | `[object Object]` | ❌ |
-| `idx_citations_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_citations_domain` | `domain` | ❌ | — |
+| `idx_citations_observation` | `observation_id` | ❌ | — |
+| `idx_citations_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -595,7 +613,7 @@
 ## Table: `competitive_analyses`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/analysis/competitive/route.ts`
 
@@ -626,7 +644,7 @@
 ## Table: `competitive_seo_findings`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -648,11 +666,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_comp_seo_findings_comp` | `[object Object]` | ❌ |
-| `idx_comp_seo_findings_tenant` | `[object Object]` | ❌ |
-| `idx_comp_seo_findings_type` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_comp_seo_findings_comp` | `competitor_id` | ❌ | — |
+| `idx_comp_seo_findings_tenant` | `tenant_id` | ❌ | — |
+| `idx_comp_seo_findings_type` | `finding_type` | ❌ | — |
 
 ### Foreign Keys
 
@@ -666,7 +684,7 @@
 ## Table: `competitor_changes`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -686,11 +704,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_competitor_changes_comp` | `[object Object]` | ❌ |
-| `idx_competitor_changes_tenant` | `[object Object]` | ❌ |
-| `idx_competitor_changes_type` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_competitor_changes_comp` | `competitor_id` | ❌ | — |
+| `idx_competitor_changes_tenant` | `tenant_id` | ❌ | — |
+| `idx_competitor_changes_type` | `change_type` | ❌ | — |
 
 ### Foreign Keys
 
@@ -704,7 +722,7 @@
 ## Table: `competitors`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/dashboard/aeo/playground/page.tsx`, `src/app/[locale]/dashboard/brand/citations/page.tsx`, `src/app/[locale]/dashboard/competitive/page.tsx`, `src/app/[locale]/dashboard/competitors/radar/page.tsx`, `src/app/[locale]/dashboard/intelligence/page.tsx`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/[locale]/solutions/page.tsx`, `src/app/[locale]/solutions/protection/page.tsx`, `src/app/[locale]/solutions/radar/page.tsx`, `src/app/actions/citation-intelligence.ts`, `src/app/actions/prompt-intelligence.ts`, `src/app/api/v1/analysis/competitive/route.ts`, `src/app/api/v1/analytics/llm/route.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/components/features/analysis/CompetitiveAnalysisPanel.tsx`, `src/components/features/analytics/LlmAnalyticsPanel.tsx`, `src/components/features/dashboard-home/DashboardKpiGrid.tsx`, `src/components/marketing/FeaturesSection.tsx`, `src/config/dashboardNavigation.ts`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`, `src/features/ai-intelligence/services/brand-intelligence-service.ts`, `src/features/ai-intelligence/services/citation-intelligence-service.ts`, `src/features/ai-intelligence/services/competitive-seo-service.ts`, `src/features/ai-intelligence/services/competitor-discovery-service.ts`, `src/features/ai-intelligence/services/keyword-intelligence-service.ts`, `src/features/ai-intelligence/services/prompt-intelligence-service.ts`, `src/services/ai/ai-visibility-provider.ts`, `src/services/ai/graph-extraction.ts`, `src/services/dashboard-services/index.ts`, `src/services/diagnostic-engine/index.ts`, `tests/features/analysis/competitive.test.ts`, `tests/services/audit-engine/diagnostic-engine.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`, `tests/unit/services/dashboard-shell.test.ts`
 
@@ -728,10 +746,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_competitors_domain_org` | `[object Object], [object Object]` | ✅ |
-| `idx_competitors_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_competitors_domain_org` | `organization_id, domain` | ✅ | `deleted_at IS NULL` |
+| `idx_competitors_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -744,7 +762,7 @@
 ## Table: `crawl_cache`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-cache-repository.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/isolation/suite.ts`
 
@@ -763,9 +781,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_crawl_cache_key` | `[object Object], [object Object], [object Object]` | ✅ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_crawl_cache_key` | `tenant_id, cache_scope, cache_key` | ✅ | — |
 
 ### Foreign Keys
 
@@ -778,7 +796,7 @@
 ## Table: `crawl_jobs`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-job-repository.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/isolation/suite.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`
 
@@ -824,13 +842,13 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_crawl_jobs_active_dedup` | `[object Object], [object Object]` | ✅ |
-| `idx_crawl_jobs_provider_job_id` | `[object Object]` | ❌ |
-| `idx_crawl_jobs_status_scheduled` | `[object Object], [object Object]` | ❌ |
-| `idx_crawl_jobs_tenant_created` | `[object Object], [object Object]` | ❌ |
-| `idx_crawl_jobs_tenant_status` | `[object Object], [object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_crawl_jobs_active_dedup` | `tenant_id, dedup_key` | ✅ | `status IN ('PENDING', 'QUEUED', 'RUNNING')` |
+| `idx_crawl_jobs_provider_job_id` | `provider_job_id` | ❌ | — |
+| `idx_crawl_jobs_status_scheduled` | `status, scheduled_for` | ❌ | `status = 'QUEUED'` |
+| `idx_crawl_jobs_tenant_created` | `tenant_id, created_at` | ❌ | — |
+| `idx_crawl_jobs_tenant_status` | `tenant_id, status` | ❌ | — |
 
 ### Foreign Keys
 
@@ -843,7 +861,7 @@
 ## Table: `crawl_results`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/premium/route.ts`, `src/features/acquisition/infrastructure/persistence/postgres/crawl-result-repository.ts`
 
@@ -859,10 +877,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `crawl_results_job_unique` | `[object Object]` | ✅ |
-| `crawl_results_tenant_job_unique` | `[object Object], [object Object]` | ✅ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `crawl_results_job_unique` | `job_id` | ✅ | — |
+| `crawl_results_tenant_job_unique` | `tenant_id, job_id` | ✅ | — |
 
 ### Foreign Keys
 
@@ -876,7 +894,7 @@
 ## Table: `crawl_snapshots`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/monitoring/repositories/crawl-snapshot-repository.ts`, `tests/unit/services/monitoring/tenant-isolation.test.ts`
 
@@ -895,11 +913,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_crawl_snapshots_captured` | `[object Object]` | ❌ |
-| `idx_crawl_snapshots_config` | `[object Object]` | ❌ |
-| `idx_crawl_snapshots_org` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_crawl_snapshots_captured` | `captured_at` | ❌ | — |
+| `idx_crawl_snapshots_config` | `monitoring_config_id` | ❌ | — |
+| `idx_crawl_snapshots_org` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -914,7 +932,7 @@
 ## Table: `credit_transactions`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/billing/services/subscription-service.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -932,9 +950,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_credit_transactions_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_credit_transactions_tenant` | `tenant_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -947,7 +965,7 @@
 ## Table: `diagnostic_finding_relationships`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -964,11 +982,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_diagnostic_rel_child` | `[object Object]` | ❌ |
-| `idx_diagnostic_rel_org` | `[object Object]` | ❌ |
-| `idx_diagnostic_rel_parent` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_diagnostic_rel_child` | `child_finding_id` | ❌ | — |
+| `idx_diagnostic_rel_org` | `organization_id` | ❌ | — |
+| `idx_diagnostic_rel_parent` | `parent_finding_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -983,7 +1001,7 @@
 ## Table: `diagnostic_findings`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -1008,11 +1026,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_diagnostic_findings_domain` | `[object Object]` | ❌ |
-| `idx_diagnostic_findings_org` | `[object Object]` | ❌ |
-| `idx_diagnostic_findings_status` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_diagnostic_findings_domain` | `domain` | ❌ | — |
+| `idx_diagnostic_findings_org` | `organization_id` | ❌ | — |
+| `idx_diagnostic_findings_status` | `status` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1025,7 +1043,7 @@
 ## Table: `document_embeddings`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/vector-store.ts`, `tests/features/ai-intelligence/run-all.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/isolation/suite.ts`, `tests/services/crawler/web-crawler.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/rag/query-service.test.ts`
 
@@ -1042,10 +1060,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_document_embeddings_embedding` | `[object Object]` | ❌ |
-| `idx_document_embeddings_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_document_embeddings_embedding` | `embedding` | ❌ | — |
+| `idx_document_embeddings_tenant` | `tenant_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1058,7 +1076,7 @@
 ## Table: `email_verification_tokens`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`, `src/core/database/privileged-paths.ts`
 
@@ -1073,6 +1091,12 @@
 | `token_hash` | `text` | ✅ | ❌ | NULL |
 | `user_id` | `text` | ✅ | ❌ | NULL |
 
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
+|---|---|---|
+| `email_verification_tokens_token_hash_unique` | `token_hash` | ❌ |
+
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
@@ -1084,7 +1108,7 @@
 ## Table: `entities`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `scripts/test-domain.ts`, `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/[locale]/dashboard/audits/[id]/page.tsx`, `src/app/[locale]/dashboard/entities/graph/page.tsx`, `src/app/[locale]/dashboard/graph/page.tsx`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/api/v1/audit/aeo-insight/route.ts`, `src/app/api/v1/knowledge-graph/query/route.ts`, `src/components/DashboardShell.tsx`, `src/components/features/analytics/TopEntitiesList.tsx`, `src/components/features/audit/FreeAuditPanel.tsx`, `src/components/features/graph/KnowledgeGraphExplorer.tsx`, `src/components/marketing/FeaturesSection.tsx`, `src/components/marketing/LandingFooter.tsx`, `src/components/marketing/ProcessSection.tsx`, `src/config/dashboardNavigation.ts`, `src/features/admin/application/handlers.ts`, `src/features/admin/index.ts`, `src/features/ai-intelligence/application/handlers/index.ts`, `src/features/ai-intelligence/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/aeo-content-intelligence-service.ts`, `src/features/ai-intelligence/services/entity-service.ts`, `src/lib/audit-engine/builder.ts`, `src/lib/audit-engine/extractor.ts`, `src/lib/audit-engine/normalizer.ts`, `src/lib/audit-engine/recommendations.ts`, `src/lib/audit-engine/scorer.ts`, `src/services/ai/ai-visibility-provider.ts`, `src/services/ai/graph-extraction.ts`, `src/services/auditService.ts`, `src/services/dashboard-services/index.ts`, `src/services/diagnostic-engine/index.ts`, `src/services/knowledge-graph/graph-store.ts`, `src/types/audit.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`, `tests/services/knowledge-graph/knowledge-graph-foundation.test.ts`, `tests/unit/features/admin/domain.test.ts`, `tests/unit/features/ai-intelligence/domain.test.ts`, `tests/unit/services/ai/graph-extraction.test.ts`, `tests/unit/services/audit-engine/engine.test.ts`, `tests/unit/services/dashboard-shell.test.ts`
 
@@ -1107,10 +1131,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_entities_organization` | `[object Object]` | ❌ |
-| `idx_entities_type` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_entities_organization` | `organization_id` | ❌ | — |
+| `idx_entities_type` | `entity_type` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1123,7 +1147,7 @@
 ## Table: `entity_relationships`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/features/ai-intelligence/security.test.ts`
 
@@ -1146,11 +1170,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_entity_relationships_org` | `[object Object]` | ❌ |
-| `idx_entity_relationships_source` | `[object Object]` | ❌ |
-| `idx_entity_relationships_target` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_entity_relationships_org` | `organization_id` | ❌ | — |
+| `idx_entity_relationships_source` | `source_entity_id` | ❌ | — |
+| `idx_entity_relationships_target` | `target_entity_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1165,7 +1189,7 @@
 ## Table: `faq_opportunities`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/actions/aeo-content-intelligence.ts`, `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1184,10 +1208,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_faq_opps_analysis` | `[object Object]` | ❌ |
-| `idx_faq_opps_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_faq_opps_analysis` | `aeo_analysis_id` | ❌ | — |
+| `idx_faq_opps_tenant` | `tenant_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1201,7 +1225,7 @@
 ## Table: `feature_flags`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/mock-db.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `tests/features/admin/cqrs.test.ts`, `tests/isolation/suite.ts`
 
@@ -1220,16 +1244,22 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_feature_flags_key` | `key` | ❌ | — |
+
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
 |---|---|---|
-| `idx_feature_flags_key` | `[object Object]` | ❌ |
+| `feature_flags_key_unique` | `key` | ❌ |
 
 ---
 
 ## Table: `historical_metrics`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/services/diagnostic-engine/index.ts`, `tests/services/audit-engine/diagnostic-engine.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -1249,10 +1279,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_historical_metrics_lookup` | `[object Object], [object Object], [object Object], [object Object]` | ❌ |
-| `idx_historical_metrics_time` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_historical_metrics_lookup` | `organization_id, entity_type, entity_id, metric_name` | ❌ | — |
+| `idx_historical_metrics_time` | `recorded_at` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1265,7 +1295,7 @@
 ## Table: `keywords`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/features/page.tsx`, `src/app/[locale]/layout.tsx`, `src/app/[locale]/page.tsx`, `src/app/api/v1/analysis/competitive/route.ts`, `src/app/api/v1/content/studio/route.ts`, `src/app/api/v1/optimization/technical/route.ts`, `src/components/features/content/ContentStudio.tsx`, `src/components/features/dashboard-home/RecommendedActionsPanel.tsx`, `src/components/features/dashboard-services/ServiceMarketplaceClient.tsx`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/aeo-content-intelligence-service.ts`, `src/features/ai-intelligence/services/competitive-seo-service.ts`, `src/features/ai-intelligence/services/keyword-intelligence-service.ts`, `src/lib/audit-engine/extractor.ts`, `src/services/technical-seo-analyzer.ts`, `tests/services/audit-engine/keyword-intelligence.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -1290,10 +1320,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_keywords_organization` | `[object Object]` | ❌ |
-| `idx_keywords_term_org` | `[object Object], [object Object]` | ✅ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_keywords_organization` | `organization_id` | ❌ | — |
+| `idx_keywords_term_org` | `organization_id, normalized_term` | ✅ | `deleted_at IS NULL` |
 
 ### Foreign Keys
 
@@ -1306,7 +1336,7 @@
 ## Table: `keywords_topics`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
 
@@ -1321,9 +1351,15 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_keywords_topics_org` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_keywords_topics_org` | `organization_id` | ❌ | — |
+
+### Composite Primary Keys
+
+| Name | Columns |
+|---|---|
+| `keywords_topics_keyword_id_topic_id_pk` | `keyword_id, topic_id` |
 
 ### Foreign Keys
 
@@ -1338,7 +1374,7 @@
 ## Table: `kg_alignments`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/actions/aeo-content-intelligence.ts`, `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1358,10 +1394,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_kg_alignments_analysis` | `[object Object]` | ❌ |
-| `idx_kg_alignments_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_kg_alignments_analysis` | `aeo_analysis_id` | ❌ | — |
+| `idx_kg_alignments_tenant` | `tenant_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1375,7 +1411,7 @@
 ## Table: `kg_entities`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`
 
@@ -1393,10 +1429,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_kg_entities_name` | `[object Object]` | ❌ |
-| `idx_kg_entities_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_kg_entities_name` | `name` | ❌ | — |
+| `idx_kg_entities_tenant` | `tenant_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1409,7 +1445,7 @@
 ## Table: `kg_relationships`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`
 
@@ -1428,11 +1464,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_kg_relationships_source` | `[object Object]` | ❌ |
-| `idx_kg_relationships_target` | `[object Object]` | ❌ |
-| `idx_kg_relationships_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_kg_relationships_source` | `source_entity_id` | ❌ | — |
+| `idx_kg_relationships_target` | `target_entity_id` | ❌ | — |
+| `idx_kg_relationships_tenant` | `tenant_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1447,7 +1483,7 @@
 ## Table: `monitoring_alerts`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/monitoring/repositories/monitoring-alert-repository.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`, `tests/unit/services/monitoring/tenant-isolation.test.ts`
 
@@ -1468,11 +1504,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_monitoring_alerts_config` | `[object Object]` | ❌ |
-| `idx_monitoring_alerts_dedup` | `[object Object], [object Object]` | ✅ |
-| `idx_monitoring_alerts_org` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_monitoring_alerts_config` | `monitoring_config_id` | ❌ | — |
+| `idx_monitoring_alerts_dedup` | `organization_id, dedup_key` | ✅ | — |
+| `idx_monitoring_alerts_org` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1487,7 +1523,7 @@
 ## Table: `monitoring_configs`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/monitoring/repositories/monitoring-config-repository.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`, `tests/unit/services/monitoring/tenant-isolation.test.ts`
 
@@ -1506,10 +1542,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_monitoring_configs_org` | `[object Object]` | ❌ |
-| `idx_monitoring_configs_website` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_monitoring_configs_org` | `organization_id` | ❌ | — |
+| `idx_monitoring_configs_website` | `website_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1523,7 +1559,7 @@
 ## Table: `organization_invitations`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/workspace.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -1543,10 +1579,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_org_invitations_email` | `[object Object]` | ❌ |
-| `idx_org_invitations_token` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_org_invitations_email` | `email` | ❌ | — |
+| `idx_org_invitations_token` | `token_hash` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1559,7 +1595,7 @@
 ## Table: `organization_members`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/isolation/suite.ts`, `tests/unit/app/actions/account.test.ts`, `tests/unit/authorization-lifecycle.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`, `tests/unit/services/auth/session.test.ts`
 
@@ -1576,10 +1612,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_org_members_user_id` | `[object Object]` | ❌ |
-| `idx_org_members_user_org` | `[object Object], [object Object]` | ✅ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_org_members_user_id` | `user_id` | ❌ | — |
+| `idx_org_members_user_org` | `organization_id, user_id` | ✅ | — |
 
 ### Foreign Keys
 
@@ -1593,7 +1629,7 @@
 ## Table: `organizations`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/features/ai-intelligence/run-all.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/public-api/public-api.test.ts`, `tests/isolation/suite.ts`, `tests/unit/authorization-lifecycle.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -1614,16 +1650,22 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_organizations_slug` | `slug` | ✅ | `deleted_at IS NULL` |
+
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
 |---|---|---|
-| `idx_organizations_slug` | `[object Object]` | ✅ |
+| `organizations_slug_unique` | `slug` | ❌ |
 
 ---
 
 ## Table: `pages`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/[locale]/dashboard/audits/[id]/page.tsx`, `src/app/[locale]/dashboard/intelligence/layout.tsx`, `src/app/[locale]/dashboard/seo/technical/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/actions/aeo-content-intelligence.ts`, `src/app/actions/site-architecture.ts`, `src/app/actions/technical-seo.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/components/features/analysis/CompetitiveAnalysisPanel.tsx`, `src/components/features/audit/PremiumAuditPanel.tsx`, `src/components/features/dashboard-home/CriticalIssuesPanel.tsx`, `src/components/features/dashboard-home/RecentActivityPanel.tsx`, `src/components/features/optimization/TechnicalOptimizationPanel.tsx`, `src/components/marketing/LandingFooter.tsx`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/competitive-seo-service.ts`, `src/features/ai-intelligence/services/keyword-intelligence-service.ts`, `src/features/ai-intelligence/services/site-architecture-analyzer-service.ts`, `src/services/auditService.ts`, `tests/features/audit/premium-audit.test.ts`, `tests/services/audit-engine/competitive-seo.test.ts`, `tests/services/audit-engine/site-architecture.test.ts`, `tests/services/crawler/web-crawler.test.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`, `tests/unit/services/observability/observability.test.ts`
 
@@ -1657,11 +1699,11 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_pages_organization` | `[object Object]` | ❌ |
-| `idx_pages_url_org` | `[object Object], [object Object]` | ✅ |
-| `idx_pages_website` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_pages_organization` | `organization_id` | ❌ | — |
+| `idx_pages_url_org` | `organization_id, normalized_url` | ✅ | `deleted_at IS NULL` |
+| `idx_pages_website` | `website_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1675,7 +1717,7 @@
 ## Table: `pages_entities`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
 
@@ -1691,9 +1733,15 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_pages_entities_org` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_pages_entities_org` | `organization_id` | ❌ | — |
+
+### Composite Primary Keys
+
+| Name | Columns |
+|---|---|
+| `pages_entities_page_id_entity_id_pk` | `page_id, entity_id` |
 
 ### Foreign Keys
 
@@ -1708,7 +1756,7 @@
 ## Table: `pages_keywords`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
 
@@ -1724,9 +1772,15 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_pages_keywords_org` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_pages_keywords_org` | `organization_id` | ❌ | — |
+
+### Composite Primary Keys
+
+| Name | Columns |
+|---|---|
+| `pages_keywords_page_id_keyword_id_pk` | `page_id, keyword_id` |
 
 ### Foreign Keys
 
@@ -1741,7 +1795,7 @@
 ## Table: `pages_topics`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
 
@@ -1757,9 +1811,15 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_pages_topics_org` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_pages_topics_org` | `organization_id` | ❌ | — |
+
+### Composite Primary Keys
+
+| Name | Columns |
+|---|---|
+| `pages_topics_page_id_topic_id_pk` | `page_id, topic_id` |
 
 ### Foreign Keys
 
@@ -1774,7 +1834,7 @@
 ## Table: `password_reset_tokens`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`, `src/core/database/privileged-paths.ts`
 
@@ -1789,6 +1849,12 @@
 | `token_hash` | `text` | ✅ | ❌ | NULL |
 | `user_id` | `text` | ✅ | ❌ | NULL |
 
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
+|---|---|---|
+| `password_reset_tokens_token_hash_unique` | `token_hash` | ❌ |
+
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
@@ -1800,7 +1866,7 @@
 ## Table: `permissions`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/api/v1/admin/index.ts`, `src/features/admin/application/commands.ts`, `src/features/admin/application/dto.ts`, `src/features/admin/application/handlers.ts`, `src/features/admin/application/mappers.ts`, `src/features/admin/domain/entities.ts`, `src/features/admin/domain/events/index.ts`, `src/features/admin/domain/types.ts`, `src/features/admin/infrastructure/mock-db.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/admin/security/index.ts`, `src/features/ai-intelligence/security/index.ts`, `src/services/auth/authorization.ts`, `tests/features/admin/cqrs.test.ts`, `tests/features/admin/infrastructure/postgres-integration.test.ts`, `tests/features/admin/security.test.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/isolation/suite.ts`, `tests/unit/features/admin/domain.test.ts`
 
@@ -1815,9 +1881,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_permissions_role_id` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_permissions_role_id` | `role_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1830,7 +1896,7 @@
 ## Table: `position_observations`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1852,9 +1918,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_position_obs_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_position_obs_tenant` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1868,7 +1934,7 @@
 ## Table: `premium_audits`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/engine/route.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/services/dashboard-home/index.ts`
 
@@ -1889,9 +1955,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_premium_audits_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_premium_audits_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1904,7 +1970,7 @@
 ## Table: `prompt_definitions`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`
 
@@ -1935,9 +2001,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_prompt_definitions_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_prompt_definitions_tenant` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1951,7 +2017,7 @@
 ## Table: `prompt_executions`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1981,10 +2047,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_prompt_executions_status` | `[object Object]` | ❌ |
-| `idx_prompt_executions_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_prompt_executions_status` | `status` | ❌ | — |
+| `idx_prompt_executions_tenant` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -1998,7 +2064,7 @@
 ## Table: `prompt_schedules`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2022,9 +2088,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_prompt_schedules_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_prompt_schedules_tenant` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2038,7 +2104,7 @@
 ## Table: `prompts`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/dashboard/aeo/audits/page.tsx`, `src/app/[locale]/dashboard/aeo/playground/page.tsx`, `src/app/[locale]/industries/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/actions/ai-visibility-audit.ts`, `src/app/actions/prompt-intelligence.ts`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/pipeline/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`, `src/features/ai-intelligence/services/brand-intelligence-service.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/unit/services/observability/observability.test.ts`
 
@@ -2062,10 +2128,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_prompts_brand` | `[object Object]` | ❌ |
-| `idx_prompts_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_prompts_brand` | `brand_id` | ❌ | — |
+| `idx_prompts_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2079,7 +2145,7 @@
 ## Table: `recommendation_observations`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2101,10 +2167,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_recommendation_obs_brand` | `[object Object]` | ❌ |
-| `idx_recommendation_obs_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_recommendation_obs_brand` | `brand_id` | ❌ | — |
+| `idx_recommendation_obs_tenant` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2118,7 +2184,7 @@
 ## Table: `recommendations`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `scripts/test-domain.ts`, `src/app/[locale]/dashboard/audits/[id]/page.tsx`, `src/app/[locale]/dashboard/intelligence/page.tsx`, `src/app/[locale]/dashboard/seo/technical/page.tsx`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/industries/page.tsx`, `src/app/[locale]/solutions/aeo/page.tsx`, `src/app/actions/technical-seo.ts`, `src/app/api/v1/analytics/llm/route.ts`, `src/app/api/v1/audit/aeo-insight/route.ts`, `src/app/api/v1/audit/engine/route.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/components/features/analysis/CompetitiveAnalysisPanel.tsx`, `src/components/features/audit/AeoAuditPanel.tsx`, `src/components/features/audit/FreeAuditPanel.tsx`, `src/components/features/audit/PremiumAuditPanel.tsx`, `src/components/features/dashboard-home/RecommendedActionsPanel.tsx`, `src/components/marketing/ProcessSection.tsx`, `src/components/visualization/contracts.ts`, `src/features/admin/infrastructure/mock-db.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/brand-intelligence-service.ts`, `src/features/ai-intelligence/services/competitive-ai-service.ts`, `src/features/ai-intelligence/services/observation-service.ts`, `src/features/ai-intelligence/services/prompt-intelligence-service.ts`, `src/features/ai-intelligence/services/site-architecture-analyzer-service.ts`, `src/lib/audit-engine/builder.ts`, `src/lib/audit-engine/recommendations.ts`, `src/services/auditService.ts`, `src/services/dashboard-home/index.ts`, `src/services/dashboard-services/index.ts`, `src/services/technical-seo-analyzer.ts`, `src/types/audit.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/analysis/competitive.test.ts`, `tests/services/audit-engine/competitive-ai.test.ts`, `tests/services/dashboard-home.test.ts`, `tests/unit/services/audit-engine/engine.test.ts`
 
@@ -2145,10 +2211,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_recommendations_brand` | `[object Object]` | ❌ |
-| `idx_recommendations_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_recommendations_brand` | `brand_id` | ❌ | — |
+| `idx_recommendations_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2162,7 +2228,7 @@
 ## Table: `roles`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/core/database/migrator.ts`, `src/core/database/privileged-paths.ts`, `src/services/auth/authorization.ts`, `tests/isolation/suite.ts`
 
@@ -2177,16 +2243,22 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_roles_name` | `name` | ❌ | — |
+
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
 |---|---|---|
-| `idx_roles_name` | `[object Object]` | ❌ |
+| `roles_name_unique` | `name` | ❌ |
 
 ---
 
 ## Table: `sessions`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/dashboard/intelligence/page.tsx`, `src/app/actions/account.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`, `tests/unit/services/auth/session.test.ts`
 
@@ -2206,6 +2278,12 @@
 | `user_id` | `text` | ✅ | ❌ | NULL |
 | `workspace_id` | `uuid` | ❌ | ❌ | NULL |
 
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
+|---|---|---|
+| `sessions_token_hash_unique` | `token_hash` | ❌ |
+
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
@@ -2219,7 +2297,7 @@
 ## Table: `system_configurations`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `tests/isolation/suite.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`
 
@@ -2237,16 +2315,22 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_system_configurations_key` | `key` | ❌ | — |
+
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
 |---|---|---|
-| `idx_system_configurations_key` | `[object Object]` | ❌ |
+| `system_configurations_key_unique` | `key` | ❌ |
 
 ---
 
 ## Table: `technical_audits`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/optimization/technical/route.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -2277,7 +2361,7 @@
 ## Table: `tenant_quotas`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/billing/services/subscription-service.ts`, `src/features/public-api/services/api-quota-service.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/public-api/public-api.test.ts`
 
@@ -2303,9 +2387,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_tenant_quotas_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_tenant_quotas_tenant` | `tenant_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2318,7 +2402,7 @@
 ## Table: `tenant_subscriptions`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/billing/services/subscription-service.ts`, `tests/features/ai-intelligence/security.test.ts`
 
@@ -2340,9 +2424,9 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_tenant_subscriptions_tenant` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_tenant_subscriptions_tenant` | `tenant_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2355,7 +2439,7 @@
 ## Table: `topics`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/features/page.tsx`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/competitive-seo-service.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -2378,10 +2462,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_topics_name_org` | `[object Object], [object Object]` | ✅ |
-| `idx_topics_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_topics_name_org` | `organization_id, name` | ✅ | `deleted_at IS NULL` |
+| `idx_topics_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2395,7 +2479,7 @@
 ## Table: `topics_entities`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
 
@@ -2410,9 +2494,15 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_topics_entities_org` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_topics_entities_org` | `organization_id` | ❌ | — |
+
+### Composite Primary Keys
+
+| Name | Columns |
+|---|---|
+| `topics_entities_topic_id_entity_id_pk` | `topic_id, entity_id` |
 
 ### Foreign Keys
 
@@ -2427,7 +2517,7 @@
 ## Table: `user_credentials`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `tests/unit/app/actions/account.test.ts`, `tests/unit/app/actions/auth.test.ts`, `tests/unit/authorization-lifecycle.test.ts`
 
@@ -2445,6 +2535,12 @@
 | `updated_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
 | `user_id` | `text` | ✅ | ❌ | NULL |
 
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
+|---|---|---|
+| `user_credentials_user_id_unique` | `user_id` | ❌ |
+
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
@@ -2456,7 +2552,7 @@
 ## Table: `users`
 
 - **Scope:** Global
-- **RLS Enabled:** ❌
+- **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
 - **Consumers:** `src/app/[locale]/pricing/page.tsx`, `src/app/[locale]/solutions/protection/page.tsx`, `src/app/[locale]/solutions/radar/page.tsx`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/components/marketing/HeroAccessCard.tsx`, `src/components/visualization/VisualizationContainer.tsx`, `src/core/database/privileged-paths.ts`, `src/features/admin/api/v1/admin/index.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/admin/security/index.ts`, `src/features/ai-intelligence/services/site-architecture-analyzer-service.ts`, `src/services/auth/session.ts`, `tests/features/admin/cqrs.test.ts`, `tests/features/admin/security.test.ts`, `tests/isolation/suite.ts`, `tests/unit/app/actions/account.test.ts`, `tests/unit/app/actions/auth-deactivated.test.ts`, `tests/unit/app/actions/auth.test.ts`, `tests/unit/auth/user-id-format.test.ts`, `tests/unit/authorization-lifecycle.test.ts`
 
@@ -2474,16 +2570,22 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_users_lower_email` | `lower("email")` | ✅ | — |
+
+### Unique Constraints
+
+| Name | Columns | Nulls Not Distinct |
 |---|---|---|
-| `idx_users_lower_email` | `[object Object]` | ✅ |
+| `users_email_unique` | `email` | ❌ |
 
 ---
 
 ## Table: `visibility_scores`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/services/diagnostic-engine/index.ts`, `tests/features/ai-intelligence/security.test.ts`
 
@@ -2509,10 +2611,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_visibility_scores_brand` | `[object Object]` | ❌ |
-| `idx_visibility_scores_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_visibility_scores_brand` | `brand_id` | ❌ | — |
+| `idx_visibility_scores_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
@@ -2527,7 +2629,7 @@
 ## Table: `websites`
 
 - **Scope:** Tenant-Scoped
-- **RLS Enabled:** ✅
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/services/crawler/link-discovery.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/services/audit-engine/competitive-seo.test.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`, `tests/unit/core/tenant-context/system-mode-bypass.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
 
@@ -2552,10 +2654,10 @@
 
 ### Indexes
 
-| Name | Columns | Unique |
-|---|---|---|
-| `idx_websites_domain_org` | `[object Object], [object Object]` | ✅ |
-| `idx_websites_organization` | `[object Object]` | ❌ |
+| Name | Columns | Unique | Predicate |
+|---|---|---|---|
+| `idx_websites_domain_org` | `organization_id, domain` | ✅ | `deleted_at IS NULL` |
+| `idx_websites_organization` | `organization_id` | ❌ | — |
 
 ### Foreign Keys
 
