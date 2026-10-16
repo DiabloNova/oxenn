@@ -41,6 +41,9 @@ jobs:
       - name: Verify tenant tables schema alignment
         run: pnpm tsx scripts/database/verify-tenant-tables.ts
 
+      - name: Verify RLS migration coverage
+        run: pnpm db:verify-rls-migrations
+
       - name: Build
         run: pnpm build
 
