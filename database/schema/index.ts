@@ -223,10 +223,14 @@ export const adminUsers = pgTable("admin_users", {
   id: uuid("id").primaryKey().default(defaultUuid),
   email: text("email").notNull().unique(),
   fullName: text("full_name").notNull(),
-  roleId: uuid("role_id").notNull().references(() => roles.id, { onDelete: "restrict" }),
+  role: text("role").notNull().default("Super Admin"),
+  permissions: jsonb("permissions").notNull().default([]),
   isActive: boolean("is_active").notNull().default(true),
+  ssoIdentities: jsonb("sso_identities").default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
+  createdBy: text("created_by").notNull().default("system"),
+  updatedBy: text("updated_by").notNull().default("system"),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   version: integer("version").notNull().default(1),
 }, (table) => [
@@ -264,6 +268,9 @@ export const featureFlags = pgTable("feature_flags", {
   tenantOverrides: text("tenant_overrides").notNull().default("{}"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
+  createdBy: text("created_by").notNull().default("system"),
+  updatedBy: text("updated_by").notNull().default("system"),
+  version: integer("version").notNull().default(1),
 }, (table) => [
   index("idx_feature_flags_key").on(table.key),
 ]);
