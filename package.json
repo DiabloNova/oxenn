@@ -23,7 +23,8 @@
     "db:push": "tsx scripts/database/db-push-guard.ts && drizzle-kit push",
     "test:isolation": "tsx tests/isolation/suite.ts",
     "docs:matrix": "tsx scripts/database/build-reference-matrix.ts",
-    "docs": "npm run docs:matrix"
+    "docs": "npm run docs:matrix",
+    "db:verify-rls-migrations": "tsx scripts/database/verify-rls-migrations.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.24",

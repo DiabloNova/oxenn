@@ -92,6 +92,123 @@ async function runTest() {
     }
     console.log("Role verification passed: app_runtime is not the table owner.");
 
+    // Verify the effective PostgreSQL catalog state after applying migrations.
+    // This complements static migration checks: a migration can exist while the
+    // resulting database is missing RLS flags or has incomplete policy coverage.
+    const rlsState = await client.query(
+      `
+        SELECT c.relname AS table_name, c.relrowsecurity, c.relforcerowsecurity
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relkind IN ('r', 'p')
+          AND c.relname = ANY($1::text[])
+      `,
+      [TENANT_SCOPED_TABLES],
+    );
+    const rlsByTable = new Map<
+      string,
+      { table_name: string; relrowsecurity: boolean; relforcerowsecurity: boolean }
+    >(
+      rlsState.rows.map((row: { table_name: string; relrowsecurity: boolean; relforcerowsecurity: boolean }) => [
+        row.table_name,
+        row,
+      ] as const),
+    );
+    const missingRlsState = TENANT_SCOPED_TABLES.filter((tableName) => {
+      const state = rlsByTable.get(tableName);
+      return !state || !state.relrowsecurity || !state.relforcerowsecurity;
+    });
+    if (missingRlsState.length > 0) {
+      throw new Error(
+        `RLS catalog verification failed: ENABLE and FORCE must both be active for every tenant table. Invalid tables: ${missingRlsState.join(", ")}`,
+      );
+    }
+    console.log(`RLS catalog verification passed: ENABLE and FORCE active on all ${TENANT_SCOPED_TABLES.length} tenant tables.`);
+
+    const policyState = await client.query(
+      `
+        SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+        FROM pg_catalog.pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = ANY($1::text[])
+      `,
+      [TENANT_SCOPED_TABLES],
+    );
+    const policiesByTable = new Map<string, typeof policyState.rows>();
+    for (const policy of policyState.rows) {
+      const tablePolicies = policiesByTable.get(policy.tablename) ?? [];
+      tablePolicies.push(policy);
+      policiesByTable.set(policy.tablename, tablePolicies);
+    }
+
+    const requiredPolicyExpressions: Record<string, "qual" | "with_check" | "both"> = {
+      SELECT: "qual",
+      INSERT: "with_check",
+      UPDATE: "both",
+      DELETE: "qual",
+    };
+    const policyFailures: string[] = [];
+    for (const tableName of TENANT_SCOPED_TABLES) {
+      const policies = policiesByTable.get(tableName) ?? [];
+      for (const [operation, expressionRequirement] of Object.entries(requiredPolicyExpressions)) {
+        const appliesToRuntime = (policy: (typeof policies)[number]) => {
+          const roles = (policy.roles as string[] | null) ?? [];
+          return roles.includes("public") || roles.includes("app_runtime");
+        };
+        const commandApplies = (policy: (typeof policies)[number]) => {
+          const command = String(policy.cmd).toUpperCase();
+          return command === operation || command === "ALL";
+        };
+        const applicablePermissivePolicies = policies.filter((policy) =>
+          String(policy.permissive).toUpperCase() === "PERMISSIVE" &&
+          appliesToRuntime(policy) &&
+          commandApplies(policy)
+        );
+
+        const usesTenantContext = (expression: unknown) =>
+          typeof expression === "string" &&
+          /current_setting\s*\(\s*'app\.current_tenant_id'(?:\s*::\s*text)?\s*,\s*true\s*\)/i.test(expression);
+        const effectiveWithCheck = (policy: (typeof policies)[number]) => {
+          if (typeof policy.with_check === "string") return policy.with_check;
+
+          // PostgreSQL reuses USING as WITH CHECK for ALL and UPDATE policies
+          // when WITH CHECK is omitted. Do not apply this fallback to INSERT-only
+          // policies, where WITH CHECK is the required new-row expression.
+          const command = String(policy.cmd).toUpperCase();
+          return command === "ALL" || command === "UPDATE" ? policy.qual : null;
+        };
+        const policyHasTenantContext = (policy: (typeof policies)[number]) => {
+          if (expressionRequirement === "qual") return usesTenantContext(policy.qual);
+          if (expressionRequirement === "with_check") return usesTenantContext(effectiveWithCheck(policy));
+          return usesTenantContext(policy.qual) && usesTenantContext(effectiveWithCheck(policy));
+        };
+
+        // PostgreSQL ORs PERMISSIVE policies together. Every applicable
+        // permissive policy must be tenant-scoped, not merely one of them.
+        if (applicablePermissivePolicies.length === 0) {
+          policyFailures.push(`${tableName}:${operation}:no-applicable-permissive-policy`);
+        } else {
+          const unscopedPolicies = applicablePermissivePolicies.filter(
+            (policy) => !policyHasTenantContext(policy),
+          );
+          if (unscopedPolicies.length > 0) {
+            policyFailures.push(
+              `${tableName}:${operation}:unscoped-permissive-policy(${unscopedPolicies.map((policy) => policy.policyname).join(", ")})`,
+            );
+          }
+        }
+      }
+    }
+
+    if (policyFailures.length > 0) {
+      const samplePolicies = policiesByTable.get("aeo_analyses") ?? [];
+      throw new Error(
+        `RLS policy catalog verification failed: tenant-context policies are missing or incomplete for ${policyFailures.join(", ")}. Sample catalog policies: ${JSON.stringify(samplePolicies.slice(0, 4))}`,
+      );
+    }
+    console.log(`RLS policy catalog verification passed: SELECT/INSERT/UPDATE/DELETE tenant-context policies verified on all ${TENANT_SCOPED_TABLES.length} tenant tables.`);
+
     const res = await client.query(`
       SELECT
         c.table_name,
