@@ -174,6 +174,15 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
     expect(result.stderr).toContain("RLS not forced at end of journal");
   });
 
+  it("fails closed on semicolons inside quoted identifiers instead of mis-splitting statements", () => {
+    const result = runVerifier(
+      'CREATE FUNCTION public."f;x"() RETURNS void LANGUAGE plpgsql AS $ BEGIN ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY; END $;\\n',
+    );
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("quoted identifiers containing semicolons are unsupported");
+  });
+
   it("does not treat quoted column names as RLS actions", () => {
     const result = runVerifier(
       'ALTER TABLE public.tenant_data DISABLE ROW LEVEL SECURITY;\n' +
