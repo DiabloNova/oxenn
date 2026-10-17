@@ -152,4 +152,54 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
     expect(result.stderr).toContain("RLS not enabled at end of journal");
   });
 
+  it("fails when a direct migration disables RLS", () => {
+    const result = runVerifier("ALTER TABLE public.tenant_data DISABLE ROW LEVEL SECURITY;\\n");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RLS not enabled at end of journal");
+  });
+
+  it("fails when a direct migration removes FORCE ROW LEVEL SECURITY", () => {
+    const result = runVerifier("ALTER TABLE public.tenant_data NO FORCE ROW LEVEL SECURITY;\\n");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RLS not forced at end of journal");
+  });
+
+  it("fails when a policy-bearing table is recreated without restoring RLS", () => {
+    const result = runVerifier("CREATE TABLE public.tenant_data (id uuid);\\n");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RLS not enabled at end of journal");
+    expect(result.stderr).toContain("RLS not forced at end of journal");
+  });
+
+  it("does not treat quoted column names as RLS actions", () => {
+    const result = runVerifier(
+      'ALTER TABLE public.tenant_data DISABLE ROW LEVEL SECURITY;\\n' +
+        'ALTER TABLE public.tenant_data ADD COLUMN "ENABLE ROW LEVEL SECURITY" boolean, ADD COLUMN "FORCE ROW LEVEL SECURITY" boolean;\\n',
+    );
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RLS not enabled at end of journal");
+  });
+
+  it("ignores RLS-looking text inside SQL strings and comments", () => {
+    const result = runVerifier(
+      "SELECT 'ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY'; -- ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY\\n",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("RLS migration final-state verified");
+  });
+
+  it("checks every RLS action in a multi-action ALTER TABLE statement", () => {
+    const result = runVerifier(
+      "ALTER TABLE public.tenant_data ENABLE ROW LEVEL SECURITY, NO FORCE ROW LEVEL SECURITY;\\n",
+    );
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RLS not forced at end of journal");
+  });
+
 });
