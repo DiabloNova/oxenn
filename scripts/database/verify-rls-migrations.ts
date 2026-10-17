@@ -86,13 +86,19 @@ function stripCommentsAndLiterals(sql: string): string {
         const end = sql.indexOf(delimiter, i + delimiter.length);
         const stop = end === -1 ? sql.length : end + delimiter.length;
         const segment = sql.slice(i, stop);
-        const statementPrefix = sql.slice(sql.lastIndexOf(";", i) + 1, i);
-        // DO blocks can execute dynamic DDL that changes RLS state. This
-        // verifier does not evaluate PL/pgSQL, so fail closed when EXECUTE
-        // appears rather than silently treating the block as harmless.
-        if (/^\s*DO\b/i.test(statementPrefix) && /\bEXECUTE\b/i.test(segment)) {
+        // Use the comment/literal-stripped output to identify the current
+        // statement. Drizzle inserts --> statement-breakpoint comments between
+        // statements, which would hide a DO block if we inspected raw SQL.
+        const statementPrefix = output.slice(output.lastIndexOf(";") + 1);
+        // This verifier cannot evaluate PL/pgSQL. Reject DO blocks that could
+        // change RLS state or table structure, whether through EXECUTE or
+        // static DDL. This intentionally fails closed; manual review or
+        // explicit migration statements are required for such blocks.
+        const canChangeRlsOrTables =
+          /\b(?:EXECUTE|ROW\s+LEVEL\s+SECURITY|(?:ALTER|DROP|CREATE)\s+TABLE)\b/i.test(segment);
+        if (/^\s*DO\b/i.test(statementPrefix) && canChangeRlsOrTables) {
           throw new Error(
-            "Cannot statically verify RLS migration: DO block contains EXECUTE (dynamic SQL). Review it manually or replace it with explicit migration statements.",
+            "Cannot statically verify RLS migration: DO block contains dynamic SQL or table/RLS-changing DDL. Review it manually or replace it with explicit migration statements.",
           );
         }
         output += segment.replace(/[^\n]/g, " ");
