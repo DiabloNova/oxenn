@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - security/rls-inventory-and-cubic-fixes
   pull_request:
     branches:
       - main
