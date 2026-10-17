@@ -147,7 +147,7 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
 
   const alterMatch = sql.match(
     new RegExp(
-      "^ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?(?:(?:\\"public\\"|public)\\s*\\.\\s*)?(" +
+      "^ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?(?:(?:\"public\"|public)\\s*\\.\\s*)?(" +
         IDENTIFIER +
         ")(?!\\s*\\.)\\s+([\\s\\S]*)$",
       "i",
