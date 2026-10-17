@@ -84,6 +84,28 @@ function stripCommentsAndLiterals(sql: string): string {
   let i = 0;
 
   while (i < sql.length) {
+    if (sql[i] === '"') {
+      output += '"';
+      i++;
+      let closed = false;
+      while (i < sql.length) {
+        if (sql[i] === '"' && sql[i + 1] === '"') {
+          output += '""';
+          i += 2;
+        } else if (sql[i] === '"') {
+          output += '"';
+          i++;
+          closed = true;
+          break;
+        } else {
+          output += sql[i];
+          i++;
+        }
+      }
+      if (!closed) throw new Error("Cannot statically verify migration: unterminated quoted identifier.");
+      continue;
+    }
+
     if (sql.startsWith("--", i)) {
       while (i < sql.length && sql[i] !== "\n") {
         output += " ";
