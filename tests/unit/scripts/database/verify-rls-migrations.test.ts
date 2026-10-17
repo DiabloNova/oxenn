@@ -41,7 +41,7 @@ function runVerifier(finalMigration: string) {
   );
   fs.writeFileSync(path.join(migrationDirectory, "0001_final.sql"), finalMigration);
 
-  return spawnSync("pnpm", ["exec", "tsx", verifierPath], {
+  return spawnSync(path.resolve(process.cwd(), "node_modules/.bin/tsx"), [verifierPath], {
     cwd: root,
     encoding: "utf8",
   });
