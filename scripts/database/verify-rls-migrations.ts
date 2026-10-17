@@ -119,9 +119,16 @@ function stripCommentsAndLiterals(sql: string): string {
       const escapeString = /(?:^|[^a-zA-Z0-9_$])[eE]$/.test(sql.slice(0, i));
       const parsed = readSingleQuotedString(sql, i, escapeString);
 
-      if (/^\s*DO\b/i.test(prefix) && bodyCanChangeRlsOrTables(parsed.content)) {
+      const isDoBlock = /^\s*DO\b/i.test(prefix);
+      const isFunctionBody =
+        /^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\b/i.test(prefix) &&
+        /\bAS\s+E?$/i.test(prefix);
+      if ((isDoBlock || isFunctionBody) && bodyCanChangeRlsOrTables(parsed.content)) {
+        const kind = isDoBlock ? "DO block" : "function/procedure body";
         throw new Error(
-          "Cannot statically verify RLS migration: DO block contains dynamic SQL or table/RLS-changing DDL. Review it manually or replace it with explicit migration statements.",
+          "Cannot statically verify RLS migration: " +
+            kind +
+            " contains dynamic SQL or table/RLS-changing DDL. Review it manually or replace it with explicit migration statements.",
         );
       }
 
