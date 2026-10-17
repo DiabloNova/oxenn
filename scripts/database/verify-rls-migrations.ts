@@ -98,6 +98,11 @@ function stripCommentsAndLiterals(sql: string): string {
           closed = true;
           break;
         } else {
+          if (sql[i] === ";") {
+            throw new Error(
+              "Cannot statically verify migration: quoted identifiers containing semicolons are unsupported because they make SQL statement boundaries ambiguous.",
+            );
+          }
           output += sql[i];
           i++;
         }
