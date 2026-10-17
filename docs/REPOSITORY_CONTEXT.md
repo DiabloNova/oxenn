@@ -37,8 +37,8 @@ The following were observed in source/schema comparisons during the read-only ba
 - `feature_flags`: persistence SQL references audit/version columns not present in the inspected schema/snapshot. `tenant_overrides` is stored as text and serialized with JSON; changing its type requires a contract and migration review.
 - `ai_provider_configs`: persistence SQL references audit/version columns not present in the inspected schema/snapshot. This table is in the requested repair scope.
 - Some repository fallback IDs use prefixed random strings, while relevant schema identifiers appear to be UUIDs. Trace actual production paths and tests; do not perform a global replacement.
-- `scripts/database/build-reference-matrix.ts` imports `TENANT_SCOPED_TABLES` from `src/core/database/tenant-context`, while the generated list inspected is at `src/core/database/tenant-tables.generated.ts`. Verify the referenced module and build script in a runnable checkout before concluding whether this is a broken import.
-- Migration `0007_boring_ares.sql` converts crawl-related `tenant_id` values using `::uuid`; any non-UUID existing values would make that conversion fail. There is no production database state available here to determine whether such values exist.
+- `scripts/database/build-reference-matrix.ts` and `scripts/database/verify-tenant-tables.ts` import `TENANT_SCOPED_TABLES` from `src/core/database/tenant-context`; inspection of `src/core/database/tenant-context/index.ts` confirms that this module re-exports the list from `src/core/database/tenant-tables.generated.ts`. This import path is therefore not itself a defect.
+- Migration `database/drizzle/0007_goofy_vanisher.sql` converts crawl-related `tenant_id` values using `::uuid`; any non-UUID existing values would make that conversion fail. There is no production database state available here to determine whether such values exist.
 
 ## Project-owner constraints for the current database-repair work
 
