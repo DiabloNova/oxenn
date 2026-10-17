@@ -51,6 +51,18 @@ These are explicit project-owner instructions and are not claims derived from th
 - Include `ai_provider_configs` in the overall database repair scope.
 - Inspect `drizzle-orm`, `drizzle-kit`, and `@electric-sql/pglite` dependency state; upgrade only if evidence shows a stable-version change is needed, and avoid opportunistic upgrades.
 
+## Additional cross-layer findings from the current read-only audit
+
+These are findings to triage in the database/security repair plan; they are not authorization to change application behavior:
+- The August 16, 2024 `docs/project/audit/INFRA_READINESS_AUDIT.md` describes a legacy `database/archive/migrations-legacy/` setup, says no migration runner/Drizzle dependencies exist, and references an older schema model. The current root README, `package.json`, `database/schema/index.ts`, `database/drizzle/meta/_journal.json`, and `src/core/database/migrator.ts` contradict those parts. Treat that audit as historical, not as a current baseline.
+- `docs/architecture/README.md` says the canonical schema models 57 tables; the inspected latest snapshot and `docs/database/reference-matrix.md` each report 70 tables. Reconcile the documentation only after confirming generated artifacts in a runnable checkout.
+- The privileged-path registry and `docs/security/privileged-paths.md` still list legacy table names such as `tenants`, `tenant_users`, and `tenant_invitations`, which are absent from the latest snapshot; the current schema uses `organizations`, `organization_members`, and `organization_invitations`.
+- In `src/core/database/tenant-context/index.ts`, `runWithSystemContext` verifies that the purpose tag is registered and blocks `sys-admin-run`/`test-req` outside test mode or a verification probe. However, `PostgresClient.connectSystemClient` does not enforce `PRIVILEGED_PATHS_REGISTRY[purpose].allowedTables` against SQL; it only checks system-mode context. The allowed-table list is therefore not a per-table runtime allowlist in the inspected query path.
+- `scripts/auth/grant-super-admin.ts` invokes `runWithSystemContext(..., "sys-admin-run", ...)`, while the above guard blocks that purpose unless `NODE_ENV === "test"` or `VERIFICATION_PROBE_ACTIVE === "1"`. This appears to conflict with the documented operator CLI path for granting `super_admin`; production behavior needs explicit verification and a narrowly scoped correction plan.
+- The admin persistence repositories in `src/features/admin/infrastructure/persistence/postgres/index.ts` issue SELECT statements but return records from static in-memory `Map` stores rather than using the query result rows. This means those read paths do not demonstrate durable PostgreSQL reads even though SQL is issued. Confirm scope across all repository methods before implementation.
+- `tests/features/admin/infrastructure/postgres-integration.test.ts` exports a function named `testPostgresIntegration` and does not use Vitest `describe/it`; the inspected `vitest.config.ts` only includes `tests/unit/**`, `tests/db/**`, and `tests/ui/**`. The file is not covered by those standard project include patterns and is not evidence of an automatically executed integration test.
+- The canonical snapshot contains 70 tables, including brand, website, crawl, prompt, AI observation, citation, recommendation, and knowledge-graph tables. A dedicated social-account table was not found in the table-name inventory inspected so far; do not conclude the capability is absent until all source models and JSON/association representations are traced.
+
 ## Safe working protocol
 
 1. Re-check the current branch, HEAD SHA, and working-tree state before each phase. Preserve unexpected user changes.
