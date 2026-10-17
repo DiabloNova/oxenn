@@ -169,10 +169,19 @@ async function runTest() {
         const usesTenantContext = (expression: unknown) =>
           typeof expression === "string" &&
           /current_setting\s*\(\s*'app\.current_tenant_id'(?:\s*::\s*text)?\s*,\s*true\s*\)/i.test(expression);
+        const effectiveWithCheck = (policy: (typeof policies)[number]) => {
+          if (typeof policy.with_check === "string") return policy.with_check;
+
+          // PostgreSQL reuses USING as WITH CHECK for ALL and UPDATE policies
+          // when WITH CHECK is omitted. Do not apply this fallback to INSERT-only
+          // policies, where WITH CHECK is the required new-row expression.
+          const command = String(policy.cmd).toUpperCase();
+          return command === "ALL" || command === "UPDATE" ? policy.qual : null;
+        };
         const policyHasTenantContext = (policy: (typeof policies)[number]) => {
           if (expressionRequirement === "qual") return usesTenantContext(policy.qual);
-          if (expressionRequirement === "with_check") return usesTenantContext(policy.with_check);
-          return usesTenantContext(policy.qual) && usesTenantContext(policy.with_check);
+          if (expressionRequirement === "with_check") return usesTenantContext(effectiveWithCheck(policy));
+          return usesTenantContext(policy.qual) && usesTenantContext(effectiveWithCheck(policy));
         };
 
         // PostgreSQL ORs PERMISSIVE policies together. Every applicable
