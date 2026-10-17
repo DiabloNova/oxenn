@@ -199,6 +199,37 @@ function getPublicTableName(target: string): string | null {
   return normalizeTableName(unquoteIdentifier(qualified[1]));
 }
 
+function maskQuotedIdentifiers(sql: string): string {
+  let output = "";
+  let i = 0;
+
+  while (i < sql.length) {
+    if (sql[i] !== '"') {
+      output += sql[i];
+      i++;
+      continue;
+    }
+
+    output += " ";
+    i++;
+    while (i < sql.length) {
+      if (sql[i] === '"' && sql[i + 1] === '"') {
+        output += "  ";
+        i += 2;
+      } else if (sql[i] === '"') {
+        output += " ";
+        i++;
+        break;
+      } else {
+        output += sql[i] === "\n" ? "\n" : " ";
+        i++;
+      }
+    }
+  }
+
+  return output;
+}
+
 function applyMigrationStatement(statement: string, state: Map<string, RlsState>): void {
   const sql = statement.trim();
   if (!sql) return;
@@ -255,7 +286,10 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
 
   // ALTER TABLE may contain multiple comma-separated actions. Inspect every
   // RLS action in the statement, in order, instead of only the first one.
-  const actions = [...alterMatch[2].matchAll(/\b(ENABLE|DISABLE|FORCE|NO\s+FORCE)\s+ROW\s+LEVEL\s+SECURITY\b/gi)];
+  // RLS action keywords are SQL syntax, not quoted identifiers. Mask quoted
+  // column names so a column named "ENABLE ROW LEVEL SECURITY" cannot spoof state.
+  const actionSql = maskQuotedIdentifiers(alterMatch[2]);
+  const actions = [...actionSql.matchAll(/\b(ENABLE|DISABLE|FORCE|NO\s+FORCE)\s+ROW\s+LEVEL\s+SECURITY\b/gi)];
   if (actions.length === 0) return;
 
   const table = normalizeTableName(unquoteIdentifier(alterMatch[1]));
