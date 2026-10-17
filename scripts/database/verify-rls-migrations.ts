@@ -86,6 +86,15 @@ function stripCommentsAndLiterals(sql: string): string {
         const end = sql.indexOf(delimiter, i + delimiter.length);
         const stop = end === -1 ? sql.length : end + delimiter.length;
         const segment = sql.slice(i, stop);
+        const statementPrefix = sql.slice(sql.lastIndexOf(";", i) + 1, i);
+        // DO blocks can execute dynamic DDL that changes RLS state. This
+        // verifier does not evaluate PL/pgSQL, so fail closed when EXECUTE
+        // appears rather than silently treating the block as harmless.
+        if (/^\s*DO\b/i.test(statementPrefix) && /\bEXECUTE\b/i.test(segment)) {
+          throw new Error(
+            "Cannot statically verify RLS migration: DO block contains EXECUTE (dynamic SQL). Review it manually or replace it with explicit migration statements.",
+          );
+        }
         output += segment.replace(/[^\n]/g, " ");
         i = stop;
         continue;
@@ -138,20 +147,27 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
 
   const alterMatch = sql.match(
     new RegExp(
-      String.raw`^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:(?:"public"|public)\s*\.\s*)?(${IDENTIFIER})(?!\s*\.)\s+(ENABLE|DISABLE|FORCE|NO\s+FORCE)\s+ROW\s+LEVEL\s+SECURITY\b`,
+      String.raw\`^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:(?:"public"|public)\s*\.\s*)?(\${IDENTIFIER})(?!\s*\.)\s+([\s\S]*)$\`,
       "i",
     ),
   );
   if (!alterMatch) return;
 
+  // ALTER TABLE may contain multiple comma-separated actions. Inspect every
+  // RLS action in the statement, in order, instead of only the first one.
+  const actions = [...alterMatch[2].matchAll(/\b(ENABLE|DISABLE|FORCE|NO\s+FORCE)\s+ROW\s+LEVEL\s+SECURITY\b/gi)];
+  if (actions.length === 0) return;
+
   const table = normalizeTableName(unquoteIdentifier(alterMatch[1]));
   if (!state.has(table)) return;
-  const action = alterMatch[2].toUpperCase().replace(/\s+/g, " ");
   const current = state.get(table)!;
-  if (action === "ENABLE") current.enabled = true;
-  else if (action === "DISABLE") current.enabled = false;
-  else if (action === "FORCE") current.forced = true;
-  else current.forced = false;
+  for (const actionMatch of actions) {
+    const action = actionMatch[1].toUpperCase().replace(/\s+/g, " ");
+    if (action === "ENABLE") current.enabled = true;
+    else if (action === "DISABLE") current.enabled = false;
+    else if (action === "FORCE") current.forced = true;
+    else current.forced = false;
+  }
 }
 
 function main(): void {
