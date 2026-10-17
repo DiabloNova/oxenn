@@ -82,3 +82,31 @@ The GitHub source inventory is complete enough to prevent the raw-pool paths alr
 - Do not make application/schema/migration/dependency/CI source changes during this audit.
 - Do not broaden privileges just to make an existing caller pass.
 - Phase 1 requires a separate focused implementation branch and the pre-agreed acceptance tests.
+
+## Second-pass cross-check — test-only direct clients and tenant-client consumers
+
+This addendum records a second pass over the relevant test/verification files and direct tenant-client consumers. It is documentation-only; no application, schema, migration, dependency, CI, or test source was changed.
+
+### Additional test-only access sites confirmed
+
+- `tests/features/acquisition/integration/run-all.ts:3,73,122-123,357,366` imports `Pool`, creates a dedicated pool from `databaseUrl`, leases clients directly for integration setup/cleanup, and closes `PostgresClient.getInstance().getPool()` at teardown. The same test uses `TenantContextManager.getDbClient()` for context assertions at lines 144 and 183. This is a test harness entrypoint, not a production request path; its target URL must be disposable.
+- `tests/features/admin/tenant-isolation-behavior.test.ts:8,62` obtains the raw pool from `PostgresClient.getPool()` and calls `pool.connect()` in an isolation test. This is a second observed test consumer of the public raw-pool accessor; it should not be mistaken for a production consumer.
+- `tests/isolation/suite.ts:1,35-37,51-52,76-77` creates direct pools/clients for database setup and test execution. The suite is capable of destructive database reset/setup; it must only target the explicitly disposable isolation database.
+- `tests/features/admin/infrastructure/persistence/postgres/fail-closed.test.ts:51` exercises `connectClient()`; unit tests under `tests/unit/core/tenant-context/` mock `connectSystemClient()` and pool methods. These are tests of the wrapper rather than additional production pool constructors.
+- `verification/phase-0/probe-system-context.ts:59-61` invokes `runWithSystemContext(..., "test-req", ...)` and reads `getDbClient()`. This probe is verification-only and its historical transcript must not be treated as current runtime evidence without a rerun against the stated commit in a disposable environment.
+
+### Additional tenant-client consumer confirmed
+
+- `src/features/billing/services/subscription-service.ts:15,69,105,151` calls `getRequiredTenantId()`, obtains `getDbClient()`, rejects a missing client, and passes the context client directly to Drizzle for subscription, quota, and credit operations. The service itself does not establish the tenant context; its actual caller/reachability path still needs to be traced before treating the context precondition as guaranteed.
+
+### Correction / clarification to the inventory
+
+The earlier public-accessor row correctly found no production callsite for `PostgresClient.getPool()` in the scanned application/script source, but the test-only uses are not limited to `tests/unit/core/tenant-context/system-mode-bypass.test.ts:53`. The additional test consumers above are now explicitly recorded. No production callsite of `getPool()` was found in the GitHub source scan; this remains a source-level observation, not proof against dynamic or external consumers.
+
+### AUTH-03 historical artifact status
+
+The current `main` source at `src/core/database/tenant-context/index.ts:185-200` leases a client with `connectSystemClient(purpose)` and stores it in `dbClient`; `getDbClient()` returns that stored client at lines 348-355. Therefore the claim in `verification/phase-0/auth03-probe.md` that all system-context calls necessarily receive `null` is inconsistent with this baseline. The report is stale for current-main claims; this source inspection does not establish when or why it became stale, and no runtime probe was executed in this pass.
+
+### Second-pass limits
+
+The additional reads were source inspection only. No local checkout, shell-wide grep, runtime probe, typecheck, lint, test suite, PostgreSQL connection, or production/shared database access was performed. The deployment identities, actual grants, RLS enforcement, worker function grants, and runtime reachability remain unverified. Phase 0's GitHub source inventory is substantially closed, but the security acceptance gate remains open until the local/Jules search and Phase 1 enforcement design/tests are completed.
