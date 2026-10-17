@@ -97,3 +97,14 @@ The product documentation describes brand/website crawling, competitor discovery
 - **Application code, schema, migrations, snapshots, dependencies, and CI:** unchanged.
 - **Git status:** no local checkout was available, so local `git status` and `git diff` are **NOT AVAILABLE**. The remote audit branch head must be re-read after the report commit; no PR was created and `main` was not modified.
 - **Outstanding governance limitation:** required `llms.txt` could not be fetched and root `PLAN.md` is absent. This task was limited to a user-authorized read-only audit plus creation of the required context/report documentation; no implementation phase was started.
+
+
+## Phase 1 design follow-up (2026-10-17)
+
+After the plan was approved, a focused caller-level review was performed for the first execution phase. The new design record is `docs/project/tasks/database-privileged-paths-hardening-design-2026-10-17.md`.
+
+- **Confirmed:** current registry/documentation table names are stale; the per-purpose `allowedTables` list is not enforced by `connectSystemClient`; current auth/workspace callers access `organizations` and `organization_members` where the registry lists legacy tables; `sys-admin-run` is used by the operator CLI even though runtime guards treat it as test-only.
+- **Additional safety concern:** `.env.example` uses the `postgres` role for both `DATABASE_URL` and the fallback privileged connection URL. This is only an example configuration; the actual deployment role is **NOT VERIFIED**. A superuser/`BYPASSRLS` runtime connection can defeat RLS independently of application context checks.
+- **Design principle:** prefer database-enforced least privilege (potentially purpose-specific PostgreSQL roles and exact grants) plus application purpose validation. Do not treat a fragile regex-only SQL allowlist as sufficient security enforcement.
+- **Call-site mapping:** the design record lists the observed table set per registered purpose and the required positive, negative, adversarial, rollback, nesting, and audit-failure tests. It explicitly marks the mapping as a minimum set pending a complete implementation-time trace.
+- **Status:** this remains a design/audit artifact, not a completed security fix. No application source, schema, migration, CI, dependency, or deployment configuration changed. No runtime tests were run. The absence of a local executable environment means the next code change must be implemented and validated in an environment capable of running the repository checks and a dedicated disposable PostgreSQL service; do not infer security success from the new documentation.
