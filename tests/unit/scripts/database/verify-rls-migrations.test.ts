@@ -82,7 +82,7 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
   });
   it("rejects a single-quoted DO body containing dynamic SQL", () => {
     const result = runVerifier(
-      "DO 'BEGIN EXECUTE ''ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY''; END';\\n",
+      "DO 'BEGIN EXECUTE ''ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY''; END';\n",
     );
 
     expect(result.status).not.toBe(0);
@@ -90,7 +90,7 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
   });
 
   it("allows a harmless single-quoted DO body", () => {
-    const result = runVerifier("DO 'BEGIN RAISE NOTICE ''safe''; END';\\n");
+    const result = runVerifier("DO 'BEGIN RAISE NOTICE ''safe''; END';\n");
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("RLS migration final-state verified");
@@ -98,7 +98,7 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
 
   it("rejects a function body containing dynamic SQL that can change RLS", () => {
     const result = runVerifier(
-      "CREATE FUNCTION mutate_rls() RETURNS void LANGUAGE plpgsql AS $$ BEGIN EXECUTE 'ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY'; END $$;\\n",
+      "CREATE FUNCTION mutate_rls() RETURNS void LANGUAGE plpgsql AS $$ BEGIN EXECUTE 'ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY'; END $$;\n",
     );
 
     expect(result.status).not.toBe(0);
@@ -107,7 +107,7 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
 
   it("rejects a procedure body containing static table-changing DDL", () => {
     const result = runVerifier(
-      "CREATE PROCEDURE mutate_rls() LANGUAGE plpgsql AS $$ BEGIN ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY; END $$;\\n",
+      "CREATE PROCEDURE mutate_rls() LANGUAGE plpgsql AS $$ BEGIN ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY; END $$;\n",
     );
 
     expect(result.status).not.toBe(0);
@@ -116,7 +116,7 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
 
   it("does not let an E-string escaped quote hide a later RLS disable statement", () => {
     const result = runVerifier(
-      "SELECT E'foo\\\\'bar';\\nALTER TABLE public.tenant_data DISABLE ROW LEVEL SECURITY;\\n",
+      "SELECT E'foo\\'bar';\nALTER TABLE public.tenant_data DISABLE ROW LEVEL SECURITY;\n",
     );
 
     expect(result.status).not.toBe(0);
@@ -125,7 +125,7 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
 
   it("tracks RLS state when a policy-bearing table is renamed away and back", () => {
     const result = runVerifier(
-      "ALTER TABLE public.tenant_data RENAME TO tenant_data_old;\\nALTER TABLE public.tenant_data_old RENAME TO tenant_data;\\n",
+      "ALTER TABLE public.tenant_data RENAME TO tenant_data_old;\nALTER TABLE public.tenant_data_old RENAME TO tenant_data;\n",
     );
 
     expect(result.status).toBe(0);
@@ -134,7 +134,7 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
 
   it("fails closed when an unprotected table is renamed into a policy-bearing table name", () => {
     const result = runVerifier(
-      "ALTER TABLE public.tenant_data RENAME TO tenant_data_old;\\nALTER TABLE public.tenant_data_v2 RENAME TO tenant_data;\\n",
+      "ALTER TABLE public.tenant_data RENAME TO tenant_data_old;\nALTER TABLE public.tenant_data_v2 RENAME TO tenant_data;\n",
     );
 
     expect(result.status).not.toBe(0);
