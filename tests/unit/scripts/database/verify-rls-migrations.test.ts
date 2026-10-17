@@ -114,6 +114,17 @@ describe("RLS migration verifier DO-block fail-closed behavior", () => {
     expect(result.stderr).toContain("function/procedure body contains dynamic SQL or table/RLS-changing DDL");
   });
 
+
+  it("rejects a single-quoted function body containing dynamic SQL", () => {
+    const result = runVerifier(
+      "CREATE FUNCTION mutate_rls() RETURNS void AS 'BEGIN EXECUTE ''ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY''; END' LANGUAGE plpgsql;\\n",
+    );
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("function/procedure body contains dynamic SQL or table/RLS-changing DDL");
+  });
+
+
   it("does not let an E-string escaped quote hide a later RLS disable statement", () => {
     const result = runVerifier(
       "SELECT E'foo\\'bar';\nALTER TABLE public.tenant_data DISABLE ROW LEVEL SECURITY;\n",
