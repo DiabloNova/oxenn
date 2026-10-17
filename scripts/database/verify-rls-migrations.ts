@@ -27,6 +27,58 @@ function normalizeTableName(name: string): string {
  * Quoted identifiers are deliberately preserved. Dollar-quoted function bodies
  * and ordinary string literals must not be mistaken for executable statements.
  */
+function statementPrefix(output: string): string {
+  return output.slice(output.lastIndexOf(";") + 1);
+}
+
+function bodyCanChangeRlsOrTables(body: string): boolean {
+  // Fail closed: this lightweight verifier cannot prove the effects of procedural
+  // SQL or dynamic execution. Explicit migration statements remain fully parsed.
+  return /\b(?:EXECUTE|ROW\s+LEVEL\s+SECURITY|(?:ALTER|DROP|CREATE)\s+TABLE)\b/i.test(body);
+}
+
+function readSingleQuotedString(
+  sql: string,
+  quoteIndex: number,
+  escapeString: boolean,
+): { content: string; end: number } {
+  let content = "";
+  let i = quoteIndex + 1;
+
+  while (i < sql.length) {
+    if (escapeString && sql[i] === "\\") {
+      if (i + 1 < sql.length) {
+        content += sql[i + 1];
+        i += 2;
+      } else {
+        content += "\\";
+        i++;
+      }
+      continue;
+    }
+
+    if (sql[i] === "'" && sql[i + 1] === "'") {
+      content += "'";
+      i += 2;
+      continue;
+    }
+
+    if (sql[i] === "'") {
+      return { content, end: i + 1 };
+    }
+
+    content += sql[i];
+    i++;
+  }
+
+  return { content, end: sql.length };
+}
+
+/**
+ * Remove comments and literal contents before inspecting migration DDL.
+ * Quoted identifiers are preserved. Procedural bodies that may mutate RLS or
+ * table structure are rejected rather than silently treated as inert strings.
+ */
 function stripCommentsAndLiterals(sql: string): string {
   let output = "";
   let i = 0;
@@ -58,25 +110,23 @@ function stripCommentsAndLiterals(sql: string): string {
           i++;
         }
       }
+      if (depth !== 0) throw new Error("Cannot statically verify migration: unterminated block comment.");
       continue;
     }
 
     if (sql[i] === "'") {
-      output += " ";
-      i++;
-      while (i < sql.length) {
-        if (sql[i] === "'" && sql[i + 1] === "'") {
-          output += "  ";
-          i += 2;
-        } else if (sql[i] === "'") {
-          output += " ";
-          i++;
-          break;
-        } else {
-          output += sql[i] === "\n" ? "\n" : " ";
-          i++;
-        }
+      const prefix = statementPrefix(output);
+      const escapeString = /(?:^|[^a-zA-Z0-9_$])[eE]$/.test(sql.slice(0, i));
+      const parsed = readSingleQuotedString(sql, i, escapeString);
+
+      if (/^\s*DO\b/i.test(prefix) && bodyCanChangeRlsOrTables(parsed.content)) {
+        throw new Error(
+          "Cannot statically verify RLS migration: DO block contains dynamic SQL or table/RLS-changing DDL. Review it manually or replace it with explicit migration statements.",
+        );
       }
+
+      output += parsed.content.replace(/[^\n]/g, " ");
+      i = parsed.end;
       continue;
     }
 
@@ -84,24 +134,38 @@ function stripCommentsAndLiterals(sql: string): string {
       const delimiter = sql.slice(i).match(/^\$(?:[a-zA-Z_][\w]*)?\$/)?.[0];
       if (delimiter) {
         const end = sql.indexOf(delimiter, i + delimiter.length);
-        const stop = end === -1 ? sql.length : end + delimiter.length;
-        const segment = sql.slice(i, stop);
-        // Use the comment/literal-stripped output to identify the current
-        // statement. Drizzle inserts --> statement-breakpoint comments between
-        // statements, which would hide a DO block if we inspected raw SQL.
-        const statementPrefix = output.slice(output.lastIndexOf(";") + 1);
-        // This verifier cannot evaluate PL/pgSQL. Reject DO blocks that could
-        // change RLS state or table structure, whether through EXECUTE or
-        // static DDL. This intentionally fails closed; manual review or
-        // explicit migration statements are required for such blocks.
-        const canChangeRlsOrTables =
-          /\b(?:EXECUTE|ROW\s+LEVEL\s+SECURITY|(?:ALTER|DROP|CREATE)\s+TABLE)\b/i.test(segment);
-        if (/^\s*DO\b/i.test(statementPrefix) && canChangeRlsOrTables) {
+        if (end === -1) {
+          const prefix = statementPrefix(output);
+          const body = sql.slice(i + delimiter.length);
+          if (
+            (/^\s*DO\b/i.test(prefix) ||
+              /^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\b/i.test(prefix)) &&
+            bodyCanChangeRlsOrTables(body)
+          ) {
+            throw new Error(
+              "Cannot statically verify RLS migration: unterminated procedural body may contain dynamic SQL or table/RLS-changing DDL.",
+            );
+          }
+          throw new Error("Cannot statically verify migration: unterminated dollar-quoted string.");
+        }
+
+        const stop = end + delimiter.length;
+        const segment = sql.slice(i + delimiter.length, end);
+        const prefix = statementPrefix(output);
+        const isDoBlock = /^\s*DO\b/i.test(prefix);
+        const isFunctionOrProcedure =
+          /^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\b/i.test(prefix);
+
+        if ((isDoBlock || isFunctionOrProcedure) && bodyCanChangeRlsOrTables(segment)) {
+          const kind = isDoBlock ? "DO block" : "function/procedure body";
           throw new Error(
-            "Cannot statically verify RLS migration: DO block contains dynamic SQL or table/RLS-changing DDL. Review it manually or replace it with explicit migration statements.",
+            "Cannot statically verify RLS migration: " +
+              kind +
+              " contains dynamic SQL or table/RLS-changing DDL. Review it manually or replace it with explicit migration statements.",
           );
         }
-        output += segment.replace(/[^\n]/g, " ");
+
+        output += sql.slice(i, stop).replace(/[^\n]/g, " ");
         i = stop;
         continue;
       }
@@ -137,7 +201,7 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
   );
   if (createMatch) {
     const table = normalizeTableName(unquoteIdentifier(createMatch[1]));
-    if (state.has(table)) state.set(table, { enabled: false, forced: false });
+    state.set(table, { enabled: false, forced: false });
     return;
   }
 
@@ -146,7 +210,28 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
     const targets = dropMatch[1].replace(/\s+(?:CASCADE|RESTRICT)\s*$/i, "");
     for (const target of targets.split(",")) {
       const table = getPublicTableName(target);
-      if (table && state.has(table)) state.set(table, { enabled: false, forced: false });
+      if (table) state.set(table, { enabled: false, forced: false });
+    }
+    return;
+  }
+
+  const renameMatch = sql.match(
+    new RegExp(
+      "^ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?((?:(?:\\\"public\\\"|public)\\s*\\.\\s*)?" +
+        IDENTIFIER +
+        ")\\s+RENAME\\s+TO\\s+(" +
+        IDENTIFIER +
+        ")$",
+      "i",
+    ),
+  );
+  if (renameMatch) {
+    const source = getPublicTableName(renameMatch[1]);
+    if (source) {
+      const destination = normalizeTableName(unquoteIdentifier(renameMatch[2]));
+      const previous = state.get(source) ?? { enabled: false, forced: false };
+      state.set(source, { enabled: false, forced: false });
+      state.set(destination, { ...previous });
     }
     return;
   }
@@ -167,8 +252,8 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
   if (actions.length === 0) return;
 
   const table = normalizeTableName(unquoteIdentifier(alterMatch[1]));
-  if (!state.has(table)) return;
-  const current = state.get(table)!;
+  const current = state.get(table) ?? { enabled: false, forced: false };
+  state.set(table, current);
   for (const actionMatch of actions) {
     const action = actionMatch[1].toUpperCase().replace(/\s+/g, " ");
     if (action === "ENABLE") current.enabled = true;
