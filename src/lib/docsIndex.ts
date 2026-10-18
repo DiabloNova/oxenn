@@ -354,11 +354,43 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Conductor PR #57 review fixes  - **Status:** SUCCESS (documentation correction; controller review and writeback pending). - **Invariant:** retries require reconciliation; authority and confidentiality stay explicit;   evidence fits the medium; physical safety is context-specific; dependency arithmetic includes   relationship and lag; whole-project startup and applicable commercial gates remain intact. - **Implementation:** issues 1–20 applied separately, in order, to the eight guidance files u`
   },
   {
+    slug: "2026-10-17-phase-0-follow-up-access-paths",
+    titleEn: "Phase 0 Follow-up — GitHub Source Inventory of Database Entry Paths",
+    titleFa: "Phase 0 Follow-up — GitHub Source Inventory of Database Entry Paths",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Phase 0 Follow-up — GitHub Source Inventory of Database Entry Paths  - Date: 2026-10-17 - Repository: \`DiabloNova/oxenn\` - Main baseline: \`feced8d2b451527cfe0e06cf62d9b6bff0af7757\` - Audit branch: \`audit/product-aware-s0-baseline\` - Scope: read-only inspection of GitHub source and test files. This report update is documentation-only. No application, schema, migration, dependency, or CI source was changed. - Database status: **no real/main/production database is connected**.  ## Decision  The r`
+  },
+  {
+    slug: "2026-10-17-phase-0-privileged-path-audit",
+    titleEn: "Phase 0 Addendum — Privileged-Path Caller and Runtime-Boundary Audit",
+    titleFa: "Phase 0 Addendum — Privileged-Path Caller and Runtime-Boundary Audit",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Phase 0 Addendum — Privileged-Path Caller and Runtime-Boundary Audit  - Audit date: 2026-10-17 - Repository: \`DiabloNova/oxenn\` - Audited ref: \`main\` - Audited commit: \`feced8d2b451527cfe0e06cf62d9b6bff0af7757\` - Scope: read-only completion of Phase 0 for privileged database paths; no application, schema, migration, dependency, or CI code changed. - Database status: **no real/main/production database is connected**. Findings below are from repository source and the existing disposable-PostgreS`
+  },
+  {
+    slug: "2026-10-17-s0-product-aware-database-audit",
+    titleEn: "S0 Product-Aware Database Integrity Audit",
+    titleFa: "S0 Product-Aware Database Integrity Audit",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# S0 Product-Aware Database Integrity Audit  **Date:** 2026-10-17   **Repository:** \`DiabloNova/oxenn\`   **Baseline inspected:** \`main\` at \`feced8d2b451527cfe0e06cf62d9b6bff0af7757\` (merge of PR #82)   **Audit branch:** \`audit/product-aware-s0-baseline\`   **Scope:** Read-only audit of product/data contracts, schema/migration consistency, persistence consumers, RLS, privileged database access, test discovery, CI, and dependency declarations. This report does not authorize implementation changes. `
+  },
+  {
     slug: "user-guides",
     titleEn: "User Guides",
     titleFa: "User Guides",
     category: "user-guides",
     categoryFa: "User Guides",
     snippet: `# User Guides  This section provides user-facing documentation for navigating and operating Seorchable.  ## Status Dictionary - **Implemented**: Verified user workflows supported by the UI/backend. - **Partial**: Workflow is accessible but missing edge cases or polished UI. - **Planned**: Not currently implemented.  ## Core Concepts & Workflows  ### Dashboard Navigation The platform offers an authenticated unified Dashboard Shell with collapsible responsive sidebars, directional support (RTL/LTR`
+  },
+  {
+    slug: "REPOSITORY_CONTEXT",
+    titleEn: "Repository Context — Verified Baseline",
+    titleFa: "Repository Context — Verified Baseline",
+    category: ".",
+    categoryFa: ".",
+    snippet: `# Repository Context — Verified Baseline  **Baseline ref:** \`main\`   **Baseline commit inspected:** \`feced8d2b451527cfe0e06cf62d9b6bff0af7757\` (2026-10-17; merge of PR #82)   **Purpose:** A concise navigation and constraints index for future agents. This document is not a substitute for inspecting the current source, tests, migrations, or Git state before each task.  ## Product and stack  - The repository README describes **Oxenn** as a bilingual Persian/English AI visibility and AEO platform fo`
   },
 ];
