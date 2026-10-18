@@ -32,9 +32,9 @@ Static inspection of callers shows the registry must be corrected from actual qu
 
 | Purpose | Observed current tables (minimum set; complete call-site trace still required) |
 | --- | --- |
-| `sys-login` | `auth_rate_limits`, `users`, `user_credentials`, `organization_members`, `organizations`, `email_verification_tokens`, `password_reset_tokens` |
+| `sys-login` | `auth_rate_limits`, `users`, `user_credentials`, `sessions`, `organizations`, `organization_members`, `email_verification_tokens`, `password_reset_tokens` |
 | `sys-register` | `auth_rate_limits`, `users`, `user_credentials`, `organizations`, `organization_members` |
-| `sys-auth-check` | `organization_members`, `organizations` |
+| `sys-auth-check` | `sessions`, `users`, `organizations`, `organization_members` |
 | `sys-auth-role-check` | `organization_members`, `organizations` |
 | `sys-auth-api-check` | `organization_members`, `organizations` |
 | `sys-create-workspace` | `organizations`, `organization_members` |
@@ -53,7 +53,7 @@ The `sys-login` purpose is currently reused for several authentication workflows
 
 `scripts/auth/grant-super-admin.ts` invokes `runWithSystemContext(null, "sys-admin-run", ...)`. `runWithSystemContext` rejects `sys-admin-run` unless `NODE_ENV === "test"` or `VERIFICATION_PROBE_ACTIVE === "1"`. This appears to block the intended operator CLI in ordinary production operation. Do not fix it by making `sys-admin-run` generally available in production.
 
-The operator operation touches `organization_members` and `audit_records`. The CLI must use an explicit operator-only execution path and a dedicated least-privilege authority, rather than inheriting a test wildcard.
+The operator operation directly changes `organization_members`. Separately, the current `runWithSystemContext` manager attempts a central `audit_records` write for outer and recorded nested contexts; this is an implicit manager-level side effect, not an ordinary caller query grant. The implementation must define how that audit write is authorized and made durable without broadening the caller's table scope. The CLI must use an explicit operator-only execution path and a dedicated least-privilege authority, rather than inheriting a test wildcard.
 
 ### E. Connection role assumptions are unsafe or unknown
 
