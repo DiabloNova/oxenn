@@ -78,3 +78,17 @@ These are findings to triage in the database/security repair plan; they are not 
 - No local checkout was available through this workflow; local typecheck, lint, unit tests, migration execution, and PostgreSQL integration tests were **NOT RUN**.
 - GitHub API confirmed the branch `audit/product-aware-s0-baseline` existed at the same baseline SHA before this context file was added. Its working-tree state cannot be inferred from GitHub's branch API; there is no local working-tree status available here.
 - No real database schema/data was inspected; production state and actual applied migration state are **NOT VERIFIED**.
+
+
+## Phase 0 access-path follow-up (2026-10-18)
+
+The GitHub-only access-path scan was extended through the full 94-file TypeScript/JavaScript test tree and the previously unreviewed worker-specific database path. Treat these as additional observations to re-verify before implementation:
+
+- `scripts/crawl-worker.ts` creates its own `pg.Pool` from `DATABASE_URL` and calls `CrawlDispatcherRepository` methods before starting per-job tenant context.
+- `src/features/acquisition/infrastructure/persistence/postgres/dispatcher-repository.ts` directly executes `public.claim_crawl_jobs`, `public.recover_expired_crawl_jobs`, and `public.complete_crawl_job_if_lease_owner` through that raw pool.
+- Those three `SECURITY DEFINER` functions and grants to a `crawler` role were found in `database/archive/migrations-legacy/0004_crawl_acquisition.sql`, but were not found in active `database/drizzle/0000`–`0012` migrations. `database/bootstrap.sql` defines `app_owner` and `app_runtime` as NOLOGIN roles and does not create `crawler`. This is a source-history conflict affecting fresh-database readiness; actual behavior was not run and is **NOT VERIFIED**.
+- `src/features/monitoring/repositories/crawl-snapshot-repository.ts`, `monitoring-alert-repository.ts`, and `monitoring-config-repository.ts` use `drizzle(ctx?.dbClient || (global as any).pgClient)`. No producer assignment for `global.pgClient` was found in the inspected source/config paths. Its reachability remains **UNRESOLVED**; tenant ID validation before the fallback does not prove the fallback connection carries the same transaction-local RLS context.
+- Test-only raw DB access includes `tests/isolation/suite.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/features/public-api/public-api.test.ts`, and a number of feature integration/run-all scripts. These should only target explicitly disposable PostgreSQL databases. Presence of a test file does not prove CI executes it.
+- The GitHub-only scan covered all 94 tracked TS/JS test files, the tracked UI page/component files, and the source modules selected for database/runtime access patterns. Exact local `rg` output, a local Git status, and runtime verification remain unavailable because there is no checkout in this workflow and the attempted clone/remote access failed. GitHub code search returned incomplete zero-result responses and was not treated as exhaustive.
+
+See `docs/tasks_reports/database/2026-10-17-phase-0-follow-up-access-paths.md` for the full evidence, conflict statement, and Phase 0 completion criteria.
