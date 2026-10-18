@@ -110,3 +110,53 @@ The current `main` source at `src/core/database/tenant-context/index.ts:185-200`
 ### Second-pass limits
 
 The additional reads were source inspection only. No local checkout, shell-wide grep, runtime probe, typecheck, lint, test suite, PostgreSQL connection, or production/shared database access was performed. The deployment identities, actual grants, RLS enforcement, worker function grants, and runtime reachability remain unverified. Phase 0's GitHub source inventory is substantially closed, but the security acceptance gate remains open until the local/Jules search and Phase 1 enforcement design/tests are completed.
+
+
+## Third pass — full test-tree scan and crawler worker / active-migration conflict (2026-10-18)
+
+This addendum records the final GitHub source inventory pass. It does not claim local grep/test execution or live database verification.
+
+### Test tree coverage
+
+- GitHub's recursive tree at main SHA `feced8d2b451527cfe0e06cf62d9b6bff0af7757` lists 94 TypeScript/JavaScript test files under `tests/`. All 94 were fetched and inspected in batches for raw `pg.Pool`/`pg.Client`, direct `pg` imports, database URL usage, `runWithSystemContext`, `connectSystemClient`, `connectClient`, `getPool`, `getDbClient`, Drizzle construction, and direct SQL.
+- Additional observed test-only database entrypoints include:
+  - `tests/features/acquisition/integration/run-all.ts`: direct `Pool`, test fixture inserts/deletes, and direct client leases. It skips if `DATABASE_URL` is unset, but its configured target must still be guaranteed disposable before executing it.
+  - `tests/features/public-api/public-api.test.ts`: direct `Pool`, requires both `DATABASE_URL` and `MIGRATION_DATABASE_URL`, and checks that they point to the same test DB before applying migrations and inserting/deleting fixtures.
+  - `tests/features/admin/tenant-isolation-behavior.test.ts`: accesses `PostgresClient.getPool()` directly for test setup and uses a tenant context client for tenant assertions.
+  - `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`, `tests/services/crawler/web-crawler.test.ts`, `tests/services/rag/query-service.test.ts`, `tests/features/ai-intelligence/run-all.ts`, and `tests/isolation/suite.ts` contain direct `pg` imports or SQL/test setup paths. Their runtime target and actual CI discovery must be checked from the test command/config; source presence alone is not evidence of automatic execution.
+  - Unit tests in `tests/unit/core/tenant-context/system-mode-bypass.test.ts` intentionally mock the raw pool/system client. This is test evidence for the known bypass semantics, not evidence of a live PostgreSQL role check.
+- The scan found no direct database client/query imports in the scanned UI page/component set (`src/app/[locale]/` and `src/components/`). No app/test source was changed.
+
+### New material conflict: crawl-worker functions absent from active migration chain
+
+**Sources inspected:**
+- `scripts/crawl-worker.ts`: constructs its own `new Pool({ connectionString: process.env.DATABASE_URL })`; on each worker loop it calls `CrawlDispatcherRepository.recoverExpired()` and `claim()` before entering per-job tenant context. Completion also calls the dispatcher repository directly.
+- `src/features/acquisition/infrastructure/persistence/postgres/dispatcher-repository.ts`: calls `public.claim_crawl_jobs($1,$2,$3)`, `public.recover_expired_crawl_jobs()`, and `public.complete_crawl_job_if_lease_owner(...)` directly via the supplied raw `Pool`.
+- The definitions of those three functions were found in `database/archive/migrations-legacy/0004_crawl_acquisition.sql` only. They are `SECURITY DEFINER`, set `search_path = pg_catalog, public`, revoke EXECUTE from PUBLIC, and grant EXECUTE to role `crawler`.
+- All active migration files `database/drizzle/0000_reflective_loa.sql` through `database/drizzle/0012_slimy_aqueduct.sql` were inspected for these function names, `SECURITY DEFINER`, worker-role grants and role setup. The function definitions/grants were not found in the active chain.
+- `database/bootstrap.sql` defines `app_owner NOLOGIN` and `app_runtime NOLOGIN`; it does not create a `crawler` role or create these functions.
+
+**Conflict detected:**
+- Source A: the production-capable crawl worker and dispatcher invoke the three public functions and rely on cross-tenant SECURITY DEFINER semantics.
+- Source B: the only inspected definitions and `GRANT EXECUTE ... TO crawler` statements live in the archived legacy migration, while the documented current migrator applies only `database/drizzle/`; current bootstrap does not create `crawler`.
+
+**Impact:** A clean database built solely from the current bootstrap plus active Drizzle migration chain has no source-defined installation path for the functions/grants required by the worker. Actual runtime failure is **NOT VERIFIED** because no local migration run or disposable PostgreSQL execution was available; however, the source-history contradiction is confirmed and must not be hidden by copying archived SQL blindly.
+
+**Required resolution in Phase 1/DB migration design:** inspect the active schema and the full archived function bodies, verify intended status/tenant/lease invariants, decide the current worker identity and exact grants, then create a new forward-only active migration through the approved Drizzle source/migration workflow. Do not edit or move the archived migration and do not add a secondary migration runner. Add negative tests for unauthorized execution, expired lease, wrong worker, wrong version, and cross-tenant data visibility. No such fix was applied during Phase 0.
+
+### Additional unresolved raw-client fallback
+
+- `src/features/monitoring/repositories/crawl-snapshot-repository.ts`, `monitoring-alert-repository.ts`, and `monitoring-config-repository.ts` build a Drizzle client from `ctx?.dbClient || (global as any).pgClient`.
+- No production assignment to `global.pgClient` was found in the inspected source/configuration paths. GitHub search is incomplete and no local checkout was available; therefore the producer may be outside the scanned paths or dynamically injected. Treat this as **UNRESOLVED**, not as proof that the fallback is unreachable.
+- The three repository paths call `getRequiredTenantId()` first, but this does not establish that the fallback connection uses the same transaction-local PostgreSQL tenant context. The fallback should be removed or replaced with an explicit typed context-client requirement in the authorized implementation phase after callsite tracing.
+
+### Remaining Stage 0 state
+
+- **PASS — GitHub static source inventory:** relevant production-capable runtime entry points, worker-specific raw Pool, migration runner, db-push guard, direct monitoring fallback references, and test-only direct database access sites have been listed from the main tree and actual files.
+- **CONFLICT — crawl worker installation contract:** active Drizzle chain/bootstrap do not define the functions/role used by the worker; resolution is deferred to the authorized migration-design phase, not improvised in this audit.
+- **UNRESOLVED — `global.pgClient` producer:** no assignment found in inspected source, but dynamic/external injection cannot be ruled out with the available connector.
+- **NOT RUN — local repository-wide command/output:** the environment has no local checkout and `git ls-remote`/clone failed because GitHub DNS was unavailable. GitHub code search returned zero matches with `incomplete_results=true` for known symbols; it was not treated as exhaustive. Exact local `rg`/grep output and `git status` are unavailable.
+- **NOT RUN — runtime checks:** no typecheck, lint, tests, active migration run, or PostgreSQL role/RLS/worker-function verification was executed.
+- **NOT VERIFIED — real/main database:** per project-owner constraint, no real database is attached. No claim is made about live schema, data, grants, RLS state, or deployment identity.
+
+**Phase 0 decision:** The GitHub-only source inventory portion is closed. Phase 0 is still reported as **INCOMPLETE — VERIFICATION PENDING** because the local command/output requirement and runtime/database proof are unavailable, and because the identified crawler migration conflict and global-client fallback need to be carried into the Phase 1/active migration design. No application, schema, migration, dependency, test, or CI source was modified.
