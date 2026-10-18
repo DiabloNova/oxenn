@@ -106,3 +106,25 @@ No final choice is made by this document alone. The implementation design must e
 - No disposable PostgreSQL runtime/adversarial tests were run.
 - No live production database or deployment credentials were inspected.
 - No application source, schema, migration, dependency, or CI changes were made in this phase of the audit.
+
+
+## Additional Phase 0 access paths requiring explicit design
+
+### Crawl worker direct-pool exception
+
+The full source scan found `scripts/crawl-worker.ts` constructing a standalone `pg.Pool` from `DATABASE_URL`. It passes this pool to `CrawlDispatcherRepository`, which executes three cross-tenant SECURITY DEFINER functions directly, without using `runWithSystemContext`:
+- `public.claim_crawl_jobs(worker_id, limit, lease_ms)`
+- `public.recover_expired_crawl_jobs()`
+- `public.complete_crawl_job_if_lease_owner(...)`
+
+The only definitions and `GRANT EXECUTE ... TO crawler` statements found are in archived `database/archive/migrations-legacy/0004_crawl_acquisition.sql`. No matching definitions/grants appear in active `database/drizzle/0000` through `0012` or `database/bootstrap.sql`; bootstrap does not create a `crawler` role. This is a **confirmed source/migration-history conflict**. A newly built database from the documented active chain has no source-defined provisioning path for this worker capability; actual execution failure was not tested.
+
+Phase 1 must determine if these functions remain the intended design. If they do, the role/function/grant contract must be established through a reviewed, forward-only active Drizzle migration, with exact EXECUTE grants, restricted relation access, safe SECURITY DEFINER ownership and search path, lease/worker/version checks, and adversarial disposable-PostgreSQL tests. Do not copy or edit the archived migration blindly and do not add a second migration runner.
+
+### Unresolved monitoring fallback
+
+Three monitoring repositories use `drizzle(ctx?.dbClient || (global as any).pgClient)`. The producer of `global.pgClient` was not found in the inspected source/config paths. Until every possible bootstrap/injection is traced, this must be treated as **UNRESOLVED**, not as unreachable. The implementation must not silently fall back to a client whose transaction-local tenant setting and runtime role are unknown.
+
+### Test-only raw access is not production proof
+
+The full 94-file test-tree scan confirmed several test/integration entrypoints use raw pools and direct SQL. In particular, the acquisition and public API integration harnesses can create/delete fixture rows and must use a dedicated disposable database. These paths should be explicitly invoked and guarded; they do not authorize raw pool access in production code.
