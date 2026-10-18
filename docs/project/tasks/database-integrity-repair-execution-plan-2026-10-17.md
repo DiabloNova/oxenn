@@ -99,3 +99,17 @@ Potentially related observations requiring confirmation during this phase:
 ## Current stop condition
 
 Phase 0 source inspection has identified the Phase 1 design questions, but this workflow does not have a local checkout or connected project database. No runtime/schema/migration/dependency/CI changes are authorized by this plan document itself. Do not mark any phase SUCCESS without the evidence required by its acceptance criteria.
+
+
+## Phase 0 access-path update — 2026-10-18
+
+The GitHub-only source inventory has now been extended through the 94 TypeScript/JavaScript test files and the worker-specific direct-pool path. The current decision is:
+
+- **Static source inventory:** closed for the inspected GitHub tree; see `docs/tasks_reports/database/2026-10-17-phase-0-follow-up-access-paths.md`.
+- **Overall Phase 0 status:** `INCOMPLETE — VERIFICATION PENDING`. A local checkout, exact whole-tree grep output, local `git status`, and local test execution were unavailable. GitHub's code search returned incomplete zero-result responses and was not considered exhaustive.
+- **New Phase 1/DB design blocker:** `scripts/crawl-worker.ts` opens a raw Pool and its dispatcher calls `public.claim_crawl_jobs`, `public.recover_expired_crawl_jobs`, and `public.complete_crawl_job_if_lease_owner`. The functions plus `GRANT EXECUTE ... TO crawler` were found in archived `database/archive/migrations-legacy/0004_crawl_acquisition.sql`, not in the active `database/drizzle/0000`–`0012` chain or `database/bootstrap.sql`. Actual behavior remains **NOT VERIFIED** because no disposable PostgreSQL migration run occurred. Phase 1 must resolve this through a new reviewed, forward-only active Drizzle migration design if confirmed necessary; never edit/copy historical archived SQL blindly or add a parallel runner.
+- **Unresolved direct-client fallback:** monitoring repositories reference `global.pgClient` when `ctx?.dbClient` is absent; no producer was found in the inspected source/config paths. Trace all bootstraps/tests/external injections and make it fail closed or remove it within approved scope.
+- **Test boundary:** the 94-file test scan found direct PostgreSQL access in test/integration harnesses including `tests/isolation/suite.ts`, `tests/features/acquisition/integration/run-all.ts`, and `tests/features/public-api/public-api.test.ts`. These must be constrained to dedicated disposable PostgreSQL targets; do not treat their file existence as evidence that CI executes them.
+- The required `llms.txt` was attempted again on 2026-10-18 and still returned GitHub/web fetch **Cache miss**. Its rules remain **NOT VERIFIED**.
+
+This update does not authorize Phase 1 implementation by itself and does not change the original guardrails. Runtime role/grant checks and adversarial PostgreSQL tests remain required before reporting the security invariant as satisfied.
