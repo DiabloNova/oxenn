@@ -1,5 +1,7 @@
 # Phase 1 remediation execution evidence
 
+> **Evidence scope:** This is the historical baseline for commit `75e4234033bae31e23ec56ee91a6b12b21775f7c` and run [39217271292](https://github.com/DiabloNova/oxenn/actions/runs/39217271292). Its gate table and outcomes do **not** certify later commits or the current PR head. The code at `4827cc52c89d3f3484787d319c26fdd81f1c8235` subsequently passed all three CI jobs in [run 39223406998](https://github.com/DiabloNova/oxenn/actions/runs/39223406998); because this report update creates a new commit, use the latest Actions run to verify the final PR head.
+
 - Kit: oxenn-remediation-kit v1.1
 - Branch: fix/audit-remediation-p1-v1.1
 - Commit initially tested: 75e4234033bae31e23ec56ee91a6b12b21775f7c
