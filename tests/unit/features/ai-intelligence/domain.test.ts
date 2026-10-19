@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it } from "vitest";
 import { BrandEntity } from "@/features/ai-intelligence/domain/entities/brand-entity";
 import { ObservationAggregate } from "@/features/ai-intelligence/domain/models/observation-aggregate";
 import { AeoScoreEngine } from "@/features/ai-intelligence/domain/services/aeo-score-engine";
