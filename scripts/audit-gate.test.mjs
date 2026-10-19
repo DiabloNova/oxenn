@@ -18,7 +18,7 @@ test('npm-bulk parser preserves GHSA and only verified dev-only paths', () => {
   }}));
   assert.equal(parsed[0].id, 'GHSA-vfj7-8cjw-p6xm');
   assert.deepEqual(parsed[0].paths, [{ path: 'eslint>micromatch>braces', dev: true }]);
-  assert.equal(decide(parsed[0]).action, 'ALLOW');
+  assert.equal(decide(parsed[0]).action, 'FAIL');
 });
 
 test('allowlist cannot accept missing or production dependency paths', () => {
@@ -33,7 +33,7 @@ test('a published patched version blocks risk acceptance', () => {
   assert.equal(decide({ id: 'GHSA-vfj7-8cjw-p6xm', name: 'braces', severity: 'high', patched: '<= 3.0.3', paths: [{ path: 'eslint>braces', dev: true }] }).action, 'FAIL');
 });
 
-test('npm v7 parser does not treat fixAvailable=false as proof no upstream patch exists', () => {
+test('npm v7 parser fails closed when fixAvailable=false cannot prove no upstream patch exists', () => {
   const parsed = parseAdvisories(JSON.stringify({ vulnerabilities: {
     braces: { severity: 'high', fixAvailable: false, via: [{ id: 'GHSA-vfj7-8cjw-p6xm', severity: 'high', range: '<=3.0.3' }] }
   }}));
