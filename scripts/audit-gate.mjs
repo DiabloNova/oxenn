@@ -228,8 +228,9 @@ export async function main() {
     process.exit(2);
   }
   for (const a of advisories) {
-    if ((!Array.isArray(a.paths) || a.paths.length === 0) && productionDependencyPaths.has(a.name)) {
-      console.error(`audit-gate: ${a.name} is reachable from the production dependency tree: ${productionDependencyPaths.get(a.name).slice(0, 5).join(' | ')}`);
+    if (a.name === 'braces') {
+      console.error(`audit-gate: braces audit path evidence: ${JSON.stringify(a.paths)}`);
+      console.error(`audit-gate: braces production dependency paths: ${JSON.stringify(productionDependencyPaths.get(a.name) || [])}`);
     }
   }
   const rows = advisories.map((a) => ({
