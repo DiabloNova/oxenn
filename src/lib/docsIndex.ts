@@ -346,6 +346,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Service Documentation  This section describes the internal application services, their boundaries, and responsibilities.  ## Status Dictionary - **Implemented**: Verified existing service. - **Partial**: Service exists but is missing functionality. - **Planned**: Not currently implemented.  ## Core Services  ### Asynchronous Job Processing (\`src/services/jobs/\`) Defines a canonical, infrastructure-agnostic background processing boundary via \`IJobQueue\`, \`IJobExecutor\`, and \`IJobRepository\` int`
   },
   {
+    slug: "audit-gate-stage3-regression-tests",
+    titleEn: "Stage 3 — Audit Gate Regression Tests and Verification",
+    titleFa: "Stage 3 — Audit Gate Regression Tests and Verification",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Stage 3 — Audit Gate Regression Tests and Verification  **Status:** SUCCESS (Stage 3 verification passed)   **Date:** 2026-10-19   **PR:** [#86](https://github.com/DiabloNova/oxenn/pull/86)   **Branch:** \`fix/audit-remediation-p1-v1.1\`   **Verified implementation commit:** \`0e439e087922245f29476acc946374c6fe6aef0a\`  ## Invariant  The dependency audit gate must never interpret missing, empty, malformed, or ambiguous severity/patch metadata as safe evidence. Critical/high findings may be risk-ac`
+  },
+  {
     slug: "conductor-review-fixes",
     titleEn: "Conductor PR #57 review fixes",
     titleFa: "Conductor PR #57 review fixes",
