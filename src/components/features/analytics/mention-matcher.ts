@@ -18,9 +18,12 @@ const normalizeMentionText = (value: string): string =>
     .replace(/\u0643/g, "ک");
 
 const escapeRegExp = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  value
+    .split("")
+    .map((character) => (/[.*+?^$()|[\]\\{}]/.test(character) ? "\\" + character : character))
+    .join("");
 
-const wordEdge = String.raw`[\p{L}\p{N}_\u200c]`;
+const wordEdge = "[\\p{L}\\p{N}_\\u200c]";
 
 /**
  * Splits text into safely classifiable mention segments.
@@ -51,7 +54,7 @@ export function matchMentionSegments(
   const alternatives = names.map(escapeRegExp).join("|");
   // Unicode property escapes avoid ASCII-only \b behavior for Persian and mixed scripts.
   const matcher = new RegExp(
-    `(?<!${wordEdge})(?:${alternatives})(?!${wordEdge})`,
+    "(?<!" + wordEdge + ")(?:" + alternatives + ")(?!" + wordEdge + ")",
     "giu",
   );
 
@@ -66,7 +69,7 @@ export function matchMentionSegments(
 
     const matchedName = match[0];
     const matchedEntities = entities.filter((entity) =>
-      new RegExp(`^${escapeRegExp(entity.name)}$`, "iu").test(matchedName),
+      new RegExp("^" + escapeRegExp(entity.name) + "$", "iu").test(matchedName),
     );
     const hasBrand = matchedEntities.some((entity) => entity.kind === "brand");
     const hasCompetitor = matchedEntities.some((entity) => entity.kind === "competitor");
