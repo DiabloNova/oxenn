@@ -89,14 +89,19 @@ test('missing fixAvailable status is unknown and fails closed', () => {
 test('production dependency collection retains optional dependencies and rejects malformed trees', () => {
   const names = collectDependencyPaths([{
     name: 'oxenn',
-    dependencies: { next: { dependencies: { 'runtime-transitive': {} } } },
+    dependencies: {
+      next: { dependencies: { 'runtime-transitive': {} } },
+      'braces-compat': { name: 'braces', from: 'npm:braces@3.0.3' }
+    },
     optionalDependencies: { 'platform-runtime': {} },
     devDependencies: { eslint: { dependencies: { braces: {} } } }
   }]);
   assert.equal(names.has('next'), true);
   assert.equal(names.has('runtime-transitive'), true);
   assert.equal(names.has('platform-runtime'), true);
+  assert.equal(names.has('braces-compat'), true);
+  assert.equal(names.has('braces'), true, 'aliased install must be indexed by real package name');
+  assert.equal(names.get('braces')[0], 'oxenn > braces-compat(braces)');
   assert.equal(names.has('eslint'), false);
-  assert.equal(names.has('braces'), false);
   assert.throws(() => collectDependencyPaths([]), /unexpected JSON shape/);
 });
