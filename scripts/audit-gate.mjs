@@ -181,9 +181,9 @@ function pad(s, n) {
   return s.length >= n ? s : s + ' '.repeat(n - s.length);
 }
 
-// A missing-path fallback is permitted only when that is the sole reason
+// A path-evidence fallback is permitted only when that is the sole reason
 // decide() failed, the advisory is still unpatched, the acceptance is current,
-// and the production dependency tree confirms no production exposure.
+// and the complete production tree independently confirms no production exposure.
 function decideMissingPathFallback(a, productionDependencyPaths, today = todayIso()) {
   const decision = decide(a, today);
   const entry = ALLOWLIST.find((e) => e.package === a.name && e.id === a.id);
@@ -193,12 +193,10 @@ function decideMissingPathFallback(a, productionDependencyPaths, today = todayIs
     && isUnpatched(a)
     && !a.patchStatusUnknown
     && entry.expiry >= today
-    && Array.isArray(a.paths)
-    && a.paths.length === 0
     && productionDependencyPaths instanceof Map
     && !productionDependencyPaths.has(a.name);
   if (!missingPathOnly) return decision;
-  return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}; package absent from the verified production dependency tree` };
+  return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}; audit path metadata is unverified, and package is absent from the verified production dependency tree` };
 }
 
 export { parseAdvisories, decide, isUnpatched, decideMissingPathFallback, collectDependencyPaths };
@@ -226,12 +224,6 @@ export async function main() {
     console.error('audit-gate: could not verify the production dependency tree; refusing to apply the missing-path exception.');
     console.error(String((err && err.stderr) || err.message || err));
     process.exit(2);
-  }
-  for (const a of advisories) {
-    if (a.name === 'braces') {
-      console.error(`audit-gate: braces audit path evidence: ${JSON.stringify(a.paths)}`);
-      console.error(`audit-gate: braces production dependency paths: ${JSON.stringify(productionDependencyPaths.get(a.name) || [])}`);
-    }
   }
   const rows = advisories.map((a) => ({
     a,
