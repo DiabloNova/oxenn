@@ -90,7 +90,7 @@ function parseAdvisories(raw) {
       name: (a && a.module_name) || 'unknown',
       severity: String((a && a.severity) || 'unknown').toLowerCase(),
       patched: typeof (a && a.patched_versions) === 'string' ? a.patched_versions.trim() : '',
-      paths: [],
+      paths: Array.isArray(a?.findings) ? a.findings.flatMap((f) => (Array.isArray(f.paths) ? f.paths : []).map((p) => ({ path: String(p), dev: f.dev === true }))) : [],
     }));
   }
 
@@ -108,7 +108,7 @@ function parseAdvisories(raw) {
           severity: String(src.severity || v.severity || 'unknown').toLowerCase(),
           patched: v.fixAvailable === false ? UNPATCHED : '',
           fixKnown: v.fixAvailable !== false,
-          paths: via.filter((x) => typeof x === 'string').slice(0, 3),
+          paths: via.filter((x) => typeof x === 'string').map((p) => ({ path: p, dev: false })),
         });
       }
     }
@@ -125,7 +125,7 @@ function isUnpatched(a) {
 
 function decide(a) {
   const rank = SEV_RANK[a.severity];
-  if (rank === undefined) return { action: 'WARN', note: 'unknown severity (non-blocking)' };
+  if (rank === undefined) return { action: 'FAIL', note: 'unknown severity — cannot safely classify advisory' };
   if (rank >= SEV_RANK.moderate) return { action: 'WARN', note: `${a.severity} — recorded, non-blocking` };
 
   // critical / high
@@ -133,6 +133,9 @@ function decide(a) {
 
   const entry = ALLOWLIST.find((e) => e.package === a.name && e.id === a.id);
   if (!entry) return { action: 'FAIL', note: 'no published fix and not risk-accepted' };
+  if (!Array.isArray(a.paths) || a.paths.length === 0 || a.paths.some((p) => !p || p.dev !== true)) {
+    return { action: 'FAIL', note: 'risk acceptance is restricted to verified dev-only paths; dependency path is missing or includes production' };
+  }
   if (entry.expiry < todayIso()) {
     return { action: 'FAIL', note: `risk acceptance expired ${entry.expiry} — review required (Ruling C/D)` };
   }
@@ -143,6 +146,8 @@ function pad(s, n) {
   s = String(s);
   return s.length >= n ? s : s + ' '.repeat(n - s.length);
 }
+
+export { parseAdvisories, decide, isUnpatched };
 
 export async function main() {
   const raw = await fetchAuditJson();
