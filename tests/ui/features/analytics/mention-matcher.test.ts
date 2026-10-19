@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { matchMentionSegments } from "@/components/features/analytics/mention-matcher";
 
 describe("matchMentionSegments", () => {
+  it("matches English names regardless of case", () => {
+    expect(matchMentionSegments("OPENAI", "OpenAI", []).map((segment) => segment.kind)).toEqual([
+      "brand",
+    ]);
+  });
+
   it("uses Unicode case-insensitive matching consistently for Greek final sigma", () => {
     expect(matchMentionSegments("οξενν", "οξενν", []).map((segment) => segment.kind)).toEqual([
       "brand",
