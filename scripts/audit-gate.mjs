@@ -145,24 +145,33 @@ function decide(a, today = todayIso()) {
   return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}` };
 }
 
-function collectDependencyNames(tree) {
+function collectDependencyPaths(tree) {
   if (!Array.isArray(tree) || tree.length === 0 || !tree[0] || typeof tree[0] !== 'object') {
     throw new Error('pnpm production dependency tree has an unexpected JSON shape');
   }
-  const names = new Set();
-  const visit = (node) => {
+  const paths = new Map();
+  const visit = (node, parentPath, ancestors) => {
     if (!node || typeof node !== 'object') return;
     for (const field of ['dependencies', 'optionalDependencies']) {
       const dependencies = node[field];
       if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies)) continue;
       for (const [name, child] of Object.entries(dependencies)) {
-        names.add(name);
-        visit(child);
+        const path = [...parentPath, name];
+        if (!paths.has(name)) paths.set(name, []);
+        paths.get(name).push(path.join(' > '));
+        if (!ancestors.has(child)) {
+          const nextAncestors = new Set(ancestors);
+          nextAncestors.add(child);
+          visit(child, path, nextAncestors);
+        }
       }
     }
   };
-  for (const root of tree) visit(root);
-  return names;
+  for (const root of tree) {
+    const rootName = typeof root.name === 'string' ? root.name : 'root';
+    visit(root, [rootName], new Set([root]));
+  }
+  return paths;
 }
 
 function pad(s, n) {
@@ -172,8 +181,8 @@ function pad(s, n) {
 
 // A missing-path fallback is permitted only when that is the sole reason
 // decide() failed, the advisory is still unpatched, the acceptance is current,
-// and an independent production audit confirms no production exposure.
-function decideMissingPathFallback(a, productionPackageNames, today = todayIso()) {
+// and the production dependency tree confirms no production exposure.
+function decideMissingPathFallback(a, productionDependencyPaths, today = todayIso()) {
   const decision = decide(a, today);
   const entry = ALLOWLIST.find((e) => e.package === a.name && e.id === a.id);
   const missingPathOnly = decision.action === 'FAIL'
@@ -184,13 +193,13 @@ function decideMissingPathFallback(a, productionPackageNames, today = todayIso()
     && entry.expiry >= today
     && Array.isArray(a.paths)
     && a.paths.length === 0
-    && productionPackageNames instanceof Set
-    && !productionPackageNames.has(a.name);
+    && productionDependencyPaths instanceof Map
+    && !productionDependencyPaths.has(a.name);
   if (!missingPathOnly) return decision;
   return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}; package absent from the verified production dependency tree` };
 }
 
-export { parseAdvisories, decide, isUnpatched, decideMissingPathFallback, collectDependencyNames };
+export { parseAdvisories, decide, isUnpatched, decideMissingPathFallback, collectDependencyPaths };
 
 export async function main() {
   const raw = await fetchAuditJson();
@@ -205,20 +214,25 @@ export async function main() {
   // Audit JSON can omit paths or report dev-only optional-peer noise as production.
   // Verify the actual production graph directly, retaining optionalDependencies;
   // `--no-optional` is deliberately NOT used because it would hide real runtime edges.
-  let productionPackageNames;
+  let productionDependencyPaths;
   try {
     const productionTreeRaw = execFileSync('pnpm', ['list', '--prod', '--depth', 'Infinity', '--json'], {
       encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
     });
-    productionPackageNames = collectDependencyNames(JSON.parse(productionTreeRaw));
+    productionDependencyPaths = collectDependencyPaths(JSON.parse(productionTreeRaw));
   } catch (err) {
     console.error('audit-gate: could not verify the production dependency tree; refusing to apply the missing-path exception.');
     console.error(String((err && err.stderr) || err.message || err));
     process.exit(2);
   }
+  for (const a of advisories) {
+    if (a.paths?.length === 0 && productionDependencyPaths.has(a.name)) {
+      console.error(`audit-gate: ${a.name} is reachable from the production dependency tree: ${productionDependencyPaths.get(a.name).slice(0, 5).join(' | ')}`);
+    }
+  }
   const rows = advisories.map((a) => ({
     a,
-    d: decideMissingPathFallback(a, productionPackageNames),
+    d: decideMissingPathFallback(a, productionDependencyPaths),
   }));
   const rankOf = (r) => (SEV_RANK[r.a.severity] !== undefined ? SEV_RANK[r.a.severity] : 9);
   rows.sort((x, y) => rankOf(x) - rankOf(y) || x.a.name.localeCompare(y.a.name));
