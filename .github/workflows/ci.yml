@@ -35,6 +35,9 @@ jobs:
       - name: Dependency audit gate
         run: pnpm run audit:gate
 
+      - name: Audit gate regression tests
+        run: pnpm run test:audit-gate
+
       - name: Typecheck
         run: pnpm typecheck
 
