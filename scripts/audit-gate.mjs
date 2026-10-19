@@ -157,11 +157,23 @@ function collectDependencyPaths(tree) {
     for (const field of ['dependencies', 'optionalDependencies']) {
       const dependencies = node[field];
       if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies)) continue;
-      for (const [name, child] of Object.entries(dependencies)) {
-        const path = [...parentPath, name];
-        if (!paths.has(name)) paths.set(name, []);
-        paths.get(name).push(path.join(' > '));
-        if (!ancestors.has(child)) {
+      for (const [alias, child] of Object.entries(dependencies)) {
+        // pnpm can expose an npm alias under the dependency key while the
+        // installed package's actual name is reported separately. Track both
+        // identities so an alias cannot hide an allowlisted package in prod.
+        const from = child && typeof child.from === 'string' ? child.from : '';
+        const fromSpec = from.startsWith('npm:') ? from.slice(4) : from;
+        const fromMatch = fromSpec.match(/^(@[^/]+\/[^@]+|[^@]+)(?:@|$)/);
+        const realName = child && typeof child.name === 'string'
+          ? child.name
+          : fromMatch?.[1] || alias;
+        const pathLabel = realName === alias ? alias : `${alias}(${realName})`;
+        const path = [...parentPath, pathLabel];
+        for (const name of new Set([alias, realName])) {
+          if (!paths.has(name)) paths.set(name, []);
+          paths.get(name).push(path.join(' > '));
+        }
+        if (child && typeof child === 'object' && !ancestors.has(child)) {
           const nextAncestors = new Set(ancestors);
           nextAncestors.add(child);
           visit(child, path, nextAncestors);
