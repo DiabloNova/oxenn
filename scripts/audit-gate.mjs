@@ -164,9 +164,8 @@ function collectDependencyPaths(tree) {
         const from = child && typeof child.from === 'string' ? child.from : '';
         const fromSpec = from.startsWith('npm:') ? from.slice(4) : from;
         const fromMatch = fromSpec.match(/^(@[^/]+\/[^@]+|[^@]+)(?:@|$)/);
-        const realName = child && typeof child.name === 'string'
-          ? child.name
-          : fromMatch?.[1] || alias;
+        const realName = fromMatch?.[1]
+          || (child && typeof child.name === 'string' ? child.name : alias);
         const pathLabel = realName === alias ? alias : `${alias}(${realName})`;
         const path = [...parentPath, pathLabel];
         for (const name of new Set([alias, realName])) {
