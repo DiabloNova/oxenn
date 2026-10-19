@@ -48,30 +48,30 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
           MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
         run: |
-          mkdir -p artifacts/regression-baseline
-          cd artifacts/regression-baseline
-          printf 'command\texit_code\n' > command-exit-codes.tsv
+          OUT="$GITHUB_WORKSPACE/artifacts/regression-baseline"
+          mkdir -p "$OUT"
+          printf 'command\texit_code\n' > "$OUT/command-exit-codes.tsv"
 
           set +e
-          pnpm audit --json > pnpm-audit.json 2> pnpm-audit.stderr.txt
+          pnpm audit --json > "$OUT/pnpm-audit.json" 2> "$OUT/pnpm-audit.stderr.txt"
           audit_code=$?
-          printf 'pnpm audit --json\t%s\n' "$audit_code" >> command-exit-codes.tsv
+          printf 'pnpm audit --json\t%s\n' "$audit_code" >> "$OUT/command-exit-codes.tsv"
 
-          pnpm lint > pnpm-lint.log 2>&1
+          pnpm lint > "$OUT/pnpm-lint.log" 2>&1
           lint_code=$?
-          printf 'pnpm lint\t%s\n' "$lint_code" >> command-exit-codes.tsv
+          printf 'pnpm lint\t%s\n' "$lint_code" >> "$OUT/command-exit-codes.tsv"
 
-          pnpm test:unit > test-unit.log 2>&1
+          pnpm test:unit > "$OUT/test-unit.log" 2>&1
           unit_code=$?
-          printf 'pnpm test:unit\t%s\n' "$unit_code" >> command-exit-codes.tsv
+          printf 'pnpm test:unit\t%s\n' "$unit_code" >> "$OUT/command-exit-codes.tsv"
 
-          pnpm test:ui > test-ui.log 2>&1
+          pnpm test:ui > "$OUT/test-ui.log" 2>&1
           ui_code=$?
-          printf 'pnpm test:ui\t%s\n' "$ui_code" >> command-exit-codes.tsv
+          printf 'pnpm test:ui\t%s\n' "$ui_code" >> "$OUT/command-exit-codes.tsv"
 
-          pnpm run test:isolation > test-isolation.log 2>&1
+          pnpm run test:isolation > "$OUT/test-isolation.log" 2>&1
           isolation_code=$?
-          printf 'pnpm run test:isolation\t%s\n' "$isolation_code" >> command-exit-codes.tsv
+          printf 'pnpm run test:isolation\t%s\n' "$isolation_code" >> "$OUT/command-exit-codes.tsv"
 
           printf 'audit_code=%s\nlint_code=%s\nunit_code=%s\nui_code=%s\nisolation_code=%s\n' \
             "$audit_code" "$lint_code" "$unit_code" "$ui_code" "$isolation_code" >> "$GITHUB_OUTPUT"
@@ -79,7 +79,7 @@ jobs:
           {
             echo '# Regression baseline capture'
             echo
-            echo "- Commit: \x60$GITHUB_SHA\x60"
+            echo "- Commit: `$GITHUB_SHA`"
             echo "- Captured at (UTC): $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             echo "- Node: $(node --version)"
             echo "- pnpm: $(pnpm --version)"
@@ -88,30 +88,30 @@ jobs:
             echo
             echo '| Command | Exit code |'
             echo '|---|---:|'
-            awk -F '\t' 'NR > 1 { printf "| \x60%s\x60 | %s |\\n", $1, $2 }' command-exit-codes.tsv
+            awk -F '\t' 'NR > 1 { printf "| `%s` | %s |\n", $1, $2 }' "$OUT/command-exit-codes.tsv"
             echo
             echo '## Vitest summary lines'
             echo
-            for log in test-unit.log test-ui.log; do
-              echo "### $log"
+            for log in "$OUT/test-unit.log" "$OUT/test-ui.log"; do
+              echo "### $(basename "$log")"
               grep -E '(^|[[:space:]])(Test Files|Tests|Snapshots|Duration|FAIL|ERROR)([[:space:]]|$)' "$log" | tail -n 20 || true
               echo
             done
             echo '### test-isolation.log'
-            grep -Ei '(pass|fail|test|suite|error|duration)' test-isolation.log | tail -n 50 || true
+            grep -Ei '(pass|fail|test|suite|error|duration)' "$OUT/test-isolation.log" | tail -n 50 || true
             echo
             echo '## Lint summary'
             echo
-            grep -E 'problems? \(|warning|error' pnpm-lint.log | tail -n 20 || true
+            grep -E 'problems? \(|warning|error' "$OUT/pnpm-lint.log" | tail -n 20 || true
             echo
             echo '## Audit summary'
             echo
-            if node -e 'const f=require("fs"); const x=JSON.parse(f.readFileSync("pnpm-audit.json","utf8")); const v=x.metadata?.vulnerabilities; if (v) console.log(JSON.stringify(v,null,2)); else console.log("No metadata.vulnerabilities object in JSON output")' 2>/dev/null; then
+            if BASELINE_DIR="$OUT" node -e 'const f=require("fs"); const x=JSON.parse(f.readFileSync(process.env.BASELINE_DIR+"/pnpm-audit.json","utf8")); const v=x.metadata?.vulnerabilities; if (v) console.log(JSON.stringify(v,null,2)); else console.log("No metadata.vulnerabilities object in JSON output")' 2>/dev/null; then
               :
             else
               echo 'Audit output was not parseable as pnpm audit JSON; inspect pnpm-audit.json and pnpm-audit.stderr.txt.'
             fi
-          } > SUMMARY.md
+          } > "$OUT/SUMMARY.md"
 
       - name: Upload raw baseline evidence
         if: always()
