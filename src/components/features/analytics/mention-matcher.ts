@@ -17,7 +17,22 @@ const normalizeMentionText = (value: string): string =>
     .replace(/\u064A/g, "ی")
     .replace(/\u0643/g, "ک");
 
-const regexMetaCharacters = new Set([".", "*", "+", "?", "^", "$", "{", "}", "(", ")", "|", "[", "]", "\\"]);
+const regexMetaCharacters = new Set([
+  ".",
+  "*",
+  "+",
+  "?",
+  "^",
+  "$",
+  "{",
+  "}",
+  "(",
+  ")",
+  "|",
+  "[",
+  "]",
+  "\\",
+]);
 
 const escapeRegExp = (value: string): string =>
   [...value]
