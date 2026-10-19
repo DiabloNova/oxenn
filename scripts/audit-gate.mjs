@@ -110,7 +110,9 @@ function parseAdvisories(raw) {
           fixKnown: v.fixAvailable === true || (v.fixAvailable !== null && typeof v.fixAvailable === 'object'),
           // false or missing is not proof that upstream has no fixed release.
           patchStatusUnknown: v.fixAvailable === false || v.fixAvailable == null,
-          paths: via.filter((x) => typeof x === 'string').map((p) => ({ path: p, dev: false })),
+          // npm v7 `via` strings are dependency/advisory markers, not verified paths.
+          // Do not invent a production path from them; use the production tree fallback.
+          paths: [],
         });
       }
     }
@@ -226,7 +228,7 @@ export async function main() {
     process.exit(2);
   }
   for (const a of advisories) {
-    if (a.paths?.length === 0 && productionDependencyPaths.has(a.name)) {
+    if ((!Array.isArray(a.paths) || a.paths.length === 0) && productionDependencyPaths.has(a.name)) {
       console.error(`audit-gate: ${a.name} is reachable from the production dependency tree: ${productionDependencyPaths.get(a.name).slice(0, 5).join(' | ')}`);
     }
   }
