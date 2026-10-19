@@ -38,6 +38,7 @@ test('npm v7 parser fails closed when fixAvailable=false cannot prove no upstrea
     braces: { severity: 'high', fixAvailable: false, via: [{ id: 'GHSA-vfj7-8cjw-p6xm', severity: 'high', range: '<=3.0.3' }] }
   }}));
   assert.equal(parsed[0].fixKnown, false);
+  assert.deepEqual(parsed[0].paths, [], 'via strings are not verified dependency paths');
   assert.equal(decide(parsed[0], '2026-10-19').action, 'FAIL');
 });
 
