@@ -56,4 +56,6 @@ The command summary and baseline interpretation are committed in this repository
 
 ### Corrected verification run
 
-The corrected full-gate run will be linked here after it completes. Its per-command exit codes and raw evidence artifact must be compared with the immutable initial results above.
+The corrected full-gate run completed successfully: [Regression Baseline Capture — run 39207559290](https://github.com/DiabloNova/oxenn/actions/runs/39207559290). The raw evidence artifact is `regression-baseline-f8072cdba0e39f568063274aab3aefdc8d385fee` (artifact ID `12165404715`, SHA-256 `5e9b2dcbeac8f75dff758a00a16b6060784ba73dfce79d1683ea0652806b339e`, created 2026-10-19 and retained by GitHub until 2027-01-17). The captured run reports exit code 0 for typecheck, lint, tenant-table verification, RLS migration verification, unit tests, UI tests, the isolation suite, build, reference-matrix generation, Drizzle migration-chain check, and generated-file drift. The unit log has no `DatabaseUnavailableError` or database connection failures; the isolation suite passed all 51 tenant tables and 488 assertions.
+
+The expected baseline audit exit code remains 1 by design: it records the pre-remediation state (54 advisories: 3 critical, 25 high, 19 moderate, 7 low). This is evidence of the starting security backlog, not a claim that the dependency audit is clean. The immutable summary and artifact digest are committed here; complete raw logs remain available in the linked artifact during the planned remediation window.
