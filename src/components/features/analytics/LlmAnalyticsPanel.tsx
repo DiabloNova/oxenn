@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useTransition, useRef } from "react";
 import DOMPurify from "dompurify";
+import { matchMentionSegments } from "@/components/features/analytics/mention-matcher";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
@@ -224,25 +225,20 @@ export const LlmAnalyticsPanel: React.FC = () => {
   const escapeRegExp = (value: string) =>
     value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-  // Helper to highlight mentions in response text
+  // Highlight mentions using one Unicode-aware matching/classification path.
   const highlightMentions = (text: string) => {
     if (!text) return "";
 
-    const needles = [brandName, ...competitors]
-      .filter(Boolean)
-      .sort((a, b) => b.length - a.length);
-    if (!needles.length) return <div className="leading-relaxed">{text}</div>;
+    const highlighted = matchMentionSegments(text, brandName, competitors)
+      .map(({ text: part, kind }) => {
+        if (kind === "text") return escapeHtml(part);
 
-    const re = new RegExp(`(${needles.map(escapeRegExp).join("|")})`, "gi");
-    const brandLc = brandName.toLowerCase();
-    const highlighted = text
-      .split(re)
-      .map((part, i) => {
-        if (i % 2 === 0) return escapeHtml(part);
         const cls =
-          part.toLowerCase() === brandLc
+          kind === "brand"
             ? "px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/10"
-            : "px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/10";
+            : kind === "competitor"
+              ? "px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/10"
+              : "px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-400 font-bold border border-slate-500/10";
         return `<span class="${cls}">${escapeHtml(part)}</span>`;
       })
       .join("");
