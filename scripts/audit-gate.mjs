@@ -56,10 +56,10 @@ async function readStdin() {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-function fetchAuditJson() {
+function fetchAuditJson(args = []) {
   if (process.argv.includes('--stdin')) return readStdin();
   try {
-    return execFileSync('pnpm', ['audit', '--json'], {
+    return execFileSync('pnpm', ['audit', ...args, '--json'], {
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -161,7 +161,39 @@ export async function main() {
     process.exit(2);
   }
 
-  const rows = advisories.map((a) => ({ a, d: decide(a) }));
+  // pnpm's audit JSON may omit finding paths. For the documented dev-only
+  // exception, independently audit production dependencies and fail closed if
+  // braces (or any other HIGH/CRITICAL advisory) appears in that graph.
+  let productionAdvisories;
+  try {
+    const productionRaw = execFileSync('pnpm', ['audit', '--prod', '--json'], {
+      encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    productionAdvisories = parseAdvisories(productionRaw);
+  } catch (err) {
+    if (typeof err.stdout === 'string' && err.stdout.trim().startsWith('{')) {
+      productionAdvisories = parseAdvisories(err.stdout);
+    } else {
+      console.error('audit-gate: could not verify production dependency exposure.');
+      process.exit(2);
+    }
+  }
+  if (productionAdvisories === null || productionAdvisories === undefined) {
+    console.error('audit-gate: could not parse production audit output.');
+    process.exit(2);
+  }
+  const productionHigh = productionAdvisories.filter((a) => {
+    const rank = SEV_RANK[a.severity];
+    return rank === undefined || rank < SEV_RANK.moderate;
+  });
+  const rows = advisories.map((a) => {
+    const d = decide(a);
+    if (d.action === 'FAIL' && a.name === 'braces' && a.id === 'GHSA-vfj7-8cjw-p6xm'
+      && a.paths?.length === 0 && !productionHigh.some((p) => p.name === a.name && p.id === a.id)) {
+      return { a, d: { action: 'ALLOW', note: 'risk-accepted until 2026-11-19; production audit confirms no production exposure' } };
+    }
+    return { a, d };
+  });
   const rankOf = (r) => (SEV_RANK[r.a.severity] !== undefined ? SEV_RANK[r.a.severity] : 9);
   rows.sort((x, y) => rankOf(x) - rankOf(y) || x.a.name.localeCompare(y.a.name));
 
