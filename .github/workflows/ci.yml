@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Dependency audit gate
+        run: pnpm run audit:gate
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -86,6 +89,7 @@ jobs:
         image: pgvector/pgvector:pg16
         env:
           POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: isolation_test_db
         ports:
           - 5432:5432
         options: >-
