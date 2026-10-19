@@ -107,8 +107,9 @@ function parseAdvisories(raw) {
           name,
           severity: String(src.severity || v.severity || 'unknown').toLowerCase(),
           patched: v.fixAvailable === false ? UNPATCHED : '',
-          fixKnown: v.fixAvailable === true,
-          patchStatusUnknown: v.fixAvailable === false,
+          fixKnown: v.fixAvailable === true || (v.fixAvailable !== null && typeof v.fixAvailable === 'object'),
+          // false or missing is not proof that upstream has no fixed release.
+          patchStatusUnknown: v.fixAvailable === false || v.fixAvailable == null,
           paths: via.filter((x) => typeof x === 'string').map((p) => ({ path: p, dev: false })),
         });
       }
@@ -144,6 +145,26 @@ function decide(a, today = todayIso()) {
   return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}` };
 }
 
+function collectDependencyNames(tree) {
+  if (!Array.isArray(tree) || tree.length === 0 || !tree[0] || typeof tree[0] !== 'object') {
+    throw new Error('pnpm production dependency tree has an unexpected JSON shape');
+  }
+  const names = new Set();
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return;
+    for (const field of ['dependencies', 'optionalDependencies']) {
+      const dependencies = node[field];
+      if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies)) continue;
+      for (const [name, child] of Object.entries(dependencies)) {
+        names.add(name);
+        visit(child);
+      }
+    }
+  };
+  for (const root of tree) visit(root);
+  return names;
+}
+
 function pad(s, n) {
   s = String(s);
   return s.length >= n ? s : s + ' '.repeat(n - s.length);
@@ -152,7 +173,7 @@ function pad(s, n) {
 // A missing-path fallback is permitted only when that is the sole reason
 // decide() failed, the advisory is still unpatched, the acceptance is current,
 // and an independent production audit confirms no production exposure.
-function decideMissingPathFallback(a, productionAdvisories, today = todayIso()) {
+function decideMissingPathFallback(a, productionPackageNames, today = todayIso()) {
   const decision = decide(a, today);
   const entry = ALLOWLIST.find((e) => e.package === a.name && e.id === a.id);
   const missingPathOnly = decision.action === 'FAIL'
@@ -163,14 +184,13 @@ function decideMissingPathFallback(a, productionAdvisories, today = todayIso()) 
     && entry.expiry >= today
     && Array.isArray(a.paths)
     && a.paths.length === 0
-    && Array.isArray(productionAdvisories)
-    && !productionAdvisories.some((p) => p.name === a.name && p.id === a.id
-      && (SEV_RANK[p.severity] === undefined || SEV_RANK[p.severity] < SEV_RANK.moderate));
+    && productionPackageNames instanceof Set
+    && !productionPackageNames.has(a.name);
   if (!missingPathOnly) return decision;
-  return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}; production audit confirms no production exposure` };
+  return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}; package absent from the verified production dependency tree` };
 }
 
-export { parseAdvisories, decide, isUnpatched, decideMissingPathFallback };
+export { parseAdvisories, decide, isUnpatched, decideMissingPathFallback, collectDependencyNames };
 
 export async function main() {
   const raw = await fetchAuditJson();
@@ -182,36 +202,23 @@ export async function main() {
     process.exit(2);
   }
 
-  // pnpm audit --prod can report optional peer dependencies that are only
-  // reachable from devDependencies (pnpm issue #13605). For the documented
-  // braces exception, check the production graph without optional-peer noise;
-  // the lockfile chain for braces is micromatch -> fast-glob -> eslint plugin
-  // (development tooling), not a runtime dependency.
-  let productionAdvisories;
+  // Audit JSON can omit paths or report dev-only optional-peer noise as production.
+  // Verify the actual production graph directly, retaining optionalDependencies;
+  // `--no-optional` is deliberately NOT used because it would hide real runtime edges.
+  let productionPackageNames;
   try {
-    const productionRaw = execFileSync('pnpm', ['audit', '--prod', '--no-optional', '--json'], {
+    const productionTreeRaw = execFileSync('pnpm', ['list', '--prod', '--depth', 'Infinity', '--json'], {
       encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
     });
-    productionAdvisories = parseAdvisories(productionRaw);
+    productionPackageNames = collectDependencyNames(JSON.parse(productionTreeRaw));
   } catch (err) {
-    if (typeof err.stdout === 'string' && err.stdout.trim().startsWith('{')) {
-      productionAdvisories = parseAdvisories(err.stdout);
-    } else {
-      console.error('audit-gate: could not verify production dependency exposure.');
-      process.exit(2);
-    }
-  }
-  if (productionAdvisories === null || productionAdvisories === undefined) {
-    console.error('audit-gate: could not parse production audit output.');
+    console.error('audit-gate: could not verify the production dependency tree; refusing to apply the missing-path exception.');
+    console.error(String((err && err.stderr) || err.message || err));
     process.exit(2);
   }
-  const productionHigh = productionAdvisories.filter((a) => {
-    const rank = SEV_RANK[a.severity];
-    return rank === undefined || rank < SEV_RANK.moderate;
-  });
   const rows = advisories.map((a) => ({
     a,
-    d: decideMissingPathFallback(a, productionHigh),
+    d: decideMissingPathFallback(a, productionPackageNames),
   }));
   const rankOf = (r) => (SEV_RANK[r.a.severity] !== undefined ? SEV_RANK[r.a.severity] : 9);
   rows.sort((x, y) => rankOf(x) - rankOf(y) || x.a.name.localeCompare(y.a.name));
