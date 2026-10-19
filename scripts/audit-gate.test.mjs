@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAdvisories, decide, isUnpatched, decideMissingPathFallback, collectDependencyNames } from './audit-gate.mjs';
+import { parseAdvisories, decide, isUnpatched, decideMissingPathFallback, collectDependencyPaths } from './audit-gate.mjs';
 
 test('unknown severity fails closed', () => {
   assert.equal(decide({ severity: 'unknown', name: 'x', id: 'GHSA-x', patched: '' }).action, 'FAIL');
@@ -44,11 +44,11 @@ test('npm v7 parser fails closed when fixAvailable=false cannot prove no upstrea
 
 test('missing-path fallback requires current unpatched acceptance and no production exposure', () => {
   const base = { id: 'GHSA-vfj7-8cjw-p6xm', name: 'braces', severity: 'high', patched: '', paths: [] };
-  assert.equal(decideMissingPathFallback(base, new Set(), '2026-10-19').action, 'ALLOW');
-  assert.equal(decideMissingPathFallback(base, new Set(), '2026-11-20').action, 'FAIL');
-  assert.equal(decideMissingPathFallback({ ...base, patched: '<= 3.0.3' }, new Set(), '2026-10-19').action, 'FAIL');
-  assert.equal(decideMissingPathFallback({ ...base, patchStatusUnknown: true }, new Set(), '2026-10-19').action, 'FAIL');
-  assert.equal(decideMissingPathFallback(base, new Set(['braces']), '2026-10-19').action, 'FAIL');
+  assert.equal(decideMissingPathFallback(base, new Map(), '2026-10-19').action, 'ALLOW');
+  assert.equal(decideMissingPathFallback(base, new Map(), '2026-11-20').action, 'FAIL');
+  assert.equal(decideMissingPathFallback({ ...base, patched: '<= 3.0.3' }, new Map(), '2026-10-19').action, 'FAIL');
+  assert.equal(decideMissingPathFallback({ ...base, patchStatusUnknown: true }, new Map(), '2026-10-19').action, 'FAIL');
+  assert.equal(decideMissingPathFallback(base, new Map([['braces', ['oxenn > next > braces']]]), '2026-10-19').action, 'FAIL');
 });
 
 test('valid dev-only acceptance uses an explicit test date for deterministic expiry behavior', () => {
@@ -70,7 +70,7 @@ test('npm v7 parser treats object-valued fixAvailable as a published fix', () =>
   assert.equal(parsed[0].patchStatusUnknown, false);
   assert.equal(isUnpatched(parsed[0]), false);
   assert.equal(decide(parsed[0], '2026-10-19').action, 'FAIL');
-  assert.equal(decideMissingPathFallback(parsed[0], new Set(), '2026-10-19').action, 'FAIL');
+  assert.equal(decideMissingPathFallback(parsed[0], new Map(), '2026-10-19').action, 'FAIL');
 });
 
 test('missing fixAvailable status is unknown and fails closed', () => {
@@ -82,7 +82,7 @@ test('missing fixAvailable status is unknown and fails closed', () => {
 });
 
 test('production dependency collection retains optional dependencies and rejects malformed trees', () => {
-  const names = collectDependencyNames([{
+  const names = collectDependencyPaths([{
     name: 'oxenn',
     dependencies: { next: { dependencies: { 'runtime-transitive': {} } } },
     optionalDependencies: { 'platform-runtime': {} },
@@ -93,5 +93,5 @@ test('production dependency collection retains optional dependencies and rejects
   assert.equal(names.has('platform-runtime'), true);
   assert.equal(names.has('eslint'), false);
   assert.equal(names.has('braces'), false);
-  assert.throws(() => collectDependencyNames([]), /unexpected JSON shape/);
+  assert.throws(() => collectDependencyPaths([]), /unexpected JSON shape/);
 });
