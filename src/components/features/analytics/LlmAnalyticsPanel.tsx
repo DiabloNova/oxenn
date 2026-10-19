@@ -221,10 +221,6 @@ export const LlmAnalyticsPanel: React.FC = () => {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
-  // Escape regex metacharacters so external names cannot break the pattern
-  const escapeRegExp = (value: string) =>
-    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
   // Highlight mentions using one Unicode-aware matching/classification path.
   const highlightMentions = (text: string) => {
     if (!text) return "";
