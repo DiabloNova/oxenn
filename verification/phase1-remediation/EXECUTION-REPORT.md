@@ -48,4 +48,4 @@
 - Database-related checks: drizzle-kit check, RLS migration coverage, and tenant-table alignment passed. The isolation suite applied migrations to the disposable PostgreSQL service, then passed 488 assertions across 51 tenant tables. No shared or production database was used.
 - Docs reference-matrix generation passed.
 
-The complete command output is available from the linked GitHub Actions run. The downloadable artifact contains the committed lockfile and this report; it does not contain the runner's temporary raw audit JSON or per-gate logs.
+The linked GitHub Actions run exposes the workflow summary and step logs retained by GitHub. The downloadable artifact contains the committed lockfile and this report; it does not contain the runner's temporary raw audit JSON or per-gate log files.
