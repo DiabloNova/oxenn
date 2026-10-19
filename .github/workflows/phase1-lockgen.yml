@@ -208,3 +208,5 @@ jobs:
             failed=1
           fi
           exit "$failed"
+
+# Validation revision: run the authorized Phase 1 remediation sequence.
