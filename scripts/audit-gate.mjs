@@ -124,7 +124,7 @@ function isUnpatched(a) {
   return a.patched === UNPATCHED || a.patched === '';
 }
 
-function decide(a) {
+function decide(a, today = todayIso()) {
   const rank = SEV_RANK[a.severity];
   if (rank === undefined) return { action: 'FAIL', note: 'unknown severity — cannot safely classify advisory' };
   if (rank >= SEV_RANK.moderate) return { action: 'WARN', note: `${a.severity} — recorded, non-blocking` };
@@ -138,7 +138,7 @@ function decide(a) {
   if (!Array.isArray(a.paths) || a.paths.length === 0 || a.paths.some((p) => !p || p.dev !== true)) {
     return { action: 'FAIL', note: 'risk acceptance is restricted to verified dev-only paths; dependency path is missing or includes production' };
   }
-  if (entry.expiry < todayIso()) {
+  if (entry.expiry < today) {
     return { action: 'FAIL', note: `risk acceptance expired ${entry.expiry} — review required (Ruling C/D)` };
   }
   return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}` };
@@ -149,7 +149,28 @@ function pad(s, n) {
   return s.length >= n ? s : s + ' '.repeat(n - s.length);
 }
 
-export { parseAdvisories, decide, isUnpatched };
+// A missing-path fallback is permitted only when that is the sole reason
+// decide() failed, the advisory is still unpatched, the acceptance is current,
+// and an independent production audit confirms no production exposure.
+function decideMissingPathFallback(a, productionAdvisories, today = todayIso()) {
+  const decision = decide(a, today);
+  const entry = ALLOWLIST.find((e) => e.package === a.name && e.id === a.id);
+  const missingPathOnly = decision.action === 'FAIL'
+    && decision.note === 'risk acceptance is restricted to verified dev-only paths; dependency path is missing or includes production'
+    && entry
+    && isUnpatched(a)
+    && !a.patchStatusUnknown
+    && entry.expiry >= today
+    && Array.isArray(a.paths)
+    && a.paths.length === 0
+    && Array.isArray(productionAdvisories)
+    && !productionAdvisories.some((p) => p.name === a.name && p.id === a.id
+      && (SEV_RANK[p.severity] === undefined || SEV_RANK[p.severity] < SEV_RANK.moderate));
+  if (!missingPathOnly) return decision;
+  return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}; production audit confirms no production exposure` };
+}
+
+export { parseAdvisories, decide, isUnpatched, decideMissingPathFallback };
 
 export async function main() {
   const raw = await fetchAuditJson();
@@ -186,14 +207,10 @@ export async function main() {
     const rank = SEV_RANK[a.severity];
     return rank === undefined || rank < SEV_RANK.moderate;
   });
-  const rows = advisories.map((a) => {
-    const d = decide(a);
-    if (d.action === 'FAIL' && a.name === 'braces' && a.id === 'GHSA-vfj7-8cjw-p6xm'
-      && a.paths?.length === 0 && !productionHigh.some((p) => p.name === a.name && p.id === a.id)) {
-      return { a, d: { action: 'ALLOW', note: 'risk-accepted until 2026-11-19; production audit confirms no production exposure' } };
-    }
-    return { a, d };
-  });
+  const rows = advisories.map((a) => ({
+    a,
+    d: decideMissingPathFallback(a, productionHigh),
+  }));
   const rankOf = (r) => (SEV_RANK[r.a.severity] !== undefined ? SEV_RANK[r.a.severity] : 9);
   rows.sort((x, y) => rankOf(x) - rankOf(y) || x.a.name.localeCompare(y.a.name));
 
