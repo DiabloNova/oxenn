@@ -228,31 +228,25 @@ export const LlmAnalyticsPanel: React.FC = () => {
   const highlightMentions = (text: string) => {
     if (!text) return "";
 
-    // 1) Escape FIRST so any HTML carried in LLM/external content is inert.
-    let highlighted = escapeHtml(text);
+    const needles = [brandName, ...competitors]
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+    if (!needles.length) return <div className="leading-relaxed">{text}</div>;
 
-    // 2) Highlight brandName in green (needle: HTML-escaped, then regex-escaped)
-    const brandNeedle = escapeRegExp(escapeHtml(brandName));
-    if (brandNeedle) {
-      const brandRegex = new RegExp(`(${brandNeedle})`, "gi");
-      highlighted = highlighted.replace(
-        brandRegex,
-        `<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/10">$1</span>`
-      );
-    }
+    const re = new RegExp(`(${needles.map(escapeRegExp).join("|")})`, "gi");
+    const brandLc = brandName.toLowerCase();
+    const highlighted = text
+      .split(re)
+      .map((part, i) => {
+        if (i % 2 === 0) return escapeHtml(part);
+        const cls =
+          part.toLowerCase() === brandLc
+            ? "px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/10"
+            : "px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/10";
+        return `<span class="${cls}">${escapeHtml(part)}</span>`;
+      })
+      .join("");
 
-    // 3) Highlight competitors in orange/amber
-    competitors.forEach((comp) => {
-      const compNeedle = escapeRegExp(escapeHtml(comp));
-      if (!compNeedle) return;
-      const compRegex = new RegExp(`(${compNeedle})`, "gi");
-      highlighted = highlighted.replace(
-        compRegex,
-        `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/10">$1</span>`
-      );
-    });
-
-    // 4) Safety net: sanitize the final markup (keeps span/class, strips anything hostile)
     return (
       <div
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(highlighted) }}
