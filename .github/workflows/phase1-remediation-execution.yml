@@ -1,0 +1,219 @@
+name: Phase 1 remediation execution (temporary)
+on:
+  push:
+    branches:
+      - 'fix/audit-remediation-p1-v1.1'
+permissions:
+  contents: write
+concurrency:
+  group: phase1-remediation-${ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    name: Resolve lockfile and run Phase 1 gates
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout remediation branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies and run gates
+        shell: bash
+        run: |
+          set +e
+          EVIDENCE_DIR="$RUNNER_TEMP/phase1-remediation-evidence"
+          export EVIDENCE_DIR
+          mkdir -p "$EVIDENCE_DIR"
+          printf '%s\n' "Commit: $GITHUB_SHA" "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" "Node: $(node --version)" "pnpm: $(pnpm --version)" > "$EVIDENCE_DIR/environment.txt"
+          run_capture() {
+            name="$1"; shift
+            "$@" > "$EVIDENCE_DIR/$name.log" 2>&1
+            rc=$?
+            printf '%s\n' "$rc" > "$EVIDENCE_DIR/$name.exit"
+            echo "== $name: exit $rc =="
+            tail -n 50 "$EVIDENCE_DIR/$name.log" 2>/dev/null
+          }
+          skip_gate() {
+            name="$1"
+            echo "SKIPPED because install failed" > "$EVIDENCE_DIR/$name.log"
+            echo 125 > "$EVIDENCE_DIR/$name.exit"
+          }
+          pnpm install --no-frozen-lockfile > "$EVIDENCE_DIR/install.log" 2>&1
+          INSTALL_RC=$?
+          echo "$INSTALL_RC" > "$EVIDENCE_DIR/install.exit"
+          tail -n 80 "$EVIDENCE_DIR/install.log"
+          if grep -E 'ERR_PNPM_PEER_DEP_ISSUES|ERR_PNPM_PEER_DEP_ISSUE' "$EVIDENCE_DIR/install.log" >/dev/null; then echo 1 > "$EVIDENCE_DIR/install-peer-errors.exit"; else echo 0 > "$EVIDENCE_DIR/install-peer-errors.exit"; fi
+          pnpm audit --json > "$EVIDENCE_DIR/pnpm-audit.json" 2> "$EVIDENCE_DIR/pnpm-audit.stderr"
+          AUDIT_RC=$?
+          echo "$AUDIT_RC" > "$EVIDENCE_DIR/pnpm-audit-command.exit"
+          if [ -s "$EVIDENCE_DIR/pnpm-audit.json" ]; then
+            run_capture audit-gate bash -c 'node scripts/audit-gate.mjs --stdin < "$1"' _ "$EVIDENCE_DIR/pnpm-audit.json"
+          else
+            echo "Audit JSON is missing" > "$EVIDENCE_DIR/audit-gate.log"
+            echo 2 > "$EVIDENCE_DIR/audit-gate.exit"
+          fi
+          if [ "$INSTALL_RC" -eq 0 ]; then
+            run_capture dependency-why-brace-expansion pnpm why brace-expansion
+            run_capture dependency-why-source-map-js pnpm why source-map-js
+            run_capture dependency-why-braces pnpm why braces
+            run_capture dependency-tree pnpm list --depth Infinity --json
+            cat > "$RUNNER_TEMP/check-resolution.mjs" <<'NODE'
+          import fs from 'node:fs';
+          const root = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const found = new Map([['brace-expansion', []], ['source-map-js', []]]);
+          function walk(v, key='') {
+            if (Array.isArray(v)) return v.forEach(x=>walk(x));
+            if (!v || typeof v!=='object') return;
+            const name=typeof v.name==='string'?v.name:key;
+            if(found.has(name)&&typeof v.version==='string')found.get(name).push(v.version);
+            for(const [k,x] of Object.entries(v))if(k!=='name'&&k!=='version')walk(x,k);
+          }
+          walk(root);
+          const tup=v=>v.split(/[.+-]/).slice(0,3).map(x=>parseInt(x,10)||0);
+          const cmp=(a,b)=>{const x=tup(a),y=tup(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]-y[i];return 0;};
+          let bad=false;
+          const br=[...new Set(found.get('brace-expansion'))];
+          console.log('brace-expansion:',br.join(', ')||'(none)');
+          if(!br.length)bad=true;
+          for(const v of br){const m=tup(v)[0];const floor=m===1?'1.1.21':m===2?'2.1.7':m===3?'3.0.9':m===4?null:'5.0.12';if(!floor||cmp(v,floor)<0){console.error('Below floor: brace-expansion@'+v);bad=true;}}
+          const sm=[...new Set(found.get('source-map-js'))];
+          console.log('source-map-js:',sm.join(', ')||'(none)');
+          if(!sm.length)bad=true;
+          for(const v of sm)if(cmp(v,'1.2.2')<0){console.error('Below floor: source-map-js@'+v);bad=true;}
+          if(bad)process.exit(1);
+          NODE
+            run_capture resolution-floors node "$RUNNER_TEMP/check-resolution.mjs" "$EVIDENCE_DIR/dependency-tree.log"
+            run_capture typecheck pnpm typecheck
+            run_capture lint pnpm lint
+            cat > "$RUNNER_TEMP/check-lint.mjs" <<'NODE'
+          import fs from 'node:fs';
+          const t=fs.readFileSync(process.argv[2],'utf8').replace(/\u001b\[[0-9;]*m/g,'');
+          const a=[...t.matchAll(/(\d+)\s+problems?\s*\(\s*(\d+)\s+errors?,\s*(\d+)\s+warnings?\s*\)/gi)];
+          if(!a.length){console.error('Could not parse ESLint summary');process.exit(2);}
+          const m=a.at(-1), e=+m[2], w=+m[3]; console.log('errors='+e+', warnings='+w+', budget=218');
+          if(e||w>218)process.exit(1);
+          NODE
+            run_capture lint-budget node "$RUNNER_TEMP/check-lint.mjs" "$EVIDENCE_DIR/lint.log"
+            run_capture unit-tests pnpm test:unit
+            cat > "$RUNNER_TEMP/check-unit.mjs" <<'NODE'
+          import fs from 'node:fs';
+          const t=fs.readFileSync(process.argv[2],'utf8').replace(/\u001b\[[0-9;]*m/g,'');
+          const n=[...t.matchAll(/\b(\d+)\s+passed\b/gi)].map(m=>+m[1]);
+          const p=n.length?Math.max(...n):0;
+          console.log('max reported passed='+p+'; required baseline=164');
+          console.log(t.split(/\r?\n/).filter(x=>/^\s*Test Files\b/i.test(x)).at(-1)||'Test Files summary missing');
+          if(p<164)process.exit(1);
+          NODE
+            run_capture unit-baseline node "$RUNNER_TEMP/check-unit.mjs" "$EVIDENCE_DIR/unit-tests.log"
+            run_capture ui-tests pnpm test:ui
+            cat > "$RUNNER_TEMP/check-ui.mjs" <<'NODE'
+          import fs from 'node:fs';
+          const t=fs.readFileSync(process.argv[2],'utf8').replace(/\u001b\[[0-9;]*m/g,'');
+          const n=[...t.matchAll(/\b(\d+)\s+passed\b/gi)].map(m=>+m[1]);
+          const p=n.length?Math.max(...n):0;console.log('max reported passed='+p+'; required baseline=3');if(p<3)process.exit(1);
+          NODE
+            run_capture ui-baseline node "$RUNNER_TEMP/check-ui.mjs" "$EVIDENCE_DIR/ui-tests.log"
+            run_capture drizzle-check pnpm exec drizzle-kit check
+            run_capture rls-migration-coverage pnpm db:verify-rls-migrations
+            run_capture tenant-table-alignment pnpm exec tsx scripts/database/verify-tenant-tables.ts
+            run_capture build pnpm build
+            cat > "$RUNNER_TEMP/check-route.mjs" <<'NODE'
+          import fs from 'node:fs';
+          const p='.next/server/app-paths-manifest.json';if(!fs.existsSync(p)){console.error(p+' missing');process.exit(1);}
+          const x=Object.keys(JSON.parse(fs.readFileSync(p,'utf8'))).filter(k=>k.includes('/api/inngest'));
+          console.log('Inngest routes:',x.join(', ')||'(none)');if(!x.length)process.exit(1);
+          NODE
+            run_capture route-manifest node "$RUNNER_TEMP/check-route.mjs"
+            run_capture image-optimizer-smoke bash -c '
+              pnpm start > "$EVIDENCE_DIR/production-server.log" 2>&1 &
+              pid=$!
+              trap "kill $pid >/dev/null 2>&1 || true" EXIT
+              ready=0
+              for i in $(seq 1 45); do c=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/ 2>/dev/null); if [ "$c" != "000" ]; then ready=1; break; fi; sleep 2; done
+              if [ "$ready" != 1 ]; then tail -n 80 "$EVIDENCE_DIR/production-server.log"; exit 1; fi
+              c=$(curl -sS -o "$EVIDENCE_DIR/image-response.bin" -w "%{http_code}" "http://127.0.0.1:3000/_next/image?url=%2Fplaceholder.jpg&w=64&q=75")
+              echo "Image optimizer HTTP $c"; [ "$c" = "200" ] || { tail -n 80 "$EVIDENCE_DIR/production-server.log"; exit 1; }
+            '
+            run_capture isolation-suite env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/isolation_test_db MIGRATION_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/isolation_test_db pnpm run test:isolation
+            run_capture docs-matrix pnpm run docs:matrix
+          else
+            for n in dependency-why-brace-expansion dependency-why-source-map-js dependency-why-braces dependency-tree resolution-floors typecheck lint lint-budget unit-tests unit-baseline ui-tests ui-baseline drizzle-check rls-migration-coverage tenant-table-alignment build route-manifest image-optimizer-smoke isolation-suite docs-matrix; do skip_gate "$n"; done
+          fi
+          mkdir -p verification/phase1-remediation
+          {
+            echo "# Phase 1 remediation execution evidence"
+            echo
+            echo "- Kit: oxenn-remediation-kit v1.1"
+            echo "- Branch: $GITHUB_REF_NAME"
+            echo "- Commit initially tested: $GITHUB_SHA"
+            echo "- Run: [$GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+            echo "- Node: $(node --version)"
+            echo "- pnpm: $(pnpm --version)"
+            echo "- Shared/production database touched: no. Isolation tests use disposable GitHub Actions PostgreSQL."
+            echo "- Raw audit command exit (nonzero may simply indicate advisories): $AUDIT_RC"
+            echo "- Install exit: $INSTALL_RC"
+            echo
+            echo "| Gate | Exit |"
+            echo "|---|---:|"
+            for f in "$EVIDENCE_DIR"/*.exit; do [ -f "$f" ] || continue; n=$(basename "$f" .exit); v=$(cat "$f"); printf '| %s | %s |\n' "$n" "$v"; done
+            echo
+            echo "Full logs and raw pnpm audit JSON are attached as the phase1-remediation-evidence Actions artifact."
+          } > verification/phase1-remediation/EXECUTION-REPORT.md
+          cat verification/phase1-remediation/EXECUTION-REPORT.md >> "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm --ignore-unmatch .github/workflows/phase1-remediation-execution.yml
+          if [ "$INSTALL_RC" -eq 0 ]; then git add pnpm-lock.yaml; fi
+          git add verification/phase1-remediation/EXECUTION-REPORT.md
+          git commit -m "chore(deps): reconcile Phase 1 lockfile and record gates"
+          CR=$?
+          if [ "$CR" -eq 0 ]; then git push origin "HEAD:$GITHUB_REF_NAME"; PRC=$?; else PRC=1; fi
+          echo "$CR" > "$EVIDENCE_DIR/evidence-commit.exit"
+          echo "$PRC" > "$EVIDENCE_DIR/evidence-push.exit"
+          echo "Evidence commit exit=$CR, push exit=$PRC"
+          exit 0
+      - name: Upload complete execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-remediation-evidence
+          path: |
+            ${ runner.temp }}/phase1-remediation-evidence/**
+            verification/phase1-remediation/EXECUTION-REPORT.md
+            pnpm-lock.yaml
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Enforce Phase 1 gates
+        if: always()
+        shell: bash
+        run: |
+          set -e
+          d="$RUNNER_TEMP/phase1-remediation-evidence"
+          failed=0
+          for f in "$d"/*.exit; do
+            [ -f "$f" ] || continue
+            n=$(basename "$f" .exit); v=$(cat "$f")
+            case "$n" in pnpm-audit-command|evidence-commit|evidence-push) continue;; esac
+            if [ "$v" != 0 ]; then echo "FAIL $n: $v"; failed=1; else echo "PASS $n"; fi
+          done
+          [ "$failed" -eq 0 ] || { echo "Phase 1 gates failed; see artifact"; exit 1; }
+          echo "All Phase 1 gates passed."
