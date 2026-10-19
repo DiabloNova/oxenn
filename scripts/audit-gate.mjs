@@ -107,7 +107,8 @@ function parseAdvisories(raw) {
           name,
           severity: String(src.severity || v.severity || 'unknown').toLowerCase(),
           patched: v.fixAvailable === false ? UNPATCHED : '',
-          fixKnown: v.fixAvailable !== false,
+          fixKnown: v.fixAvailable === true,
+          patchStatusUnknown: v.fixAvailable === false,
           paths: via.filter((x) => typeof x === 'string').map((p) => ({ path: p, dev: false })),
         });
       }
@@ -129,6 +130,7 @@ function decide(a) {
   if (rank >= SEV_RANK.moderate) return { action: 'WARN', note: `${a.severity} — recorded, non-blocking` };
 
   // critical / high
+  if (a.patchStatusUnknown) return { action: 'FAIL', note: 'fixAvailable=false does not prove no upstream patch exists; verify advisory version data' };
   if (!isUnpatched(a)) return { action: 'FAIL', note: 'fix available — apply via override or upgrade' };
 
   const entry = ALLOWLIST.find((e) => e.package === a.name && e.id === a.id);
