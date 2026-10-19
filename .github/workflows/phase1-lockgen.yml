@@ -58,7 +58,7 @@ jobs:
           pnpm install --no-frozen-lockfile 2>&1 | tee -a "$OUT/pnpm-install.log"
 
           # Exercise the patched transitive package installed by pnpm.
-          BRACES_CONSTANTS="$(find node_modules/.pnpm -path '*/node_modules/braces/lib/constants.js' -exec grep -l 'MAX_DEPTH: 100' {} \\; -print -quit)"
+          BRACES_CONSTANTS="$(grep -l 'MAX_DEPTH: 100' node_modules/.pnpm/braces@3.0.3*/node_modules/braces/lib/constants.js 2>/dev/null | head -n 1)"
           test -n "$BRACES_CONSTANTS"
           BRACES_PACKAGE="$GITHUB_WORKSPACE/${BRACES_CONSTANTS%/lib/constants.js}" node > "$OUT/braces-smoke-test.log" 2>&1 <<'NODE'
           const assert = require('node:assert/strict');
