@@ -1,0 +1,165 @@
+name: Phase 1 dependency lockfile validation
+
+on:
+  push:
+    branches:
+      - fix/audit-phase1-lockgen
+    paths:
+      - package.json
+      - .github/workflows/phase1-lockgen.yml
+
+permissions:
+  contents: write
+
+jobs:
+  resolve-and-validate:
+    name: Resolve lockfile and run Phase 1 gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Activate pinned pnpm
+        run: corepack prepare pnpm@10.30.3 --activate
+
+      - name: Install and resolve lockfile
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/phase1
+          pnpm install --no-frozen-lockfile 2>&1 | tee artifacts/phase1/pnpm-install.log
+          git add pnpm-lock.yaml
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore(deps): resolve Phase 1 pnpm lockfile"
+            git push origin HEAD:fix/audit-phase1-lockgen
+          fi
+
+      - name: Run Phase 1 validation commands
+        id: gates
+        shell: bash
+        run: |
+          set +e
+          OUT="$GITHUB_WORKSPACE/artifacts/phase1"
+          mkdir -p "$OUT"
+          printf 'gate\texit_code\n' > "$OUT/exit-codes.tsv"
+
+          run_gate() {
+            name="$1"
+            shift
+            "$@" > "$OUT/$name.log" 2>&1
+            code=$?
+            printf '%s\t%s\n' "$name" "$code" >> "$OUT/exit-codes.tsv"
+            echo "$name exit code: $code"
+          }
+
+          run_gate pnpm-audit pnpm audit --json
+          run_gate typecheck pnpm typecheck
+          run_gate test-unit pnpm test:unit
+          run_gate test-ui pnpm test:ui
+          run_gate build pnpm build
+          run_gate lint pnpm lint
+          run_gate why-undici pnpm why undici
+          run_gate why-axios pnpm why axios
+          run_gate why-js-yaml pnpm why js-yaml
+          run_gate why-grpc pnpm why @grpc/grpc-js
+
+          if [[ -f .next/server/app-paths-manifest.json ]]; then
+            node -e 'const m=require("./.next/server/app-paths-manifest.json"); const ks=Object.keys(m); const rows=ks.filter(k=>/api\/inngest|image/i.test(k)); require("fs").writeFileSync(process.env.OUT+"/route-manifest-check.txt", "Manifest found. Relevant paths:\n"+rows.join("\n")+"\n"); console.log(rows.join("\n")); process.exit(ks.some(k=>/api\/inngest/i.test(k))?0:1)' OUT="$OUT"
+            route_code=$?
+          else
+            echo "Missing .next/server/app-paths-manifest.json" > "$OUT/route-manifest-check.txt"
+            route_code=1
+          fi
+          printf 'route-manifest-check\t%s\n' "$route_code" >> "$OUT/exit-codes.tsv"
+
+          {
+            echo '# Phase 1 validation summary'
+            echo
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Node: $(node --version)"
+            echo "- pnpm: $(pnpm --version)"
+            echo
+            echo '## Exit codes'
+            echo
+            echo '| Gate | Exit code |'
+            echo '|---|---:|'
+            awk -F '\t' 'NR > 1 { printf "| %s | %s |\n", $1, $2 }' "$OUT/exit-codes.tsv"
+            echo
+            echo '## Audit severity summary'
+            node -e 'const fs=require("fs");const p=process.argv[1];try{const j=JSON.parse(fs.readFileSync(p,"utf8"));console.log(JSON.stringify(j.metadata?.vulnerabilities??j.vulnerabilities??{note:"No known vulnerability summary field"},null,2))}catch(e){console.log("Audit JSON parsing failed: "+e.message)}' "$OUT/pnpm-audit.log"
+            echo
+            echo '## Unit test summary'
+            grep -E '(^|[[:space:]])(Test Files|Tests|Duration|FAIL|ERROR)([[:space:]]|$)' "$OUT/test-unit.log" | tail -n 20 || true
+            echo
+            echo '## UI test summary'
+            grep -E '(^|[[:space:]])(Test Files|Tests|Duration|FAIL|ERROR)([[:space:]]|$)' "$OUT/test-ui.log" | tail -n 20 || true
+            echo
+            echo '## Lint summary'
+            grep -E 'problems? \(' "$OUT/lint.log" | tail -n 5 || true
+            echo
+            echo '## Built route manifest spot-check'
+            cat "$OUT/route-manifest-check.txt" 2>/dev/null || true
+            echo
+            echo '## Install peer-dependency signals'
+            if grep -Ei 'ERR_PNPM_PEER_DEP_ISSUES|Issues with peer dependencies found|unmet peer' "$OUT/pnpm-install.log"; then
+              true
+            else
+              echo 'No peer-dependency error markers found in install log.'
+            fi
+          } > "$OUT/SUMMARY.md"
+
+      - name: Upload Phase 1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-validation-${{ github.sha }}
+          path: artifacts/phase1/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce Phase 1 acceptance gates
+        if: always()
+        shell: bash
+        run: |
+          OUT="$GITHUB_WORKSPACE/artifacts/phase1"
+          failed=0
+          for name in typecheck test-unit test-ui build lint route-manifest-check; do
+            code="$(awk -F '\t' -v n="$name" '$1 == n {print $2}' "$OUT/exit-codes.tsv" | tail -n 1)"
+            if [[ "$code" != "0" ]]; then echo "::error::$name failed (exit ${code:-unknown})"; failed=1; fi
+          done
+          node - "$OUT/pnpm-audit.log" <<'NODE'
+          const fs = require('fs');
+          const p = process.argv[2];
+          let data;
+          try { data = JSON.parse(fs.readFileSync(p, 'utf8')); }
+          catch (e) { console.error('Could not parse pnpm audit JSON:', e.message); process.exit(2); }
+          const v = data.metadata?.vulnerabilities ?? data.vulnerabilities;
+          if (!v) { console.error('Audit JSON has no vulnerability summary'); process.exit(2); }
+          console.log('Audit vulnerabilities:', JSON.stringify(v));
+          if ((v.critical ?? 0) > 0 || (v.high ?? 0) > 0) process.exit(1);
+          NODE
+          if [[ "$?" != "0" ]]; then echo "::error::pnpm audit gate requires 0 critical and 0 high advisories"; failed=1; fi
+          if grep -Eqi 'ERR_PNPM_PEER_DEP_ISSUES|Issues with peer dependencies found|unmet peer' "$OUT/pnpm-install.log"; then
+            echo "::error::Peer dependency issue marker found in pnpm install log"
+            failed=1
+          fi
+          lint_line="$(grep -E 'problems? \(' "$OUT/lint.log" | tail -n 1)"
+          lint_warnings="$(printf '%s' "$lint_line" | sed -nE 's/.*\(([0-9]+) errors?, ([0-9]+) warnings?\).*/\2/p')"
+          if [[ -z "$lint_warnings" ]]; then echo "::error::Could not determine ESLint warning count"; failed=1
+          elif (( lint_warnings > 218 )); then echo "::error::Lint warnings $lint_warnings exceed baseline 218"; failed=1
+          fi
+          exit "$failed"
