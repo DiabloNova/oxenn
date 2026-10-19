@@ -86,7 +86,7 @@ function parseAdvisories(raw) {
   // npm-bulk style (used by pnpm): { advisories: { "<ghsa>": {...} } }
   if (data && data.advisories && typeof data.advisories === 'object' && !Array.isArray(data.advisories)) {
     return Object.entries(data.advisories).map(([key, a]) => ({
-      id: (a && a.id) || key,
+      id: (a && a.github_advisory_id) || (a && a.id) || key,
       name: (a && a.module_name) || 'unknown',
       severity: String((a && a.severity) || 'unknown').toLowerCase(),
       patched: typeof (a && a.patched_versions) === 'string' ? a.patched_versions.trim() : '',
