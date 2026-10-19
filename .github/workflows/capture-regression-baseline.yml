@@ -1,0 +1,143 @@
+name: Regression Baseline Capture
+
+on:
+  push:
+    branches:
+      - fix/audit-remediation
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: Capture audit, lint, and test baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout baseline commit
+        uses: actions/checkout@v4
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Capture command outputs and exit codes
+        id: baseline
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
+          MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
+        run: |
+          mkdir -p artifacts/regression-baseline
+          cd artifacts/regression-baseline
+          printf 'command\texit_code\n' > command-exit-codes.tsv
+
+          set +e
+          pnpm audit --json > pnpm-audit.json 2> pnpm-audit.stderr.txt
+          audit_code=$?
+          printf 'pnpm audit --json\t%s\n' "$audit_code" >> command-exit-codes.tsv
+
+          pnpm lint > pnpm-lint.log 2>&1
+          lint_code=$?
+          printf 'pnpm lint\t%s\n' "$lint_code" >> command-exit-codes.tsv
+
+          pnpm test:unit > test-unit.log 2>&1
+          unit_code=$?
+          printf 'pnpm test:unit\t%s\n' "$unit_code" >> command-exit-codes.tsv
+
+          pnpm test:ui > test-ui.log 2>&1
+          ui_code=$?
+          printf 'pnpm test:ui\t%s\n' "$ui_code" >> command-exit-codes.tsv
+
+          pnpm run test:isolation > test-isolation.log 2>&1
+          isolation_code=$?
+          printf 'pnpm run test:isolation\t%s\n' "$isolation_code" >> command-exit-codes.tsv
+
+          printf 'audit_code=%s\nlint_code=%s\nunit_code=%s\nui_code=%s\nisolation_code=%s\n' \
+            "$audit_code" "$lint_code" "$unit_code" "$ui_code" "$isolation_code" >> "$GITHUB_OUTPUT"
+
+          {
+            echo '# Regression baseline capture'
+            echo
+            echo "- Commit: \x60$GITHUB_SHA\x60"
+            echo "- Captured at (UTC): $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "- Node: $(node --version)"
+            echo "- pnpm: $(pnpm --version)"
+            echo
+            echo '## Command exit codes'
+            echo
+            echo '| Command | Exit code |'
+            echo '|---|---:|'
+            awk -F '\t' 'NR > 1 { printf "| \x60%s\x60 | %s |\\n", $1, $2 }' command-exit-codes.tsv
+            echo
+            echo '## Vitest summary lines'
+            echo
+            for log in test-unit.log test-ui.log; do
+              echo "### $log"
+              grep -E '(^|[[:space:]])(Test Files|Tests|Snapshots|Duration|FAIL|ERROR)([[:space:]]|$)' "$log" | tail -n 20 || true
+              echo
+            done
+            echo '### test-isolation.log'
+            grep -Ei '(pass|fail|test|suite|error|duration)' test-isolation.log | tail -n 50 || true
+            echo
+            echo '## Lint summary'
+            echo
+            grep -E 'problems? \(|warning|error' pnpm-lint.log | tail -n 20 || true
+            echo
+            echo '## Audit summary'
+            echo
+            if node -e 'const f=require("fs"); const x=JSON.parse(f.readFileSync("pnpm-audit.json","utf8")); const v=x.metadata?.vulnerabilities; if (v) console.log(JSON.stringify(v,null,2)); else console.log("No metadata.vulnerabilities object in JSON output")' 2>/dev/null; then
+              :
+            else
+              echo 'Audit output was not parseable as pnpm audit JSON; inspect pnpm-audit.json and pnpm-audit.stderr.txt.'
+            fi
+          } > SUMMARY.md
+
+      - name: Upload raw baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-baseline-${{ github.sha }}
+          path: artifacts/regression-baseline/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce lint and test command success
+        if: always()
+        shell: bash
+        env:
+          LINT_CODE: ${{ steps.baseline.outputs.lint_code }}
+          UNIT_CODE: ${{ steps.baseline.outputs.unit_code }}
+          UI_CODE: ${{ steps.baseline.outputs.ui_code }}
+          ISOLATION_CODE: ${{ steps.baseline.outputs.isolation_code }}
+        run: |
+          failed=0
+          for name in LINT UNIT UI ISOLATION; do
+            var="${name}_CODE"
+            code="${!var}"
+            if [[ "$code" != "0" ]]; then
+              echo "::error::$name baseline command exited with code ${code:-unknown}"
+              failed=1
+            fi
+          done
+          exit "$failed"
