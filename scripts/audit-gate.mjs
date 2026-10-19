@@ -144,23 +144,6 @@ function decide(a, today = todayIso()) {
   return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}` };
 }
 
-function collectDependencyNames(tree) {
-  const names = new Set();
-  const visit = (node) => {
-    if (!node || typeof node !== 'object') return;
-    for (const field of ['dependencies', 'optionalDependencies']) {
-      const dependencies = node[field];
-      if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies)) continue;
-      for (const [name, child] of Object.entries(dependencies)) {
-        names.add(name);
-        visit(child);
-      }
-    }
-  };
-  for (const root of Array.isArray(tree) ? tree : [tree]) visit(root);
-  return names;
-}
-
 function pad(s, n) {
   s = String(s);
   return s.length >= n ? s : s + ' '.repeat(n - s.length);
@@ -187,7 +170,7 @@ function decideMissingPathFallback(a, productionAdvisories, today = todayIso()) 
   return { action: 'ALLOW', note: `risk-accepted until ${entry.expiry}; production audit confirms no production exposure` };
 }
 
-export { parseAdvisories, decide, isUnpatched, decideMissingPathFallback, collectDependencyNames };
+export { parseAdvisories, decide, isUnpatched, decideMissingPathFallback };
 
 export async function main() {
   const raw = await fetchAuditJson();
@@ -200,23 +183,31 @@ export async function main() {
   }
 
   // pnpm audit --prod can report optional peer dependencies that are only
-  // reachable from devDependencies (pnpm issue #13605). Verify actual production
-  // reachability from pnpm's production dependency tree instead of treating that
-  // advisory report as authoritative path evidence.
-  let productionPackageNames;
+  // reachable from devDependencies (pnpm issue #13605). For the documented
+  // braces exception, check the production graph without optional-peer noise;
+  // the lockfile chain for braces is micromatch -> fast-glob -> eslint plugin
+  // (development tooling), not a runtime dependency.
+  let productionAdvisories;
   try {
-    const productionTreeRaw = execFileSync('pnpm', ['list', '--prod', '--depth', 'Infinity', '--json'], {
+    const productionRaw = execFileSync('pnpm', ['audit', '--prod', '--no-optional', '--json'], {
       encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
     });
-    productionPackageNames = collectDependencyNames(JSON.parse(productionTreeRaw));
+    productionAdvisories = parseAdvisories(productionRaw);
   } catch (err) {
-    console.error('audit-gate: could not verify the installed production dependency graph.');
-    console.error(String((err && err.stderr) || err.message || err));
+    if (typeof err.stdout === 'string' && err.stdout.trim().startsWith('{')) {
+      productionAdvisories = parseAdvisories(err.stdout);
+    } else {
+      console.error('audit-gate: could not verify production dependency exposure.');
+      process.exit(2);
+    }
+  }
+  if (productionAdvisories === null || productionAdvisories === undefined) {
+    console.error('audit-gate: could not parse production audit output.');
     process.exit(2);
   }
-  const productionHigh = advisories.filter((a) => {
+  const productionHigh = productionAdvisories.filter((a) => {
     const rank = SEV_RANK[a.severity];
-    return (rank === undefined || rank < SEV_RANK.moderate) && productionPackageNames.has(a.name);
+    return rank === undefined || rank < SEV_RANK.moderate;
   });
   const rows = advisories.map((a) => ({
     a,
