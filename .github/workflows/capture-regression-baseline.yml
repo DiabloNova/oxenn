@@ -10,9 +10,9 @@ permissions:
 
 jobs:
   capture:
-    name: Capture audit, lint, and test baseline
+    name: Capture full pre-remediation verification baseline
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -41,76 +41,94 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Capture command outputs and exit codes
+      - name: Capture verification commands and exit codes
         id: baseline
         shell: bash
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
-          MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
         run: |
+          set +e
           OUT="$GITHUB_WORKSPACE/artifacts/regression-baseline"
           mkdir -p "$OUT"
           printf 'command\texit_code\n' > "$OUT/command-exit-codes.tsv"
 
-          set +e
-          pnpm audit --json > "$OUT/pnpm-audit.json" 2> "$OUT/pnpm-audit.stderr.txt"
-          audit_code=$?
-          printf 'pnpm audit --json\t%s\n' "$audit_code" >> "$OUT/command-exit-codes.tsv"
+          capture() {
+            local key="$1"
+            local label="$2"
+            local code
+            shift 2
+            echo "::group::$label"
+            if [[ "$key" == "audit" ]]; then
+              "$@" > "$OUT/pnpm-audit.json" 2> "$OUT/pnpm-audit.stderr.txt"
+              code=$?
+            else
+              "$@" > "$OUT/$key.log" 2>&1
+              code=$?
+            fi
+            printf '%s\t%s\n' "$label" "$code" >> "$OUT/command-exit-codes.tsv"
+            printf '%s_code=%s\n' "$key" "$code" >> "$GITHUB_OUTPUT"
+            echo "$label exit code: $code"
+            echo "::endgroup::"
+          }
 
-          pnpm lint > "$OUT/pnpm-lint.log" 2>&1
-          lint_code=$?
-          printf 'pnpm lint\t%s\n' "$lint_code" >> "$OUT/command-exit-codes.tsv"
-
-          pnpm test:unit > "$OUT/test-unit.log" 2>&1
-          unit_code=$?
-          printf 'pnpm test:unit\t%s\n' "$unit_code" >> "$OUT/command-exit-codes.tsv"
-
-          pnpm test:ui > "$OUT/test-ui.log" 2>&1
-          ui_code=$?
-          printf 'pnpm test:ui\t%s\n' "$ui_code" >> "$OUT/command-exit-codes.tsv"
-
-          pnpm run test:isolation > "$OUT/test-isolation.log" 2>&1
-          isolation_code=$?
-          printf 'pnpm run test:isolation\t%s\n' "$isolation_code" >> "$OUT/command-exit-codes.tsv"
-
-          printf 'audit_code=%s\nlint_code=%s\nunit_code=%s\nui_code=%s\nisolation_code=%s\n' \
-            "$audit_code" "$lint_code" "$unit_code" "$ui_code" "$isolation_code" >> "$GITHUB_OUTPUT"
+          capture audit "pnpm audit --json" pnpm audit --json
+          capture typecheck "pnpm typecheck" pnpm typecheck
+          capture lint "pnpm lint" pnpm lint
+          capture tenant_tables "pnpm tsx scripts/database/verify-tenant-tables.ts" pnpm tsx scripts/database/verify-tenant-tables.ts
+          capture rls_migrations "pnpm db:verify-rls-migrations" pnpm db:verify-rls-migrations
+          capture unit "pnpm test:unit" pnpm test:unit
+          capture ui "pnpm test:ui" pnpm test:ui
+          capture isolation "pnpm run test:isolation" env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/isolation_test_db MIGRATION_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/isolation_test_db pnpm run test:isolation
+          capture build "pnpm build" pnpm build
+          capture reference_matrix "pnpm run docs:matrix" pnpm run docs:matrix
+          capture drizzle_check "pnpm exec drizzle-kit check" pnpm exec drizzle-kit check
+          capture generated_drift "git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts docs/database/reference-matrix.md" git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts docs/database/reference-matrix.md
 
           {
-            echo '# Regression baseline capture'
-            echo
-            echo "- Commit: `$GITHUB_SHA`"
-            echo "- Captured at (UTC): $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo "- Node: $(node --version)"
-            echo "- pnpm: $(pnpm --version)"
-            echo
-            echo '## Command exit codes'
-            echo
-            echo '| Command | Exit code |'
-            echo '|---|---:|'
-            awk -F '\t' 'NR > 1 { printf "| `%s` | %s |\n", $1, $2 }' "$OUT/command-exit-codes.tsv"
-            echo
-            echo '## Vitest summary lines'
-            echo
-            for log in "$OUT/test-unit.log" "$OUT/test-ui.log"; do
-              echo "### $(basename "$log")"
-              grep -E '(^|[[:space:]])(Test Files|Tests|Snapshots|Duration|FAIL|ERROR)([[:space:]]|$)' "$log" | tail -n 20 || true
-              echo
+            printf '# Regression baseline capture\n\n'
+            printf -- '- Commit: %s\n' "$GITHUB_SHA"
+            printf -- '- Captured at (UTC): %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            printf -- '- Node: %s\n' "$(node --version)"
+            printf -- '- pnpm: %s\n' "$(pnpm --version)"
+            printf '\n## Command exit codes\n\n'
+            printf '| Command | Exit code |\n|---|---:|\n'
+            awk -F '\t' 'NR > 1 { printf "| %s | %s |\n", $1, $2 }' "$OUT/command-exit-codes.tsv"
+            printf '\n## Test summaries\n\n'
+            for log in "$OUT/unit.log" "$OUT/ui.log" "$OUT/isolation.log"; do
+              printf '### %s\n' "$(basename "$log")"
+              grep -E 'Test Files|Tests|Duration|Database initialized|Role verification passed|RLS catalog verification passed|verification passed|assertions|suites passed' "$log" | tail -n 30 || true
+              printf '\n'
             done
-            echo '### test-isolation.log'
-            grep -Ei '(pass|fail|test|suite|error|duration)' "$OUT/test-isolation.log" | tail -n 50 || true
-            echo
-            echo '## Lint summary'
-            echo
-            grep -E 'problems? \(|warning|error' "$OUT/pnpm-lint.log" | tail -n 20 || true
-            echo
-            echo '## Audit summary'
-            echo
-            if BASELINE_DIR="$OUT" node -e 'const f=require("fs"); const x=JSON.parse(f.readFileSync(process.env.BASELINE_DIR+"/pnpm-audit.json","utf8")); const v=x.metadata?.vulnerabilities; if (v) console.log(JSON.stringify(v,null,2)); else console.log("No metadata.vulnerabilities object in JSON output")' 2>/dev/null; then
+            printf '## Lint summary\n\n'
+            grep -E 'problems? \(|warning|error' "$OUT/lint.log" | tail -n 20 || true
+            printf '\n## Audit summary\n\n'
+            if node - "$OUT/pnpm-audit.json" <<'NODE'
+          const fs = require("node:fs");
+          const report = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (report.metadata?.vulnerabilities) {
+            console.log(JSON.stringify(report.metadata.vulnerabilities, null, 2));
+          } else if (report.advisories && typeof report.advisories === "object") {
+            const severities = {};
+            for (const advisory of Object.values(report.advisories)) {
+              const severity = String(advisory.severity || "unknown").toLowerCase();
+              severities[severity] = (severities[severity] || 0) + 1;
+            }
+            console.log(JSON.stringify({ total: Object.keys(report.advisories).length, severities }, null, 2));
+          } else if (report.vulnerabilities && typeof report.vulnerabilities === "object") {
+            const severities = {};
+            for (const vulnerability of Object.values(report.vulnerabilities)) {
+              const severity = String(vulnerability.severity || "unknown").toLowerCase();
+              severities[severity] = (severities[severity] || 0) + 1;
+            }
+            console.log(JSON.stringify({ packages: Object.keys(report.vulnerabilities).length, severities }, null, 2));
+          } else {
+            console.log("Audit JSON did not contain a recognized advisory summary; inspect the raw JSON.");
+          }
+          NODE
+            then
               :
             else
-              echo 'Audit output was not parseable as pnpm audit JSON; inspect pnpm-audit.json and pnpm-audit.stderr.txt.'
+              printf 'Could not summarize audit JSON; inspect pnpm-audit.json and pnpm-audit.stderr.txt.\n'
             fi
+            printf '\nThe audit exit code is recorded as pre-remediation security evidence. It is intentionally not part of the functional-gate success loop; dependency acceptance is handled separately by the Phase 1 decision memo.\n'
           } > "$OUT/SUMMARY.md"
 
       - name: Upload raw baseline evidence
@@ -122,22 +140,43 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Enforce lint and test command success
+      - name: Enforce all non-audit verification gates
         if: always()
         shell: bash
         env:
+          TYPECHECK_CODE: ${{ steps.baseline.outputs.typecheck_code }}
           LINT_CODE: ${{ steps.baseline.outputs.lint_code }}
+          TENANT_TABLES_CODE: ${{ steps.baseline.outputs.tenant_tables_code }}
+          RLS_MIGRATIONS_CODE: ${{ steps.baseline.outputs.rls_migrations_code }}
           UNIT_CODE: ${{ steps.baseline.outputs.unit_code }}
           UI_CODE: ${{ steps.baseline.outputs.ui_code }}
           ISOLATION_CODE: ${{ steps.baseline.outputs.isolation_code }}
+          BUILD_CODE: ${{ steps.baseline.outputs.build_code }}
+          REFERENCE_MATRIX_CODE: ${{ steps.baseline.outputs.reference_matrix_code }}
+          DRIZZLE_CHECK_CODE: ${{ steps.baseline.outputs.drizzle_check_code }}
+          GENERATED_DRIFT_CODE: ${{ steps.baseline.outputs.generated_drift_code }}
         run: |
+          set +e
           failed=0
-          for name in LINT UNIT UI ISOLATION; do
-            var="${name}_CODE"
-            code="${!var}"
+          check_gate() {
+            local name="$1"
+            local code="$2"
             if [[ "$code" != "0" ]]; then
-              echo "::error::$name baseline command exited with code ${code:-unknown}"
+              echo "::error::$name gate exited with code ${code:-unknown}"
               failed=1
+            else
+              echo "$name gate passed"
             fi
-          done
+          }
+          check_gate "Typecheck" "$TYPECHECK_CODE"
+          check_gate "Lint" "$LINT_CODE"
+          check_gate "Tenant table verification" "$TENANT_TABLES_CODE"
+          check_gate "RLS migration verification" "$RLS_MIGRATIONS_CODE"
+          check_gate "Unit tests" "$UNIT_CODE"
+          check_gate "UI tests" "$UI_CODE"
+          check_gate "Isolation suite" "$ISOLATION_CODE"
+          check_gate "Production build" "$BUILD_CODE"
+          check_gate "Reference matrix generation" "$REFERENCE_MATRIX_CODE"
+          check_gate "Drizzle migration chain" "$DRIZZLE_CHECK_CODE"
+          check_gate "Generated-file drift" "$GENERATED_DRIFT_CODE"
           exit "$failed"

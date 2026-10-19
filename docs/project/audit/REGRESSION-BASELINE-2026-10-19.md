@@ -36,3 +36,24 @@ The nonzero audit exit is the recorded baseline, not a CI/test failure: preserve
 2. Record changed lint warning/error counts, audit severity/advisory deltas, and per-suite test/file/assertion counts.
 3. Any new test failures, reduced isolation coverage, increased warning counts, or increased critical/high advisories must be called out explicitly rather than hidden by an overall green result.
 4. Keep command exit codes and the complete raw logs with every future comparison.
+
+
+## Stabilization review — PR #84
+
+This record is maintained under `docs/project/audit/` as internal engineering evidence and is intentionally excluded from the public documentation index.
+
+### Capture-harness issues found and corrected
+
+The original capture workflow set DATABASE_URL and MIGRATION_DATABASE_URL at the whole-step level. Those values therefore leaked into the unit and UI commands, even though the referenced isolation_test_db had not been initialized yet. The initial unit log included DatabaseUnavailableError while the process exit code stayed zero. That output was a harness defect and must not be treated as proof that database-dependent paths passed. The original results above are preserved as a historical record, not silently rewritten.
+
+The corrected capture workflow scopes the database URLs to the isolation command only, matching the main CI test job. It now records typecheck, lint, tenant-table verification, RLS migration verification, unit tests, UI tests, the isolation suite, production build, reference-matrix generation, Drizzle migration-chain validation, and generated-file drift. It also records the actual commit in SUMMARY.md without shell command substitution.
+
+The pre-remediation dependency audit remains visible as baseline evidence. A non-zero audit result is expected at this stage and is intentionally excluded from the functional-gate loop; it is not described as a clean security audit. Phase 1 must use the separate, authorized policy in PHASE1-DECISIONS.md.
+
+### Evidence retention
+
+The command summary and baseline interpretation are committed in this repository. GitHub Actions retains the raw command logs and audit JSON for 90 days; any need for longer-term raw-log retention must be handled by a separate durable archive before artifact expiry.
+
+### Corrected verification run
+
+The corrected full-gate run will be linked here after it completes. Its per-command exit codes and raw evidence artifact must be compared with the immutable initial results above.
