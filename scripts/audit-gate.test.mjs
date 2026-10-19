@@ -46,6 +46,10 @@ test('npm v7 parser fails closed when fixAvailable=false cannot prove no upstrea
 test('missing-path fallback requires current unpatched acceptance and no production exposure', () => {
   const base = { id: 'GHSA-vfj7-8cjw-p6xm', name: 'braces', severity: 'high', patched: '', paths: [] };
   assert.equal(decideMissingPathFallback(base, new Map(), '2026-10-19').action, 'ALLOW');
+  assert.equal(decideMissingPathFallback({
+    ...base, paths: [{ path: '.>eslint-config-next>@next/eslint-plugin-next>fast-glob>micromatch>braces', dev: false }]
+  }, new Map(), '2026-10-19').action, 'ALLOW', 'prod graph overrides pnpm false-positive dev flag only for the exact risk-accepted advisory');
+  assert.equal(decideMissingPathFallback(base, new Map([['braces', ['oxenn > braces']]]), '2026-10-19').action, 'FAIL');
   assert.equal(decideMissingPathFallback(base, new Map(), '2026-11-20').action, 'FAIL');
   assert.equal(decideMissingPathFallback({ ...base, patched: '<= 3.0.3' }, new Map(), '2026-10-19').action, 'FAIL');
   assert.equal(decideMissingPathFallback({ ...base, patchStatusUnknown: true }, new Map(), '2026-10-19').action, 'FAIL');
