@@ -48,7 +48,7 @@ The original capture workflow set DATABASE_URL and MIGRATION_DATABASE_URL at the
 
 The corrected capture workflow scopes the database URLs to the isolation command only, matching the main CI test job. It now records typecheck, lint, tenant-table verification, RLS migration verification, unit tests, UI tests, the isolation suite, production build, reference-matrix generation, Drizzle migration-chain validation, and generated-file drift. It also records the actual commit in SUMMARY.md without shell command substitution.
 
-The pre-remediation dependency audit remains visible as baseline evidence. A non-zero audit result is expected at this stage and is intentionally excluded from the functional-gate loop; it is not described as a clean security audit. Phase 1 must use the separate, authorized policy in PHASE1-DECISIONS.md.
+The pre-remediation dependency audit remains visible as baseline evidence. A non-zero audit result is expected at this stage and is intentionally excluded from the functional-gate loop; it is not described as a clean security audit. Phase 1 must use the separate, authorized policy in the [remediation-kit PHASE1-DECISIONS.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/PHASE1-DECISIONS.md). This policy is maintained in the remediation-kit repository, not copied into the application repository.
 
 ### Evidence retention
 
