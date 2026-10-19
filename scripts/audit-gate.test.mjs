@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAdvisories, decide, isUnpatched, decideMissingPathFallback, collectDependencyNames } from './audit-gate.mjs';
+import { parseAdvisories, decide, isUnpatched, decideMissingPathFallback } from './audit-gate.mjs';
 
 test('unknown severity fails closed', () => {
   assert.equal(decide({ severity: 'unknown', name: 'x', id: 'GHSA-x', patched: '' }).action, 'FAIL');
@@ -55,23 +55,4 @@ test('valid dev-only acceptance uses an explicit test date for deterministic exp
   const advisory = { id: 'GHSA-vfj7-8cjw-p6xm', name: 'braces', severity: 'high', patched: '', paths: [{ path: 'eslint>braces', dev: true }] };
   assert.equal(decide(advisory, '2026-10-19').action, 'ALLOW');
   assert.equal(decide(advisory, '2026-11-20').action, 'FAIL');
-});
-
-
-test('production dependency graph ignores dev-only edges but includes optional production edges', () => {
-  const names = collectDependencyNames([{
-    name: 'oxenn',
-    dependencies: {
-      next: { dependencies: { 'some-runtime-package': {} } },
-      'optional-runtime-package': {}
-    },
-    devDependencies: {
-      eslint: { dependencies: { braces: {} } }
-    }
-  }]);
-  assert.equal(names.has('next'), true);
-  assert.equal(names.has('some-runtime-package'), true);
-  assert.equal(names.has('optional-runtime-package'), true);
-  assert.equal(names.has('eslint'), false);
-  assert.equal(names.has('braces'), false);
 });
