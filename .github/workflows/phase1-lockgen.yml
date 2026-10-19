@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - fix/audit-phase1-lockgen
+    # Only workflow edits start a run. Dependency/patch commits created by this
+    # workflow therefore cannot race it or create an install/commit loop.
     paths:
-      - package.json
       - .github/workflows/phase1-lockgen.yml
 
 permissions:
@@ -15,7 +16,7 @@ jobs:
   resolve-and-validate:
     name: Resolve lockfile and run Phase 1 gates
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - name: Checkout staging branch
         uses: actions/checkout@v4
@@ -34,22 +35,54 @@ jobs:
       - name: Activate pinned pnpm
         run: corepack prepare pnpm@10.30.3 --activate
 
-      - name: Install and resolve lockfile
+      - name: Resolve dependencies and apply reviewed braces backport
         shell: bash
         run: |
-          set -o pipefail
-          mkdir -p artifacts/phase1
-          pnpm install --no-frozen-lockfile 2>&1 | tee artifacts/phase1/pnpm-install.log
-          git add pnpm-lock.yaml
+          set -euo pipefail
+          OUT="$GITHUB_WORKSPACE/artifacts/phase1"
+          mkdir -p "$OUT"
+          pnpm install --no-frozen-lockfile 2>&1 | tee "$OUT/pnpm-install.log"
+
+          # ESLint 10 is deferred until eslint-config-next's plugins declare
+          # compatible peer ranges. Apply the upstream-reviewed depth guard
+          # at the exact pinned PR commit below; no application source is changed.
+          PATCH_DIR="/tmp/oxenn-braces-3.0.3"
+          pnpm patch braces@3.0.3 --edit-dir "$PATCH_DIR"
+          UPSTREAM="https://raw.githubusercontent.com/FSDevelop/braces/28d440b5dd449dbf1fe6f3506cf94ecca4d02660/lib"
+          for file in compile.js constants.js expand.js parse.js stringify.js; do
+            curl --fail --silent --show-error --location "$UPSTREAM/$file" -o "$PATCH_DIR/lib/$file"
+          done
+          pnpm patch-commit "$PATCH_DIR" 2>&1 | tee "$OUT/braces-patch-commit.log"
+
+          # Re-resolve after registering the local patch and updates/overrides.
+          pnpm install --no-frozen-lockfile 2>&1 | tee -a "$OUT/pnpm-install.log"
+
+          # Exercise the patched transitive package installed by pnpm.
+          BRACES_STORE_DIR="$(find node_modules/.pnpm -maxdepth 1 -type d -name 'braces@3.0.3*' -print -quit)"
+          test -n "$BRACES_STORE_DIR"
+          BRACES_PACKAGE="$GITHUB_WORKSPACE/$BRACES_STORE_DIR/node_modules/braces" node > "$OUT/braces-smoke-test.log" 2>&1 <<'NODE'
+          const assert = require('node:assert/strict');
+          const path = require('node:path');
+          const pkg = process.env.BRACES_PACKAGE;
+          const braces = require(pkg);
+          const parse = require(path.join(pkg, 'lib/parse.js'));
+          const hostile = '{'.repeat(101) + 'a,b' + '}'.repeat(101);
+          assert.throws(() => braces(hostile), /exceeds max depth/i);
+          assert.throws(() => parse(hostile), /exceeds max depth/i);
+          assert.deepEqual(braces.expand('{a,b}'), ['a', 'b']);
+          console.log('braces backport smoke tests passed: excessive nesting rejected; valid expansion preserved');
+          NODE
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json pnpm-lock.yaml patches
+          git status --short
           if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore(deps): resolve Phase 1 pnpm lockfile"
+            git commit -m "fix(deps): patch remaining Phase 1 advisories"
             git push origin HEAD:fix/audit-phase1-lockgen
           fi
 
       - name: Run Phase 1 validation commands
-        id: gates
         shell: bash
         run: |
           set +e
@@ -76,9 +109,12 @@ jobs:
           run_gate why-axios pnpm why axios
           run_gate why-js-yaml pnpm why js-yaml
           run_gate why-grpc pnpm why @grpc/grpc-js
+          run_gate why-brace-expansion pnpm why brace-expansion
+          run_gate why-braces pnpm why braces
+          run_gate why-source-map-js pnpm why source-map-js
 
           if [[ -f .next/server/app-paths-manifest.json ]]; then
-            OUT="$OUT" node -e 'const m=require("./.next/server/app-paths-manifest.json"); const ks=Object.keys(m); const rows=ks.filter(k=>/api\/inngest|image/i.test(k)); require("fs").writeFileSync(process.env.OUT+"/route-manifest-check.txt", "Manifest found. Relevant paths:\n"+rows.join("\n")+"\n"); console.log(rows.join("\n")); process.exit(ks.some(k=>/api\/inngest/i.test(k))?0:1)'
+            OUT="$OUT" node -e 'const fs=require("node:fs"); const m=require("./.next/server/app-paths-manifest.json"); const ks=Object.keys(m); const rows=ks.filter(k=>/api\/inngest|image/i.test(k)); fs.writeFileSync(process.env.OUT+"/route-manifest-check.txt", "Relevant app paths:\n"+rows.join("\n")+"\n"); console.log(rows.join("\n")); process.exit(ks.some(k=>/api\/inngest/i.test(k))?0:1)'
             route_code=$?
           else
             echo "Missing .next/server/app-paths-manifest.json" > "$OUT/route-manifest-check.txt"
@@ -89,7 +125,7 @@ jobs:
           {
             echo '# Phase 1 validation summary'
             echo
-            echo "- Commit: $GITHUB_SHA"
+            echo "- Commit checked out by workflow: $GITHUB_SHA"
             echo "- Node: $(node --version)"
             echo "- pnpm: $(pnpm --version)"
             echo
@@ -99,8 +135,8 @@ jobs:
             echo '|---|---:|'
             awk -F '\t' 'NR > 1 { printf "| %s | %s |\n", $1, $2 }' "$OUT/exit-codes.tsv"
             echo
-            echo '## Audit severity summary'
-            node -e 'const fs=require("fs");const p=process.argv[1];try{const j=JSON.parse(fs.readFileSync(p,"utf8"));console.log(JSON.stringify(j.metadata?.vulnerabilities??j.vulnerabilities??{note:"No known vulnerability summary field"},null,2))}catch(e){console.log("Audit JSON parsing failed: "+e.message)}' "$OUT/pnpm-audit.log"
+            echo '## Audit severity summary and high findings'
+            node -e 'const fs=require("fs");const p=process.argv[1];try{const j=JSON.parse(fs.readFileSync(p,"utf8"));console.log(JSON.stringify(j.metadata?.vulnerabilities??j.vulnerabilities??{note:"No known vulnerability summary field"},null,2));for(const a of Object.values(j.advisories??{})){if(["critical","high"].includes(a.severity)) console.log(a.severity+" | "+a.module_name+" | "+a.title+" | "+a.url)}}catch(e){console.log("Audit JSON parsing failed: "+e.message)}' "$OUT/pnpm-audit.log"
             echo
             echo '## Unit test summary'
             grep -E '(^|[[:space:]])(Test Files|Tests|Duration|FAIL|ERROR)([[:space:]]|$)' "$OUT/test-unit.log" | tail -n 20 || true
@@ -111,15 +147,18 @@ jobs:
             echo '## Lint summary'
             grep -E 'problems? \(' "$OUT/lint.log" | tail -n 5 || true
             echo
-            echo '## Built route manifest spot-check'
-            cat "$OUT/route-manifest-check.txt" 2>/dev/null || true
-            echo
             echo '## Install peer-dependency signals'
             if grep -Ei 'ERR_PNPM_PEER_DEP_ISSUES|Issues with peer dependencies found|unmet peer' "$OUT/pnpm-install.log"; then
               true
             else
               echo 'No peer-dependency error markers found in install log.'
             fi
+            echo
+            echo '## Braces patch smoke test'
+            cat "$OUT/braces-smoke-test.log" 2>/dev/null || true
+            echo
+            echo '## Built route manifest spot-check'
+            cat "$OUT/route-manifest-check.txt" 2>/dev/null || true
           } > "$OUT/SUMMARY.md"
 
       - name: Upload Phase 1 evidence
@@ -141,8 +180,9 @@ jobs:
             code="$(awk -F '\t' -v n="$name" '$1 == n {print $2}' "$OUT/exit-codes.tsv" | tail -n 1)"
             if [[ "$code" != "0" ]]; then echo "::error::$name failed (exit ${code:-unknown})"; failed=1; fi
           done
+
           node - "$OUT/pnpm-audit.log" <<'NODE'
-          const fs = require('fs');
+          const fs = require('node:fs');
           const p = process.argv[2];
           let data;
           try { data = JSON.parse(fs.readFileSync(p, 'utf8')); }
@@ -153,6 +193,7 @@ jobs:
           if ((v.critical ?? 0) > 0 || (v.high ?? 0) > 0) process.exit(1);
           NODE
           if [[ "$?" != "0" ]]; then echo "::error::pnpm audit gate requires 0 critical and 0 high advisories"; failed=1; fi
+
           if grep -Eqi 'ERR_PNPM_PEER_DEP_ISSUES|Issues with peer dependencies found|unmet peer' "$OUT/pnpm-install.log"; then
             echo "::error::Peer dependency issue marker found in pnpm install log"
             failed=1
@@ -161,5 +202,9 @@ jobs:
           lint_warnings="$(printf '%s' "$lint_line" | sed -nE 's/.*\(([0-9]+) errors?, ([0-9]+) warnings?\).*/\2/p')"
           if [[ -z "$lint_warnings" ]]; then echo "::error::Could not determine ESLint warning count"; failed=1
           elif (( lint_warnings > 218 )); then echo "::error::Lint warnings $lint_warnings exceed baseline 218"; failed=1
+          fi
+          if ! grep -q 'braces backport smoke tests passed' "$OUT/braces-smoke-test.log"; then
+            echo "::error::Braces backport smoke test did not pass"
+            failed=1
           fi
           exit "$failed"
