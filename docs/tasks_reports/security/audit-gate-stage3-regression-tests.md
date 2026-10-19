@@ -51,3 +51,12 @@ The regression tests explicitly exercise unknown/malformed severity and patch me
 - Verification is based on the GitHub Actions run above; no separate local checkout or local test invocation was available in this session.
 - This report does not claim that the PR has been merged. PR #86 remains open unless its state changes independently.
 - The conductor URL referenced by `AGENTS.md` was inaccessible earlier due to a DNS failure; it was not represented as read or followed.
+
+## Stage 5 — Final Diff Review Corrections
+
+The Stage 5 diff review confirmed two test-maintenance findings:
+
+- Restored the HTTP crawl test's per-host request-start interval assertion from 75 ms to its original 90 ms. The production crawl policy was not changed, so weakening the assertion was not justified by the remediation scope.
+- Restored regression coverage for the audit-gate missing-path fallback when an audit path is falsely marked production but the independently verified production dependency tree does not contain the package. This protects the existing production-tree override behavior without weakening fail-closed checks for actual production exposure.
+
+The corrections are limited to regression tests. No dependency manifest, lockfile, CI workflow, database artifact, baseline, issue, or main-branch change was made. The final Stage 5 commit's GitHub Actions result is the verification authority; the final response records its exact commit and run.
