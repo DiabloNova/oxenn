@@ -226,8 +226,8 @@ jobs:
             echo "::error::Peer dependency issue marker found in pnpm install log"
             failed=1
           fi
-          lint_line="$(grep -E 'problems? \\(' "$OUT/lint.log" | tail -n 1)"
-          lint_warnings="$(printf '%s' "$lint_line" | sed -nE 's/.*\\(([0-9]+) errors?, ([0-9]+) warnings?\\).*/\\2/p')"
+          lint_line="$(grep -E 'problems? \(' "$OUT/lint.log" | tail -n 1)"
+          lint_warnings="$(printf '%s' "$lint_line" | sed -nE 's/.*\(([0-9]+) errors?, ([0-9]+) warnings?\).*/\2/p')"
           new_next_rule_count="$(grep -c '@next/next/no-location-assign-relative-destination' "$OUT/lint.log" || true)"
           if [[ -z "$lint_warnings" ]]; then
             echo "::error::Could not determine ESLint warning count"
@@ -240,7 +240,7 @@ jobs:
             echo "::error::Lint warnings $lint_warnings exceed the baseline except for the explicitly documented two-warning Next 16.4.2 delta"
             failed=1
           fi
-          if ! grep -q 'braces backport smoke tests passed'
+          if ! grep -q 'braces backport smoke tests passed' "$OUT/braces-smoke-test.log"; then
             echo "::error::Braces backport smoke test did not pass"
             failed=1
           fi
