@@ -91,7 +91,7 @@ test('production dependency collection retains optional dependencies and rejects
     name: 'oxenn',
     dependencies: {
       next: { dependencies: { 'runtime-transitive': {} } },
-      'braces-compat': { name: 'braces', from: 'npm:braces@3.0.3' }
+      'braces-compat': { name: 'braces-compat', from: 'npm:braces@3.0.3' }
     },
     optionalDependencies: { 'platform-runtime': {} },
     devDependencies: { eslint: { dependencies: { braces: {} } } }
