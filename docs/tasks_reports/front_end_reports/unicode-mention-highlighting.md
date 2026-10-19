@@ -23,10 +23,12 @@ Mention detection and mention classification must use consistent Unicode-aware c
 
 ## Scope and safety
 
-Only these paths differ from `fix/audit-remediation-p2`:
+The implementation/test diff from `fix/audit-remediation-p2` is limited to:
 - `src/components/features/analytics/LlmAnalyticsPanel.tsx`
 - `src/components/features/analytics/mention-matcher.ts`
 - `tests/ui/features/analytics/mention-matcher.test.ts`
+
+This task report is the only additional documentation path: `docs/tasks_reports/front_end_reports/unicode-mention-highlighting.md`.
 
 No dependencies, database files, migrations, CI configuration, or security-header behavior were changed. The PR is stacked on PR #89 because its sanitization and security-header work is not yet merged into `main`.
 
