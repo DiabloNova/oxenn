@@ -43,7 +43,7 @@ const ALLOWLIST = [
   },
 ];
 
-const SEV_RANK = { critical: 0, high: 1, moderate: 2, low: 3 };
+const SEV_RANK = { critical: 0, high: 1, moderate: 2, low: 3, info: 4 };
 const UNPATCHED = '<0.0.0';
 
 function todayIso() {
@@ -90,6 +90,10 @@ function parseAdvisories(raw) {
       name: (a && a.module_name) || 'unknown',
       severity: String((a && a.severity) || 'unknown').toLowerCase(),
       patched: typeof (a && a.patched_versions) === 'string' ? a.patched_versions.trim() : '',
+      patchStatus: typeof (a && a.patched_versions) === 'string'
+        ? (a.patched_versions.trim() === UNPATCHED ? 'unpatched' : a.patched_versions.trim() ? 'patched' : 'unknown')
+        : 'unknown',
+      patchStatusUnknown: !(typeof (a && a.patched_versions) === 'string' && a.patched_versions.trim() !== ''),
       paths: Array.isArray(a?.findings) ? a.findings.flatMap((f) => (Array.isArray(f.paths) ? f.paths : []).map((p) => ({ path: String(p), dev: f.dev === true }))) : [],
     }));
   }
@@ -106,10 +110,14 @@ function parseAdvisories(raw) {
           id: src.id || 'unknown',
           name,
           severity: String(src.severity || v.severity || 'unknown').toLowerCase(),
-          patched: v.fixAvailable === false ? UNPATCHED : '',
+          patched: v.fixAvailable === true || (v.fixAvailable !== null && typeof v.fixAvailable === 'object') ? 'fix-available' : '',
           fixKnown: v.fixAvailable === true || (v.fixAvailable !== null && typeof v.fixAvailable === 'object'),
-          // false or missing is not proof that upstream has no fixed release.
-          patchStatusUnknown: v.fixAvailable === false || v.fixAvailable == null,
+          // npm v7 fixAvailable=false means no applicable automatic fix, not
+          // reliable evidence that upstream has no patched release.
+          patchStatus: v.fixAvailable === true || (v.fixAvailable !== null && typeof v.fixAvailable === 'object')
+            ? 'patched'
+            : 'unknown',
+          patchStatusUnknown: !(v.fixAvailable === true || (v.fixAvailable !== null && typeof v.fixAvailable === 'object')),
           // npm v7 `via` strings are dependency/advisory markers, not verified paths.
           // Do not invent a production path from them; use the production tree fallback.
           paths: [],
@@ -123,8 +131,11 @@ function parseAdvisories(raw) {
 }
 
 function isUnpatched(a) {
-  if (typeof a.fixKnown === 'boolean') return !a.fixKnown;
-  return a.patched === UNPATCHED || a.patched === '';
+  // Only explicit, recognized evidence may establish that no upstream patch
+  // exists. Missing/empty/malformed metadata is unknown, never unpatched.
+  if (a.patchStatus === 'unpatched') return true;
+  if (a.patchStatus === 'patched' || a.patchStatus === 'unknown') return false;
+  return a.patched === UNPATCHED;
 }
 
 function decide(a, today = todayIso()) {
@@ -132,9 +143,14 @@ function decide(a, today = todayIso()) {
   if (rank === undefined) return { action: 'FAIL', note: 'unknown severity — cannot safely classify advisory' };
   if (rank >= SEV_RANK.moderate) return { action: 'WARN', note: `${a.severity} — recorded, non-blocking` };
 
-  // critical / high
-  if (a.patchStatusUnknown) return { action: 'FAIL', note: 'fixAvailable=false does not prove no upstream patch exists; verify advisory version data' };
-  if (!isUnpatched(a)) return { action: 'FAIL', note: 'fix available — apply via override or upgrade' };
+  // critical / high: fail closed on absent or malformed patch evidence.
+  if (a.patchStatusUnknown || a.patchStatus === 'unknown'
+      || (!a.patchStatus && typeof a.patched !== 'string')) {
+    return { action: 'FAIL', note: 'patch status unknown — missing or malformed version evidence; verify advisory data' };
+  }
+  if (a.patchStatus === 'patched' || !isUnpatched(a)) {
+    return { action: 'FAIL', note: 'fix available or patch status not proven absent — apply via override/upgrade or verify upstream advisory data' };
+  }
 
   const entry = ALLOWLIST.find((e) => e.package === a.name && e.id === a.id);
   if (!entry) return { action: 'FAIL', note: 'no published fix and not risk-accepted' };
@@ -203,6 +219,7 @@ function decideMissingPathFallback(a, productionDependencyPaths, today = todayIs
     && entry
     && isUnpatched(a)
     && !a.patchStatusUnknown
+    && a.patchStatus !== 'unknown'
     && entry.expiry >= today
     && productionDependencyPaths instanceof Map
     && !productionDependencyPaths.has(a.name);
@@ -244,13 +261,13 @@ export async function main() {
   rows.sort((x, y) => rankOf(x) - rankOf(y) || x.a.name.localeCompare(y.a.name));
 
   console.log('');
-  console.log('Oxenn audit gate v1.1 — FAIL: critical/high with a fix; ALLOW: documented unpatched only; WARN: moderate/low.');
+  console.log('Oxenn audit gate v1.1 — FAIL: critical/high with a fix or unknown patch status; ALLOW: documented unpatched only; WARN: moderate/low/info.');
   console.log('');
   console.log(`${pad('SEV', 9)}${pad('PACKAGE', 20)}${pad('ADVISORY', 26)}${pad('FIX', 5)}${pad('DECISION', 9)}NOTE`);
   console.log('-'.repeat(112));
   for (const { a, d } of rows) {
     console.log(
-      `${pad(a.severity.toUpperCase(), 9)}${pad(a.name, 20)}${pad(a.id, 26)}${pad(isUnpatched(a) ? 'no' : 'yes', 5)}${pad(d.action, 9)}${d.note}`
+      `${pad(a.severity.toUpperCase(), 9)}${pad(a.name, 20)}${pad(a.id, 26)}${pad(a.patchStatus === 'unknown' || a.patchStatusUnknown ? '?' : isUnpatched(a) ? 'no' : 'yes', 5)}${pad(d.action, 9)}${d.note}`
     );
   }
   console.log('-'.repeat(112));
