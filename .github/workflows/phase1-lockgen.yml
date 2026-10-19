@@ -78,7 +78,7 @@ jobs:
           run_gate why-grpc pnpm why @grpc/grpc-js
 
           if [[ -f .next/server/app-paths-manifest.json ]]; then
-            node -e 'const m=require("./.next/server/app-paths-manifest.json"); const ks=Object.keys(m); const rows=ks.filter(k=>/api\/inngest|image/i.test(k)); require("fs").writeFileSync(process.env.OUT+"/route-manifest-check.txt", "Manifest found. Relevant paths:\n"+rows.join("\n")+"\n"); console.log(rows.join("\n")); process.exit(ks.some(k=>/api\/inngest/i.test(k))?0:1)' OUT="$OUT"
+            OUT="$OUT" node -e 'const m=require("./.next/server/app-paths-manifest.json"); const ks=Object.keys(m); const rows=ks.filter(k=>/api\/inngest|image/i.test(k)); require("fs").writeFileSync(process.env.OUT+"/route-manifest-check.txt", "Manifest found. Relevant paths:\n"+rows.join("\n")+"\n"); console.log(rows.join("\n")); process.exit(ks.some(k=>/api\/inngest/i.test(k))?0:1)'
             route_code=$?
           else
             echo "Missing .next/server/app-paths-manifest.json" > "$OUT/route-manifest-check.txt"
