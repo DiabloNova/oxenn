@@ -17,10 +17,11 @@ const normalizeMentionText = (value: string): string =>
     .replace(/\u064A/g, "ی")
     .replace(/\u0643/g, "ک");
 
+const regexMetaCharacters = new Set([".", "*", "+", "?", "^", "$", "{", "}", "(", ")", "|", "[", "]", "\\"]);
+
 const escapeRegExp = (value: string): string =>
-  value
-    .split("")
-    .map((character) => (/[.*+?^$()|[\]\\{}]/.test(character) ? "\\" + character : character))
+  [...value]
+    .map((character) => (regexMetaCharacters.has(character) ? "\\" + character : character))
     .join("");
 
 const wordEdge = "[\\p{L}\\p{N}_\\u200c]";
