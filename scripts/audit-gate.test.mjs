@@ -152,6 +152,12 @@ test('npm v7 missing or malformed fixAvailable is unknown and fails closed', () 
 test('missing-path fallback only applies to the exact accepted unpatched advisory', () => {
   const base = accepted({ paths: [] });
   assert.equal(decideMissingPathFallback(base, new Map(), DATE).action, 'ALLOW');
+  assert.equal(decideMissingPathFallback(accepted({
+    paths: [{
+      path: '.>eslint-config-next>@next/eslint-plugin-next>fast-glob>micromatch>braces',
+      dev: false,
+    }],
+  }), new Map(), DATE).action, 'ALLOW', 'production graph overrides a false-positive production path flag');
   assert.equal(decideMissingPathFallback(base, new Map([['braces', ['oxenn > braces']]]), DATE).action, 'FAIL');
   assert.equal(decideMissingPathFallback(base, new Map([['braces', ['oxenn > next > braces']]]), DATE).action, 'FAIL');
   assert.equal(decideMissingPathFallback(base, new Map(), '2026-11-20').action, 'FAIL');
