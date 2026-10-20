@@ -142,7 +142,7 @@ describe("LlmAnalyticsPanel security regression", () => {
     ).toBe(true);
   });
 
-  it("preserves entity text and highlights names that resemble HTML entities or injected markup", async () => {
+  it("preserves encoded text and highlights names that resemble markup", async () => {
     const brand = "Oxenn";
     const competitors = ["Amp", "Bold", "lt", "quot", "Span"];
     const responseText =
@@ -158,7 +158,7 @@ describe("LlmAnalyticsPanel security regression", () => {
         sentimentScore: 80,
         queryResults: [
           {
-            query: "Can entities and tag-like names be highlighted?",
+            query: "Can special characters and tag-like names be highlighted?",
             simulatedResponse: responseText,
             brandMentioned: true,
             sentiment: "positive",
@@ -196,7 +196,7 @@ describe("LlmAnalyticsPanel security regression", () => {
     });
 
     // The displayed text must be identical to the untrusted source text: no split
-    // entities, leaked class fragments, or accidentally rewritten characters.
+    // split encoded sequences, leaked class fragments, or rewritten characters.
     expect(highlighted.textContent).toBe(responseText);
     expect(highlighted.querySelector("tag")).toBeNull();
 
