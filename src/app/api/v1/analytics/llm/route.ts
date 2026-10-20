@@ -6,6 +6,8 @@ import { TenantContextManager } from "@/core/database/tenant-context";
 // Request validator schema
 const requestSchema = z.object({
   brandName: z.string().min(1, "نام برند الزامی است"),
+  brandNameWarningObserved: z.boolean().default(false),
+  brandNameWarningDecision: z.enum(["corrected", "confirmed", "not-needed"]).default("not-needed"),
   competitorNames: z.array(z.string()).min(1, "حداقل وارد کردن نام یک رقیب الزامی است"),
   queries: z.array(z.string()).min(1, "حداقل وارد کردن یک پرس‌وجو الزامی است"),
 });
@@ -51,16 +53,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { brandName, competitorNames, queries } = parsed.data;
+    const { brandName, brandNameWarningObserved, brandNameWarningDecision, competitorNames, queries } = parsed.data;
 
     // Run inside secure tenant isolation context
     return await TenantContextManager.runWithTenantContext(tenantId, userId, "req-llm-analytics", async () => {
       const llmClient = getLLMClient();
       let rawLlmOutput = "";
 
+      const characterWarningContext = brandNameWarningObserved
+        ? `\nMANDATORY BRAND-NAME CHARACTER-WARNING REVIEW:\nA non-Persian character (letter or symbol) was detected in the initial brand-name input. The user decision was: "${brandNameWarningDecision}". This history must be considered even if the user corrected the current name. The current official brand name is "${brandName}". Review whether the initial warning suggests useful follow-up questions about prior spellings, transliterations, pronunciation, alternate forms, or brand identity when building the digital twin. Do not assume the current name still contains a non-Persian character when the user corrected it. Do not infer a real model misunderstanding or brand-name defect from the warning alone. Separate confirmed information, hypotheses, and unknowns; recommend further user confirmation only where it would materially improve identity resolution.\n`
+        : "\\nNo non-Persian-character warning was recorded for the initial brand-name input. Do not invent a warning history.\\n";
+
       const prompt = `
         You are a world-class AI Analyst and Brand Strategist.
         We are conducting simulated LLM brand visibility audits for the brand "${brandName}" versus its competitors: ${competitorNames.join(", ")}.
+        ${characterWarningContext}
 
         For each of the following queries, simulate how a leading AI model (e.g. ChatGPT, Claude) would answer in professional fluent Persian:
         ${queries.map((q, idx) => `${idx + 1}. "${q}"`).join("\n")}
