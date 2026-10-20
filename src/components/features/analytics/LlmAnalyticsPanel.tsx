@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useTransition, useRef } from "react";
+import DOMPurify from "dompurify";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
@@ -210,28 +211,48 @@ export const LlmAnalyticsPanel: React.FC = () => {
       ]
     : [];
 
+  // HTML-escape untrusted text before any markup wrapping (audit fix H1)
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  // Escape regex metacharacters so external names cannot break the pattern
+  const escapeRegExp = (value: string) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
   // Helper to highlight mentions in response text
   const highlightMentions = (text: string) => {
     if (!text) return "";
-    let highlighted = text;
 
-    // Highlight brandName in green
-    const brandRegex = new RegExp(`(${brandName})`, "g");
-    highlighted = highlighted.replace(
-      brandRegex,
-      `<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/10">$1</span>`
+    const needles = [brandName, ...competitors]
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+    if (!needles.length) return <div className="leading-relaxed">{text}</div>;
+
+    const re = new RegExp(`(${needles.map(escapeRegExp).join("|")})`, "gi");
+    const brandLc = brandName.toLowerCase();
+    const highlighted = text
+      .split(re)
+      .map((part, i) => {
+        if (i % 2 === 0) return escapeHtml(part);
+        const cls =
+          part.toLowerCase() === brandLc
+            ? "px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/10"
+            : "px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/10";
+        return `<span class="${cls}">${escapeHtml(part)}</span>`;
+      })
+      .join("");
+
+    return (
+      <div
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(highlighted) }}
+        className="leading-relaxed"
+      />
     );
-
-    // Highlight competitors in orange/amber
-    competitors.forEach((comp) => {
-      const compRegex = new RegExp(`(${comp})`, "g");
-      highlighted = highlighted.replace(
-        compRegex,
-        `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/10">$1</span>`
-      );
-    });
-
-    return <div dangerouslySetInnerHTML={{ __html: highlighted }} className="leading-relaxed" />;
   };
 
   return (

@@ -346,6 +346,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Service Documentation  This section describes the internal application services, their boundaries, and responsibilities.  ## Status Dictionary - **Implemented**: Verified existing service. - **Partial**: Service exists but is missing functionality. - **Planned**: Not currently implemented.  ## Core Services  ### Asynchronous Job Processing (\`src/services/jobs/\`) Defines a canonical, infrastructure-agnostic background processing boundary via \`IJobQueue\`, \`IJobExecutor\`, and \`IJobRepository\` int`
   },
   {
+    slug: "phase-2-code-security",
+    titleEn: "Phase 2 — Code Security (H1, M8)",
+    titleFa: "Phase 2 — Code Security (H1, M8)",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Phase 2 — Code Security (H1, M8)  **Status: INCOMPLETE — VERIFICATION PENDING**   **Date:** 2026-10-19   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Oxenn Audit Report and Remediation Plan](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [PATCH-LlmAnalyticsPanel-XSS.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/PATCH-LlmAnalyticsPanel-XSS.md)   **Branch:** \`fix/audit-remediation-p2\`   **Pull req`
+  },
+  {
     slug: "audit-gate-stage3-regression-tests",
     titleEn: "Stage 3 — Audit Gate Regression Tests and Verification",
     titleFa: "Stage 3 — Audit Gate Regression Tests and Verification",
