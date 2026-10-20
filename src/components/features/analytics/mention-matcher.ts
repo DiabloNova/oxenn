@@ -91,7 +91,7 @@ const escapeRegExp = (value: string): string =>
     .join("");
 
 const isWordCharacter = (character: string | undefined): boolean =>
-  character !== undefined && /[\\p{L}\\p{M}\\p{N}_\\u200c]/u.test(character);
+  character !== undefined && /[\p{L}\p{M}\p{N}_\u200c]/u.test(character);
 
 /**
  * Splits the original response into safely classifiable mention segments.
