@@ -188,7 +188,7 @@ export const LlmAnalyticsPanel: React.FC = () => {
           body: JSON.stringify({
             brandName,
             brandNameWarningObserved,
-            brandNameWarningDecision: brandNameWarningObserved ? (brandNameWarningDecision ?? "not-needed") : "not-needed",
+            brandNameWarningDecision: brandNameWarningObserved ? (brandNameWarningDecision ?? (brandNameHasNonPersianCharacter ? "not-needed" : "corrected")) : "not-needed",
             competitorNames: competitors,
             queries: finalQueries,
           }),
