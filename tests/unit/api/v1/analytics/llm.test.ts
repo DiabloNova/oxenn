@@ -30,7 +30,7 @@ describe("DIRECT REGRESSION TEST: src/app/api/v1/analytics/llm/route.ts", () => 
         "x-user-id": "usr-test-123",
       },
       body: JSON.stringify({
-        brandName: "Rasha Gostar",
+        brandName: "رها گستر",
         competitorNames: ["Digikala"],
         queries: ["بهترین برند کدام است؟"],
       }),
