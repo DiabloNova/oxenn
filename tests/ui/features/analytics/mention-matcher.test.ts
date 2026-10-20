@@ -85,7 +85,7 @@ describe("matchMentionSegments", () => {
   });
 
   it("treats combining marks as part of a token for mention boundaries", () => {
-    const source = "Brand\\u064eName";
+    const source = "Brand\u064eName";
     const segments = matchMentionSegments(source, "Brand", []);
     expect(segments.every((segment) => segment.kind !== "brand")).toBe(true);
     expect(segments.map((segment) => segment.text).join("")).toBe(source);
@@ -94,7 +94,7 @@ describe("matchMentionSegments", () => {
   it("falls back safely when Intl.Segmenter is unavailable", () => {
     vi.stubGlobal("Intl", Object.assign(Object.create(Intl), { Segmenter: undefined }));
     try {
-      const source = "Cafe\\u0301";
+      const source = "Cafe\u0301";
       const segments = matchMentionSegments(source, "Café", []);
       expect(segments.map((segment) => segment.text).join("")).toBe(source);
       expect(segments.find((segment) => segment.kind === "brand")?.text).toBe(source);
