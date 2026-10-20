@@ -14,16 +14,16 @@ Mention detection and classification must use consistent Unicode-aware case-inse
 
 - Added `src/components/features/analytics/mention-matcher.ts` as a pure matching helper.
 - Uses a separate normalized matching view, including NFC normalization and canonicalization of common Arabic Yeh (`ي`) and Kaf (`ك`) variants to Persian Yeh (`ی`) and Kaf (`ک`).
-- Uses `Intl.Segmenter` grapheme ranges to map normalized matching offsets back to source ranges. Every returned segment is sliced from the original response, preserving its original Unicode spelling and UTF-16 content.
-- Uses Unicode property-based word edges and case-insensitive Unicode regex matching for both finding and classifying mentions; this avoids the prior `toLowerCase()` versus regex-`i` inconsistency (including Greek final sigma).
+- Uses `Intl.Segmenter` grapheme ranges when available, with a combining-mark-aware fallback for supported browsers without it, to map normalized offsets back to source ranges. Every returned segment is sliced from the original response, preserving its original Unicode spelling and UTF-16 content.
+- Uses Unicode property escapes, including combining marks, and case-insensitive Unicode regex matching for classification. Token boundaries are checked without regex lookbehind for compatibility with older supported Safari versions; this avoids the prior `toLowerCase()` versus regex-`i` inconsistency (including Greek final sigma).
 - Treats configured names as literal strings, sorts alternatives longest-first, and preserves ZWNJ as a word connector rather than silently removing it.
 - Marks a mention as `ambiguous` when the same matched spelling can resolve to both the brand and a competitor; the component displays that match with a neutral style.
 - Retains HTML escaping and `DOMPurify.sanitize()` in the rendering path.
-- Added regression assertions for Arabic text preservation, unchanged no-match/no-entity paths, exact source reconstruction, and mapping NFC-equivalent matches to the original grapheme sequence.
+- Added regression assertions for Arabic text preservation, unchanged no-match/no-entity paths, exact source reconstruction, NFC-equivalent decomposed input, longest-first overlapping names, combining-mark token boundaries, and the `Intl.Segmenter` fallback.
 
 ## Scope
 
-- `src/components/features/analytics/LlmAnalyticsPanel.tsx` (existing rendering integration; no change in this fix)
+- `src/components/features/analytics/LlmAnalyticsPanel.tsx` (updated earlier in this PR to render the matching helper's segments)
 - `src/components/features/analytics/mention-matcher.ts`
 - `tests/ui/features/analytics/mention-matcher.test.ts`
 - `docs/tasks_reports/front_end_reports/unicode-mention-highlighting.md`
@@ -47,7 +47,7 @@ No dependencies, database files, migrations, API contracts, or CI configuration 
 ## Known limitations
 
 - This change must not be considered verified until the focused UI test, typecheck, lint, and build run successfully.
-- `Intl.Segmenter` is required for grapheme-aware offset mapping; the project targets modern browser and Node runtimes, but the runtime support must be confirmed by CI.
+- Without `Intl.Segmenter`, the fallback keeps combining marks attached to preceding code points; it is intentionally a lightweight compatibility fallback rather than a full Unicode grapheme-break implementation.
 - Unicode case-insensitive regex matching follows JavaScript's Unicode-aware simple case-folding behavior; it does not promise every possible linguistic equivalence (for example, multi-character folds such as `ß` versus `ss`).
 - Arabic Yeh/Kaf normalization intentionally covers common variants only. ZWNJ and whitespace are not collapsed because doing so could merge distinct names.
 - Ambiguity is resolved conservatively for display only; it does not change configured brand/competitor records or claim that the two underlying entities are identical.
