@@ -31,7 +31,12 @@ The separate mention-matching correction uses a normalized matching view and map
 - `src/components/features/analytics/mention-matcher.ts`
 - `src/app/api/v1/analytics/llm/route.ts`
 - `tests/ui/features/analytics/brand-name-quality.test.ts`
+- `tests/ui/features/analytics/LlmAnalyticsPanel.test.tsx`
 - `tests/ui/features/analytics/mention-matcher.test.ts`
+- `tests/unit/api/v1/analytics/llm.test.ts`
+- `scripts/database/build-reference-matrix.ts`
+- `src/lib/docsIndex.ts` (generated documentation index)
+- `docs/database/reference-matrix.md` (generated database reference matrix)
 
 No database schema or migration changes are included. The warning history is request-scoped in the current analytics flow; this task does not claim permanent workspace-level persistence. If the product later needs the history to survive across separate sessions, that should be designed explicitly as part of Digital Twin metadata rather than silently assumed here.
 
@@ -39,8 +44,12 @@ No database schema or migration changes are included. The warning history is req
 
 | Check | Status |
 |---|---|
-| Character detector regression tests | Added; CI must confirm execution |
+| Character detector regression tests (Persian hamza and combining marks) | Added; CI must confirm execution |
+| API warning-gate tests (missing metadata, rejected decision, confirmed, corrected) | Added; CI must confirm execution |
+| UI warning-gate test and request-history tests | Added; CI must confirm execution |
 | Mention matcher regression tests | Present; CI must confirm execution |
+| Reference-matrix generator and generated matrix | Generator updated; regenerate with `pnpm docs:matrix` and verify no drift |
+| Generated documentation index | Included in tracked-file verification |
 | Typecheck, lint, build | Pending CI |
 | UI/browser verification | Pending |
 
