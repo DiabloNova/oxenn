@@ -6,9 +6,12 @@ describe("hasNonPersianBrandCharacter", () => {
     expect(hasNonPersianBrandCharacter("خانه خلاق هوش مصنوعی")).toBe(false);
   });
 
-  it("does not warn for Persian ZWNJ, Persian digits, or standard Persian hamza spelling", () => {
+  it("does not warn for Persian ZWNJ, Persian digits, or precomposed Persian orthographic forms", () => {
     expect(hasNonPersianBrandCharacter("خانه‌نو ۱۲۳")).toBe(false);
     expect(hasNonPersianBrandCharacter("رئیس")).toBe(false);
+    expect(hasNonPersianBrandCharacter("مؤسسه رئیس")).toBe(false);
+    expect(hasNonPersianBrandCharacter("مؤثر رؤیا")).toBe(false);
+    expect(hasNonPersianBrandCharacter("خانۀ کوچک")).toBe(false);
   });
 
   it("does not warn for Persian text with an Arabic combining mark such as fatha", () => {
