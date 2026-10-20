@@ -175,4 +175,18 @@ describe("LlmAnalyticsPanel security regression", () => {
     });
   });
 
+  it("blocks analysis until a flagged brand name is confirmed or corrected", () => {
+    render(<LlmAnalyticsPanel />);
+    fireEvent.change(screen.getByPlaceholderText("e.g., Optimus AI"), {
+      target: { value: "Oxenn" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Analyze Share of Voice/i }));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Please correct the name or confirm the non-Persian character warning.")
+    ).toBeTruthy();
+  });
+
 });
