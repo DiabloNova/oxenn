@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
+import { hasNonPersianBrandCharacter } from "@/components/features/analytics/brand-name-quality";
 
 // Request validator schema
 const requestSchema = z.object({
@@ -11,6 +12,14 @@ const requestSchema = z.object({
   competitorNames: z.array(z.string()).min(1, "حداقل وارد کردن نام یک رقیب الزامی است"),
   queries: z.array(z.string()).min(1, "حداقل وارد کردن یک پرس‌وجو الزامی است"),
 }).superRefine((value, context) => {
+  const currentNameIsFlagged = hasNonPersianBrandCharacter(value.brandName);
+  if (currentNameIsFlagged && value.brandNameWarningDecision !== "confirmed") {
+    context.addIssue({
+      code: "custom",
+      path: ["brandNameWarningDecision"],
+      message: "نام دارای نویسه غیر فارسی است؛ تأیید صریح کاربر الزامی است",
+    });
+  }
   if (value.brandNameWarningObserved && value.brandNameWarningDecision === "not-needed") {
     context.addIssue({
       code: "custom",
@@ -61,7 +70,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { brandName, brandNameWarningObserved, brandNameWarningDecision, competitorNames, queries } = parsed.data;
+    const { brandName, brandNameWarningDecision, competitorNames, queries } = parsed.data;
+    // Derive current-name warnings server-side; never trust a client flag to bypass confirmation.
+    const brandNameWarningObserved = parsed.data.brandNameWarningObserved || hasNonPersianBrandCharacter(brandName);
 
     // Run inside secure tenant isolation context
     return await TenantContextManager.runWithTenantContext(tenantId, userId, "req-llm-analytics", async () => {
