@@ -83,7 +83,7 @@ export function matchMentionSegments(
 ): MentionSegment[] {
   const matchingView = createMatchingView(text);
   const entities: MentionEntity[] = [
-    { name: normalizeMentionText(brandName.trim()), kind: "brand" },
+    { name: normalizeMentionText(brandName.trim()), kind: "brand" as const },
     ...brandAliases.map((name) => ({ name: normalizeMentionText(name.trim()), kind: "brand" as const })),
     ...competitors.map((name) => ({
       name: normalizeMentionText(name.trim()),
