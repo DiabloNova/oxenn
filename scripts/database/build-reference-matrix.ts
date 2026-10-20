@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-context";
 
 interface Journal {
@@ -88,14 +87,82 @@ function getExportNameForTable(tableName: string): string | null {
   return null;
 }
 
+function getSourceFiles(dirPath: string, files: string[] = []): string[] {
+  if (!fs.existsSync(dirPath)) return files;
+  for (const entry of fs.readdirSync(dirPath)) {
+    const fullPath = path.join(dirPath, entry);
+    if (fs.statSync(fullPath).isDirectory()) {
+      getSourceFiles(fullPath, files);
+    } else if (/\.(?:ts|tsx|js|jsx)$/.test(entry)) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+function isSchemaModule(modulePath: string): boolean {
+  const normalized = modulePath.replace(/\\/g, "/");
+  return /(?:^|\/)database\/schema(?:\/index)?$/.test(normalized)
+    || /(?:^|\/)schema(?:\/index)?$/.test(normalized);
+}
+
+/**
+ * A word-level grep incorrectly treats generic identifiers such as a local
+ * entities array as evidence that a file consumes the database table.
+ * Count only source files that import the actual table export from a schema
+ * module and then reference that imported binding.
+ */
 function findTableReferences(tableName: string): string[] {
   const exportName = getExportNameForTable(tableName);
-  try {
-    const grepCmd = `grep -rlE "\\\\b${tableName}\\\\b|\\\\b${exportName || "NO_EXPORT_FOUND"}\\\\b" src/ scripts/ tests/ | grep -v "tenant-tables.generated.ts" | grep -v "docsIndex.ts" | grep -v "build-reference-matrix.ts" | grep -v "database/schema" | grep -v "docsData.ts" || true`;
-    return execSync(grepCmd).toString().trim().split("\n").filter(Boolean).sort();
-  } catch {
-    return [];
+  if (!exportName) return [];
+
+  const roots = ["src", "scripts", "tests"].map((dir) => path.join(process.cwd(), dir));
+  const files = roots.flatMap((root) => getSourceFiles(root));
+  const consumers = new Set<string>();
+
+  for (const file of files) {
+    const normalizedPath = file.replace(/\\/g, "/");
+    if (
+      normalizedPath.endsWith("/tenant-tables.generated.ts")
+      || normalizedPath.endsWith("/docsIndex.ts")
+      || normalizedPath.endsWith("/build-reference-matrix.ts")
+      || normalizedPath.includes("/database/schema/")
+      || normalizedPath.endsWith("/docsData.ts")
+    ) continue;
+
+    const source = fs.readFileSync(file, "utf8");
+    const importPattern = /\bimport\s+(?!\()([\s\S]*?)\s+from\s+["']([^"']+)["'];?/g;
+    const sourceWithoutImports = source.replace(importPattern, "");
+    let match: RegExpExecArray | null;
+    let consumesTable = false;
+
+    while ((match = importPattern.exec(source)) !== null) {
+      const [, importClause, modulePath] = match;
+      if (!isSchemaModule(modulePath)) continue;
+
+      const namespace = importClause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/);
+      if (namespace) {
+        const namespaceUse = new RegExp(
+          \`\\b\${namespace[1]}\\s*(?:\\.\\s*\${exportName}\\b|\\[\\s*["']\${exportName}["']\\s*\\])\`
+        );
+        if (namespaceUse.test(sourceWithoutImports)) consumesTable = true;
+      }
+
+      const namedImports = importClause.match(/\{([\s\S]*?)\}/);
+      if (namedImports) {
+        for (const specifier of namedImports[1].split(",")) {
+          const parsed = specifier.trim().replace(/^type\s+/, "").match(/^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
+          if (!parsed || parsed[1] !== exportName) continue;
+          const localName = parsed[2] || parsed[1];
+          if (new RegExp(\`\\b\${localName}\\b\`).test(sourceWithoutImports)) consumesTable = true;
+        }
+      }
+    }
+
+    if (consumesTable) consumers.add(path.relative(process.cwd(), file).replace(/\\/g, "/"));
   }
+
+  return [...consumers].sort();
 }
 
 function escapeMarkdownCell(value: string): string {
