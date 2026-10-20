@@ -109,8 +109,9 @@ function isSchemaModule(modulePath: string): boolean {
 /**
  * A word-level grep incorrectly treats generic identifiers such as a local
  * entities array as evidence that a file consumes the database table.
- * Count only source files that import the actual table export from a schema
- * module and then reference that imported binding.
+ * Count source files that import and reference the actual table export, or
+ * contain a SQL table clause (FROM/JOIN/INSERT/UPDATE/DDL/REFERENCES) naming
+ * the table. This preserves raw-SQL consumers without treating local words as usage.
  */
 function findTableReferences(tableName: string): string[] {
   const exportName = getExportNameForTable(tableName);
@@ -133,8 +134,17 @@ function findTableReferences(tableName: string): string[] {
     const source = fs.readFileSync(file, "utf8");
     const importPattern = /\bimport\s+(?!\()([\s\S]*?)\s+from\s+["']([^"']+)["'];?/g;
     const sourceWithoutImports = source.replace(importPattern, "");
+    const escapedTableName = tableName.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\    const sourceWithoutImports = source.replace(importPattern, "");
     let match: RegExpExecArray | null;
     let consumesTable = false;
+
+    while ((match = importPattern.exec(source)) !== null) {");
+    const sqlTableReference = new RegExp(
+      "\\\\b(?:FROM|JOIN|INTO|UPDATE|TABLE|REFERENCES)\\\\s+(?:(?:public|[A-Za-z_][\\\\w$]*)\\\\s*\\\\.\\\\s*)?[\"\\\\x60]?" + escapedTableName + "[\"\\\\x60]?\\\\b",
+      "i"
+    );
+    let match: RegExpExecArray | null;
+    let consumesTable = sqlTableReference.test(source);
 
     while ((match = importPattern.exec(source)) !== null) {
       const [, importClause, modulePath] = match;
