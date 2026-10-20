@@ -6,8 +6,13 @@ describe("hasNonPersianBrandCharacter", () => {
     expect(hasNonPersianBrandCharacter("خانه خلاق هوش مصنوعی")).toBe(false);
   });
 
-  it("does not warn for Persian ZWNJ or Persian digits", () => {
+  it("does not warn for Persian ZWNJ, Persian digits, or standard Persian hamza spelling", () => {
     expect(hasNonPersianBrandCharacter("خانه‌نو ۱۲۳")).toBe(false);
+    expect(hasNonPersianBrandCharacter("رئیس")).toBe(false);
+  });
+
+  it("does not warn for Persian text with an Arabic combining mark such as fatha", () => {
+    expect(hasNonPersianBrandCharacter("فَردا")).toBe(false);
   });
 
   it("warns when a Latin letter appears, even as a single character", () => {
