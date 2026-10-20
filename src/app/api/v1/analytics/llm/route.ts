@@ -10,6 +10,14 @@ const requestSchema = z.object({
   brandNameWarningDecision: z.enum(["corrected", "confirmed", "not-needed"]).default("not-needed"),
   competitorNames: z.array(z.string()).min(1, "حداقل وارد کردن نام یک رقیب الزامی است"),
   queries: z.array(z.string()).min(1, "حداقل وارد کردن یک پرس‌وجو الزامی است"),
+}).superRefine((value, context) => {
+  if (value.brandNameWarningObserved && value.brandNameWarningDecision === "not-needed") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["brandNameWarningDecision"],
+      message: "تصمیم کاربر درباره هشدار نام برند الزامی است",
+    });
+  }
 });
 
 export interface LlmAnalyticsResponse {
