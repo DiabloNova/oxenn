@@ -1,6 +1,6 @@
 # Brand Name Non-Persian Character Warning and Digital Twin Context
 
-**Status:** IMPLEMENTED — AUTOMATED VERIFICATION PENDING  
+**Status:** IMPLEMENTED — CI VERIFIED  
 **Date:** 2026-10-20  
 **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)  
 **Branch:** `fix/llm-mention-unicode-fa-en`  
@@ -44,14 +44,14 @@ No database schema or migration changes are included. The warning history is req
 
 | Check | Status |
 |---|---|
-| Character detector regression tests (Persian hamza and combining marks) | Added; CI must confirm execution |
-| API warning-gate tests (missing metadata, rejected decision, confirmed, corrected) | Added; CI must confirm execution |
-| UI warning-gate test and request-history tests | Added; CI must confirm execution |
-| Mention matcher regression tests | Present; CI must confirm execution |
-| Reference-matrix generator and generated matrix | Generator updated; regenerate with `pnpm docs:matrix` and verify no drift |
-| Generated documentation index | Included in tracked-file verification |
-| Typecheck, lint, build | Pending CI |
-| UI/browser verification | Pending |
+| Character detector regression tests (Persian hamza and combining marks) | Passed in CI |
+| API warning-gate tests (missing metadata, rejected decision, confirmed, corrected) | Passed in CI |
+| UI warning-gate test and request-history tests | Passed in CI |
+| Mention matcher regression tests | Passed in CI |
+| Reference-matrix generator and generated matrix | `pnpm run docs:matrix` passed; generated-file drift check passed |
+| Generated documentation index | Generated-file drift check passed |
+| Typecheck, lint, build | Passed in CI |
+| Manual browser verification | Not performed; automated UI regression tests passed |
 
 ## Completion criteria
 
