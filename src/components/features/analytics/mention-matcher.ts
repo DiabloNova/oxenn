@@ -101,7 +101,7 @@ const isWordCharacter = (character: string | undefined): boolean =>
 export function matchMentionSegments(
   text: string,
   brandName: string,
-  competitors: string[],
+  competitorNames: string[],
 ): MentionSegment[] {
   const matchingView = createMatchingView(text);
   const mentionCandidates: MentionEntity[] = [
