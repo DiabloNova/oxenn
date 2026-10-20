@@ -104,17 +104,17 @@ export function matchMentionSegments(
   competitors: string[],
 ): MentionSegment[] {
   const matchingView = createMatchingView(text);
-  const entities: MentionEntity[] = [
+  const mentionCandidates: MentionEntity[] = [
     { name: normalizeMentionText(brandName.trim()), kind: "brand" as const },
-    ...competitors.map((name) => ({
+    ...competitorNames.map((name) => ({
       name: normalizeMentionText(name.trim()),
       kind: "competitor" as const,
     })),
   ].filter((entity) => entity.name.length > 0);
 
-  if (entities.length === 0) return [{ text, kind: "text" }];
+  if (mentionCandidates.length === 0) return [{ text, kind: "text" }];
 
-  const names = [...new Set(entities.map((entity) => entity.name))].sort(
+  const names = [...new Set(mentionCandidates.map((entity) => entity.name))].sort(
     (a, b) => b.length - a.length,
   );
   const alternatives = names.map(escapeRegExp).join("|");
@@ -142,7 +142,7 @@ export function matchMentionSegments(
     const originalEnd = matchingView.originalEndByIndex[lastMatchedIndex];
     if (originalStart === undefined || originalEnd === undefined) continue;
 
-    const matchedEntities = entities.filter((entity) =>
+    const matchedEntities = mentionCandidates.filter((entity) =>
       new RegExp("^" + escapeRegExp(entity.name) + "$", "iu").test(match![0]),
     );
     const hasBrand = matchedEntities.some((entity) => entity.kind === "brand");
