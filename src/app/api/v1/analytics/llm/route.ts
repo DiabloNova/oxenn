@@ -6,6 +6,7 @@ import { TenantContextManager } from "@/core/database/tenant-context";
 // Request validator schema
 const requestSchema = z.object({
   brandName: z.string().min(1, "نام برند الزامی است"),
+  brandAliases: z.array(z.string().trim().min(1)).default([]),
   competitorNames: z.array(z.string()).min(1, "حداقل وارد کردن نام یک رقیب الزامی است"),
   queries: z.array(z.string()).min(1, "حداقل وارد کردن یک پرس‌وجو الزامی است"),
 });
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { brandName, competitorNames, queries } = parsed.data;
+    const { brandName, brandAliases, competitorNames, queries } = parsed.data;
 
     // Run inside secure tenant isolation context
     return await TenantContextManager.runWithTenantContext(tenantId, userId, "req-llm-analytics", async () => {
@@ -60,14 +61,16 @@ export async function POST(req: NextRequest) {
 
       const prompt = `
         You are a world-class AI Analyst and Brand Strategist.
-        We are conducting simulated LLM brand visibility audits for the brand "${brandName}" versus its competitors: ${competitorNames.join(", ")}.
+        We are conducting simulated LLM brand visibility audits for the official brand name "${brandName}" versus its competitors: ${competitorNames.join(", ")}.
+        Confirmed alternate spellings/aliases for this same brand: ${brandAliases.length ? brandAliases.join(", ") : "none"}.
+        Treat aliases as alternate ways to identify the same brand, not as replacements for its official name. Do not assume an unconfirmed translation is an official name.
 
         For each of the following queries, simulate how a leading AI model (e.g. ChatGPT, Claude) would answer in professional fluent Persian:
         ${queries.map((q, idx) => `${idx + 1}. "${q}"`).join("\n")}
 
         Analyze each generated response to determine:
-        1. brandMentioned: true if "${brandName}" is explicitly mentioned/recommended, otherwise false.
-        2. sentiment: "positive" | "neutral" | "negative" regarding "${brandName}".
+        1. brandMentioned: true if "${brandName}" or one of these confirmed aliases (${brandAliases.join(", ") || "none"}) is explicitly mentioned/recommended, otherwise false.
+        2. sentiment: "positive" | "neutral" | "negative" regarding "${brandName}" and its confirmed aliases.
         3. hallucinationRisk: "low" | "medium" | "high" depending on factual clarity.
 
         Then, compile:
