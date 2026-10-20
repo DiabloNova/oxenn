@@ -90,7 +90,8 @@ const escapeRegExp = (value: string): string =>
     .map((character) => (regexMetaCharacters.has(character) ? "\\" + character : character))
     .join("");
 
-const wordEdge = "[\\p{L}\\p{M}\\p{N}_\\u200c]";
+const isWordCharacter = (character: string | undefined): boolean =>
+  character !== undefined && /[\\p{L}\\p{M}\\p{N}_\\u200c]/u.test(character);
 
 /**
  * Splits the original response into safely classifiable mention segments.
@@ -117,11 +118,9 @@ export function matchMentionSegments(
     (a, b) => b.length - a.length,
   );
   const alternatives = names.map(escapeRegExp).join("|");
-  // Unicode property escapes include combining marks in token boundaries.
-  const matcher = new RegExp(
-    "(?<!" + wordEdge + ")(?:" + alternatives + ")(?!" + wordEdge + ")",
-    "giu",
-  );
+  // Avoid lookbehind for older supported Safari versions. Check boundaries
+  // manually, including combining marks, after each longest-first match.
+  const matcher = new RegExp(alternatives, "giu");
 
   interface Candidate {
     start: number;
@@ -132,6 +131,12 @@ export function matchMentionSegments(
   let match: RegExpExecArray | null;
 
   while ((match = matcher.exec(matchingView.text)) !== null) {
+    const previousCharacter = Array.from(matchingView.text.slice(0, match.index)).pop();
+    const nextCharacter = Array.from(
+      matchingView.text.slice(match.index + match[0].length),
+    )[0];
+    if (isWordCharacter(previousCharacter) || isWordCharacter(nextCharacter)) continue;
+
     const originalStart = matchingView.originalStartByIndex[match.index];
     const lastMatchedIndex = match.index + match[0].length - 1;
     const originalEnd = matchingView.originalEndByIndex[lastMatchedIndex];
