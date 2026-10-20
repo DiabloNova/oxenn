@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { matchMentionSegments } from "@/components/features/analytics/mention-matcher";
 
 describe("matchMentionSegments", () => {
@@ -76,4 +76,31 @@ describe("matchMentionSegments", () => {
     expect(segments.map((segment) => segment.text).join("")).toBe(source);
     expect(segments.find((segment) => segment.kind === "brand")?.text).toBe("Cafe\u0301");
   });
+  it("prefers a longer competitor name over a brand name contained within it", () => {
+    const segments = matchMentionSegments("OpenAI Labs announced a release", "OpenAI", ["OpenAI Labs"]);
+    expect(segments.filter((segment) => segment.kind !== "text")).toEqual([
+      { text: "OpenAI Labs", kind: "competitor" },
+    ]);
+    expect(segments.map((segment) => segment.text).join("")).toBe("OpenAI Labs announced a release");
+  });
+
+  it("treats combining marks as part of a token for mention boundaries", () => {
+    const source = "Brand\\u064eName";
+    const segments = matchMentionSegments(source, "Brand", []);
+    expect(segments.every((segment) => segment.kind !== "brand")).toBe(true);
+    expect(segments.map((segment) => segment.text).join("")).toBe(source);
+  });
+
+  it("falls back safely when Intl.Segmenter is unavailable", () => {
+    vi.stubGlobal("Intl", Object.assign(Object.create(Intl), { Segmenter: undefined }));
+    try {
+      const source = "Cafe\\u0301";
+      const segments = matchMentionSegments(source, "Café", []);
+      expect(segments.map((segment) => segment.text).join("")).toBe(source);
+      expect(segments.find((segment) => segment.kind === "brand")?.text).toBe(source);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
 });
