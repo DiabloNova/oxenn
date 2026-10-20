@@ -346,12 +346,28 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Service Documentation  This section describes the internal application services, their boundaries, and responsibilities.  ## Status Dictionary - **Implemented**: Verified existing service. - **Partial**: Service exists but is missing functionality. - **Planned**: Not currently implemented.  ## Core Services  ### Asynchronous Job Processing (\`src/services/jobs/\`) Defines a canonical, infrastructure-agnostic background processing boundary via \`IJobQueue\`, \`IJobExecutor\`, and \`IJobRepository\` int`
   },
   {
+    slug: "brand-name-character-warning",
+    titleEn: "Brand Name Non-Persian Character Warning and Digital Twin Context",
+    titleFa: "Brand Name Non-Persian Character Warning and Digital Twin Context",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Brand Name Non-Persian Character Warning and Digital Twin Context  **Status:** IMPLEMENTED — AUTOMATED VERIFICATION PENDING   **Date:** 2026-10-20   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Branch:** \`fix/llm-mention-unicode-fa-en\`   **Pull request:** [#90](https://github.com/DiabloNova/oxenn/pull/90)  ## Goal  Keep brand-name validation deliberately minimal: detect whether at least one character is outside the accepted Persian letters, Persian digits, whites`
+  },
+  {
     slug: "phase-2-code-security",
     titleEn: "Phase 2 — Code Security (H1, M8)",
     titleFa: "Phase 2 — Code Security (H1, M8)",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
     snippet: `# Phase 2 — Code Security (H1, M8)  **Status: INCOMPLETE — VERIFICATION PENDING**   **Date:** 2026-10-19   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Oxenn Audit Report and Remediation Plan](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [PATCH-LlmAnalyticsPanel-XSS.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/PATCH-LlmAnalyticsPanel-XSS.md)   **Branch:** \`fix/audit-remediation-p2\`   **Pull req`
+  },
+  {
+    slug: "unicode-mention-highlighting",
+    titleEn: "Unicode-Safe LLM Mention Highlighting",
+    titleFa: "Unicode-Safe LLM Mention Highlighting",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Unicode-Safe LLM Mention Highlighting  **Status: IMPLEMENTED — AUTOMATED VERIFICATION NOT RUN**   **Date:** 2026-10-20   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Branch:** \`fix/llm-mention-unicode-fa-en\`   **Pull request:** [#90](https://github.com/DiabloNova/oxenn/pull/90)  ## Invariant  Mention detection and classification must use consistent Unicode-aware case-insensitive semantics. Persian/Arabic spelling variants must be handled consistently, brand/compe`
   },
   {
     slug: "audit-gate-stage3-regression-tests",
