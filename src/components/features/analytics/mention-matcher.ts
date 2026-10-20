@@ -10,12 +10,41 @@ interface MentionEntity {
   kind: "brand" | "competitor";
 }
 
+interface MatchingView {
+  text: string;
+  originalStartByIndex: number[];
+  originalEndByIndex: number[];
+}
+
 const normalizeMentionText = (value: string): string =>
   value
     .normalize("NFC")
     // Canonicalize common Arabic-script variants used in Persian names.
     .replace(/\u064A/g, "ی")
     .replace(/\u0643/g, "ک");
+
+/**
+ * Builds a normalized matching string while tracking each normalized UTF-16
+ * index back to the original grapheme range. Rendering always slices the
+ * untouched source string, so normalization can never rewrite model output.
+ */
+const createMatchingView = (source: string): MatchingView => {
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  let text = "";
+  const originalStartByIndex: number[] = [];
+  const originalEndByIndex: number[] = [];
+
+  for (const part of segmenter.segment(source)) {
+    const normalized = normalizeMentionText(part.segment);
+    text += normalized;
+    for (let index = 0; index < normalized.length; index += 1) {
+      originalStartByIndex.push(part.index);
+      originalEndByIndex.push(part.index + part.segment.length);
+    }
+  }
+
+  return { text, originalStartByIndex, originalEndByIndex };
+};
 
 const regexMetaCharacters = new Set([
   ".",
@@ -42,18 +71,16 @@ const escapeRegExp = (value: string): string =>
 const wordEdge = "[\\p{L}\\p{N}_\\u200c]";
 
 /**
- * Splits text into safely classifiable mention segments.
- *
- * Matching and classification use the same Unicode-aware, case-insensitive
- * regex semantics. If a matched spelling can refer to both the brand and a
- * competitor, it is marked ambiguous rather than assigned a misleading color.
+ * Splits the original response into safely classifiable mention segments.
+ * Normalization is used only in a separate matching view; every returned
+ * segment is sliced from the original source and concatenates back to it.
  */
 export function matchMentionSegments(
   text: string,
   brandName: string,
   competitors: string[],
 ): MentionSegment[] {
-  const normalizedText = normalizeMentionText(text);
+  const matchingView = createMatchingView(text);
   const entities: MentionEntity[] = [
     { name: normalizeMentionText(brandName.trim()), kind: "brand" },
     ...competitors.map((name) => ({
@@ -62,25 +89,29 @@ export function matchMentionSegments(
     })),
   ].filter((entity) => entity.name.length > 0);
 
-  if (entities.length === 0) return [{ text: normalizedText, kind: "text" }];
+  if (entities.length === 0) return [{ text, kind: "text" }];
 
   const names = [...new Set(entities.map((entity) => entity.name))].sort(
     (a, b) => b.length - a.length,
   );
   const alternatives = names.map(escapeRegExp).join("|");
-  // Unicode property escapes avoid ASCII-only \b behavior for Persian and mixed scripts.
+  // Unicode property escapes avoid ASCII-only \\b behavior for Persian and mixed scripts.
   const matcher = new RegExp(
     "(?<!" + wordEdge + ")(?:" + alternatives + ")(?!" + wordEdge + ")",
     "giu",
   );
 
   const segments: MentionSegment[] = [];
-  let cursor = 0;
+  let originalCursor = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = matcher.exec(normalizedText)) !== null) {
-    if (match.index > cursor) {
-      segments.push({ text: normalizedText.slice(cursor, match.index), kind: "text" });
+  while ((match = matcher.exec(matchingView.text)) !== null) {
+    const originalStart = matchingView.originalStartByIndex[match.index];
+    const lastMatchedIndex = match.index + match[0].length - 1;
+    const originalEnd = matchingView.originalEndByIndex[lastMatchedIndex];
+
+    if (originalStart > originalCursor) {
+      segments.push({ text: text.slice(originalCursor, originalStart), kind: "text" });
     }
 
     const matchedName = match[0];
@@ -99,13 +130,13 @@ export function matchMentionSegments(
             ? "competitor"
             : "text";
 
-    segments.push({ text: matchedName, kind });
-    cursor = matcher.lastIndex;
+    segments.push({ text: text.slice(originalStart, originalEnd), kind });
+    originalCursor = originalEnd;
   }
 
-  if (cursor < normalizedText.length) {
-    segments.push({ text: normalizedText.slice(cursor), kind: "text" });
+  if (originalCursor < text.length) {
+    segments.push({ text: text.slice(originalCursor), kind: "text" });
   }
 
-  return segments.length ? segments : [{ text: normalizedText, kind: "text" }];
+  return segments.length ? segments : [{ text, kind: "text" }];
 }
