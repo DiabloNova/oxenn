@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useTransition, useRef } from "react";
 import DOMPurify from "dompurify";
 import { matchMentionSegments } from "@/components/features/analytics/mention-matcher";
+import { analyzeBrandName } from "@/components/features/analytics/brand-name-quality";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
@@ -32,8 +33,21 @@ export const LlmAnalyticsPanel: React.FC = () => {
 
   // Inputs
   const [brandName, setBrandName] = useState("خانه خلاق هوش مصنوعی");
+  const [brandAliases, setBrandAliases] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState("");
   const [competitors, setCompetitors] = useState<string[]>(["دیجی‌کالا", "اسنپ"]);
+  const brandNameFindings = analyzeBrandName(brandName, isRtl ? "fa" : "en");
+
+  const addBrandAlias = (alias: string) => {
+    const trimmed = alias.trim();
+    if (trimmed && trimmed !== brandName.trim() && !brandAliases.includes(trimmed)) {
+      setBrandAliases((current) => [...current, trimmed]);
+    }
+  };
+
+  const removeBrandAlias = (alias: string) => {
+    setBrandAliases((current) => current.filter((item) => item !== alias));
+  };
 
   // Dynamic queries
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([
@@ -179,6 +193,7 @@ export const LlmAnalyticsPanel: React.FC = () => {
           },
           body: JSON.stringify({
             brandName,
+            brandAliases,
             competitorNames: competitors,
             queries: finalQueries,
           }),
@@ -225,7 +240,7 @@ export const LlmAnalyticsPanel: React.FC = () => {
   const highlightMentions = (text: string) => {
     if (!text) return "";
 
-    const highlighted = matchMentionSegments(text, brandName, competitors)
+    const highlighted = matchMentionSegments(text, brandName, competitors, brandAliases)
       .map(({ text: part, kind }) => {
         if (kind === "text") return escapeHtml(part);
 
@@ -283,6 +298,61 @@ export const LlmAnalyticsPanel: React.FC = () => {
                   className="w-full px-4 py-2.5 text-xs rounded-xl outline-none transition-all duration-300 bg-[var(--muted-surface)] text-[var(--text-primary)] border border-[var(--border)] focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:bg-[var(--card)]"
                   disabled={isPending}
                 />
+                {brandNameFindings.length > 0 && (
+                  <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3" role="status" aria-live="polite">
+                    {brandNameFindings.map((finding) => (
+                      <div key={finding.code} className="space-y-2">
+                        <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                          {isRtl ? finding.messageFa : finding.messageEn}
+                        </p>
+                        {finding.suggestions.map((suggestion) => {
+                          const alreadyAdded = brandAliases.includes(suggestion.suggestedName);
+                          return (
+                            <div key={suggestion.suggestedName} className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-semibold text-[var(--text-primary)]">
+                                {isRtl ? "معادل پیشنهادی:" : "Suggested Persian alias:"} {suggestion.suggestedName}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => addBrandAlias(suggestion.suggestedName)}
+                                disabled={isPending || alreadyAdded || suggestion.suggestedName === brandName.trim()}
+                                className="rounded-lg border border-sky-500/40 px-2.5 py-1 text-[10px] font-semibold text-sky-500 disabled:opacity-50"
+                              >
+                                {alreadyAdded
+                                  ? (isRtl ? "اضافه شده" : "Added")
+                                  : (isRtl ? "تأیید و افزودن به نام‌های جایگزین" : "Confirm and add as alias")}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-[var(--text-muted)]">
+                      {isRtl
+                        ? "این هشدار به‌تنهایی ثابت نمی‌کند مدل زبانی نام برند را اشتباه می‌فهمد. نام رسمی تغییر نمی‌کند و فقط معادل تأییدشده در همین تحلیل به‌عنوان نام جایگزین استفاده می‌شود."
+                        : "This warning does not prove an LLM misunderstands the brand. The official name is unchanged; only a confirmed alias is used in this analysis."}
+                    </p>
+                  </div>
+                )}
+                {brandAliases.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[10px] font-semibold text-[var(--text-secondary)]">
+                      {isRtl ? "نام‌های جایگزین تأییدشده:" : "Confirmed aliases:"}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {brandAliases.map((alias) => (
+                        <span key={alias} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-500">
+                          {alias}
+                          {!isPending && (
+                            <button type="button" onClick={() => removeBrandAlias(alias)} aria-label={isRtl ? `حذف نام جایگزین ${alias}` : `Remove alias ${alias}`}>
+                              <X size={11} />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Competitors Tag input */}
