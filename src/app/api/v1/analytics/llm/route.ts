@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
       const characterWarningContext = brandNameWarningObserved
         ? `\nMANDATORY BRAND-NAME CHARACTER-WARNING REVIEW:\nA non-Persian character (letter or symbol) was detected in the initial brand-name input. The user decision was: "${brandNameWarningDecision}". This history must be considered even if the user corrected the current name. The current official brand name is "${brandName}". Review whether the initial warning suggests useful follow-up questions about prior spellings, transliterations, pronunciation, alternate forms, or brand identity when building the digital twin. Do not assume the current name still contains a non-Persian character when the user corrected it. Do not infer a real model misunderstanding or brand-name defect from the warning alone. Separate confirmed information, hypotheses, and unknowns; recommend further user confirmation only where it would materially improve identity resolution.\n`
-        : "\\nNo non-Persian-character warning was recorded for the initial brand-name input. Do not invent a warning history.\\n";
+        : "\nNo non-Persian-character warning was recorded for the initial brand-name input. Do not invent a warning history.\n";
 
       const prompt = `
         You are a world-class AI Analyst and Brand Strategist.
