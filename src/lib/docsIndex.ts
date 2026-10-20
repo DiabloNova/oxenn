@@ -351,7 +351,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Brand Name Non-Persian Character Warning and Digital Twin Context",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Brand Name Non-Persian Character Warning and Digital Twin Context  **Status:** IMPLEMENTED — AUTOMATED VERIFICATION PENDING   **Date:** 2026-10-20   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Branch:** \`fix/llm-mention-unicode-fa-en\`   **Pull request:** [#90](https://github.com/DiabloNova/oxenn/pull/90)  ## Goal  Keep brand-name validation deliberately minimal: detect whether at least one character is outside the accepted Persian letters, Persian digits, whites`
+    snippet: `# Brand Name Non-Persian Character Warning and Digital Twin Context  **Status:** IMPLEMENTED — CI VERIFIED   **Date:** 2026-10-20   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Branch:** \`fix/llm-mention-unicode-fa-en\`   **Pull request:** [#90](https://github.com/DiabloNova/oxenn/pull/90)  ## Goal  Keep brand-name validation deliberately minimal: detect whether at least one character is outside the accepted Persian letters, Persian digits, whitespace, Persian ZWNJ,`
   },
   {
     slug: "phase-2-code-security",
