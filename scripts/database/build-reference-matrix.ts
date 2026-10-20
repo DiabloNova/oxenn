@@ -134,15 +134,17 @@ function findTableReferences(tableName: string): string[] {
     const source = fs.readFileSync(file, "utf8");
     const importPattern = /\bimport\s+(?!\()([\s\S]*?)\s+from\s+["']([^"']+)["'];?/g;
     const sourceWithoutImports = source.replace(importPattern, "");
-    const escapedTableName = tableName.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
     const sqlTableReference = new RegExp(
-      "\\b(?:FROM|JOIN|INTO|UPDATE|TABLE|REFERENCES)\\s+(?:(?:public|[A-Za-z_][\\w$]*)\\s*\\.\\s*)?["]?" + escapedTableName + "["]?\\b",
+      "\\b(?:FROM|JOIN|INTO|UPDATE|TABLE|REFERENCES)\\s+(?:(?:public|[A-Za-z_][\\w$]*)\\s*\\.\\s*)?[\\\"]?" + tableName + "[\\\"]?\\b",
       "i"
     );
     let match: RegExpExecArray | null;
     let consumesTable = sqlTableReference.test(source);
 
     while ((match = importPattern.exec(source)) !== null) {
+      const [, importClause, modulePath] = match;
+      if (!isSchemaModule(modulePath)) continue;
+
       const namespace = importClause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/);
       if (namespace) {
         const namespaceUse = new RegExp("\\b" + namespace[1] + "\\s*\\.\\s*" + exportName + "\\b");
