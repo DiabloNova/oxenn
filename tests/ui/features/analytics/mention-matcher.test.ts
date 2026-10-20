@@ -70,6 +70,13 @@ describe("matchMentionSegments", () => {
     expect(segments.every((segment) => segment.kind !== "brand")).toBe(true);
   });
 
+  it("highlights confirmed Persian aliases as the brand without replacing source text", () => {
+    const source = "Optimus هوش مصنوعی را بررسی کنید.";
+    const segments = matchMentionSegments(source, "Optimus AI", [], ["Optimus هوش مصنوعی"]);
+    expect(segments.find((segment) => segment.kind === "brand")?.text).toBe("Optimus هوش مصنوعی");
+    expect(segments.map((segment) => segment.text).join("")).toBe(source);
+  });
+
   it("maps NFC-equivalent matches back to the exact original grapheme sequence", () => {
     const source = "Cafe\u0301 is a brand";
     const segments = matchMentionSegments(source, "Café", []);
