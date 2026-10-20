@@ -142,9 +142,7 @@ function findTableReferences(tableName: string): string[] {
 
       const namespace = importClause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/);
       if (namespace) {
-        const namespaceUse = new RegExp(
-          \`\\b\${namespace[1]}\\s*(?:\\.\\s*\${exportName}\\b|\\[\\s*["']\${exportName}["']\\s*\\])\`
-        );
+        const namespaceUse = new RegExp("\\b" + namespace[1] + "\\s*\\.\\s*" + exportName + "\\b");
         if (namespaceUse.test(sourceWithoutImports)) consumesTable = true;
       }
 
@@ -154,7 +152,7 @@ function findTableReferences(tableName: string): string[] {
           const parsed = specifier.trim().replace(/^type\s+/, "").match(/^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
           if (!parsed || parsed[1] !== exportName) continue;
           const localName = parsed[2] || parsed[1];
-          if (new RegExp(\`\\b\${localName}\\b\`).test(sourceWithoutImports)) consumesTable = true;
+          if (new RegExp("\\b" + localName + "\\b").test(sourceWithoutImports)) consumesTable = true;
         }
       }
     }
