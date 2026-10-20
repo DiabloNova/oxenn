@@ -148,4 +148,31 @@ describe("LlmAnalyticsPanel security regression", () => {
       Array.from(highlighted.querySelectorAll("span")).some((span) => span.textContent === competitor)
     ).toBe(true);
   });
+  it("retains warning history after the user corrects the brand name", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        shareOfVoice: { yourBrand: 100, competitors: [] },
+        sentimentScore: 75,
+        queryResults: [],
+        actionableInsights: [],
+      }),
+    });
+
+    render(<LlmAnalyticsPanel />);
+    const brandInput = screen.getByPlaceholderText("e.g., Optimus AI");
+    fireEvent.change(brandInput, { target: { value: "Oxenn" } });
+    fireEvent.change(brandInput, { target: { value: "اوکسن" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Analyze Share of Voice/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(requestBody).toMatchObject({
+      brandName: "اوکسن",
+      brandNameWarningObserved: true,
+      brandNameWarningDecision: "corrected",
+    });
+  });
+
 });
