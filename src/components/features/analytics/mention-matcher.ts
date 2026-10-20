@@ -28,13 +28,35 @@ const normalizeMentionText = (value: string): string =>
  * index back to the original grapheme range. Rendering always slices the
  * untouched source string, so normalization can never rewrite model output.
  */
+const getGraphemeLikeSegments = (source: string): Array<{ segment: string; index: number }> => {
+  if (typeof Intl.Segmenter === "function") {
+    return Array.from(
+      new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(source),
+      (part) => ({ segment: part.segment, index: part.index }),
+    );
+  }
+
+  // Fallback for supported browsers without Intl.Segmenter. Keep combining
+  // marks attached to the preceding code point so source offsets stay intact.
+  const parts: Array<{ segment: string; index: number }> = [];
+  let offset = 0;
+  for (const character of source) {
+    if (/\p{M}/u.test(character) && parts.length > 0) {
+      parts[parts.length - 1].segment += character;
+    } else {
+      parts.push({ segment: character, index: offset });
+    }
+    offset += character.length;
+  }
+  return parts;
+};
+
 const createMatchingView = (source: string): MatchingView => {
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
   let text = "";
   const originalStartByIndex: number[] = [];
   const originalEndByIndex: number[] = [];
 
-  for (const part of segmenter.segment(source)) {
+  for (const part of getGraphemeLikeSegments(source)) {
     const normalized = normalizeMentionText(part.segment);
     text += normalized;
     for (let index = 0; index < normalized.length; index += 1) {
@@ -68,7 +90,7 @@ const escapeRegExp = (value: string): string =>
     .map((character) => (regexMetaCharacters.has(character) ? "\\" + character : character))
     .join("");
 
-const wordEdge = "[\\p{L}\\p{N}_\\u200c]";
+const wordEdge = "[\\p{L}\\p{M}\\p{N}_\\u200c]";
 
 /**
  * Splits the original response into safely classifiable mention segments.
@@ -95,32 +117,31 @@ export function matchMentionSegments(
     (a, b) => b.length - a.length,
   );
   const alternatives = names.map(escapeRegExp).join("|");
-  // Unicode property escapes avoid ASCII-only \\b behavior for Persian and mixed scripts.
+  // Unicode property escapes include combining marks in token boundaries.
   const matcher = new RegExp(
     "(?<!" + wordEdge + ")(?:" + alternatives + ")(?!" + wordEdge + ")",
     "giu",
   );
 
-  const segments: MentionSegment[] = [];
-  let originalCursor = 0;
+  interface Candidate {
+    start: number;
+    end: number;
+    kind: MentionKind;
+  }
+  const candidates: Candidate[] = [];
   let match: RegExpExecArray | null;
 
   while ((match = matcher.exec(matchingView.text)) !== null) {
     const originalStart = matchingView.originalStartByIndex[match.index];
     const lastMatchedIndex = match.index + match[0].length - 1;
     const originalEnd = matchingView.originalEndByIndex[lastMatchedIndex];
+    if (originalStart === undefined || originalEnd === undefined) continue;
 
-    if (originalStart > originalCursor) {
-      segments.push({ text: text.slice(originalCursor, originalStart), kind: "text" });
-    }
-
-    const matchedName = match[0];
     const matchedEntities = entities.filter((entity) =>
-      new RegExp("^" + escapeRegExp(entity.name) + "$", "iu").test(matchedName),
+      new RegExp("^" + escapeRegExp(entity.name) + "$", "iu").test(match![0]),
     );
     const hasBrand = matchedEntities.some((entity) => entity.kind === "brand");
     const hasCompetitor = matchedEntities.some((entity) => entity.kind === "competitor");
-
     const kind: MentionKind =
       hasBrand && hasCompetitor
         ? "ambiguous"
@@ -130,12 +151,38 @@ export function matchMentionSegments(
             ? "competitor"
             : "text";
 
-    segments.push({ text: text.slice(originalStart, originalEnd), kind });
-    originalCursor = originalEnd;
+    candidates.push({ start: originalStart, end: originalEnd, kind });
   }
 
-  if (originalCursor < text.length) {
-    segments.push({ text: text.slice(originalCursor), kind: "text" });
+  // Normalization can map multiple regex hits to the same source grapheme.
+  // Merge overlapping source ranges before slicing so source text is never duplicated.
+  candidates.sort((a, b) => a.start - b.start || b.end - a.end);
+  const merged: Candidate[] = [];
+  for (const candidate of candidates) {
+    const previous = merged[merged.length - 1];
+    if (!previous || candidate.start >= previous.end) {
+      merged.push({ ...candidate });
+      continue;
+    }
+
+    previous.end = Math.max(previous.end, candidate.end);
+    if (previous.kind !== candidate.kind) previous.kind = "ambiguous";
+  }
+
+  const segments: MentionSegment[] = [];
+  let cursor = 0;
+  for (const candidate of merged) {
+    if (candidate.start > cursor) {
+      segments.push({ text: text.slice(cursor, candidate.start), kind: "text" });
+    }
+    if (candidate.end > cursor) {
+      segments.push({ text: text.slice(Math.max(cursor, candidate.start), candidate.end), kind: candidate.kind });
+      cursor = candidate.end;
+    }
+  }
+
+  if (cursor < text.length) {
+    segments.push({ text: text.slice(cursor), kind: "text" });
   }
 
   return segments.length ? segments : [{ text, kind: "text" }];
