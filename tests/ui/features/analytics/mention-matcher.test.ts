@@ -17,9 +17,30 @@ describe("matchMentionSegments", () => {
     ]);
   });
 
-  it("matches common Arabic/Persian Yeh and Kaf variants", () => {
-    const segments = matchMentionSegments("از ديجي‌كالا خرید کنید", "Oxenn", ["دیجی‌کالا"]);
-    expect(segments.find((segment) => segment.kind === "competitor")?.text).toBe("دیجی‌کالا");
+  it("matches common Arabic/Persian Yeh and Kaf variants while preserving source spelling", () => {
+    const source = "از ديجي‌كالا خرید کنید";
+    const segments = matchMentionSegments(source, "Oxenn", ["دیجی‌کالا"]);
+    expect(segments.find((segment) => segment.kind === "competitor")?.text).toBe("ديجي‌كالا");
+    expect(segments.map((segment) => segment.text).join("")).toBe(source);
+  });
+
+  it("preserves Arabic letters in unhighlighted response text", () => {
+    const source = "في هذا المثال، نام برند Oxenn است.";
+    const segments = matchMentionSegments(source, "Oxenn", []);
+    expect(segments.map((segment) => segment.text).join("")).toBe(source);
+    expect(segments[0]?.text).toContain("في");
+  });
+
+  it("preserves original text when no entity matches", () => {
+    const source = "في متن عربی و فارسی، هیچ نامی پیدا نشد.";
+    const segments = matchMentionSegments(source, "Oxenn", []);
+    expect(segments).toEqual([{ text: source, kind: "text" }]);
+  });
+
+  it("preserves the original text when no entities are configured", () => {
+    const source = "في متن؛ ي و ك";
+    const segments = matchMentionSegments(source, " ", []);
+    expect(segments).toEqual([{ text: source, kind: "text" }]);
   });
 
   it("marks a normalized brand/competitor collision as ambiguous", () => {
@@ -47,5 +68,12 @@ describe("matchMentionSegments", () => {
   it("keeps zero-width non-joiner inside a word for boundary checks", () => {
     const segments = matchMentionSegments("خانه‌خلاق", "خلاق", []);
     expect(segments.every((segment) => segment.kind !== "brand")).toBe(true);
+  });
+
+  it("maps NFC-equivalent matches back to the exact original grapheme sequence", () => {
+    const source = "Cafe\u0301 is a brand";
+    const segments = matchMentionSegments(source, "Café", []);
+    expect(segments.map((segment) => segment.text).join("")).toBe(source);
+    expect(segments.find((segment) => segment.kind === "brand")?.text).toBe("Cafe\u0301");
   });
 });
