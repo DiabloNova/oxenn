@@ -111,6 +111,7 @@ describe("LlmAnalyticsPanel security regression", () => {
     fireEvent.change(screen.getByPlaceholderText("e.g., Optimus AI"), {
       target: { value: "Oxenn" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm name as entered" }));
 
     const competitorInput = screen.getByPlaceholderText("Add competitor brand name...");
     fireEvent.change(competitorInput, { target: { value: competitor } });
@@ -121,6 +122,12 @@ describe("LlmAnalyticsPanel security regression", () => {
     fireEvent.click(screen.getByRole("button", { name: /Analyze Share of Voice/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(requestBody).toMatchObject({
+      brandName: "Oxenn",
+      brandNameWarningObserved: true,
+      brandNameWarningDecision: "confirmed",
+    });
 
     const highlighted = await waitFor(() => {
       const result = Array.from(container.querySelectorAll(".leading-relaxed")).find((element) =>
