@@ -13,7 +13,7 @@ const requestSchema = z.object({
 }).superRefine((value, context) => {
   if (value.brandNameWarningObserved && value.brandNameWarningDecision === "not-needed") {
     context.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["brandNameWarningDecision"],
       message: "تصمیم کاربر درباره هشدار نام برند الزامی است",
     });
