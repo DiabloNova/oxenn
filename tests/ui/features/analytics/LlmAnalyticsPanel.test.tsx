@@ -189,7 +189,7 @@ describe("LlmAnalyticsPanel security regression", () => {
 
     const highlighted = await waitFor(() => {
       const result = Array.from(container.querySelectorAll(".leading-relaxed")).find(
-        (element) => element.textContent?.includes('Symbols: & <tag> "quote"')
+        (element) => element.innerHTML.includes("&lt;tag&gt;")
       );
       if (!result) throw new Error("Mocked analytics response has not rendered yet.");
       return result;
