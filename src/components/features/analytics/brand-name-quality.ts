@@ -8,7 +8,7 @@
 export type BrandNameWarningDecision = "corrected" | "confirmed" | "not-needed";
 
 const persianLetters = new Set(Array.from(
-  "آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیءئ"
+  "آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیءأإئؤۀ"
 ));
 
 /**
