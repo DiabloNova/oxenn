@@ -44,4 +44,28 @@ describe("DIRECT REGRESSION TEST: src/app/api/v1/analytics/llm/route.ts", () => 
     expect(body.shareOfVoice).toBeUndefined();
     expect(body.sentimentScore).toBeUndefined();
   });
+  it("rejects an observed brand-name warning without a user decision", async () => {
+    const req = new NextRequest("http://localhost:3000/api/v1/analytics/llm", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-tenant-id": "00000000-0000-0000-0000-000000000001",
+        "x-user-id": "usr-test-123",
+      },
+      body: JSON.stringify({
+        brandName: "خانهA",
+        brandNameWarningObserved: true,
+        brandNameWarningDecision: "not-needed",
+        competitorNames: ["Digikala"],
+        queries: ["بهترین برند کدام است؟"],
+      }),
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Bad Request");
+  });
+
 });
