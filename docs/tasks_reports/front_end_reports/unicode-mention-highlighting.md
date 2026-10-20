@@ -1,59 +1,57 @@
 # Unicode-Safe LLM Mention Highlighting
 
-**Status: INCOMPLETE — AUTOMATED VERIFICATION NOT RUN**  
-**Date:** 2026-10-19  
+**Status: IMPLEMENTED — AUTOMATED VERIFICATION NOT RUN**  
+**Date:** 2026-10-20  
 **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)  
 **Branch:** `fix/llm-mention-unicode-fa-en`  
-**Pull request:** [#90](https://github.com/DiabloNova/oxenn/pull/90)  
-**Base branch:** `fix/audit-remediation-p2` (PR #89; stacked change)
+**Pull request:** [#90](https://github.com/DiabloNova/oxenn/pull/90)
 
 ## Invariant
 
-Mention detection and mention classification must use consistent Unicode-aware case-insensitive semantics. Persian/Arabic spelling variants must be handled consistently, brand/competitor collisions must not be assigned a misleading brand or competitor color, and untrusted response text must remain escaped and sanitized before HTML rendering.
+Mention detection and classification must use consistent Unicode-aware case-insensitive semantics. Persian/Arabic spelling variants must be handled consistently, brand/competitor collisions must not be assigned a misleading brand or competitor color, and untrusted response text must remain escaped and sanitized before HTML rendering. Most importantly, the highlighted segments must concatenate to exactly the original LLM response; normalization is for matching only and must not alter displayed content.
 
 ## Implementation
 
 - Added `src/components/features/analytics/mention-matcher.ts` as a pure matching helper.
-- Uses NFC normalization and canonicalizes common Arabic Yeh (`ي`) and Kaf (`ك`) to Persian Yeh (`ی`) and Kaf (`ک`) for matching.
+- Uses a separate normalized matching view, including NFC normalization and canonicalization of common Arabic Yeh (`ي`) and Kaf (`ك`) variants to Persian Yeh (`ی`) and Kaf (`ک`).
+- Uses `Intl.Segmenter` grapheme ranges to map normalized matching offsets back to source ranges. Every returned segment is sliced from the original response, preserving its original Unicode spelling and UTF-16 content.
 - Uses Unicode property-based word edges and case-insensitive Unicode regex matching for both finding and classifying mentions; this avoids the prior `toLowerCase()` versus regex-`i` inconsistency (including Greek final sigma).
 - Treats configured names as literal strings, sorts alternatives longest-first, and preserves ZWNJ as a word connector rather than silently removing it.
 - Marks a mention as `ambiguous` when the same matched spelling can resolve to both the brand and a competitor; the component displays that match with a neutral style.
-- Updated `LlmAnalyticsPanel.tsx` to render the helper's segments while retaining HTML escaping and `DOMPurify.sanitize()`.
-- Added focused tests for English case-insensitivity, Greek sigma case-folding, Arabic/Persian Yeh-Kaf variants, normalization collisions, brand/competitor ambiguity, regex-special names, Unicode-aware word boundaries, and ZWNJ.
+- Retains HTML escaping and `DOMPurify.sanitize()` in the rendering path.
+- Added regression assertions for Arabic text preservation, unchanged no-match/no-entity paths, exact source reconstruction, and mapping NFC-equivalent matches to the original grapheme sequence.
 
-## Scope and safety
+## Scope
 
-The implementation/test diff from `fix/audit-remediation-p2` is limited to:
-- `src/components/features/analytics/LlmAnalyticsPanel.tsx`
+- `src/components/features/analytics/LlmAnalyticsPanel.tsx` (existing rendering integration; no change in this fix)
 - `src/components/features/analytics/mention-matcher.ts`
 - `tests/ui/features/analytics/mention-matcher.test.ts`
+- `docs/tasks_reports/front_end_reports/unicode-mention-highlighting.md`
 
-This task report is the only additional documentation path: `docs/tasks_reports/front_end_reports/unicode-mention-highlighting.md`.
-
-No dependencies, database files, migrations, CI configuration, or security-header behavior were changed. The PR is stacked on PR #89 because its sanitization and security-header work is not yet merged into `main`.
+No dependencies, database files, migrations, API contracts, or CI configuration were changed.
 
 ## Verification evidence
 
 | Check | Status | Evidence / limitation |
 |---|---|---|
-| Branch/base identity | PASS | GitHub compare confirms merge base `130cb3919d14f4fc8a7d8f24efe7004b22e32d74`, the head of `fix/audit-remediation-p2`. |
-| Changed-file scope | PASS | GitHub compare reports exactly the three paths listed above. |
-| Source re-read | PASS | Re-fetched the helper, component section, and test file after updates. |
-| Cubic Unicode mismatch | COVERED, NOT RUN | A regression test covers Greek sigma matching; implementation uses the same `iu` regex semantics for detection and classification. |
+| Source re-read | PASS | Helper and test source were re-read after updates. |
+| Source-preservation invariant | COVERED, NOT RUN | Tests assert `segments.map(s => s.text).join("") === source` and exact preservation of Arabic characters. |
+| NFC offset mapping | COVERED, NOT RUN | Test uses a decomposed accent and checks that the returned highlighted text retains the original decomposed sequence. |
 | Persian/Arabic normalization and ambiguity | COVERED, NOT RUN | Tests cover Yeh/Kaf variants and a brand/competitor collision after normalization. |
-| HTML/XSS behavior | PRESERVED, NOT RUN | The existing escape-before-markup and DOMPurify rendering path remains in place; PR #89 already contains the hostile-markup regression test. |
+| HTML/XSS behavior | PRESERVED, NOT RUN | The existing escape-before-markup and DOMPurify rendering path remains unchanged. |
 | Focused test file | NOT RUN | No local repository checkout/test runner was available in this execution context. |
 | Typecheck, lint, build | NOT RUN | No passing CI evidence is available for this head. |
-| GitHub Actions / status checks | NOT OBSERVED | The GitHub connector returned no workflow runs or combined statuses for the latest head SHA when checked. |
+| GitHub Actions / status checks | NOT VERIFIED | Must be checked on the resulting head commit. |
 | Manual browser verification | NOT VERIFIED | No running browser session was available. |
 
 ## Known limitations
 
-- This is not marked complete until the focused UI test, typecheck, lint, and build run successfully.
+- This change must not be considered verified until the focused UI test, typecheck, lint, and build run successfully.
+- `Intl.Segmenter` is required for grapheme-aware offset mapping; the project targets modern browser and Node runtimes, but the runtime support must be confirmed by CI.
 - Unicode case-insensitive regex matching follows JavaScript's Unicode-aware simple case-folding behavior; it does not promise every possible linguistic equivalence (for example, multi-character folds such as `ß` versus `ss`).
-- Arabic Yeh/Kaf normalization intentionally covers only common variants. ZWNJ and whitespace are not collapsed because doing so could merge distinct names.
+- Arabic Yeh/Kaf normalization intentionally covers common variants only. ZWNJ and whitespace are not collapsed because doing so could merge distinct names.
 - Ambiguity is resolved conservatively for display only; it does not change configured brand/competitor records or claim that the two underlying entities are identical.
 
 ## Completion decision
 
-**INCOMPLETE.** Keep PR #90 in draft until automated verification is available and passing. Do not merge based only on source inspection or test presence.
+**IMPLEMENTED, VERIFICATION PENDING.** Do not merge until focused tests, typecheck, lint, build, and applicable CI checks pass.
