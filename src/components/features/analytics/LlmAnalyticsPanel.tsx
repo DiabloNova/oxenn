@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useTransition, useRef } from "react";
 import DOMPurify from "dompurify";
 import { matchMentionSegments } from "@/components/features/analytics/mention-matcher";
+import { hasNonPersianBrandCharacter, type BrandNameWarningDecision } from "@/components/features/analytics/brand-name-quality";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
@@ -32,6 +33,9 @@ export const LlmAnalyticsPanel: React.FC = () => {
 
   // Inputs
   const [brandName, setBrandName] = useState("خانه خلاق هوش مصنوعی");
+  const [brandNameHasNonPersianCharacter, setBrandNameHasNonPersianCharacter] = useState(false);
+  const [brandNameWarningObserved, setBrandNameWarningObserved] = useState(false);
+  const [brandNameWarningDecision, setBrandNameWarningDecision] = useState<BrandNameWarningDecision | null>(null);
   const [competitorInput, setCompetitorInput] = useState("");
   const [competitors, setCompetitors] = useState<string[]>(["دیجی‌کالا", "اسنپ"]);
 
@@ -151,6 +155,10 @@ export const LlmAnalyticsPanel: React.FC = () => {
       setError(isRtl ? "لطفاً نام برند خود را وارد کنید." : "Please enter your brand name.");
       return;
     }
+    if (brandNameHasNonPersianCharacter && brandNameWarningDecision !== "confirmed") {
+      setError(isRtl ? "لطفاً نام را اصلاح کنید یا وجود نویسه غیر فارسی را تأیید کنید." : "Please correct the name or confirm the non-Persian character warning.");
+      return;
+    }
     if (competitors.length === 0) {
       setError(isRtl ? "لطفاً حداقل نام یک رقیب را اضافه کنید." : "Please add at least one competitor.");
       return;
@@ -179,6 +187,8 @@ export const LlmAnalyticsPanel: React.FC = () => {
           },
           body: JSON.stringify({
             brandName,
+            brandNameWarningObserved,
+            brandNameWarningDecision: brandNameWarningObserved ? (brandNameWarningDecision ?? "not-needed") : "not-needed",
             competitorNames: competitors,
             queries: finalQueries,
           }),
@@ -278,11 +288,55 @@ export const LlmAnalyticsPanel: React.FC = () => {
                 <input
                   type="text"
                   value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
+                  onChange={(e) => {
+                    const nextName = e.target.value;
+                    const nextHasNonPersianCharacter = hasNonPersianBrandCharacter(nextName);
+                    if (nextHasNonPersianCharacter) {
+                      setBrandNameWarningObserved(true);
+                      setBrandNameWarningDecision(null);
+                    } else if (brandNameHasNonPersianCharacter) {
+                      setBrandNameWarningDecision("corrected");
+                    }
+                    setBrandNameHasNonPersianCharacter(nextHasNonPersianCharacter);
+                    setBrandName(nextName);
+                  }}
                   placeholder={isRtl ? "مثال: خانه خلاق هوش مصنوعی" : "e.g., Optimus AI"}
                   className="w-full px-4 py-2.5 text-xs rounded-xl outline-none transition-all duration-300 bg-[var(--muted-surface)] text-[var(--text-primary)] border border-[var(--border)] focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:bg-[var(--card)]"
                   disabled={isPending}
                 />
+                {brandNameHasNonPersianCharacter && (
+                  <div className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3" role="alert" aria-live="polite">
+                    <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                      {isRtl
+                        ? "در نام برند حداقل یک نویسه غیر فارسی (حرف یا علامت) وجود دارد. می‌توانید نام را اصلاح کنید یا با همین شکل تأیید کنید."
+                        : "The brand name contains at least one non-Persian character (letter or symbol). You can correct the name or confirm it as entered."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setBrandNameWarningDecision("confirmed")}
+                      disabled={isPending || brandNameWarningDecision === "confirmed"}
+                      className="rounded-lg border border-amber-500/40 px-2.5 py-1.5 text-[10px] font-semibold text-[var(--text-primary)] disabled:opacity-50"
+                    >
+                      {brandNameWarningDecision === "confirmed"
+                        ? (isRtl ? "نام با همین شکل تأیید شد" : "Confirmed as entered")
+                        : (isRtl ? "تأیید نام به همین شکل" : "Confirm name as entered")}
+                    </button>
+                  </div>
+                )}
+                {!brandNameHasNonPersianCharacter && brandNameWarningObserved && brandNameWarningDecision === "corrected" && (
+                  <p className="text-[10px] text-amber-600" role="status">
+                    {isRtl
+                      ? "نام اصلاح شد؛ سابقه هشدار برای تحلیل برند حفظ می‌شود."
+                      : "Name corrected; the warning history will still be included in brand analysis."}
+                  </p>
+                )}
+                {brandNameHasNonPersianCharacter && brandNameWarningDecision === "confirmed" && (
+                  <p className="text-[10px] text-amber-600" role="status">
+                    {isRtl
+                      ? "نام تأیید شد؛ سابقه هشدار برای تحلیل برند ارسال می‌شود."
+                      : "Name confirmed; the warning history will be sent for brand analysis."}
+                  </p>
+                )}
               </div>
 
               {/* Competitors Tag input */}
