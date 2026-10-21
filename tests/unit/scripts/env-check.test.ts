@@ -23,4 +23,22 @@ describe("resolveMode", () => {
 
     expect(resolveMode()).toBe("dev");
   });
+
+  it.each(["dev", "build", "migrate", "test"])("accepts the supported mode %s", (mode) => {
+    expect(resolveMode(mode)).toBe(mode);
+  });
+
+  it("rejects an unsupported explicit mode", () => {
+    expect(() => resolveMode("staging")).toThrow(
+      "Unsupported environment mode 'staging'. Expected one of: dev, build, migrate, test.",
+    );
+  });
+
+  it("rejects an unsupported APP_MODE instead of bypassing validation", () => {
+    vi.stubEnv("APP_MODE", "staging");
+
+    expect(() => resolveMode()).toThrow(
+      "Unsupported environment mode 'staging'. Expected one of: dev, build, migrate, test.",
+    );
+  });
 });
