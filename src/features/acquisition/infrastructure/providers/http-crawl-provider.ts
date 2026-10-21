@@ -10,6 +10,7 @@ import type {
 import type { CrawlPolicy } from "../../domain/policy";
 import { normalizeUrl } from "../../domain/url/normalizer";
 import { safeFetch } from "../http/safe-fetcher";
+import { PerHostRateLimiter } from "../http/per-host-rate-limiter";
 import type { HostValidationResult, Resolver } from "../security/ssrf-guard";
 
 interface QueueEntry {
@@ -100,23 +101,6 @@ function documentFromResponse(
   };
 }
 
-function delay(delayMs: number, signal: AbortSignal): Promise<void> {
-  if (signal.aborted) {
-    return Promise.reject(new CrawlError("CANCELLED", "Crawl was cancelled"));
-  }
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, delayMs);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(new CrawlError("CANCELLED", "Crawl was cancelled"));
-      },
-      { once: true }
-    );
-  });
-}
-
 export class HttpCrawlProvider implements CrawlProvider {
   public constructor(
     private readonly fetchOptions: {
@@ -143,34 +127,11 @@ export class HttpCrawlProvider implements CrawlProvider {
     const visited = new Set<string>();
     const documents: CrawledDocument[] = [];
     const robotsCache = new Map<string, Promise<string>>();
-    const lastRequestAt = new Map<string, number>();
-    const hostLocks = new Map<string, Promise<void>>();
+    const rateLimiter = new PerHostRateLimiter();
     let bytesProcessed = 0;
 
-    const requestHost = async (host: string): Promise<void> => {
-      const spacing = 1000 / policy.perHostRequestsPerSecond;
-      const previous = hostLocks.get(host) ?? Promise.resolve();
-      let release!: () => void;
-      const current = new Promise<void>(resolve => {
-        release = resolve;
-      }
-      );
-      hostLocks.set(host, current);
-      await previous;
-      try {
-        const lastRequest = lastRequestAt.get(host) ?? 0;
-        const remaining = spacing - (Date.now() - lastRequest);
-        if (remaining > 0) {
-          await delay(remaining, signal);
-        }
-        lastRequestAt.set(host, Date.now());
-      } finally {
-        release();
-        if (hostLocks.get(host) === current) {
-          hostLocks.delete(host);
-        }
-      }
-    };
+    const requestHost = (host: string): Promise<void> =>
+      rateLimiter.waitForSlot(host, policy.perHostRequestsPerSecond, signal);
     const processEntry = async (entry: QueueEntry): Promise<CrawledDocument | null> => {
       if (signal.aborted) {
         throw new CrawlError("CANCELLED", "Crawl was cancelled");
