@@ -112,7 +112,7 @@ if (require.main === module) {
   loadEnvFile(path.resolve(process.cwd(), ".env.local"));
   loadEnvFile(path.resolve(process.cwd(), ".env"));
 
-  const targetMode = process.argv[2] || "dev";
+  const targetMode = process.argv[2] || process.env.APP_MODE || "dev";
   const result = validateEnv(targetMode);
 
   console.log(`[env-check] Validating environment for mode '${result.mode}'...`);
