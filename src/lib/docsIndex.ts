@@ -354,6 +354,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Phase 2 — Code Security (H1, M8)  **Status: INCOMPLETE — VERIFICATION PENDING**   **Date:** 2026-10-19   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Oxenn Audit Report and Remediation Plan](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [PATCH-LlmAnalyticsPanel-XSS.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/PATCH-LlmAnalyticsPanel-XSS.md)   **Branch:** \`fix/audit-remediation-p2\`   **Pull req`
   },
   {
+    slug: "phase-3-repository-configuration-hygiene",
+    titleEn: "Phase 3 — Repository and Configuration Hygiene",
+    titleFa: "Phase 3 — Repository and Configuration Hygiene",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Phase 3 — Repository and Configuration Hygiene  **Status:** INCOMPLETE — VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c`
+  },
+  {
     slug: "audit-gate-stage3-regression-tests",
     titleEn: "Stage 3 — Audit Gate Regression Tests and Verification",
     titleFa: "Stage 3 — Audit Gate Regression Tests and Verification",

@@ -26,36 +26,42 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 
 ## Explicitly preserved
 
-- `package.json` and `pnpm-lock.yaml` are unchanged.
-- No database schema, migration journal/snapshot, runtime database code, `env-check.ts`, or generated file was intentionally changed.
-- `src/lib/docsIndex.ts`, `src/core/database/tenant-tables.generated.ts`, and `docs/database/reference-matrix.md` must remain byte-for-byte unchanged.
+- `package.json`, `pnpm-lock.yaml`, database schema, migration journal/snapshots, runtime database code, and `scripts/env-check.ts` remain unchanged.
+- `src/core/database/tenant-tables.generated.ts` and `docs/database/reference-matrix.md` remain byte-for-byte unchanged.
+- `src/lib/docsIndex.ts` contains the generator-derived entry for this required task report. This is expected because `scripts/generate-docs-data.ts` indexes Markdown files beneath `docs/`; the generated entry is caused by the report addition, not by the `FloatingSidebar` move. No generator source change was made.
 - No Phase 4 environment validation, test-db seeding, security-header work, dependency migration, or database guard work was included.
 
 ## Verification ledger
 
 | Item | Evidence / procedure | Result |
 |---|---|---|
-| Branch base | GitHub main at `641b1fcb18a62e520a463b546240239b952836c2`; new branch created from main | verified |
-| Audit scope | Phase 3 and deletion/move list in `Audit.md` and `README-FIXES.md` inspected | verified |
-| Environment names | Direct inspection of authenticator configuration and `VERIFICATION_PROBE_ACTIVE` use in `src/core/database/tenant-context/index.ts` | verified |
-| FloatingSidebar import paths | Direct inspection of the component and layout; moved-file imports converted to configured aliases | verified by source review |
-| Migration semantics | Original statement inspected; only the final newline is added | verified by content inspection; `drizzle-kit check` pending |
-| Dev-tool script relocation | New blobs match both original script SHAs; only their paths change | verified |
-| Orphan root tree references | Audit consumer findings inspected; a fresh full-repository reference scan was not available | not verified pending typecheck/build |
-| Frozen install | `pnpm install --frozen-lockfile` | not verified locally; no local checkout/dependency install was available |
-| Typecheck | `pnpm typecheck` | pending CI |
-| Lint ratchet | `pnpm lint --max-warnings=218` | pending CI |
-| Unit and UI tests | `pnpm test:unit`, `pnpm test:ui` | pending CI |
-| Production build | `pnpm build` | pending CI |
-| Database and generated checks | `npx drizzle-kit check`, `pnpm db:verify-rls-migrations`, `pnpm tsx scripts/database/verify-tenant-tables.ts`, `pnpm run docs:matrix`, and generated-files drift check | pending CI/local verification |
-| CI workflow | [CI workflow](https://github.com/DiabloNova/oxenn/blob/main/.github/workflows/ci.yml) | pending pull-request run |
-| Visual verification | Persian/English × light/dark screenshots for routes where FloatingSidebar renders | not verified; no running browser/app was available in this execution environment |
-| Final diff scope | Review the branch compare; confirm generated-file paths are unchanged | pending final compare |
+| Branch base | GitHub main at `641b1fcb18a62e520a463b546240239b952836c2`; branch was created from that commit | verified |
+| Audit scope | Phase 3 and its deletion/move checklist in `Audit.md` and `README-FIXES.md` inspected | verified |
+| Environment names | Direct source inspection of authenticator pool configuration and the `VERIFICATION_PROBE_ACTIVE` guard in `src/core/database/tenant-context/index.ts`; example default is `0` and `env-check.ts` is unchanged | verified |
+| FloatingSidebar imports | Component internals and layout import use the configured `@/` aliases; CI Typecheck and production Build passed | verified |
+| Deletion list | Branch tree confirms stale schema copy, scratch file, update script, seven listed logs, and orphan root component/lib files are absent | verified |
+| Dev-tool scripts | Moved script blobs have the exact original SHAs; only paths changed | verified |
+| Migration 0004 content | SQL statement is unchanged; branch blob has the required trailing newline | verified by content inspection; `drizzle-kit check` is separate |
+| Report-generated index behavior | Generator reads Markdown files under `docs/`; first CI run generated the task report's `docsIndex` entry | verified |
+| Frozen install | CI step `pnpm install --frozen-lockfile` succeeded in Unit Tests and Build/Test jobs | verified |
+| Typecheck | CI step `pnpm typecheck` succeeded | verified |
+| Lint ratchet | CI step `pnpm lint --max-warnings=218` succeeded | verified |
+| Unit and UI tests | CI steps `pnpm test:unit` and `pnpm test:ui` succeeded | verified |
+| Production build | CI `Build` step succeeded | verified |
+| Tenant table / RLS gates | CI steps `verify-tenant-tables.ts` and `db:verify-rls-migrations` succeeded | verified |
+| Reference-matrix generation | CI `Build Reference Matrix` succeeded; the initial drift diff contained no changes to `tenant-tables.generated.ts` or `reference-matrix.md` | verified |
+| Initial generated-files drift gate | First run failed only because the required report's generated `docsIndex` entry was not yet committed; the job log names only `src/lib/docsIndex.ts` in the diff | failed on initial commit; correction is being committed |
+| Updated generated-files drift gate | The report-derived `docsIndex` entry is being committed to match the generator; the next CI run is the acceptance authority | not verified until rerun completes |
+| Drizzle chain check | `npx drizzle-kit check` is not part of the current CI workflow and was not run locally | not verified; local checkout unavailable |
+| Visual verification | Persian/English × light/dark screenshots of the route(s) where `FloatingSidebar` renders | not verified; no running browser/app was available in this execution environment |
+| Final branch diff | Recheck branch compare after the generated index update and confirm no other paths are present | not verified until final compare |
 
 ## Known limits and unresolved items
 
-The execution environment could read and write repository files through the GitHub API, but could not create a local clone because DNS resolution for `github.com` failed. Consequently, no local pnpm commands or browser screenshots are claimed. CI must be green on the final commit; the generated-file drift gate must show no changes to the three protected generated files. The report must be updated with actual CI/compare outcomes before Phase 3 can be described as complete.
+The GitHub API was available, but a local clone could not be created because DNS resolution for `github.com` failed. No local pnpm command or UI screenshot is claimed. The initial CI run established that install, typecheck, lint, unit/UI tests, build, tenant alignment, RLS verification, and reference-matrix generation passed, while the generated-file drift check failed because the new required task report is itself indexed by the docs generator. The matching generated entry is now being committed separately; the new CI run must confirm that drift is eliminated without introducing unrelated generated changes.
 
-**Current assessment:** source edits are prepared within Phase 3. Required command execution, the complete generated-file gate, and the four visual states remain unverified.
+The migration's final newline and SQL content were inspected directly, but a standalone `drizzle-kit check` remains unverified. Required visual verification is also incomplete. Keep this PR in Draft and do not merge until the rerun is green and the remaining required verification limitations have been resolved or explicitly accepted by the project owner.
 
-**Counts:** 6 verified, 0 failed, 10 not verified, 0 not applicable, 0 exception of 16 reported verification items.
+**Current assessment:** Phase 3 source changes are in the dedicated branch; functional CI checks passed on the first commit, but acceptance is incomplete until the generated-files drift rerun passes and the Drizzle/visual checks are addressed.
+
+**Counts:** 15 verified, 1 failed, 4 not verified, 0 not applicable, 0 exception of 20 reported verification items.
