@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PerHostRateLimiter } from "@/features/acquisition/infrastructure/http/per-host-rate-limiter";
 
 describe("PerHostRateLimiter", () => {
@@ -64,5 +64,54 @@ describe("PerHostRateLimiter", () => {
     await limiter.waitForSlot("b.test", 10, signal);
 
     expect(requestedWaits).toEqual([]);
+  });
+
+  it("removes the abort listener when a timed wait completes", async () => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const removeListener = vi.spyOn(controller.signal, "removeEventListener");
+      const limiter = new PerHostRateLimiter(() => Date.now());
+
+      await limiter.waitForSlot("a.test", 10, controller.signal);
+      const pending = limiter.waitForSlot("a.test", 10, controller.signal);
+      await vi.advanceTimersByTimeAsync(100);
+      await pending;
+
+      expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects with CANCELLED when aborted during a timed wait", async () => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const limiter = new PerHostRateLimiter(() => Date.now());
+
+      await limiter.waitForSlot("a.test", 10, controller.signal);
+      const pending = limiter.waitForSlot("a.test", 10, controller.signal);
+      await Promise.resolve();
+      controller.abort();
+
+      await expect(pending).rejects.toMatchObject({ code: "CANCELLED" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects an already-aborted signal even when no delay remains", async () => {
+    let now = 1_000;
+    const controller = new AbortController();
+    const limiter = new PerHostRateLimiter(() => now);
+
+    await limiter.waitForSlot("a.test", 10, controller.signal);
+    now += 100;
+    controller.abort();
+
+    await expect(
+      limiter.waitForSlot("a.test", 10, controller.signal)
+    ).rejects.toMatchObject({ code: "CANCELLED" });
   });
 });
