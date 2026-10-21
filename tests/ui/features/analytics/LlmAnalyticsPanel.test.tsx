@@ -141,4 +141,75 @@ describe("LlmAnalyticsPanel security regression", () => {
       Array.from(highlighted.querySelectorAll("span")).some((span) => span.textContent === competitor)
     ).toBe(true);
   });
+
+  it("preserves encoded text and highlights names that resemble markup", async () => {
+    const brand = "Oxenn";
+    const competitors = ["Amp", "Bold", "lt", "quot", "Span"];
+    const responseText =
+      'Symbols: &amp; <tag> "quote" \'apostrophe\'. Mentions: Oxenn, Amp, Bold, lt, quot, Span.';
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        shareOfVoice: {
+          yourBrand: 50,
+          competitors: competitors.map((name) => ({ name, percentage: 10 })),
+        },
+        sentimentScore: 80,
+        queryResults: [
+          {
+            query: "Can special characters and tag-like names be highlighted?",
+            simulatedResponse: responseText,
+            brandMentioned: true,
+            sentiment: "positive",
+            hallucinationRisk: "low",
+          },
+        ],
+        actionableInsights: ["Preserve the original response text."],
+      }),
+    });
+
+    const { container } = render(<LlmAnalyticsPanel />);
+
+    fireEvent.change(screen.getByPlaceholderText("e.g., Optimus AI"), {
+      target: { value: brand },
+    });
+
+    const competitorInput = screen.getByPlaceholderText("Add competitor brand name...");
+    for (const competitor of competitors) {
+      fireEvent.change(competitorInput, { target: { value: competitor } });
+      const form = competitorInput.closest("form");
+      if (!form) throw new Error("Competitor input is not inside its expected form.");
+      fireEvent.submit(form);
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: /Analyze Share of Voice/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    const highlighted = await waitFor(() => {
+      const result = Array.from(container.querySelectorAll(".leading-relaxed")).find(
+        (element) => element.textContent === responseText
+      );
+      if (!result) throw new Error("Mocked analytics response has not rendered yet.");
+      return result;
+    });
+
+    // The displayed text must be identical to the untrusted source text: no split
+    // split encoded sequences, leaked class fragments, or rewritten characters.
+    expect(highlighted.textContent).toBe(responseText);
+    expect(highlighted.querySelector("tag")).toBeNull();
+
+    const highlightedText = Array.from(highlighted.querySelectorAll("span")).map(
+      (span) => span.textContent
+    );
+    for (const mention of [brand, ...competitors]) {
+      expect(highlightedText).toContain(mention);
+    }
+
+    // Escaping is still applied to markup-like response text.
+    expect(highlighted.innerHTML).toContain("&lt;tag&gt;");
+    expect(container.querySelector("img, script, iframe")).toBeNull();
+  });
+
 });
