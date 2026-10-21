@@ -42,7 +42,7 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 | FloatingSidebar import paths | Component internals and layout import use configured `@/` aliases; CI Typecheck and production Build succeeded | verified |
 | Deletion list | Branch tree confirms stale schema copy, scratch file, update script, seven listed logs, and orphan root component/lib files are absent | verified |
 | Dev-tool script relocation | Moved script blobs have the exact original SHAs; only paths changed | verified |
-| Migration 0004 content | SQL statement is unchanged; branch blob has the required trailing newline | verified by content inspection; standalone `drizzle-kit check` remains separate |
+| Migration 0004 content | SQL statement is unchanged; branch blob has the required trailing newline | verified by content inspection |
 | Report-generated index behavior | Generator reads Markdown files under `docs/`; CI produced the task report's entry in `src/lib/docsIndex.ts` | verified |
 | Frozen install | CI step `pnpm install --frozen-lockfile` succeeded in Unit Tests and Build/Test jobs | verified |
 | Typecheck | CI step `pnpm typecheck` succeeded | verified |
