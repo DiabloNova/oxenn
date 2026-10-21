@@ -9,7 +9,7 @@
 
 ## Objective and scope
 
-Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and L4. Preserve the main-branch behavior outside the authorized hygiene/configuration work. No dependency manifest or lockfile edits, database schema changes, new migrations, changes to `env-check.ts`, or Phase 4 tasks are included.
+Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and L4. Preserve the main-branch behavior outside the authorized hygiene/configuration work. No dependency manifest or lockfile edits, database schema changes, new migrations, or Phase 4 tasks are included. The CLI fallback in `scripts/env-check.ts` was adjusted narrowly so an explicit mode argument wins, then `APP_MODE`, then `dev`.
 
 ## Changes
 
@@ -21,12 +21,13 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 - Move the two useful ad-hoc inventory scripts from the repository root to `scripts/dev-tools/` without changing their bodies.
 - Add a final newline to `database/drizzle/0004_abandoned_black_crow.sql`; SQL statement content remains unchanged.
 - Raise TypeScript `target` from `ES2017` to `ES2022`.
+- Make the `scripts/env-check.ts` CLI honor `APP_MODE` when no explicit mode argument is supplied; an explicit argument retains precedence.
 - Add the CI lint ratchet `pnpm lint --max-warnings=218`.
 - Add this task report as required by `AGENTS.md`.
 
 ## Explicitly preserved
 
-- `package.json`, `pnpm-lock.yaml`, database schema, migration journal/snapshots, runtime database code, and `scripts/env-check.ts` remain unchanged.
+- `package.json`, `pnpm-lock.yaml`, database schema, migration journal/snapshots, and runtime database code remain unchanged.
 - `src/core/database/tenant-tables.generated.ts` and `docs/database/reference-matrix.md` remain byte-for-byte unchanged.
 - `src/lib/docsIndex.ts` contains the generator-derived entry for this required task report. This is expected because `scripts/generate-docs-data.ts` indexes Markdown files beneath `docs/`; the generated entry is caused by the report addition, not by the `FloatingSidebar` move. No generator source change was made.
 - No Phase 4 environment validation, test-db seeding, security-header work, dependency migration, or database guard work was included.
@@ -37,7 +38,7 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 |---|---|---|
 | Branch base | GitHub main at `641b1fcb18a62e520a463b546240239b952836c2`; branch was created from that commit | verified |
 | Audit scope | Phase 3 and its deletion/move checklist in `Audit.md` and `README-FIXES.md` inspected | verified |
-| Environment names | Direct source inspection of authenticator pool configuration and the `VERIFICATION_PROBE_ACTIVE` guard in `src/core/database/tenant-context/index.ts`; example default is `0` and `env-check.ts` is unchanged | verified |
+| Environment names | Direct source inspection of authenticator pool configuration and the `VERIFICATION_PROBE_ACTIVE` guard in `src/core/database/tenant-context/index.ts`; example default is `0`. The `APP_MODE` CLI fallback was corrected to honor the advertised setting. | code change verified; behavior still requires CI/test confirmation |
 | FloatingSidebar import paths | Component internals and layout import use configured `@/` aliases; CI Typecheck and production Build succeeded | verified |
 | Deletion list | Branch tree confirms stale schema copy, scratch file, update script, seven listed logs, and orphan root component/lib files are absent | verified |
 | Dev-tool script relocation | Moved script blobs have the exact original SHAs; only paths changed | verified |
@@ -58,7 +59,7 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 
 ## Known limits and unresolved items
 
-The GitHub API was available, but a local clone could not be created because DNS resolution for `github.com` failed. No local pnpm command or UI screenshot is claimed. The first CI run's generated-files drift failure was traced to the new required task report: `scripts/generate-docs-data.ts` indexes Markdown files beneath `docs/`. The report's matching generated `docsIndex` entry was committed without changing the generator, and the second CI run passed the full drift check. `src/core/database/tenant-tables.generated.ts` and `docs/database/reference-matrix.md` remain byte-for-byte unchanged; the `FloatingSidebar` move did not affect them or create the `docsIndex` entry.
+The GitHub API was available, but a local clone could not be created because DNS resolution for `github.com` failed. No local pnpm command or UI screenshot is claimed. The `APP_MODE` CLI fallback was corrected after review, and `.env.example` now explicitly states that production must use a dedicated least-privilege authenticator role; the local example retains the same local PostgreSQL credentials for developer usability. The first CI run's generated-files drift failure was traced to the new required task report: `scripts/generate-docs-data.ts` indexes Markdown files beneath `docs/`. The report's matching generated `docsIndex` entry was committed without changing the generator, and the second CI run passed the full drift check. `src/core/database/tenant-tables.generated.ts` and `docs/database/reference-matrix.md` remain byte-for-byte unchanged; the `FloatingSidebar` move did not affect them or create the `docsIndex` entry.
 
 The latest complete CI run is green: frozen install, audit gates, typecheck, lint ratchet, unit tests, UI tests, production build, tenant-table alignment, RLS coverage, reference-matrix generation, generated-file drift, and Isolation Suite all passed. However, a standalone `drizzle-kit check` and the required four-state visual screenshots remain unverified, so the task is not being marked fully complete and this PR must remain Draft until those limits are resolved or explicitly accepted by the project owner.
 
