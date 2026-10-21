@@ -21,8 +21,8 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 - Move the two useful ad-hoc inventory scripts from the repository root to `scripts/dev-tools/` without changing their bodies.
 - Add a final newline to `database/drizzle/0004_abandoned_black_crow.sql`; SQL statement content remains unchanged.
 - Raise TypeScript `target` from `ES2017` to `ES2022`.
-- Make the `scripts/env-check.ts` CLI honor `APP_MODE` when no explicit mode argument is supplied; an explicit argument retains precedence.
-- Add the CI lint ratchet `pnpm lint --max-warnings=218`.
+- Make the `scripts/env-check.ts` CLI honor `APP_MODE` when no explicit mode argument is supplied; an explicit argument retains precedence, with regression coverage in `tests/unit/scripts/env-check.test.ts`.
+- Add the CI lint ratchet `pnpm lint --max-warnings=218` and a Drizzle migration-chain consistency check.
 - Add this task report as required by `AGENTS.md`.
 
 ## Explicitly preserved
@@ -53,7 +53,7 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 | Reference-matrix generation | CI `Build Reference Matrix` succeeded; `tenant-tables.generated.ts` and `reference-matrix.md` remain unchanged | verified |
 | Initial generated-files drift gate | First run failed only because the required report's generated `docsIndex` entry had not yet been committed; the job log names only `src/lib/docsIndex.ts` in the diff | failed on initial commit; cause corrected below |
 | Final generated-files drift gate | Second CI run passed `git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts docs/database/reference-matrix.md` after the matching report entry was committed | verified |
-| Drizzle chain check | `npx drizzle-kit check` is not part of the current CI workflow and was not run locally | not verified; local checkout unavailable |
+| Drizzle chain check | Added `pnpm exec drizzle-kit check --config=drizzle.config.ts` to the Build and Test CI job; the new run must complete before merge | pending CI |
 | Visual verification | Persian/English × light/dark screenshots of the route(s) where `FloatingSidebar` renders | not verified; no running browser/app was available in this execution environment |
 | Final branch diff | GitHub compare confirms the branch is two commits ahead of `main`, with only Phase 3 paths plus the report-derived `docsIndex` entry; generated tenant-table and reference-matrix blobs match main | verified |
 
@@ -61,8 +61,8 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 
 The GitHub API was available, but a local clone could not be created because DNS resolution for `github.com` failed. No local pnpm command or UI screenshot is claimed. The `APP_MODE` CLI fallback was corrected after review, and `.env.example` now explicitly states that production must use a dedicated least-privilege authenticator role; the local example retains the same local PostgreSQL credentials for developer usability. The first CI run's generated-files drift failure was traced to the new required task report: `scripts/generate-docs-data.ts` indexes Markdown files beneath `docs/`. The report's matching generated `docsIndex` entry was committed without changing the generator, and the second CI run passed the full drift check. `src/core/database/tenant-tables.generated.ts` and `docs/database/reference-matrix.md` remain byte-for-byte unchanged; the `FloatingSidebar` move did not affect them or create the `docsIndex` entry.
 
-The latest complete CI run is green: frozen install, audit gates, typecheck, lint ratchet, unit tests, UI tests, production build, tenant-table alignment, RLS coverage, reference-matrix generation, generated-file drift, and Isolation Suite all passed. However, a standalone `drizzle-kit check` and the required four-state visual screenshots remain unverified, so the task is not being marked fully complete and this PR must remain Draft until those limits are resolved or explicitly accepted by the project owner.
+The latest completed CI run before the final APP_MODE regression test and Drizzle-chain CI step was green: frozen install, audit gates, typecheck, lint ratchet, unit tests, UI tests, production build, tenant-table alignment, RLS coverage, reference-matrix generation, generated-file drift, and Isolation Suite all passed. A new CI run is required to validate the added regression test and Drizzle-chain step. However, a standalone `drizzle-kit check` and the required four-state visual screenshots remain unverified, so the task is not being marked fully complete and this PR must remain Draft until those limits are resolved or explicitly accepted by the project owner.
 
 **Current assessment:** Phase 3 implementation is committed and the final CI workflow passed. Independent migration-chain verification and four-state UI visual verification remain unresolved.
 
-**Counts:** 17 verified, 1 failed, 2 not verified, 0 not applicable, 0 exception of 20 reported verification items.
+**Counts:** Verification counts must be recalculated after the current CI run; the four-state visual screenshot check remains not verified.
