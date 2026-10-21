@@ -8,7 +8,7 @@ import {
   pgPolicy
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { organizations } from "./index";
+import { organizations } from "./organization-table";
 
 const defaultUuid = sql`gen_random_uuid()`;
 const defaultNow = sql`NOW()`;
