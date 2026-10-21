@@ -146,7 +146,7 @@ describe("LlmAnalyticsPanel security regression", () => {
     const brand = "Oxenn";
     const competitors = ["Amp", "Bold", "lt", "quot", "Span"];
     const responseText =
-      'Symbols: & <tag> "quote" \'apostrophe\'. Mentions: Oxenn, Amp, Bold, lt, quot, Span.';
+      'Symbols: &amp; <tag> "quote" \'apostrophe\'. Mentions: Oxenn, Amp, Bold, lt, quot, Span.';
 
     fetchMock.mockResolvedValue({
       ok: true,
