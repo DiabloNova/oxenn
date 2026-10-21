@@ -2,20 +2,33 @@ import { CrawlError } from "../../domain/errors";
 
 export type RateLimitWait = (delayMs: number, signal: AbortSignal) => Promise<void>;
 
+function cancelledError(): CrawlError {
+  return new CrawlError("CANCELLED", "Crawl was cancelled");
+}
+
+function throwIfAborted(signal: AbortSignal): void {
+  if (signal.aborted) {
+    throw cancelledError();
+  }
+}
+
 function wait(delayMs: number, signal: AbortSignal): Promise<void> {
   if (signal.aborted) {
-    return Promise.reject(new CrawlError("CANCELLED", "Crawl was cancelled"));
+    return Promise.reject(cancelledError());
   }
+
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, delayMs);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(new CrawlError("CANCELLED", "Crawl was cancelled"));
-      },
-      { once: true }
-    );
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      reject(cancelledError());
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, delayMs);
+
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -34,6 +47,8 @@ export class PerHostRateLimiter {
     requestsPerSecond: number,
     signal: AbortSignal
   ): Promise<void> {
+    throwIfAborted(signal);
+
     const spacing = 1000 / requestsPerSecond;
     const previous = this.hostLocks.get(host) ?? Promise.resolve();
     let release!: () => void;
@@ -42,13 +57,17 @@ export class PerHostRateLimiter {
     });
     this.hostLocks.set(host, current);
 
-    await previous;
     try {
+      await previous;
+      throwIfAborted(signal);
+
       const lastRequest = this.lastRequestAt.get(host) ?? 0;
       const remaining = spacing - (this.now() - lastRequest);
       if (remaining > 0) {
         await this.waitFor(remaining, signal);
       }
+
+      throwIfAborted(signal);
       this.lastRequestAt.set(host, this.now());
     } finally {
       release();
