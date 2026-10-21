@@ -42,7 +42,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm lint --max-warnings=218
 
       - name: Verify tenant tables schema alignment
         run: pnpm tsx scripts/database/verify-tenant-tables.ts
