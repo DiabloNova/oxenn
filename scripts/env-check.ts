@@ -79,8 +79,12 @@ function loadEnvFile(filePath: string) {
   }
 }
 
+export function resolveMode(modeArg?: string): Mode {
+  return (modeArg as Mode) || (process.env.APP_MODE as Mode) || "dev";
+}
+
 export function validateEnv(modeArg?: string) {
-  const mode: Mode = (modeArg as Mode) || (process.env.APP_MODE as Mode) || "dev";
+  const mode = resolveMode(modeArg);
   const missing: string[] = [];
   const invalid: { name: string; reason: string }[] = [];
 
@@ -112,7 +116,7 @@ if (require.main === module) {
   loadEnvFile(path.resolve(process.cwd(), ".env.local"));
   loadEnvFile(path.resolve(process.cwd(), ".env"));
 
-  const targetMode = process.argv[2] || process.env.APP_MODE || "dev";
+  const targetMode = resolveMode(process.argv[2]);
   const result = validateEnv(targetMode);
 
   console.log(`[env-check] Validating environment for mode '${result.mode}'...`);
