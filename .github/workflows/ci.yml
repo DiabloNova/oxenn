@@ -50,6 +50,9 @@ jobs:
       - name: Verify RLS migration coverage
         run: pnpm db:verify-rls-migrations
 
+      - name: Verify Drizzle migration chain
+        run: pnpm exec drizzle-kit check --config=drizzle.config.ts
+
       - name: Build
         run: pnpm build
 
