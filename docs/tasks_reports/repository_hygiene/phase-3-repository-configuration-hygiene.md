@@ -38,30 +38,30 @@ Execute only Phase 3 of the Oxenn audit remediation plan: M6, M7, M9, L1, L2 and
 | Branch base | GitHub main at `641b1fcb18a62e520a463b546240239b952836c2`; branch was created from that commit | verified |
 | Audit scope | Phase 3 and its deletion/move checklist in `Audit.md` and `README-FIXES.md` inspected | verified |
 | Environment names | Direct source inspection of authenticator pool configuration and the `VERIFICATION_PROBE_ACTIVE` guard in `src/core/database/tenant-context/index.ts`; example default is `0` and `env-check.ts` is unchanged | verified |
-| FloatingSidebar imports | Component internals and layout import use the configured `@/` aliases; CI Typecheck and production Build passed | verified |
+| FloatingSidebar import paths | Component internals and layout import use configured `@/` aliases; CI Typecheck and production Build succeeded | verified |
 | Deletion list | Branch tree confirms stale schema copy, scratch file, update script, seven listed logs, and orphan root component/lib files are absent | verified |
-| Dev-tool scripts | Moved script blobs have the exact original SHAs; only paths changed | verified |
-| Migration 0004 content | SQL statement is unchanged; branch blob has the required trailing newline | verified by content inspection; `drizzle-kit check` is separate |
-| Report-generated index behavior | Generator reads Markdown files under `docs/`; first CI run generated the task report's `docsIndex` entry | verified |
+| Dev-tool script relocation | Moved script blobs have the exact original SHAs; only paths changed | verified |
+| Migration 0004 content | SQL statement is unchanged; branch blob has the required trailing newline | verified by content inspection; standalone `drizzle-kit check` remains separate |
+| Report-generated index behavior | Generator reads Markdown files under `docs/`; CI produced the task report's entry in `src/lib/docsIndex.ts` | verified |
 | Frozen install | CI step `pnpm install --frozen-lockfile` succeeded in Unit Tests and Build/Test jobs | verified |
 | Typecheck | CI step `pnpm typecheck` succeeded | verified |
 | Lint ratchet | CI step `pnpm lint --max-warnings=218` succeeded | verified |
 | Unit and UI tests | CI steps `pnpm test:unit` and `pnpm test:ui` succeeded | verified |
 | Production build | CI `Build` step succeeded | verified |
 | Tenant table / RLS gates | CI steps `verify-tenant-tables.ts` and `db:verify-rls-migrations` succeeded | verified |
-| Reference-matrix generation | CI `Build Reference Matrix` succeeded; the initial drift diff contained no changes to `tenant-tables.generated.ts` or `reference-matrix.md` | verified |
-| Initial generated-files drift gate | First run failed only because the required report's generated `docsIndex` entry was not yet committed; the job log names only `src/lib/docsIndex.ts` in the diff | failed on initial commit; correction is being committed |
-| Updated generated-files drift gate | The report-derived `docsIndex` entry is being committed to match the generator; the next CI run is the acceptance authority | not verified until rerun completes |
+| Reference-matrix generation | CI `Build Reference Matrix` succeeded; `tenant-tables.generated.ts` and `reference-matrix.md` remain unchanged | verified |
+| Initial generated-files drift gate | First run failed only because the required report's generated `docsIndex` entry had not yet been committed; the job log names only `src/lib/docsIndex.ts` in the diff | failed on initial commit; cause corrected below |
+| Final generated-files drift gate | Second CI run passed `git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts docs/database/reference-matrix.md` after the matching report entry was committed | verified |
 | Drizzle chain check | `npx drizzle-kit check` is not part of the current CI workflow and was not run locally | not verified; local checkout unavailable |
 | Visual verification | Persian/English × light/dark screenshots of the route(s) where `FloatingSidebar` renders | not verified; no running browser/app was available in this execution environment |
-| Final branch diff | Recheck branch compare after the generated index update and confirm no other paths are present | not verified until final compare |
+| Final branch diff | GitHub compare confirms the branch is two commits ahead of `main`, with only Phase 3 paths plus the report-derived `docsIndex` entry; generated tenant-table and reference-matrix blobs match main | verified |
 
 ## Known limits and unresolved items
 
-The GitHub API was available, but a local clone could not be created because DNS resolution for `github.com` failed. No local pnpm command or UI screenshot is claimed. The initial CI run established that install, typecheck, lint, unit/UI tests, build, tenant alignment, RLS verification, and reference-matrix generation passed, while the generated-file drift check failed because the new required task report is itself indexed by the docs generator. The matching generated entry is now being committed separately; the new CI run must confirm that drift is eliminated without introducing unrelated generated changes.
+The GitHub API was available, but a local clone could not be created because DNS resolution for `github.com` failed. No local pnpm command or UI screenshot is claimed. The first CI run's generated-files drift failure was traced to the new required task report: `scripts/generate-docs-data.ts` indexes Markdown files beneath `docs/`. The report's matching generated `docsIndex` entry was committed without changing the generator, and the second CI run passed the full drift check. `src/core/database/tenant-tables.generated.ts` and `docs/database/reference-matrix.md` remain byte-for-byte unchanged; the `FloatingSidebar` move did not affect them or create the `docsIndex` entry.
 
-The migration's final newline and SQL content were inspected directly, but a standalone `drizzle-kit check` remains unverified. Required visual verification is also incomplete. Keep this PR in Draft and do not merge until the rerun is green and the remaining required verification limitations have been resolved or explicitly accepted by the project owner.
+The latest complete CI run is green: frozen install, audit gates, typecheck, lint ratchet, unit tests, UI tests, production build, tenant-table alignment, RLS coverage, reference-matrix generation, generated-file drift, and Isolation Suite all passed. However, a standalone `drizzle-kit check` and the required four-state visual screenshots remain unverified, so the task is not being marked fully complete and this PR must remain Draft until those limits are resolved or explicitly accepted by the project owner.
 
-**Current assessment:** Phase 3 source changes are in the dedicated branch; functional CI checks passed on the first commit, but acceptance is incomplete until the generated-files drift rerun passes and the Drizzle/visual checks are addressed.
+**Current assessment:** Phase 3 implementation is committed and the final CI workflow passed. Independent migration-chain verification and four-state UI visual verification remain unresolved.
 
-**Counts:** 15 verified, 1 failed, 4 not verified, 0 not applicable, 0 exception of 20 reported verification items.
+**Counts:** 17 verified, 1 failed, 2 not verified, 0 not applicable, 0 exception of 20 reported verification items.
