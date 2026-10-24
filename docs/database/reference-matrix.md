@@ -255,7 +255,6 @@
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
 | `idx_api_keys_organization` | `organization_id` | `btree` | ❌ | — |
-| `idx_api_keys_prefix` | `prefix` | `btree` | ❌ | — |
 
 ### Unique Constraints
 
