@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 type Theme = "light" | "dark";
 type Direction = "ltr" | "rtl";
@@ -29,6 +30,8 @@ export function ThemeProvider({
   children: React.ReactNode;
   initialLanguage?: Language;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [theme, setThemeState] = useState<Theme>("light");
   const [language, setLanguageState] = useState<Language>(initialLanguage);
   const [direction, setDirection] = useState<Direction>(initialLanguage === "fa" ? "rtl" : "ltr");
@@ -51,7 +54,17 @@ export function ThemeProvider({
 
     setLanguageState(newLang);
     setDirection(dir);
-  }, []);
+
+    // Locale-specific page content is selected by the URL segment, so keep the
+    // route in sync with the language control while preserving the current page
+    // and any query/hash state.
+    if (pathname) {
+      const localizedPath = pathname.replace(/^\/(?:fa|en)(?=\/|$)/, `/${newLang}`);
+      if (localizedPath !== pathname) {
+        router.replace(`${localizedPath}${window.location.search}${window.location.hash}`);
+      }
+    }
+  }, [pathname, router]);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme") as Theme | null;
