@@ -50,6 +50,5 @@ export const apiKeys = pgTable("api_keys", {
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 }, (table) => [
   index("idx_api_keys_organization").on(table.organizationId),
-  index("idx_api_keys_prefix").on(table.prefix),
   ...tenantPolicy("organization_id")
 ]);
