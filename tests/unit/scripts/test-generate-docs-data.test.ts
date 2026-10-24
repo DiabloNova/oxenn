@@ -33,6 +33,15 @@ describe("createContentSnippet", () => {
     expect(snippet.length).toBeLessThan(500 + identifier.length);
   });
 
+  it("does not extend a natural-language word just because it crosses the limit", () => {
+    const content = `${"x".repeat(495)} processing tail`;
+
+    const snippet = createContentSnippet(content);
+
+    expect(snippet).toBe(`${"x".repeat(495)} proc`);
+    expect(snippet).toHaveLength(500);
+  });
+
   it("does not pull in a new token when the boundary falls between tokens", () => {
     const content = `${"x".repeat(499)} next-token`;
 
