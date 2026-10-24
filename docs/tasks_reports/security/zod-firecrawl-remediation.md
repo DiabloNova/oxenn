@@ -19,7 +19,7 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 ## Implementation
 
 - Raised the root Zod dependency to ^4.6.7.
-- Added a narrowly scoped pnpm override for only the Zod dependency requested by @mendable/firecrawl-js, pinned to 4.6.7.
+- Added narrowly scoped pnpm overrides for the Zod dependencies requested by both @mendable/firecrawl-js and its firecrawl@4.30.1 dependency, pinned to 4.6.7.
 - Updated the lockfile dependency snapshots so Firecrawl and zod-to-json-schema resolve against Zod 4.6.7; removed the installed Zod 3.25.76 package resolution and snapshot.
 - Kept the Firecrawl SDK version and application provider contract unchanged.
 - Did not change audit-gate rules, allowlists, database files, or PR #96.
