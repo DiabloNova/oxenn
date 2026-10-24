@@ -1,7 +1,8 @@
 /**
- * Create a compact docs-search snippet without cutting a token in half.
- * The result may exceed maxLength only by the remainder of the token that
- * crosses the boundary, so identifiers such as migration numbers stay intact.
+ * Create a compact docs-search snippet while preserving an identifier that
+ * crosses the boundary. Natural-language words remain bounded at maxLength;
+ * technical identifiers (numbers, underscore names, paths, or dotted names)
+ * may extend only to the end of the token.
  */
 export function createContentSnippet(content: string, maxLength = 500): string {
   const normalizedContent = content.replace(/\n/g, " ");
@@ -14,16 +15,22 @@ export function createContentSnippet(content: string, maxLength = 500): string {
   const previousCharacter = normalizedContent[end - 1];
   const nextCharacter = normalizedContent[end];
 
-  // Extend only when the limit falls inside a token. If it falls between
-  // tokens, keep the existing length limit and avoid pulling in a new word.
   if (
     previousCharacter &&
     nextCharacter &&
     !/\s/.test(previousCharacter) &&
     !/\s/.test(nextCharacter)
   ) {
-    while (end < normalizedContent.length && !/\s/.test(normalizedContent[end])) {
-      end += 1;
+    const tokenStart = normalizedContent.slice(0, end).search(/\S+$/);
+    const tokenPrefix = normalizedContent.slice(tokenStart, end);
+    const identifierFragment =
+      /[\d_/@:]/.test(tokenPrefix) ||
+      (tokenPrefix.includes(".") && /[A-Za-z0-9]/.test(nextCharacter));
+
+    if (identifierFragment) {
+      while (end < normalizedContent.length && !/\s/.test(normalizedContent[end])) {
+        end += 1;
+      }
     }
   }
 
