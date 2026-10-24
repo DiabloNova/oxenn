@@ -6,7 +6,10 @@ import { CrawlerOrchestrator } from "@/services/crawler/crawler-orchestrator";
 // Request body validation schema
 const requestSchema = z.object({
   seedUrls: z
-    .array(z.string().url("Each seed URL must be a valid URL"))
+    .array(
+      z.string().max(2048, "Seed URL exceeds the maximum length").url("Each seed URL must be a valid URL")
+    )
+    .max(50, "At most 50 seed URLs can be submitted")
     .min(1, "At least one seed URL is required"),
 });
 

@@ -45,15 +45,17 @@ const createDefSchema = z.object({
   category: PromptCategoryEnum,
   intent: PromptIntentTypeEnum,
   locale: z.string().min(1, "زبان الزامی است"),
-  variables: z.array(
-    z.object({
-      name: z.string(),
-      defaultValue: z.string(),
-      description: z.string().optional(),
-    }),
-  ),
-  competitors: z.array(z.string()),
-  tags: z.array(z.string()),
+  variables: z
+    .array(
+      z.object({
+        name: z.string().max(80),
+        defaultValue: z.string().max(2000),
+        description: z.string().max(500).optional(),
+      }),
+    )
+    .max(20, "At most 20 prompt variables are supported"),
+  competitors: z.array(z.string().max(120)).max(25, "At most 25 competitors are supported"),
+  tags: z.array(z.string().max(100)).max(50, "At most 50 tags are supported"),
   notes: z.string().optional(),
 });
 
@@ -67,14 +69,15 @@ const updateDefSchema = z.object({
   variables: z
     .array(
       z.object({
-        name: z.string(),
-        defaultValue: z.string(),
-        description: z.string().optional(),
+        name: z.string().max(80),
+        defaultValue: z.string().max(2000),
+        description: z.string().max(500).optional(),
       }),
     )
+    .max(20, "At most 20 prompt variables are supported")
     .optional(),
-  competitors: z.array(z.string()).optional(),
-  tags: z.array(z.string()).optional(),
+  competitors: z.array(z.string().max(120)).max(25, "At most 25 competitors are supported").optional(),
+  tags: z.array(z.string().max(100)).max(50, "At most 50 tags are supported").optional(),
   notes: z.string().optional(),
   isActive: z.boolean().optional(),
 });
@@ -88,7 +91,7 @@ const executeSchema = z.object({
 const compareSchema = z.object({
   promptId: z.string().uuid(),
   variablesValues: z.record(z.string(), z.string()),
-  models: z.array(z.string()),
+  models: z.array(z.string().max(100)).max(10, "At most 10 models can be compared"),
 });
 
 const scheduleSchema = z.object({

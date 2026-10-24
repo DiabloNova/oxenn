@@ -370,6 +370,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Stage 3 — Audit Gate Regression Tests and Verification  **Status:** SUCCESS (Stage 3 verification passed)   **Date:** 2026-10-19   **PR:** [#86](https://github.com/DiabloNova/oxenn/pull/86)   **Branch:** \`fix/audit-remediation-p1-v1.1\`   **Verified implementation commit:** \`0e439e087922245f29476acc946374c6fe6aef0a\`  ## Invariant  The dependency audit gate must never interpret missing, empty, malformed, or ambiguous severity/patch metadata as safe evidence. Critical/high findings may be risk-ac`
   },
   {
+    slug: "zod-firecrawl-remediation",
+    titleEn: "Firecrawl and Zod dependency remediation",
+    titleFa: "Firecrawl and Zod dependency remediation",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Firecrawl and Zod dependency remediation  **Status:** Implementation CI passed — validated commit \`573576f9793d225cebcc72098177476ce396cb3b\`   **Date:** 2026-10-24   **Branch:** fix/firecrawl-zod-remediation  ## Invariant  Every installed Zod runtime version in the resolved dependency graph must be outside the affected range of GHSA-mrhx-c7xc-m3w5, and Firecrawl crawl behavior must remain compatible. The dependency audit gate must remain unchanged and blocking.  ## Findings  - The root applica`
+  },
+  {
     slug: "conductor-review-fixes",
     titleEn: "Conductor PR #57 review fixes",
     titleFa: "Conductor PR #57 review fixes",
