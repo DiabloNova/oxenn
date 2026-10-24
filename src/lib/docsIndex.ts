@@ -362,6 +362,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Phase 3 — Repository and Configuration Hygiene  **Status:** INCOMPLETE — VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c`
   },
   {
+    slug: "api-keys-prefix-index-reconciliation",
+    titleEn: "Remove Redundant API-Key Prefix Index",
+    titleFa: "Remove Redundant API-Key Prefix Index",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Remove Redundant API-Key Prefix Index  ## Finding  The api_keys prefix column already has a uniqueness constraint, which PostgreSQL backs with a unique index. A separate non-unique index duplicates that index for prefix lookups. This change removes only the redundant non-unique index and preserves the uniqueness guarantee.  ## Implementation  - Removed the standalone prefix index from the current Drizzle schema. - Added migration 0013 and its matching snapshot/journal entry. - Preserved the prefix uniqueness constraint and left historical migrations unchanged.`
+  },
+  {
     slug: "audit-gate-stage3-regression-tests",
     titleEn: "Stage 3 — Audit Gate Regression Tests and Verification",
     titleFa: "Stage 3 — Audit Gate Regression Tests and Verification",
