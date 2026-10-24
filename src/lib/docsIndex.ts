@@ -247,7 +247,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Relational Database Persistence Model",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Relational Database Persistence Model  This document details the PostgreSQL table structures, query optimizations, soft deletion strategy, and optimistic concurrency locks.  ## UUID Entity Persistence  Every record persisted across the administrative subsystem uses globally unique UUID primary keys.  ## Optimistic Concurrency Control  Optimistic Locking is enforced on all state updates to prevent concurrency conflicts or racing administrative commands:  - Each table (e.g., \`brands\`, \`feature_f`
+    snippet: `# Relational Database Persistence Model  This document details the PostgreSQL table structures, query optimizations, soft deletion strategy, and optimistic concurrency locks.  ## UUID Entity Persistence  Every record persisted across the administrative subsystem uses globally unique UUID primary keys.  ## Optimistic Concurrency Control  Optimistic Locking is enforced on all state updates to prevent concurrency conflicts or racing administrative commands:  - Each table (e.g., \`brands\`, \`feature_flags\`,`
   },
   {
     slug: "PLATFORM_MONITORING",
@@ -367,7 +367,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Phase 3 — Repository and Configuration Hygiene",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Phase 3 — Repository and Configuration Hygiene  **Status:** INCOMPLETE — VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c`
+    snippet: `# Phase 3 — Repository and Configuration Hygiene  **Status:** INCOMPLETE — VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c2\``
   },
   {
     slug: "audit-gate-stage3-regression-tests",
@@ -391,6 +391,6 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "User Guides",
     category: "user-guides",
     categoryFa: "User Guides",
-    snippet: `# User Guides  This section provides user-facing documentation for navigating and operating Seorchable.  ## Status Dictionary - **Implemented**: Verified user workflows supported by the UI/backend. - **Partial**: Workflow is accessible but missing edge cases or polished UI. - **Planned**: Not currently implemented.  ## Core Concepts & Workflows  ### Dashboard Navigation The platform offers an authenticated unified Dashboard Shell with collapsible responsive sidebars, directional support (RTL/LTR`
+    snippet: `# User Guides  This section provides user-facing documentation for navigating and operating Seorchable.  ## Status Dictionary - **Implemented**: Verified user workflows supported by the UI/backend. - **Partial**: Workflow is accessible but missing edge cases or polished UI. - **Planned**: Not currently implemented.  ## Core Concepts & Workflows  ### Dashboard Navigation The platform offers an authenticated unified Dashboard Shell with collapsible responsive sidebars, directional support (RTL/LTR),`
   },
 ];
