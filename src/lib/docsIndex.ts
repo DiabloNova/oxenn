@@ -375,7 +375,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Firecrawl and Zod dependency remediation",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Firecrawl and Zod dependency remediation  **Status:** INCOMPLETE — CI validation pending   **Date:** 2026-10-24   **Branch:** fix/firecrawl-zod-remediation  ## Invariant  Every installed Zod runtime version in the resolved dependency graph must be outside the affected range of GHSA-mrhx-c7xc-m3w5, and Firecrawl crawl behavior must remain compatible. The dependency audit gate must remain unchanged and blocking.  ## Findings  - The root application used Zod 4.4.3. - The resolved Firecrawl SDK ve`
+    snippet: `# Firecrawl and Zod dependency remediation  **Status:** Implementation CI passed — validated commit \`573576f9793d225cebcc72098177476ce396cb3b\`   **Date:** 2026-10-24   **Branch:** fix/firecrawl-zod-remediation  ## Invariant  Every installed Zod runtime version in the resolved dependency graph must be outside the affected range of GHSA-mrhx-c7xc-m3w5, and Firecrawl crawl behavior must remain compatible. The dependency audit gate must remain unchanged and blocking.  ## Findings  - The root applica`
   },
   {
     slug: "conductor-review-fixes",
