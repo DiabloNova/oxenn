@@ -22,13 +22,16 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Added narrowly scoped pnpm overrides for the Zod dependencies requested by both @mendable/firecrawl-js and its firecrawl@4.30.1 dependency, pinned to 4.6.7.
 - Updated the lockfile dependency snapshots so Firecrawl and zod-to-json-schema resolve against Zod 4.6.7; removed the installed Zod 3.25.76 package resolution and snapshot.
 - Kept the Firecrawl SDK version and application provider contract unchanged.
+- Bounded externally supplied arrays and member strings in the LLM analytics, content studio, crawl policy, legacy crawler, and prompt-intelligence validation schemas. This activates Zod's early size rejection at these boundaries instead of relying on the dependency patch alone.
+- Added a regression test proving an oversized invalid query array is rejected with HTTP 400 before model work.
 - Did not change audit-gate rules, allowlists, database files, or PR #96.
 
 ## Verification
 
 - Static lockfile consistency checks performed in this session: the old Zod 3.25.76 package resolution, package snapshot, and Firecrawl dependency references are absent; the new Zod integrity matches the published 4.6.7 artifact.
-- Local pnpm install, audit, typecheck, lint, unit tests, isolation suite, and build: NOT RUN. This session has no local Oxenn checkout or pnpm installation.
-- GitHub Actions validation: PENDING. The remediation must not be considered complete until the frozen lockfile install, dependency audit gate, and required CI jobs pass on this branch.
+- The dependency-only CI revision passed frozen installation, dependency audit, audit-gate regression tests, typecheck, lint, migration checks, build, unit tests, UI tests, isolation suite, build reference matrix, and generated-file drift checks.
+- Local pnpm commands: NOT RUN. This session has no local Oxenn checkout or pnpm installation.
+- GitHub Actions validation for these added input bounds and the new regression test is PENDING; this revision is incomplete until all required jobs pass.
 
 ## Remaining risks and acceptance criteria
 
