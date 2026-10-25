@@ -5,6 +5,10 @@ import { PremiumHomeExperience } from "@/components/marketing/PremiumHomeExperie
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), pathname: "/en" }));
 
+vi.mock("@/components/AuthProvider", () => ({
+  useAuth: () => ({ session: { user: null, expiresAt: null, status: "unauthenticated" } }),
+}));
+
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
   useRouter: () => ({ push: navigation.push }),
@@ -34,6 +38,15 @@ describe("PremiumHomeExperience", () => {
     expect(screen.getByRole("link", { name: "About us" })).toHaveAttribute("href", "/en/about");
     expect(screen.getByRole("link", { name: "Documentation" })).toHaveAttribute("href", "/en/docs");
     expect(document.querySelector(".oxen-nav-logo")?.textContent?.trim()).toBe("");
+  });
+
+  it("preserves the session-aware workspace access flow in a focused modal", () => {
+    renderHome();
+    fireEvent.click(screen.getByRole("button", { name: "Workspace access" }));
+    expect(screen.getByRole("dialog", { name: "Workspace access" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Access the workspace" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
+    expect(screen.queryByRole("dialog", { name: "Workspace access" })).not.toBeInTheDocument();
   });
 
   it("switches the existing navigation area into search mode", () => {

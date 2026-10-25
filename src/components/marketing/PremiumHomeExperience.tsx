@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { SeorchableLogo } from "./SeorchableLogo";
+import { HeroAccessCard } from "./HeroAccessCard";
 import "./PremiumHomeExperience.css";
 
 type NavigationItem = {
@@ -29,6 +30,7 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
   const rootPath = "/" + locale;
   const isHomepage = pathname === rootPath || pathname === rootPath + "/";
   const [searchOpen, setSearchOpen] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -145,21 +147,23 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
   }, []);
 
   useEffect(() => {
-    if (!searchOpen) return;
+    if (!searchOpen && !accessOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setSearchOpen(false);
         setSearchQuery("");
+        setAccessOpen(false);
       }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [searchOpen]);
+  }, [searchOpen, accessOpen]);
 
   useEffect(() => {
     setSearchOpen(false);
     setSearchQuery("");
     setSidebarOpen(false);
+    setAccessOpen(false);
   }, [pathname]);
 
   const isTopItemActive = (id: string) => {
@@ -341,6 +345,9 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
                 <span>{copy.secondary}</span><span className="oxen-secondary-arrow">↘</span>
               </button>
             </div>
+            <button type="button" className="oxen-workspace-link" onClick={() => setAccessOpen(true)}>
+              <UserRound size={14} aria-hidden="true" /><span>{copy.workspaceAccess}</span><ArrowUpRight size={13} aria-hidden="true" />
+            </button>
             <div className="oxen-hero-proof"><ShieldCheck size={17} aria-hidden="true" /><span>{copy.proof}</span></div>
             <div className="oxen-scroll-cue"><span>01</span><i /><span>04</span><small>{copy.scroll}</small></div>
           </div>
@@ -407,6 +414,15 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
           </div>
         </div>
       </section>
+      {accessOpen && (
+        <div className="oxen-access-overlay">
+          <button type="button" className="oxen-access-backdrop" aria-label={copy.closeDialog} onClick={() => setAccessOpen(false)} />
+          <div className="oxen-access-dialog" role="dialog" aria-modal="true" aria-label={copy.workspaceAccess}>
+            <button type="button" className="oxen-access-close" autoFocus aria-label={copy.closeDialog} onClick={() => setAccessOpen(false)}><X size={18} /></button>
+            <HeroAccessCard locale={locale} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

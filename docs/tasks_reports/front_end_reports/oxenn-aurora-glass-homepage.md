@@ -24,7 +24,7 @@
 - Search opens within the same header and filters a finite list of known site/workspace destinations. Escape closes it. It is client-side navigation/search only; it does not claim full-text search over all content.
 - Product sidebar has desktop expanded/collapsed layouts and a mobile drawer; it shares the existing ThemeProvider for locale and theme.
 - Scroll progress, wave parallax, dashboard chart line drawing, a floating insight chip, and section reveal effects are implemented with reduced-motion overrides.
-- The existing marketing copy and downstream page sections have been kept; the existing free-audit component is still present.
+- The existing marketing copy and downstream page sections have been kept; the existing free-audit component is still present. The original session-aware `HeroAccessCard` registration/dashboard path is preserved in an on-demand access dialog so it does not dominate the hero layout.
 - The ThemeProvider's fallback now defaults to light when no valid saved preference exists.
 
 ## Verification

@@ -125,3 +125,18 @@
  .oxen-floating-insight{right:-2px;top:-6px;min-width:145px;gap:7px;padding:8px 9px;border-radius:11px}.oxen-insight-spark{width:25px;height:25px}.oxen-floating-insight b{font-size:8px}.oxen-floating-insight small{font-size:6.5px}.oxen-floating-insight>svg{width:13px}
 }
 @media(prefers-reduced-motion:reduce){.oxen-home-experience *,.oxen-home-experience *::before,.oxen-home-experience *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.ox-scroll-reveal{opacity:1!important;transform:none!important}}
+
+
+/* Keep the existing session-aware registration/dashboard flow available without crowding the hero. */
+.oxen-workspace-link{display:inline-flex;align-items:center;gap:8px;margin-top:15px;padding:5px 1px;border:0;background:transparent;color:#4d7781;font-size:10px;font-weight:700;cursor:pointer;transition:color .2s,gap .2s}
+.oxen-workspace-link svg:first-child{color:var(--oh-accent)}.oxen-workspace-link:hover{color:#087d7b;gap:11px}
+.oxen-home-experience[data-theme=dark] .oxen-workspace-link{color:#b4d0ce}.oxen-home-experience[data-theme=dark] .oxen-workspace-link:hover{color:#78e5d8}
+.oxen-access-overlay{position:fixed;z-index:220;inset:0;display:grid;place-items:center;padding:20px}
+.oxen-access-backdrop{position:absolute;inset:0;width:100%;height:100%;border:0;background:rgba(8,24,31,.48);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);cursor:pointer;animation:oxen-access-fade .2s ease-out both}
+.oxen-access-dialog{position:relative;z-index:1;width:min(100%,470px);max-height:calc(100svh - 40px);overflow:auto;padding:34px 12px 12px;border:1px solid rgba(255,255,255,.7);border-radius:25px;background:linear-gradient(140deg,rgba(250,255,253,.94),rgba(228,249,245,.9));box-shadow:0 5px 12px rgba(8,25,31,.1),0 35px 110px rgba(8,25,31,.32),inset 0 1px 0 rgba(255,255,255,.95);animation:oxen-access-enter .28s cubic-bezier(.2,.8,.2,1) both}
+.oxen-home-experience[data-theme=dark] .oxen-access-dialog{background:linear-gradient(140deg,rgba(17,43,48,.97),rgba(11,29,35,.96));border-color:rgba(211,245,240,.2)}
+.oxen-access-close{position:absolute;z-index:2;top:9px;right:9px;width:33px;height:33px;display:grid;place-items:center;border:1px solid rgba(62,117,123,.15);border-radius:11px;color:#41636b;background:rgba(255,255,255,.62);cursor:pointer}
+[dir=rtl] .oxen-access-close{right:auto;left:9px}
+.oxen-access-dialog .animated-border-glass{border-radius:17px}
+@keyframes oxen-access-fade{from{opacity:0}to{opacity:1}}@keyframes oxen-access-enter{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.oxen-access-backdrop,.oxen-access-dialog{animation:none!important}.oxen-workspace-link{transition:none!important}}
