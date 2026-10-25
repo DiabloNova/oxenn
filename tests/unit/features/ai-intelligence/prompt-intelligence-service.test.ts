@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PromptIntelligenceService } from "@/features/ai-intelligence/services/prompt-intelligence-service";
-import type { PromptIntelligenceRepository, BrandRepository } from "@/features/ai-intelligence/repositories";
+import type { PromptIntelligenceRepository, BrandRepository, CompetitorRepository } from "@/features/ai-intelligence/repositories";
 import type { PromptDefinition } from "@/features/ai-intelligence/domain/types";
 
 describe("PromptIntelligenceService execution input guard", () => {
@@ -29,7 +29,8 @@ describe("PromptIntelligenceService execution input guard", () => {
     const brandRepository = {
       findById: findBrandById,
     } as unknown as BrandRepository;
-    return new PromptIntelligenceService(repository, brandRepository);
+    const competitorRepository = {} as CompetitorRepository;
+    return new PromptIntelligenceService(repository, brandRepository, competitorRepository);
   }
 
   it("rejects over-limit variable maps before brand lookup or execution persistence", async () => {
