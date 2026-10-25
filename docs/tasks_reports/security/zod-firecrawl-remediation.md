@@ -33,8 +33,9 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Static lockfile consistency checks performed in this session: the old Zod 3.25.76 package resolution, package snapshot, and Firecrawl dependency references are absent; the new Zod integrity matches the published 4.6.7 artifact.
 - The dependency-only CI revision passed frozen installation, dependency audit, audit-gate regression tests, typecheck, lint, migration checks, build, unit tests, UI tests, isolation suite, build reference matrix, and generated-file drift checks.
 - A clean remote checkout was created at the exact PR head. `corepack pnpm install --frozen-lockfile` was attempted, but dependency installation did not complete within the remote execution window because npm registry downloads were extremely slow; the focused test commands therefore have not run yet.
-- GitHub Actions validation for the additional input-bound tests is PENDING until the updated commit's checks finish; do not merge until required jobs pass.
-- Local verification for the follow-up remediation must be recorded from actual command output; do not infer success from the presence of test files.
+- GitHub Actions on follow-up commit `5ad1fb590104e1c78ac6ab98c1f063ace185261a` passed **Unit Tests**, **Build and Test** (including typecheck, lint, build, and generated-file drift verification), and **Isolation Suite**.
+- Cubic's new review run was still queued at the time of this report update. Hyrax Review was skipped because its connected workspace had exhausted included credits; GitHub marked that check as non-blocking.
+- Focused tests could not be run locally in the remote checkout because frozen dependency installation exceeded the 180-second execution window; the successful CI job is the verified test result.
 
 ## Remaining risks and acceptance criteria
 
