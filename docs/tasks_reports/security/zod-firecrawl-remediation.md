@@ -30,14 +30,14 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Added exact-at-limit acceptance tests for Prompt Intelligence definitions, Content Studio fields, Crawl API policy arrays/member lengths, and legacy Crawler Start URL/count limits. The Content Studio boundary test uses a valid URL, non-placeholder Firecrawl key, and tenant-context callback so it can reach the provider if validation is bypassed.
 - Added a direct service-level model-comparison test ensuring undeclared variables are rejected before brand lookup or execution persistence. Action validation tests also assert invalid input is rejected before authentication work.
 - Replaced the reference-matrix grep heuristic with a TypeScript AST detector for imported Drizzle table bindings, relational `db.query.<table>` access, and SQL table clauses passed to query/execute methods. It ignores payload properties, ordinary prose, comments, and SQL literals; regenerated the matrix and docs index from the detector output (70 tables: 59 wired, 11 legacy candidates).
-- No database schema or migration, dependency, audit-gate, allowlist, or PR #96 changes were made.
+- No database schema or migration, audit-gate, allowlist, or PR #96 changes were made. The Zod upgrade and Firecrawl-related overrides are intentional dependency changes in this remediation, as described above.
 
 ## Verification
 
 - Static lockfile consistency checks performed in this session: the old Zod 3.25.76 package resolution, package snapshot, and Firecrawl dependency references are absent; the new Zod integrity matches the published 4.6.7 artifact.
 - The dependency-only CI revision passed frozen installation, dependency audit, audit-gate regression tests, typecheck, lint, migration checks, build, unit tests, UI tests, isolation suite, build reference matrix, and generated-file drift checks.
-- A clean remote checkout was created at the exact PR head. `corepack pnpm install --frozen-lockfile` was attempted, but dependency installation did not complete within the remote execution window because npm registry downloads were extremely slow; the focused test commands therefore have not run yet.
-- GitHub Actions on follow-up commit `5ad1fb590104e1c78ac6ab98c1f063ace185261a` passed **Unit Tests**, **Build and Test** (including typecheck, lint, build, and generated-file drift verification), and **Isolation Suite**.
+- The remote checkout could not complete a full frozen pnpm install within the execution window because dependency linking stalled. The focused AST-detector tests were run separately and passed; the full application test suite is validated by GitHub Actions.
+- GitHub Actions on follow-up commit `42a2523c534d9c30044b00db88ecbb7a3aa0c079` passed **Unit Tests**, **Build and Test** (including typecheck, lint, build, and generated-file drift verification), and **Isolation Suite**. Additional review follow-ups are included after that commit and must also pass CI before merge.
 - Cubic's new review run was still queued at the time of this report update. Hyrax Review was skipped because its connected workspace had exhausted included credits; GitHub marked that check as non-blocking.
 - Focused tests on the follow-up revision were not run in this session: the fresh remote sandbox stalled during frozen dependency installation. CI on the latest follow-up commit must verify the updated tests, typecheck, lint, build, and generated-file drift checks before merge; earlier successful CI does not cover these follow-up edits.
 
