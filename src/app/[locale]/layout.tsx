@@ -10,12 +10,12 @@ import "../globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: `${siteConfig.name} — هوشمندی و دیده‌شدن برند سئورچبل`,
-    template: `%s | ${siteConfig.name}`,
+    default: "Oxenn — Intelligence for the Answer Era",
+    template: `%s | Oxenn`,
   },
   description:
-    "سنجش، محافظت و بهینه‌سازی نحوه‌ی ارجاع به برند شما در ChatGPT، Gemini، Claude و Perplexity. پلتفرم نسل‌بعدی AEO و GEO با سئورچبل seorchable.ir.",
-  keywords: ["AEO", "GEO", "Brand Intelligence", "AI visibility", "سئورچبل", "seorchable.ir", "دیده‌شدن برند"],
+    "Oxenn is the enterprise AI-powered SEO, AEO, and GEO intelligence platform for measuring and shaping how brands are understood across answer engines.",
+  keywords: ["Oxenn", "AEO", "GEO", "AI visibility", "SEO intelligence", "answer engine optimization"],
   metadataBase: new URL(siteConfig.url),
   openGraph: {
     title: siteConfig.name,
