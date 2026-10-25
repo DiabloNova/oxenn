@@ -1,7 +1,7 @@
 # Firecrawl and Zod dependency remediation
 
-**Status:** Original dependency remediation CI passed; Cubic follow-up fixes are committed and require final CI validation before merge.  
-**Date:** 2026-10-25  
+**Status:** Original dependency remediation CI passed; follow-up Cubic fixes are committed and require CI validation before merge.
+**Date:** 2026-10-25
 **Branch:** fix/firecrawl-zod-remediation
 
 ## Invariant
@@ -28,9 +28,7 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Added Vitest unit coverage for Prompt Intelligence create/update/execute/compare limits and for the Content Studio, Crawl API policy, and legacy Crawler Start caps. Route tests assert HTTP 400 and no downstream provider/orchestrator invocation.
 - Follow-up Cubic remediation centralizes prompt-variable definition bounds in `promptVariableDefinitionSchema` and `promptVariableDefinitionsSchema`, reused by create and update actions. Shared constants now govern both definition and execution-value contracts.
 - Added exact-at-limit acceptance tests for Prompt Intelligence definitions, Content Studio fields, Crawl API policy arrays/member lengths, and legacy Crawler Start URL/count limits. The Content Studio boundary test uses a valid URL, non-placeholder Firecrawl key, and tenant-context callback so it can reach the provider if validation is bypassed.
-- Added service-level and action-path model-comparison tests for undeclared variables, ensuring the service guard rejects before brand lookup or execution persistence and the action surfaces the error. Invalid action payloads are also verified to fail before authentication work.
-- Replaced reference-matrix consumer discovery based on grep-by-name with TypeScript AST analysis of imported Drizzle table bindings, relational `db.query.<table>` calls, and SQL table clauses passed to query/execute methods. SQL held in local variables is resolved within its lexical scope; payload property names, comments, and string literals alone are not consumers.
-- Removed false consumers from the generated matrix for request-validation tests that only use request/property names. Matrix summary from the generator's CI diff: 70 tables, 59 wired and 11 legacy candidates.
+- Added a direct service-level model-comparison test ensuring undeclared variables are rejected before brand lookup or execution persistence. Action validation tests also assert invalid input is rejected before authentication work.
 - No database schema or migration, dependency, audit-gate, allowlist, or PR #96 changes were made.
 
 ## Verification
@@ -40,7 +38,7 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - A clean remote checkout was created at the exact PR head. `corepack pnpm install --frozen-lockfile` was attempted, but dependency installation did not complete within the remote execution window because npm registry downloads were extremely slow; the focused test commands therefore have not run yet.
 - GitHub Actions on follow-up commit `5ad1fb590104e1c78ac6ab98c1f063ace185261a` passed **Unit Tests**, **Build and Test** (including typecheck, lint, build, and generated-file drift verification), and **Isolation Suite**.
 - Cubic's new review run was still queued at the time of this report update. Hyrax Review was skipped because its connected workspace had exhausted included credits; GitHub marked that check as non-blocking.
-- Focused tests on the follow-up revision were not run in this session: the fresh remote sandbox stalled during frozen dependency installation. CI on the latest follow-up commit must verify the updated tests, typecheck, lint, build, reference-matrix regeneration, and generated-file drift checks before merge; earlier successful CI does not cover these follow-up edits.
+- Focused tests on the follow-up revision were not run in this session: the fresh remote sandbox stalled during frozen dependency installation. CI on the latest follow-up commit must verify the updated tests, typecheck, lint, build, and generated-file drift checks before merge; earlier successful CI does not cover these follow-up edits.
 
 ## Remaining risks and acceptance criteria
 
