@@ -45,7 +45,7 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
         primary: "شروع تحلیل رایگان", secondary: "کاوش در پلتفرم",
         proof: "جست‌وجوی سنتی، پاسخ‌های هوش مصنوعی و هوشمندی رقابتی؛ در یک نگاه",
         visibility: "دیده‌شدن برند", sample: "داده نمونه", score: "شاخص دیده‌شدن",
-        trend: "روند سیگنال‌ها", platforms: "سهم پلتفرم‌های AI", queries: "پرس‌وجوهای نمونه",
+        trend: "روند سیگنال‌ها", platforms: "سهم پلتفرم‌های AI", topQueries: "پرس‌وجوهای نمونه",
         insight: "بینش هوشمند", opportunity: "فرصت‌های روشن‌تر",
         queryOne: "هوش مصنوعی درباره برند من چه می‌گوید؟",
         queryTwo: "بهترین برند در این حوزه کدام است؟",
@@ -67,7 +67,7 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
         primary: "Start free analysis", secondary: "Explore the platform",
         proof: "Traditional search, AI answers, and competitor intelligence — connected",
         visibility: "Brand visibility", sample: "SAMPLE DATA", score: "VISIBILITY INDEX",
-        trend: "Signal momentum", platforms: "AI platform share", queries: "Example queries",
+        trend: "Signal momentum", platforms: "AI platform share", topQueries: "Example queries",
         insight: "Smarter insights", opportunity: "Clearer opportunities",
         queryOne: "What does AI say about your brand?",
         queryTwo: "Best brand in this category",
@@ -396,7 +396,7 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
                   </div>
                 </div>
                 <div className="oxen-top-queries">
-                  <b>{copy.queries}</b>
+                  <b>{copy.topQueries}</b>
                   <div><span>1</span><p>{copy.queryOne}</p><small>12.4%</small><ChevronRight size={13} /></div>
                   <div><span>2</span><p>{copy.queryTwo}</p><small>9.8%</small><ChevronRight size={13} /></div>
                   <div><span>3</span><p>{copy.queryThree}</p><small>7.1%</small><ChevronRight size={13} /></div>

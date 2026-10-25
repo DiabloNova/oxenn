@@ -1,6 +1,6 @@
 # Oxenn Aurora Glass Homepage — Implementation Report
 
-- **Status:** IMPLEMENTED ON BRANCH; runtime verification pending.
+- **Status:** IMPLEMENTED ON BRANCH; one initial Vercel build surfaced duplicate translation-object keys in the new component. Those two duplicate keys were corrected in the follow-up commit; the replacement build is pending.
 - **Branch:** \`feat/oxenn-aurora-glass-homepage\`
 - **Base commit:** \`400078265de4ec2238d7c6d21be018cfb042924a\`
 - **Intent:** Translate the approved visual direction into the real Next.js homepage: pale aqua/teal wave backdrop, raised floating glass navigation, icon-only links with hover labels and active route state, collapsible product sidebar, in-place search, an animated sample dashboard, and purposeful scroll motion.
