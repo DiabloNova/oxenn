@@ -56,6 +56,12 @@ describe("Content Studio request bounds", () => {
   it("accepts keywords and brand voice exactly at their configured limits", async () => {
     const response = await post({ targetKeywords: Array.from({ length: 100 }, () => "k".repeat(200)), brandVoice: "v".repeat(200) });
     expect(response.status).toBe(200);
+    expect(runWithTenantContextMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "usr-studio-default",
+      "req-content-studio",
+      expect.any(Function),
+    );
     expect(scrapeUrlMock).toHaveBeenCalledWith("https://example.com", { formats: ["markdown"] });
     expect(getLLMClient).toHaveBeenCalledTimes(1);
   });
