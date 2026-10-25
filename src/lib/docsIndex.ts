@@ -375,7 +375,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Firecrawl and Zod dependency remediation",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Firecrawl and Zod dependency remediation  **Status:** Original dependency remediation CI passed; follow-up Cubic fixes are committed and require CI validation before merge. **Date:** 2026-10-25 **Branch:** fix/firecrawl-zod-remediation  ## Invariant  Every installed Zod runtime version in the resolved dependency graph must be outside the affected range of GHSA-mrhx-c7xc-m3w5, and Firecrawl crawl behavior must remain compatible. The dependency audit gate must remain unchanged and blocking.  ## `
+    snippet: `# Firecrawl and Zod dependency remediation  **Status:** Dependency remediation and Cubic follow-up fixes passed CI on code head \`ae0eaacd3fde95eb6750cd15da91706792fb06af\`; PR #99 remains unmerged pending review. **Date:** 2026-10-25 **Branch:** fix/firecrawl-zod-remediation  ## Invariant  Every installed Zod runtime version in the resolved dependency graph must be outside the affected range of GHSA-mrhx-c7xc-m3w5, and Firecrawl crawl behavior must remain compatible. The dependency audit gate mus`
   },
   {
     slug: "conductor-review-fixes",
