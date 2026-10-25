@@ -1,7 +1,7 @@
 # Firecrawl and Zod dependency remediation
 
-**Status:** Implementation CI passed — validated commit `573576f9793d225cebcc72098177476ce396cb3b`  
-**Date:** 2026-10-24  
+**Status:** Original dependency remediation CI passed; follow-up Cubic fixes are committed and require CI validation before merge.  
+**Date:** 2026-10-25  
 **Branch:** fix/firecrawl-zod-remediation
 
 ## Invariant
@@ -26,7 +26,10 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Added a regression test proving an oversized invalid query array is rejected with HTTP 400 before model work.
 - Follow-up PR #99 remediation: centralized bounded Prompt Intelligence variable-value validation (maximum 20 keys, 80 characters per key, 2,000 characters per value), reused it in both execute/compare actions, and added a service-level guard against bypassing the action boundary. Unknown variable names are rejected before brand lookup or execution persistence.
 - Added Vitest unit coverage for Prompt Intelligence create/update/execute/compare limits and for the Content Studio, Crawl API policy, and legacy Crawler Start caps. Route tests assert HTTP 400 and no downstream provider/orchestrator invocation.
-- Did not change audit-gate rules, allowlists, database schema or migrations, or PR #96.
+- Follow-up Cubic remediation centralizes prompt-variable definition bounds in `promptVariableDefinitionSchema` and `promptVariableDefinitionsSchema`, reused by create and update actions. Shared constants now govern both definition and execution-value contracts.
+- Added exact-at-limit acceptance tests for Prompt Intelligence definitions, Content Studio fields, Crawl API policy arrays/member lengths, and legacy Crawler Start URL/count limits. The Content Studio boundary test uses a valid URL, non-placeholder Firecrawl key, and tenant-context callback so it can reach the provider if validation is bypassed.
+- Added a direct service-level model-comparison test ensuring undeclared variables are rejected before brand lookup or execution persistence. Action validation tests also assert invalid input is rejected before authentication work.
+- No database schema or migration, dependency, audit-gate, allowlist, or PR #96 changes were made.
 
 ## Verification
 
@@ -35,7 +38,7 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - A clean remote checkout was created at the exact PR head. `corepack pnpm install --frozen-lockfile` was attempted, but dependency installation did not complete within the remote execution window because npm registry downloads were extremely slow; the focused test commands therefore have not run yet.
 - GitHub Actions on follow-up commit `5ad1fb590104e1c78ac6ab98c1f063ace185261a` passed **Unit Tests**, **Build and Test** (including typecheck, lint, build, and generated-file drift verification), and **Isolation Suite**.
 - Cubic's new review run was still queued at the time of this report update. Hyrax Review was skipped because its connected workspace had exhausted included credits; GitHub marked that check as non-blocking.
-- Focused tests could not be run locally in the remote checkout because frozen dependency installation exceeded the 180-second execution window; the successful CI job is the verified test result.
+- Focused tests on the follow-up revision were not run in this session: the fresh remote sandbox stalled during frozen dependency installation. CI on the latest follow-up commit must verify the updated tests, typecheck, lint, build, and generated-file drift checks before merge; earlier successful CI does not cover these follow-up edits.
 
 ## Remaining risks and acceptance criteria
 
