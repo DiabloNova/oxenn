@@ -10,43 +10,31 @@ import {
   Check,
   FileText,
   Activity,
-  MessageSquare,
   Network,
   Zap,
   Brain,
   Search,
-  CheckCircle,
-  TrendingUp,
   ShieldCheck,
   Eye,
   Radar,
   Lock,
   Compass,
-  DollarSign,
   Workflow,
-  BarChart3,
   Terminal,
   FileCode,
-  HeartHandshake,
-  AlertTriangle,
   Layers,
-  HelpCircle,
-  PlayCircle,
   FileSpreadsheet,
-  CheckSquare,
   BookOpen,
   MessagesSquare,
   Newspaper,
   BookMarked,
   Award,
-  ArrowDown,
   Receipt,
-  ExternalLink
+  ExternalLink,
 } from "lucide-react";
-import { LandingHeader } from "@/components/marketing/LandingHeader";
 import { LandingFooter } from "@/components/marketing/LandingFooter";
-import { HeroAccessCard } from "@/components/marketing/HeroAccessCard";
 import { FreeAuditPanel } from "@/components/features/audit/FreeAuditPanel";
+import { PremiumHomeExperience } from "@/components/marketing/PremiumHomeExperience";
 import { RadialPolarGraph } from "@/components/features/graph/RadialPolarGraph";
 import { LiveKnowledgeGraph } from "@/components/features/graph/LiveKnowledgeGraph";
 
@@ -149,66 +137,8 @@ export default function MarketingLandingPage({ params }: { params: Promise<{ loc
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--text-primary)]" style={{ direction: isFa ? "rtl" : "ltr" }}>
-      {/* Navigation */}
-      <LandingHeader />
-
-      {/* QUESTION 1: "What is this platform?" - Product-First Hero Section */}
-      <section className="relative pt-36 pb-20 md:pt-44 md:pb-24 overflow-hidden border-b border-[var(--border)]">
-        {/* Sky Blue / Orange Signature Gradients */}
-        <div className="absolute top-0 right-1/4 w-[40vw] h-[40vw] bg-gradient-to-br from-[#38bdf8]/15 to-[#f97316]/5 rounded-full blur-[110px] pointer-events-none -z-10" />
-        <div className="absolute bottom-0 left-1/4 w-[35vw] h-[35vw] bg-gradient-to-tr from-[#f97316]/10 to-[#38bdf8]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <div className="absolute inset-0 grid-backdrop opacity-[0.25] pointer-events-none -z-10" />
-
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center space-y-8">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-4 py-2 text-xs font-bold text-[#38bdf8]">
-            <Sparkles size={14} className="animate-pulse text-[#f97316]" />
-            {isFa ? "پلتفرم مدیریت هوشمندی برند و بهینه‌سازی موتورهای پاسخگو" : "The Category-Defining AI Search, GEO & Brand Intelligence Platform"}
-          </span>
-
-          <h1 className="font-display font-black tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.1] text-balance max-w-5xl mx-auto">
-            {isFa ? (
-              <>
-                <span className="text-[var(--text-primary)]">اندازه‌گیری، پایش و ارتقای حضور شما در</span>
-                <span className="text-gradient-brand font-extrabold block mt-3"> ChatGPT، Claude و موتورهای هوش مصنوعی</span>
-              </>
-            ) : (
-              <>
-                <span className="text-[var(--text-primary)]">Measure, Track and Optimize Your Visibility Inside</span>
-                <span className="text-gradient-brand font-extrabold block mt-3">ChatGPT, Claude and Perplexity AI</span>
-              </>
-            )}
-          </h1>
-
-          <p className="text-lg md:text-xl text-[var(--text-secondary)] font-medium leading-relaxed max-w-3xl mx-auto">
-            {isFa
-              ? "مجموعه نرم‌افزاری یکپارچه برای مدیریت رتبه‌بندی، سهم استناد (AI Citation) و برطرف کردن توهم‌های برند در مدل‌های زبانی. ابزار سنتی سئو کافی نیست، حضور خود را مهندسی کنید."
-              : "A complete software ecosystem to audit, optimize, and secure your brand's presence in foundational AI memory. Traditional search indexing is over. Welcome to Generative Engine Optimization."}
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
-            <button
-              onClick={() => scrollToRef(freeAuditRef)}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl text-white text-base font-bold bg-gradient-to-r from-[#38bdf8] to-[#f97316] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer"
-            >
-              <Sparkles size={16} className="animate-pulse" />
-              <span>{isFa ? "آنالیز رایگان وب‌سایت" : "Start Free AI Audit"}</span>
-              <ArrowDown size={16} className="animate-bounce shrink-0" />
-            </button>
-
-            <button
-              onClick={() => scrollToRef(dashboardsRef)}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl text-base font-bold bg-slate-900/40 hover:bg-[#38bdf8]/10 text-[var(--text-primary)] border border-[#38bdf8]/30 hover:border-[#38bdf8]/80 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-md"
-            >
-              <span>{isFa ? "کاوش پیشخوان‌های نرم‌افزاری" : "Explore Mock Dashboards"}</span>
-              <ArrowRight size={16} className="rtl:-scale-x-100 shrink-0" />
-            </button>
-          </div>
-          <div className="w-full max-w-md mx-auto">
-            <HeroAccessCard locale={locale} />
-          </div>
-        </div>
-      </section>
+    <div className="ox-premium-page min-h-screen flex flex-col bg-transparent text-[var(--text-primary)]" dir={isFa ? "rtl" : "ltr"}>
+      <PremiumHomeExperience locale={locale} />
 
       {/* FREE AUDIT FUNNEL SECTION */}
       <section id="free-audit" ref={freeAuditRef} className="py-20 bg-[var(--background)] relative border-b border-[var(--border)] overflow-hidden">

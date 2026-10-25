@@ -55,8 +55,7 @@ export function ThemeProvider({
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme") as Theme | null;
-    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const initialTheme = storedTheme || systemTheme;
+    const initialTheme = storedTheme === "dark" || storedTheme === "light" ? storedTheme : "light";
 
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
