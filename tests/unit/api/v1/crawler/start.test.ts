@@ -14,7 +14,7 @@ import { POST } from "@/app/api/v1/crawler/start/route";
 describe("Legacy crawler start request bounds", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    runCrawlerCampaignMock.mockResolvedValue({ success: true });
+    runCrawlerCampaignMock.mockResolvedValue({ success: true, campaignId: "campaign-test" });
   });
 
   async function post(seedUrls: string[]) {
