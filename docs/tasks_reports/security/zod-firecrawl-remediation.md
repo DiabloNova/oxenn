@@ -26,7 +26,7 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Added a regression test proving an oversized invalid query array is rejected with HTTP 400 before model work.
 - Follow-up PR #99 remediation: centralized bounded Prompt Intelligence variable-value validation (maximum 20 keys, 80 characters per key, 2,000 characters per value), reused it in both execute/compare actions, and added a service-level guard against bypassing the action boundary. Unknown variable names are rejected before brand lookup or execution persistence.
 - Added Vitest unit coverage for Prompt Intelligence create/update/execute/compare limits and for the Content Studio, Crawl API policy, and legacy Crawler Start caps. Route tests assert HTTP 400 and no downstream provider/orchestrator invocation.
-- Did not change audit-gate rules, allowlists, database files, or PR #96.
+- Did not change audit-gate rules, allowlists, database schema or migrations, or PR #96.
 
 ## Verification
 
