@@ -9,6 +9,7 @@ import { requireWorkspaceMembership } from "@/services/auth/authorization";
 import { PromptIntelligenceService } from "@/features/ai-intelligence/services/prompt-intelligence-service";
 import { PromptIntelligenceRepository } from "@/features/ai-intelligence/repositories";
 import { PositionObservation } from "@/features/ai-intelligence/domain/types";
+import { promptVariableValuesSchema } from "@/features/ai-intelligence/domain/schemas/prompt-variable-values";
 
 // Zod Enums based on your domain types to ensure runtime type-safety
 const PromptCategoryEnum = z.enum([
@@ -84,13 +85,13 @@ const updateDefSchema = z.object({
 
 const executeSchema = z.object({
   promptId: z.string().uuid(),
-  variablesValues: z.record(z.string(), z.string()),
+  variablesValues: promptVariableValuesSchema,
   modelName: z.string(),
 });
 
 const compareSchema = z.object({
   promptId: z.string().uuid(),
-  variablesValues: z.record(z.string(), z.string()),
+  variablesValues: promptVariableValuesSchema,
   models: z.array(z.string().max(100)).max(10, "At most 10 models can be compared"),
 });
 

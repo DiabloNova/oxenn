@@ -24,14 +24,17 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Kept the Firecrawl SDK version and application provider contract unchanged.
 - Bounded externally supplied arrays and member strings in the LLM analytics, content studio, crawl policy, legacy crawler, and prompt-intelligence validation schemas. This activates Zod's early size rejection at these boundaries instead of relying on the dependency patch alone.
 - Added a regression test proving an oversized invalid query array is rejected with HTTP 400 before model work.
+- Follow-up PR #99 remediation: centralized bounded Prompt Intelligence variable-value validation (maximum 20 keys, 80 characters per key, 2,000 characters per value), reused it in both execute/compare actions, and added a service-level guard against bypassing the action boundary. Unknown variable names are rejected before brand lookup or execution persistence.
+- Added Vitest unit coverage for Prompt Intelligence create/update/execute/compare limits and for the Content Studio, Crawl API policy, and legacy Crawler Start caps. Route tests assert HTTP 400 and no downstream provider/orchestrator invocation.
 - Did not change audit-gate rules, allowlists, database files, or PR #96.
 
 ## Verification
 
 - Static lockfile consistency checks performed in this session: the old Zod 3.25.76 package resolution, package snapshot, and Firecrawl dependency references are absent; the new Zod integrity matches the published 4.6.7 artifact.
 - The dependency-only CI revision passed frozen installation, dependency audit, audit-gate regression tests, typecheck, lint, migration checks, build, unit tests, UI tests, isolation suite, build reference matrix, and generated-file drift checks.
-- Local pnpm commands: NOT RUN. This session has no local Oxenn checkout or pnpm installation.
-- GitHub Actions validation for these added input bounds and the new regression test is PENDING; this revision is incomplete until all required jobs pass.
+- A clean remote checkout was created at the exact PR head. `corepack pnpm install --frozen-lockfile` was attempted, but dependency installation did not complete within the remote execution window because npm registry downloads were extremely slow; the focused test commands therefore have not run yet.
+- GitHub Actions validation for the additional input-bound tests is PENDING until the updated commit's checks finish; do not merge until required jobs pass.
+- Local verification for the follow-up remediation must be recorded from actual command output; do not infer success from the presence of test files.
 
 ## Remaining risks and acceptance criteria
 
