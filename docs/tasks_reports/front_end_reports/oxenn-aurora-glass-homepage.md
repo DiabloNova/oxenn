@@ -1,6 +1,6 @@
 # Oxenn Aurora Glass Homepage — Implementation Report
 
-- **Status:** IMPLEMENTED ON BRANCH; one initial Vercel build surfaced duplicate translation-object keys in the new component. Those two duplicate keys were corrected in the follow-up commit; the replacement build is pending.
+- **Status:** IMPLEMENTED ON BRANCH; latest implementation commit `67f9d9babf53a5919895a75fe9c17e31833ab131` reached Vercel `READY` after correcting initial TypeScript findings. Preview routes and the custom SVG background were fetched successfully. Unit/UI tests and pixel-level browser QA remain unverified.
 - **Branch:** \`feat/oxenn-aurora-glass-homepage\`
 - **Base commit:** \`400078265de4ec2238d7c6d21be018cfb042924a\`
 - **Intent:** Translate the approved visual direction into the real Next.js homepage: pale aqua/teal wave backdrop, raised floating glass navigation, icon-only links with hover labels and active route state, collapsible product sidebar, in-place search, an animated sample dashboard, and purposeful scroll motion.
@@ -35,13 +35,15 @@
 | Branch isolation | PASS | Dedicated branch created from main commit \`400078265de4ec2238d7c6d21be018cfb042924a\`. |
 | Test coverage added | PASS (added, not run) | Focused UI tests cover icon-only navigation, active home state, in-place search, Persian RTL, and theme control location/toggle. |
 | Unit/UI tests | NOT RUN | The available environment had no local repository checkout/dependencies for running pnpm. |
-| Typecheck/lint/build | NOT RUN | Not available in the current connector-only execution environment. |
-| Browser render / exact visual comparison | NOT VERIFIED | No browser session was available to render the deployed branch against the supplied mockup; implementation follows the documented layout/effects but pixel-parity is not claimed. |
-| Accessibility/RTL visual QA | PENDING | Keyboard focus, responsive widths, and reduced-motion support are included; browser verification across light/dark and RTL/LTR remains required. |
+| Vercel production build | PASS | Deployment for implementation commit `67f9d9babf53a5919895a75fe9c17e31833ab131` reached `READY`; the initial TS1117 duplicate copy keys and later TS2339 missing modal-label keys were corrected before this passing deployment. This does not claim the standalone lint script passed. |
+| Preview route / asset fetch | PASS | The branch preview returned HTTP 200 for both `/en` and `/fa`; fetched HTML contained the correct localized hero, icon navigation, and workspace-access entry. `/images/marketing/oxenn-aurora-waves.svg` also returned HTTP 200. |
+| Vitest UI tests | ADDED, NOT RUN | Focused tests cover icon-only nav/current route, search replacement, Persian RTL, theme control location/toggle, and workspace-access modal. No local checkout/dependencies are available here to run `pnpm test:ui`. | 
+| Pixel-level visual comparison / interaction QA | NOT VERIFIED | No screenshot-capable browser session was available to compare the rendered page pixel-for-pixel against the supplied mockup or exercise interactions on an actual device. CSS implements responsive rules and reduced-motion behavior, but visual parity is not claimed as measured. |
 | Main branch | UNCHANGED | All changes are committed only to \`feat/oxenn-aurora-glass-homepage\`; no merge is performed. |
 
 ## Known limitations
 
 - The repository-mandated \`https://jules-prompts.wecanuseai.com/llms.txt\` was attempted but remained inaccessible in this environment; it is not represented as read.
 - The dashboard values and trends are intentionally illustrative and not connected to product APIs.
-- No PR is opened until verification gates can be run and results reviewed.
+- The Vercel preview is for review only; it does not prove pixel-level parity with the supplied mockup.
+- No PR is opened until the added UI tests and visual interaction gates can be run and reviewed.
