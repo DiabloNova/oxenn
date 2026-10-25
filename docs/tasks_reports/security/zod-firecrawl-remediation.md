@@ -1,6 +1,6 @@
 # Firecrawl and Zod dependency remediation
 
-**Status:** Original dependency remediation CI passed; follow-up Cubic fixes are committed and require CI validation before merge.
+**Status:** Dependency remediation and Cubic follow-up fixes passed CI on code head `ae0eaacd3fde95eb6750cd15da91706792fb06af`; PR #99 remains unmerged pending review.
 **Date:** 2026-10-25
 **Branch:** fix/firecrawl-zod-remediation
 
@@ -37,8 +37,8 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Static lockfile consistency checks performed in this session: the old Zod 3.25.76 package resolution, package snapshot, and Firecrawl dependency references are absent; the new Zod integrity matches the published 4.6.7 artifact.
 - The dependency-only CI revision passed frozen installation, dependency audit, audit-gate regression tests, typecheck, lint, migration checks, build, unit tests, UI tests, isolation suite, build reference matrix, and generated-file drift checks.
 - The remote checkout could not complete a full frozen pnpm install within the execution window because dependency linking stalled. The focused AST-detector tests were run separately and passed; the full application test suite is validated by GitHub Actions.
-- GitHub Actions on follow-up commit `42a2523c534d9c30044b00db88ecbb7a3aa0c079` passed **Unit Tests**, **Build and Test** (including typecheck, lint, build, and generated-file drift verification), and **Isolation Suite**. Additional review follow-ups are included after that commit and must also pass CI before merge.
-- Cubic's new review run was still queued at the time of this report update. Hyrax Review was skipped because its connected workspace had exhausted included credits; GitHub marked that check as non-blocking.
+- GitHub Actions on code head `ae0eaacd3fde95eb6750cd15da91706792fb06af` passed **Unit Tests**, **Build and Test** (including typecheck, lint, build, reference-matrix generation, and generated-file drift verification), and **Isolation Suite**. The focused AST-detector tests also passed locally in the remote workspace.
+- Cubic review findings were addressed with regression tests and the review threads were resolved after successful CI. Hyrax Review was skipped because its connected workspace had exhausted included credits; GitHub marked that check as non-blocking.
 - Focused tests on the follow-up revision were not run in this session: the fresh remote sandbox stalled during frozen dependency installation. CI on the latest follow-up commit must verify the updated tests, typecheck, lint, build, and generated-file drift checks before merge; earlier successful CI does not cover these follow-up edits.
 
 ## Remaining risks and acceptance criteria
