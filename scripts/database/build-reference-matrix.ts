@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
+import { findTableReferences } from "./reference-matrix-consumers";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-context";
 
 interface Journal {
@@ -88,16 +88,6 @@ function getExportNameForTable(tableName: string): string | null {
   return null;
 }
 
-function findTableReferences(tableName: string): string[] {
-  const exportName = getExportNameForTable(tableName);
-  try {
-    const grepCmd = `grep -rlE "\\\\b${tableName}\\\\b|\\\\b${exportName || "NO_EXPORT_FOUND"}\\\\b" src/ scripts/ tests/ | grep -v "tenant-tables.generated.ts" | grep -v "docsIndex.ts" | grep -v "build-reference-matrix.ts" | grep -v "database/schema" | grep -v "docsData.ts" || true`;
-    return execSync(grepCmd).toString().trim().split("\n").filter(Boolean).sort();
-  } catch {
-    return [];
-  }
-}
-
 function escapeMarkdownCell(value: string): string {
   return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
 }
@@ -116,7 +106,7 @@ function generateMarkdown(): void {
   let wiredTablesCount = 0;
 
   for (const table of tables) {
-    const refs = findTableReferences(table.name);
+    const refs = findTableReferences(process.cwd(), table.name, getExportNameForTable(table.name));
     const isTenantScoped = TENANT_SCOPED_TABLES.includes(table.name as never);
     const scope = isTenantScoped ? "Tenant-Scoped" : "Global";
     const hasPolicies = Object.keys(table.policies || {}).length > 0;
