@@ -42,6 +42,24 @@ describe("PromptIntelligenceService execution input guard", () => {
     expect(saveExecution).not.toHaveBeenCalled();
   });
 
+  it("rejects variable names longer than 80 characters before brand lookup or execution persistence", async () => {
+    const values = { ["k".repeat(81)]: "x" };
+    await expect(
+      createService().executePrompt("tenant-test", "prompt-test", values, "sonar-medium"),
+    ).rejects.toThrow("Invalid prompt variable values");
+    expect(findBrandById).not.toHaveBeenCalled();
+    expect(saveExecution).not.toHaveBeenCalled();
+  });
+
+  it("rejects variable values longer than 2000 characters before brand lookup or execution persistence", async () => {
+    const values = { topic: "x".repeat(2001) };
+    await expect(
+      createService().executePrompt("tenant-test", "prompt-test", values, "sonar-medium"),
+    ).rejects.toThrow("Invalid prompt variable values");
+    expect(findBrandById).not.toHaveBeenCalled();
+    expect(saveExecution).not.toHaveBeenCalled();
+  });
+
   it("rejects variable names not declared by the prompt definition", async () => {
     await expect(
       createService().executePrompt("tenant-test", "prompt-test", { topic: "SEO", unknown: "value" }, "sonar-medium"),
