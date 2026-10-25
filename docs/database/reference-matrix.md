@@ -5,7 +5,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/features/admin/infrastructure/mock-db.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `tests/features/admin/cqrs.test.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
 ### Columns
 
@@ -47,7 +47,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -87,8 +87,8 @@
 
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
-- **Status:** `WIRED`
-- **Consumers:** `tests/isolation/suite.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -113,8 +113,8 @@
 
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
-- **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/domain/types/index.ts`, `src/services/diagnostic-engine/index.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/services/audit-engine/diagnostic-engine.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -158,7 +158,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
 ### Columns
 
@@ -186,7 +186,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -231,7 +231,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `scripts/api/issue-key.ts`, `scripts/api/revoke-key.ts`, `src/core/database/privileged-paths.ts`, `src/features/public-api/repositories/api-key-repository.ts`, `tests/features/public-api/public-api.test.ts`, `tests/unit/core/tenant-context/system-mode-bypass.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `scripts/api/issue-key.ts`, `scripts/api/revoke-key.ts`, `src/features/public-api/repositories/api-key-repository.ts`, `tests/features/public-api/public-api.test.ts`, `tests/unit/core/tenant-context/system-mode-bypass.test.ts`
 
 ### Columns
 
@@ -311,7 +311,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/core/database/tenant-context/index.ts`, `src/features/admin/infrastructure/mock-db.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `tests/features/admin/cqrs.test.ts`, `tests/isolation/suite.ts`, `tests/unit/app/actions/account.test.ts`, `tests/unit/core/tenant-context/privileged-paths.test.ts`
+- **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/core/database/tenant-context/index.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
 ### Columns
 
@@ -347,7 +347,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/auth.ts`, `tests/unit/app/actions/auth-deactivated.test.ts`, `tests/unit/auth/user-id-format.test.ts`, `tests/unit/authorization-lifecycle.test.ts`
+- **Consumers:** `src/app/actions/auth.ts`
 
 ### Columns
 
@@ -413,8 +413,8 @@
 
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
-- **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/dashboard/aeo/audits/page.tsx`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/services/audit-engine/ai-visibility.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -455,8 +455,8 @@
 
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
-- **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/about/page.tsx`, `src/app/[locale]/dashboard/aeo/audits/page.tsx`, `src/app/[locale]/dashboard/aeo/playground/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/[locale]/pricing/page.tsx`, `src/app/actions/ai-visibility-audit.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/entity-service.ts`, `src/lib/audit-engine/extractor.ts`, `src/services/ai/ai-visibility-provider.ts`, `src/services/ai/graph-extraction.ts`, `tests/features/ai-intelligence/application.test.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/ai-intelligence/tenant-pipeline.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -535,7 +535,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/competitive-radar-service.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -572,8 +572,8 @@
 
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
-- **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/about/page.tsx`, `src/app/[locale]/dashboard/aeo/audits/page.tsx`, `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/[locale]/dashboard/audits/[id]/page.tsx`, `src/app/[locale]/dashboard/intelligence/page.tsx`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/[locale]/solutions/geo/page.tsx`, `src/components/features/dashboard-home/DashboardKpiGrid.tsx`, `src/components/features/graph/LiveKnowledgeGraph.tsx`, `src/components/marketing/HeroSection.tsx`, `src/components/marketing/MetricsSection.tsx`, `src/components/marketing/ProcessSection.tsx`, `src/config/dashboardNavigation.ts`, `src/features/ai-intelligence/application/handlers/index.ts`, `src/features/ai-intelligence/domain/models/observation-aggregate.ts`, `src/features/ai-intelligence/domain/services/aeo-score-engine.ts`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`, `src/features/ai-intelligence/services/citation-service.ts`, `src/features/ai-intelligence/services/observation-service.ts`, `src/features/ai-intelligence/services/prompt-intelligence-service.ts`, `src/services/ai/ai-visibility-provider.ts`, `src/services/auditService.ts`, `src/services/dashboard-services/index.ts`, `src/services/diagnostic-engine/index.ts`, `src/services/intelligence/index.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/services/audit-engine/ai-visibility.test.ts`, `tests/services/audit-engine/competitive-ai.test.ts`, `tests/services/audit-engine/competitive-radar.test.ts`, `tests/services/audit-engine/intelligence-model.test.ts`, `tests/unit/services/dashboard-services.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -646,7 +646,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -692,7 +692,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -730,7 +730,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/dashboard/aeo/playground/page.tsx`, `src/app/[locale]/dashboard/brand/citations/page.tsx`, `src/app/[locale]/dashboard/competitive/page.tsx`, `src/app/[locale]/dashboard/competitors/radar/page.tsx`, `src/app/[locale]/dashboard/intelligence/page.tsx`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/[locale]/solutions/page.tsx`, `src/app/[locale]/solutions/protection/page.tsx`, `src/app/[locale]/solutions/radar/page.tsx`, `src/app/actions/citation-intelligence.ts`, `src/app/actions/prompt-intelligence.ts`, `src/app/api/v1/analysis/competitive/route.ts`, `src/app/api/v1/analytics/llm/route.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/components/features/analysis/CompetitiveAnalysisPanel.tsx`, `src/components/features/analytics/LlmAnalyticsPanel.tsx`, `src/components/features/dashboard-home/DashboardKpiGrid.tsx`, `src/components/marketing/FeaturesSection.tsx`, `src/config/dashboardNavigation.ts`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`, `src/features/ai-intelligence/services/brand-intelligence-service.ts`, `src/features/ai-intelligence/services/citation-intelligence-service.ts`, `src/features/ai-intelligence/services/competitive-seo-service.ts`, `src/features/ai-intelligence/services/competitor-discovery-service.ts`, `src/features/ai-intelligence/services/keyword-intelligence-service.ts`, `src/features/ai-intelligence/services/prompt-intelligence-service.ts`, `src/services/ai/ai-visibility-provider.ts`, `src/services/ai/graph-extraction.ts`, `src/services/dashboard-services/index.ts`, `src/services/diagnostic-engine/index.ts`, `tests/features/analysis/competitive.test.ts`, `tests/services/audit-engine/diagnostic-engine.test.ts`, `tests/ui/features/analytics/LlmAnalyticsPanel.test.tsx`, `tests/unit/core/tenant-context/tenant-tables.test.ts`, `tests/unit/services/dashboard-shell.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -770,7 +770,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-cache-repository.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-cache-repository.ts`, `tests/features/acquisition/integration/run-all.ts`
 
 ### Columns
 
@@ -810,7 +810,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-job-repository.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/isolation/suite.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`
+- **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-job-repository.ts`, `tests/features/acquisition/integration/run-all.ts`
 
 ### Columns
 
@@ -885,7 +885,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/api/v1/audit/premium/route.ts`, `src/features/acquisition/infrastructure/persistence/postgres/crawl-result-repository.ts`
+- **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-result-repository.ts`
 
 ### Columns
 
@@ -918,7 +918,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/monitoring/repositories/crawl-snapshot-repository.ts`, `tests/unit/services/monitoring/tenant-isolation.test.ts`
+- **Consumers:** `src/features/monitoring/repositories/crawl-snapshot-repository.ts`
 
 ### Columns
 
@@ -956,7 +956,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/billing/services/subscription-service.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/billing/services/subscription-service.ts`
 
 ### Columns
 
@@ -989,7 +989,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1025,7 +1025,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1067,7 +1067,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/vector-store.ts`, `tests/features/ai-intelligence/run-all.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/isolation/suite.ts`, `tests/services/crawler/web-crawler.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/rag/query-service.test.ts`
+- **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/vector-store.ts`, `tests/features/audit/aeo-insight.test.ts`
 
 ### Columns
 
@@ -1100,7 +1100,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/auth.ts`, `src/core/database/privileged-paths.ts`
+- **Consumers:** `src/app/actions/auth.ts`
 
 ### Columns
 
@@ -1132,7 +1132,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `scripts/test-domain.ts`, `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/[locale]/dashboard/audits/[id]/page.tsx`, `src/app/[locale]/dashboard/entities/graph/page.tsx`, `src/app/[locale]/dashboard/graph/page.tsx`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/api/v1/audit/aeo-insight/route.ts`, `src/app/api/v1/knowledge-graph/query/route.ts`, `src/components/DashboardShell.tsx`, `src/components/features/analytics/TopEntitiesList.tsx`, `src/components/features/audit/FreeAuditPanel.tsx`, `src/components/features/graph/KnowledgeGraphExplorer.tsx`, `src/components/marketing/FeaturesSection.tsx`, `src/components/marketing/LandingFooter.tsx`, `src/components/marketing/ProcessSection.tsx`, `src/config/dashboardNavigation.ts`, `src/features/admin/application/handlers.ts`, `src/features/admin/index.ts`, `src/features/ai-intelligence/application/handlers/index.ts`, `src/features/ai-intelligence/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/aeo-content-intelligence-service.ts`, `src/features/ai-intelligence/services/entity-service.ts`, `src/lib/audit-engine/builder.ts`, `src/lib/audit-engine/extractor.ts`, `src/lib/audit-engine/normalizer.ts`, `src/lib/audit-engine/recommendations.ts`, `src/lib/audit-engine/scorer.ts`, `src/services/ai/ai-visibility-provider.ts`, `src/services/ai/graph-extraction.ts`, `src/services/auditService.ts`, `src/services/dashboard-services/index.ts`, `src/services/diagnostic-engine/index.ts`, `src/services/knowledge-graph/graph-store.ts`, `src/types/audit.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`, `tests/services/knowledge-graph/knowledge-graph-foundation.test.ts`, `tests/unit/features/admin/domain.test.ts`, `tests/unit/features/ai-intelligence/domain.test.ts`, `tests/unit/services/ai/graph-extraction.test.ts`, `tests/unit/services/audit-engine/engine.test.ts`, `tests/unit/services/dashboard-shell.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1171,7 +1171,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/features/ai-intelligence/security.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1213,7 +1213,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/actions/aeo-content-intelligence.ts`, `src/features/ai-intelligence/repositories/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1249,7 +1249,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/features/admin/infrastructure/mock-db.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `tests/features/admin/cqrs.test.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
 ### Columns
 
@@ -1283,7 +1283,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/services/diagnostic-engine/index.ts`, `tests/services/audit-engine/diagnostic-engine.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1319,7 +1319,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `scripts/database/verify-rls-migrations.ts`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/layout.tsx`, `src/app/[locale]/page.tsx`, `src/app/api/v1/analysis/competitive/route.ts`, `src/app/api/v1/content/studio/route.ts`, `src/app/api/v1/optimization/technical/route.ts`, `src/components/features/content/ContentStudio.tsx`, `src/components/features/dashboard-home/RecommendedActionsPanel.tsx`, `src/components/features/dashboard-services/ServiceMarketplaceClient.tsx`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/aeo-content-intelligence-service.ts`, `src/features/ai-intelligence/services/competitive-seo-service.ts`, `src/features/ai-intelligence/services/keyword-intelligence-service.ts`, `src/lib/audit-engine/extractor.ts`, `src/services/technical-seo-analyzer.ts`, `tests/services/audit-engine/keyword-intelligence.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1360,7 +1360,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1398,7 +1398,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/actions/aeo-content-intelligence.ts`, `src/features/ai-intelligence/repositories/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1435,7 +1435,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`
+- **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`
 
 ### Columns
 
@@ -1469,7 +1469,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`
+- **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`
 
 ### Columns
 
@@ -1507,7 +1507,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/monitoring/repositories/monitoring-alert-repository.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`, `tests/unit/services/monitoring/tenant-isolation.test.ts`
+- **Consumers:** `src/features/monitoring/repositories/monitoring-alert-repository.ts`
 
 ### Columns
 
@@ -1547,7 +1547,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/monitoring/repositories/monitoring-config-repository.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`, `tests/unit/services/monitoring/tenant-isolation.test.ts`
+- **Consumers:** `src/features/monitoring/repositories/monitoring-config-repository.ts`
 
 ### Columns
 
@@ -1583,7 +1583,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/workspace.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/app/actions/workspace.ts`
 
 ### Columns
 
@@ -1619,7 +1619,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/isolation/suite.ts`, `tests/unit/app/actions/account.test.ts`, `tests/unit/authorization-lifecycle.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`, `tests/unit/services/auth/session.test.ts`
+- **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/isolation/suite.ts`
 
 ### Columns
 
@@ -1653,7 +1653,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/features/ai-intelligence/run-all.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/public-api/public-api.test.ts`, `tests/isolation/suite.ts`, `tests/unit/authorization-lifecycle.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/features/public-api/public-api.test.ts`
 
 ### Columns
 
@@ -1689,7 +1689,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/dashboard/aeo/content/page.tsx`, `src/app/[locale]/dashboard/audits/[id]/page.tsx`, `src/app/[locale]/dashboard/intelligence/layout.tsx`, `src/app/[locale]/dashboard/seo/technical/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/actions/aeo-content-intelligence.ts`, `src/app/actions/site-architecture.ts`, `src/app/actions/technical-seo.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/components/features/analysis/CompetitiveAnalysisPanel.tsx`, `src/components/features/audit/PremiumAuditPanel.tsx`, `src/components/features/dashboard-home/CriticalIssuesPanel.tsx`, `src/components/features/dashboard-home/RecentActivityPanel.tsx`, `src/components/features/optimization/TechnicalOptimizationPanel.tsx`, `src/components/marketing/LandingFooter.tsx`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/competitive-seo-service.ts`, `src/features/ai-intelligence/services/keyword-intelligence-service.ts`, `src/features/ai-intelligence/services/site-architecture-analyzer-service.ts`, `src/services/auditService.ts`, `tests/features/audit/premium-audit.test.ts`, `tests/services/audit-engine/competitive-seo.test.ts`, `tests/services/audit-engine/site-architecture.test.ts`, `tests/services/crawler/web-crawler.test.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`, `tests/unit/services/observability/observability.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1741,7 +1741,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1780,7 +1780,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1819,7 +1819,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1858,7 +1858,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/auth.ts`, `src/core/database/privileged-paths.ts`
+- **Consumers:** `src/app/actions/auth.ts`
 
 ### Columns
 
@@ -1889,8 +1889,8 @@
 
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
-- **Status:** `WIRED`
-- **Consumers:** `src/features/admin/api/v1/admin/index.ts`, `src/features/admin/application/commands.ts`, `src/features/admin/application/dto.ts`, `src/features/admin/application/handlers.ts`, `src/features/admin/application/mappers.ts`, `src/features/admin/domain/entities.ts`, `src/features/admin/domain/events/index.ts`, `src/features/admin/domain/types.ts`, `src/features/admin/infrastructure/mock-db.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/admin/security/index.ts`, `src/features/ai-intelligence/security/index.ts`, `src/services/auth/authorization.ts`, `tests/features/admin/cqrs.test.ts`, `tests/features/admin/infrastructure/postgres-integration.test.ts`, `tests/features/admin/security.test.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/isolation/suite.ts`, `tests/unit/features/admin/domain.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -1994,7 +1994,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -2041,7 +2041,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/repositories/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -2133,8 +2133,8 @@
 
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
-- **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/dashboard/aeo/audits/page.tsx`, `src/app/[locale]/dashboard/aeo/playground/page.tsx`, `src/app/[locale]/industries/page.tsx`, `src/app/[locale]/page.tsx`, `src/app/actions/ai-visibility-audit.ts`, `src/app/actions/prompt-intelligence.ts`, `src/features/ai-intelligence/domain/types/index.ts`, `src/features/ai-intelligence/pipeline/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`, `src/features/ai-intelligence/services/brand-intelligence-service.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/unit/services/observability/observability.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -2213,8 +2213,8 @@
 
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
-- **Status:** `WIRED`
-- **Consumers:** `scripts/test-domain.ts`, `src/app/[locale]/dashboard/audits/[id]/page.tsx`, `src/app/[locale]/dashboard/intelligence/page.tsx`, `src/app/[locale]/dashboard/seo/technical/page.tsx`, `src/app/[locale]/features/page.tsx`, `src/app/[locale]/industries/page.tsx`, `src/app/[locale]/solutions/aeo/page.tsx`, `src/app/actions/technical-seo.ts`, `src/app/api/v1/analytics/llm/route.ts`, `src/app/api/v1/audit/aeo-insight/route.ts`, `src/app/api/v1/audit/engine/route.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/components/features/analysis/CompetitiveAnalysisPanel.tsx`, `src/components/features/audit/AeoAuditPanel.tsx`, `src/components/features/audit/FreeAuditPanel.tsx`, `src/components/features/audit/PremiumAuditPanel.tsx`, `src/components/features/dashboard-home/RecommendedActionsPanel.tsx`, `src/components/marketing/ProcessSection.tsx`, `src/components/visualization/contracts.ts`, `src/features/admin/infrastructure/mock-db.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/brand-intelligence-service.ts`, `src/features/ai-intelligence/services/competitive-ai-service.ts`, `src/features/ai-intelligence/services/observation-service.ts`, `src/features/ai-intelligence/services/prompt-intelligence-service.ts`, `src/features/ai-intelligence/services/site-architecture-analyzer-service.ts`, `src/lib/audit-engine/builder.ts`, `src/lib/audit-engine/recommendations.ts`, `src/services/auditService.ts`, `src/services/dashboard-home/index.ts`, `src/services/dashboard-services/index.ts`, `src/services/technical-seo-analyzer.ts`, `src/types/audit.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/analysis/competitive.test.ts`, `tests/services/audit-engine/competitive-ai.test.ts`, `tests/services/dashboard-home.test.ts`, `tests/unit/services/audit-engine/engine.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -2257,8 +2257,8 @@
 
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
-- **Status:** `WIRED`
-- **Consumers:** `src/core/database/migrator.ts`, `src/core/database/privileged-paths.ts`, `src/services/auth/authorization.ts`, `tests/isolation/suite.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -2288,7 +2288,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/dashboard/intelligence/page.tsx`, `src/app/actions/account.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`, `tests/unit/services/auth/session.test.ts`
+- **Consumers:** `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
 
 ### Columns
 
@@ -2326,8 +2326,8 @@
 
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
-- **Status:** `WIRED`
-- **Consumers:** `tests/isolation/suite.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -2360,7 +2360,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/api/v1/optimization/technical/route.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/app/api/v1/optimization/technical/route.ts`
 
 ### Columns
 
@@ -2391,7 +2391,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/billing/services/subscription-service.ts`, `src/features/public-api/services/api-quota-service.ts`, `tests/features/ai-intelligence/security.test.ts`, `tests/features/public-api/public-api.test.ts`
+- **Consumers:** `src/features/billing/services/subscription-service.ts`, `src/features/public-api/services/api-quota-service.ts`, `tests/features/public-api/public-api.test.ts`
 
 ### Columns
 
@@ -2432,7 +2432,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/billing/services/subscription-service.ts`, `tests/features/ai-intelligence/security.test.ts`
+- **Consumers:** `src/features/billing/services/subscription-service.ts`
 
 ### Columns
 
@@ -2469,7 +2469,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/features/page.tsx`, `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/competitive-seo-service.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -2509,7 +2509,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/isolation/suite.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -2547,7 +2547,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `tests/unit/app/actions/account.test.ts`, `tests/unit/app/actions/auth.test.ts`, `tests/unit/authorization-lifecycle.test.ts`
+- **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`
 
 ### Columns
 
@@ -2582,7 +2582,7 @@
 - **Scope:** Global
 - **RLS Policies Defined:** ❌
 - **Status:** `WIRED`
-- **Consumers:** `src/app/[locale]/pricing/page.tsx`, `src/app/[locale]/solutions/protection/page.tsx`, `src/app/[locale]/solutions/radar/page.tsx`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/components/marketing/HeroAccessCard.tsx`, `src/components/visualization/VisualizationContainer.tsx`, `src/core/database/privileged-paths.ts`, `src/features/admin/api/v1/admin/index.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/admin/security/index.ts`, `src/features/ai-intelligence/services/site-architecture-analyzer-service.ts`, `src/services/auth/session.ts`, `tests/features/admin/cqrs.test.ts`, `tests/features/admin/security.test.ts`, `tests/isolation/suite.ts`, `tests/unit/app/actions/account.test.ts`, `tests/unit/app/actions/auth-deactivated.test.ts`, `tests/unit/app/actions/auth.test.ts`, `tests/unit/auth/user-id-format.test.ts`, `tests/unit/authorization-lifecycle.test.ts`
+- **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
 
 ### Columns
 
@@ -2614,8 +2614,8 @@
 
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
-- **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/services/diagnostic-engine/index.ts`, `tests/features/ai-intelligence/security.test.ts`
+- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
+- **Consumers:** -
 
 ### Columns
 
@@ -2659,7 +2659,7 @@
 - **Scope:** Tenant-Scoped
 - **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/services/crawler/link-discovery.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/services/audit-engine/competitive-seo.test.ts`, `tests/unit/core/tenant-context/is-query-tenant-scoped.test.ts`, `tests/unit/core/tenant-context/system-mode-bypass.test.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/unit/core/tenant-context/system-mode-bypass.test.ts`
 
 ### Columns
 
@@ -2698,5 +2698,5 @@
 
 ## Summary
 - Total Tables: 70
-- WIRED Tables: 70
-- ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 0
+- WIRED Tables: 59
+- ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 11

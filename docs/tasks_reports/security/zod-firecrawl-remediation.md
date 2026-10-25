@@ -30,7 +30,7 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Added exact-at-limit acceptance tests for Prompt Intelligence definitions, Content Studio fields, Crawl API policy arrays/member lengths, and legacy Crawler Start URL/count limits. The Content Studio boundary test uses a valid URL, non-placeholder Firecrawl key, and tenant-context callback so it can reach the provider if validation is bypassed.
 - Added service-level and action-path model-comparison tests for undeclared variables, ensuring the service guard rejects before brand lookup or execution persistence and the action surfaces the error. Invalid action payloads are also verified to fail before authentication work.
 - Replaced reference-matrix consumer discovery based on grep-by-name with TypeScript AST analysis of imported Drizzle table bindings, relational `db.query.<table>` calls, and SQL table clauses passed to query/execute methods. SQL held in local variables is resolved within its lexical scope; payload property names, comments, and string literals alone are not consumers.
-- Removed false consumers from the generated matrix for request-validation tests that only use request/property names. Matrix summary after regeneration: 70 tables, 70 wired and 0 legacy candidates.
+- Removed false consumers from the generated matrix for request-validation tests that only use request/property names. Matrix summary from the generator's CI diff: 70 tables, 59 wired and 11 legacy candidates.
 - No database schema or migration, dependency, audit-gate, allowlist, or PR #96 changes were made.
 
 ## Verification

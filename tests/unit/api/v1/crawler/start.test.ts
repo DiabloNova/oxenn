@@ -12,7 +12,10 @@ vi.mock("@/services/crawler/crawler-orchestrator", () => ({
 import { POST } from "@/app/api/v1/crawler/start/route";
 
 describe("Legacy crawler start request bounds", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    runCrawlerCampaignMock.mockResolvedValue({ success: true });
+  });
 
   async function post(seedUrls: string[]) {
     return POST(new NextRequest("http://localhost/api/v1/crawler/start", {
