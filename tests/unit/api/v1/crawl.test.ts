@@ -51,7 +51,7 @@ describe("Crawl API policy bounds", () => {
 
   it("accepts every policy field exactly at its configured limit", async () => {
     const policy = {
-      allowedSchemes: Array.from({ length: 8 }, () => "https"),
+      allowedSchemes: ["s".repeat(16), ...Array.from({ length: 7 }, () => "https")],
       allowedContentTypes: Array.from({ length: 64 }, () => "t".repeat(128)),
     };
     const response = await post(policy);

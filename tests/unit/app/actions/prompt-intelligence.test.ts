@@ -1,7 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireSessionMock } = vi.hoisted(() => ({ requireSessionMock: vi.fn() }));
+const { requireSessionMock, requireWorkspaceMembershipMock, runWithTenantContextMock, executeComparisonMock } = vi.hoisted(() => ({
+  requireSessionMock: vi.fn(),
+  requireWorkspaceMembershipMock: vi.fn(),
+  runWithTenantContextMock: vi.fn(),
+  executeComparisonMock: vi.fn(),
+}));
 vi.mock("@/services/auth/session", () => ({ requireSession: requireSessionMock }));
+vi.mock("@/services/auth/authorization", () => ({
+  AuthorizationError: class extends Error {
+    constructor(_status: number, message: string) { super(message); }
+  },
+  requireWorkspaceMembership: requireWorkspaceMembershipMock,
+}));
+vi.mock("@/core/database/tenant-context", () => ({
+  TenantContextManager: { runWithTenantContext: runWithTenantContextMock },
+}));
+vi.mock("@/features/ai-intelligence/services/prompt-intelligence-service", () => ({
+  PromptIntelligenceService: class { executeComparison = executeComparisonMock; },
+}));
+vi.mock("@/features/ai-intelligence/repositories", () => ({
+  PromptIntelligenceRepository: class { findPositionsByExecutionId = vi.fn().mockResolvedValue([]); },
+}));
 import { promptVariableDefinitionsSchema, promptVariableValuesSchema } from "@/features/ai-intelligence/domain/schemas/prompt-variable-values";
 import {
   createPromptDefinitionAction,
@@ -27,7 +47,16 @@ const validUpdate = {
 };
 
 describe("Prompt Intelligence bounded input contracts", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    executeComparisonMock.mockReset();
+    requireSessionMock.mockResolvedValue({ user: { id: "user-test", workspaceId: "tenant-test" } });
+    requireWorkspaceMembershipMock.mockResolvedValue(undefined);
+    runWithTenantContextMock.mockImplementation((...args: unknown[]) => {
+      const callback = args[args.length - 1];
+      return (callback as () => unknown)();
+    });
+  });
   afterEach(() => vi.unstubAllEnvs());
 
   it("accepts variable definitions exactly at the shared definition limits", () => {
@@ -134,6 +163,16 @@ describe("Prompt Intelligence bounded input contracts", () => {
       expect(execution).toMatchObject({ success: false, error: "Validation failed" });
       expect(comparison).toMatchObject({ success: false, error: "Validation failed" });
     }
+    expect(requireSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the service unknown-variable guard through model comparison", async () => {
+    const promptId = "00000000-0000-4000-8000-000000000003";
+    const values = { topic: "SEO", unknown: "value" };
+    executeComparisonMock.mockRejectedValue(new Error("Validation Error: Unknown prompt variable(s): unknown"));
+    const result = await executeModelComparisonAction({ promptId, variablesValues: values, models: ["sonar-medium"] });
+    expect(result).toEqual({ success: false, error: "Validation Error: Unknown prompt variable(s): unknown" });
+    expect(executeComparisonMock).toHaveBeenCalledWith("tenant-test", promptId, values, ["sonar-medium"], "user-test");
   });
 
   it("rejects more than 10 models and model names longer than 100 characters", async () => {

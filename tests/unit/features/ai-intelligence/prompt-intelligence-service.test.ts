@@ -44,7 +44,7 @@ describe("PromptIntelligenceService execution input guard", () => {
 
   it("rejects variable names not declared by the prompt definition", async () => {
     await expect(
-      createService().executePrompt("tenant-test", "prompt-test", { unknown: "value" }, "sonar-medium"),
+      createService().executePrompt("tenant-test", "prompt-test", { topic: "SEO", unknown: "value" }, "sonar-medium"),
     ).rejects.toThrow("Unknown prompt variable(s): unknown");
     expect(findBrandById).not.toHaveBeenCalled();
     expect(saveExecution).not.toHaveBeenCalled();
