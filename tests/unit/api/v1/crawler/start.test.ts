@@ -28,6 +28,15 @@ describe("Legacy crawler start request bounds", () => {
     expect(runCrawlerCampaignMock).not.toHaveBeenCalled();
   });
 
+  it("accepts 50 seed URLs and a URL exactly 2048 characters long", async () => {
+    const maxLengthUrl = `https://e.co/${"a".repeat(2035)}`;
+    expect(maxLengthUrl).toHaveLength(2048);
+    const seedUrls = [maxLengthUrl, ...Array.from({ length: 49 }, () => "https://example.com")];
+    const response = await post(seedUrls);
+    expect(response.status).toBe(200);
+    expect(runCrawlerCampaignMock).toHaveBeenCalledWith(seedUrls, "tenant-test", "system_crawler", expect.any(String));
+  });
+
   it("rejects a seed URL longer than 2048 characters before starting a campaign", async () => {
     const longUrl = `https://example.com/${"a".repeat(2040)}`;
     const response = await post([longUrl]);

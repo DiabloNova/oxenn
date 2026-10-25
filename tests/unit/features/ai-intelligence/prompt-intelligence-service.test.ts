@@ -49,4 +49,12 @@ describe("PromptIntelligenceService execution input guard", () => {
     expect(findBrandById).not.toHaveBeenCalled();
     expect(saveExecution).not.toHaveBeenCalled();
   });
+
+  it("rejects an undeclared variable during model comparison before any persistence", async () => {
+    await expect(
+      createService().executeComparison("tenant-test", "prompt-test", { topic: "SEO", unknown: "value" }, ["sonar-medium"]),
+    ).rejects.toThrow("Unknown prompt variable(s): unknown");
+    expect(findBrandById).not.toHaveBeenCalled();
+    expect(saveExecution).not.toHaveBeenCalled();
+  });
 });

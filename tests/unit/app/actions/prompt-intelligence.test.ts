@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { promptVariableValuesSchema } from "@/features/ai-intelligence/domain/schemas/prompt-variable-values";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { requireSessionMock } = vi.hoisted(() => ({ requireSessionMock: vi.fn() }));
+vi.mock("@/services/auth/session", () => ({ requireSession: requireSessionMock }));
+import { promptVariableDefinitionsSchema, promptVariableValuesSchema } from "@/features/ai-intelligence/domain/schemas/prompt-variable-values";
 import {
   createPromptDefinitionAction,
   updatePromptDefinitionAction,
@@ -24,6 +27,18 @@ const validUpdate = {
 };
 
 describe("Prompt Intelligence bounded input contracts", () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("accepts variable definitions exactly at the shared definition limits", () => {
+    const definitions = Array.from({ length: 20 }, (_, index) => ({
+      name: `${"n".repeat(78)}${String(index).padStart(2, "0")}`,
+      defaultValue: "d".repeat(2000),
+      description: "x".repeat(500),
+    }));
+    expect(promptVariableDefinitionsSchema.safeParse(definitions).success).toBe(true);
+  });
+
   it("accepts values exactly at the shared variable-value limits", () => {
     const values = Object.fromEntries(
       Array.from({ length: 20 }, (_, index) => [
@@ -40,6 +55,7 @@ describe("Prompt Intelligence bounded input contracts", () => {
       variables: Array.from({ length: 21 }, (_, index) => ({ name: `v${index}`, defaultValue: "x" })),
     });
     expect(result).toMatchObject({ success: false, error: "Validation failed" });
+    expect(requireSessionMock).not.toHaveBeenCalled();
   });
 
   it("rejects oversized variable names, defaults, and descriptions", async () => {
