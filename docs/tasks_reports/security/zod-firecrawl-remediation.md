@@ -29,6 +29,7 @@ Every installed Zod runtime version in the resolved dependency graph must be out
 - Follow-up Cubic remediation centralizes prompt-variable definition bounds in `promptVariableDefinitionSchema` and `promptVariableDefinitionsSchema`, reused by create and update actions. Shared constants now govern both definition and execution-value contracts.
 - Added exact-at-limit acceptance tests for Prompt Intelligence definitions, Content Studio fields, Crawl API policy arrays/member lengths, and legacy Crawler Start URL/count limits. The Content Studio boundary test uses a valid URL, non-placeholder Firecrawl key, and tenant-context callback so it can reach the provider if validation is bypassed.
 - Added a direct service-level model-comparison test ensuring undeclared variables are rejected before brand lookup or execution persistence. Action validation tests also assert invalid input is rejected before authentication work.
+- Replaced the reference-matrix grep heuristic with a TypeScript AST detector for imported Drizzle table bindings, relational `db.query.<table>` access, and SQL table clauses passed to query/execute methods. It ignores payload properties, ordinary prose, comments, and SQL literals; regenerated the matrix and docs index from the detector output (70 tables: 59 wired, 11 legacy candidates).
 - No database schema or migration, dependency, audit-gate, allowlist, or PR #96 changes were made.
 
 ## Verification
