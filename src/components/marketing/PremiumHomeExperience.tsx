@@ -52,7 +52,7 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
         queryOne: "هوش مصنوعی درباره برند من چه می‌گوید؟",
         queryTwo: "بهترین برند در این حوزه کدام است؟",
         queryThree: "برند من در مقایسه با رقبا",
-        scroll: "برای کشف بیشتر اسکرول کنید", search: "جستجو در Oxenn", workspaceAccess: "ورود به فضای کار", closeDialog: "بستن پنجره",
+        scroll: "برای کشف بیشتر اسکرول کنید", search: "جستجو در Oxenn", workspaceAccess: "ورود به فضای کار", closeDialog: "بستن پنجره", backdropLabel: "بستن پس‌زمینه",
         noResults: "نتیجه‌ای پیدا نشد. عبارت دیگری را امتحان کنید.",
         language: "تغییر زبان به انگلیسی",
         themeLabel: theme === "dark" ? "تغییر به تم روشن" : "تغییر به تم تیره",
@@ -74,7 +74,7 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
         queryOne: "What does AI say about your brand?",
         queryTwo: "Best brand in this category",
         queryThree: "Your brand vs. competitors",
-        scroll: "SCROLL TO EXPLORE", search: "Search Oxenn", workspaceAccess: "Workspace access", closeDialog: "Close dialog",
+        scroll: "SCROLL TO EXPLORE", search: "Search Oxenn", workspaceAccess: "Workspace access", closeDialog: "Close dialog", backdropLabel: "Dismiss access backdrop",
         noResults: "No matching destination. Try a different search.",
         language: "Switch language to Persian",
         themeLabel: theme === "dark" ? "Switch to light theme" : "Switch to dark theme",
@@ -416,7 +416,7 @@ export function PremiumHomeExperience({ locale }: { locale: string }) {
       </section>
       {accessOpen && (
         <div className="oxen-access-overlay">
-          <button type="button" className="oxen-access-backdrop" aria-label={copy.closeDialog} onClick={() => setAccessOpen(false)} />
+          <button type="button" className="oxen-access-backdrop" aria-label={copy.backdropLabel} onClick={() => setAccessOpen(false)} />
           <div className="oxen-access-dialog" role="dialog" aria-modal="true" aria-label={copy.workspaceAccess}>
             <button type="button" className="oxen-access-close" autoFocus aria-label={copy.closeDialog} onClick={() => setAccessOpen(false)}><X size={18} /></button>
             <HeroAccessCard locale={locale} />
