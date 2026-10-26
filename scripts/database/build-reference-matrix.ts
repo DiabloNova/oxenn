@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-context";
+import { findTableReferences as detectTableReferences } from "./reference-matrix-consumers";
 
 interface Journal {
   entries: { idx: number }[];
@@ -89,13 +89,7 @@ function getExportNameForTable(tableName: string): string | null {
 }
 
 function findTableReferences(tableName: string): string[] {
-  const exportName = getExportNameForTable(tableName);
-  try {
-    const grepCmd = `grep -rlE "\\\\b${tableName}\\\\b|\\\\b${exportName || "NO_EXPORT_FOUND"}\\\\b" src/ scripts/ tests/ | grep -v "tenant-tables.generated.ts" | grep -v "docsIndex.ts" | grep -v "build-reference-matrix.ts" | grep -v "database/schema" | grep -v "docsData.ts" || true`;
-    return execSync(grepCmd).toString().trim().split("\n").filter(Boolean).sort();
-  } catch {
-    return [];
-  }
+  return detectTableReferences(process.cwd(), tableName, getExportNameForTable(tableName));
 }
 
 function escapeMarkdownCell(value: string): string {
