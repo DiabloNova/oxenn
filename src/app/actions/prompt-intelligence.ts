@@ -9,6 +9,7 @@ import { requireWorkspaceMembership } from "@/services/auth/authorization";
 import { PromptIntelligenceService } from "@/features/ai-intelligence/services/prompt-intelligence-service";
 import { PromptIntelligenceRepository } from "@/features/ai-intelligence/repositories";
 import { PositionObservation } from "@/features/ai-intelligence/domain/types";
+import { promptVariableDefinitionsSchema, promptVariableValuesSchema } from "@/features/ai-intelligence/domain/schemas/prompt-variable-values";
 
 // Zod Enums based on your domain types to ensure runtime type-safety
 const PromptCategoryEnum = z.enum([
@@ -45,15 +46,9 @@ const createDefSchema = z.object({
   category: PromptCategoryEnum,
   intent: PromptIntentTypeEnum,
   locale: z.string().min(1, "زبان الزامی است"),
-  variables: z.array(
-    z.object({
-      name: z.string(),
-      defaultValue: z.string(),
-      description: z.string().optional(),
-    }),
-  ),
-  competitors: z.array(z.string()),
-  tags: z.array(z.string()),
+  variables: promptVariableDefinitionsSchema,
+  competitors: z.array(z.string().max(120)).max(25, "At most 25 competitors are supported"),
+  tags: z.array(z.string().max(100)).max(50, "At most 50 tags are supported"),
   notes: z.string().optional(),
 });
 
@@ -64,31 +59,23 @@ const updateDefSchema = z.object({
   category: PromptCategoryEnum.optional(),
   intent: PromptIntentTypeEnum.optional(),
   locale: z.string().optional(),
-  variables: z
-    .array(
-      z.object({
-        name: z.string(),
-        defaultValue: z.string(),
-        description: z.string().optional(),
-      }),
-    )
-    .optional(),
-  competitors: z.array(z.string()).optional(),
-  tags: z.array(z.string()).optional(),
+  variables: promptVariableDefinitionsSchema.optional(),
+  competitors: z.array(z.string().max(120)).max(25, "At most 25 competitors are supported").optional(),
+  tags: z.array(z.string().max(100)).max(50, "At most 50 tags are supported").optional(),
   notes: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 
 const executeSchema = z.object({
   promptId: z.string().uuid(),
-  variablesValues: z.record(z.string(), z.string()),
+  variablesValues: promptVariableValuesSchema,
   modelName: z.string(),
 });
 
 const compareSchema = z.object({
   promptId: z.string().uuid(),
-  variablesValues: z.record(z.string(), z.string()),
-  models: z.array(z.string()),
+  variablesValues: promptVariableValuesSchema,
+  models: z.array(z.string().max(100)).max(10, "At most 10 models can be compared"),
 });
 
 const scheduleSchema = z.object({

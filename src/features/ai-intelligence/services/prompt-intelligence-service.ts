@@ -15,6 +15,7 @@ import {
 import { PromptIntelligenceRepository, BrandRepository, CompetitorRepository } from "../repositories";
 import { AIVisibilityProviderRegistry } from "../../../services/ai/ai-visibility-provider";
 import { AIVisibilityAuditEngine } from "./ai-visibility-audit-engine";
+import { promptVariableValuesSchema } from "../domain/schemas/prompt-variable-values";
 
 export interface ModelDefinition {
   provider: string;
@@ -259,13 +260,30 @@ export class PromptIntelligenceService {
       throw new Error("Prompt Definition not found");
     }
 
+    // Public actions validate before entering the service; retain the same guard here
+    // so internal/direct callers cannot bypass the bounded input contract.
+    const parsedValues = promptVariableValuesSchema.safeParse(values);
+    if (!parsedValues.success) {
+      throw new Error("Validation Error: Invalid prompt variable values.");
+    }
+
+    const allowedVariableNames = new Set(definition.variables.map((variable) => variable.name));
+    const unknownVariableNames = Object.keys(parsedValues.data).filter(
+      (name) => !allowedVariableNames.has(name),
+    );
+    if (unknownVariableNames.length > 0) {
+      throw new Error(`Validation Error: Unknown prompt variable(s): ${unknownVariableNames.join(", ")}`);
+    }
+
+    // Persist only supplied values declared by this prompt definition.
+    const validatedValues = parsedValues.data;
     const brand = await this.brandRepo.findById(organizationId, definition.brandId);
     if (!brand) {
       throw new Error("Linked brand not found");
     }
 
     // 1. Resolve Variables
-    const resolvedPromptText = this.resolvePromptText(definition.promptTemplate, definition.variables, values);
+    const resolvedPromptText = this.resolvePromptText(definition.promptTemplate, definition.variables, validatedValues);
 
     // 2. Create Execution in 'queued' state
     const executionId = crypto.randomUUID();
@@ -277,7 +295,7 @@ export class PromptIntelligenceService {
       promptId: promptDefinitionId,
       promptVersion: definition.version,
       resolvedPromptText,
-      variablesValues: values,
+      variablesValues: validatedValues,
       status: "queued",
       provider: modelDef.provider,
       model: modelDef.model,

@@ -5,9 +5,15 @@ import { TenantContextManager } from "@/core/database/tenant-context";
 
 // Request validator schema
 const requestSchema = z.object({
-  brandName: z.string().min(1, "نام برند الزامی است"),
-  competitorNames: z.array(z.string()).min(1, "حداقل وارد کردن نام یک رقیب الزامی است"),
-  queries: z.array(z.string()).min(1, "حداقل وارد کردن یک پرس‌وجو الزامی است"),
+  brandName: z.string().min(1, "نام برند الزامی است").max(200, "نام برند بیش از حد طولانی است"),
+  competitorNames: z
+    .array(z.string().max(120, "نام رقیب بیش از حد طولانی است"))
+    .max(25, "حداکثر ۲۵ رقیب قابل تحلیل است")
+    .min(1, "حداقل وارد کردن نام یک رقیب الزامی است"),
+  queries: z
+    .array(z.string().max(2000, "متن پرس‌وجو بیش از حد طولانی است"))
+    .max(100, "حداکثر ۱۰۰ پرس‌وجو قابل ارسال است")
+    .min(1, "حداقل وارد کردن یک پرس‌وجو الزامی است"),
 });
 
 export interface LlmAnalyticsResponse {

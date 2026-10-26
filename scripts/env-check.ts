@@ -79,8 +79,22 @@ function loadEnvFile(filePath: string) {
   }
 }
 
+const MODES: readonly Mode[] = ["dev", "build", "migrate", "test"];
+
+export function resolveMode(modeArg?: string): Mode {
+  const candidate = modeArg || process.env.APP_MODE || "dev";
+
+  if (!MODES.includes(candidate as Mode)) {
+    throw new Error(
+      `Unsupported environment mode '${candidate}'. Expected one of: ${MODES.join(", ")}.`,
+    );
+  }
+
+  return candidate as Mode;
+}
+
 export function validateEnv(modeArg?: string) {
-  const mode: Mode = (modeArg as Mode) || (process.env.APP_MODE as Mode) || "dev";
+  const mode = resolveMode(modeArg);
   const missing: string[] = [];
   const invalid: { name: string; reason: string }[] = [];
 
@@ -112,7 +126,16 @@ if (require.main === module) {
   loadEnvFile(path.resolve(process.cwd(), ".env.local"));
   loadEnvFile(path.resolve(process.cwd(), ".env"));
 
-  const targetMode = process.argv[2] || "dev";
+  let targetMode: Mode;
+  try {
+    targetMode = resolveMode(process.argv[2]);
+  } catch (error) {
+    console.error(
+      `\n❌ [env-check] ${error instanceof Error ? error.message : "Invalid environment mode."}\n`,
+    );
+    process.exit(1);
+  }
+
   const result = validateEnv(targetMode);
 
   console.log(`[env-check] Validating environment for mode '${result.mode}'...`);

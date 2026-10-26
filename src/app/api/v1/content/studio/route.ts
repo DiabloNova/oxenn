@@ -6,8 +6,12 @@ import { TenantContextManager } from "@/core/database/tenant-context";
 
 const requestSchema = z.object({
   url: z.string().url("لطفاً یک آدرس وب‌سایت معتبر وارد کنید").optional().or(z.literal("")),
-  brandVoice: z.string().optional().default("رسمی"),
-  targetKeywords: z.array(z.string()).optional().default([]),
+  brandVoice: z.string().max(200, "لحن برند بیش از حد طولانی است").optional().default("رسمی"),
+  targetKeywords: z
+    .array(z.string().max(200, "کلیدواژه بیش از حد طولانی است"))
+    .max(100, "حداکثر ۱۰۰ کلیدواژه قابل ارسال است")
+    .optional()
+    .default([]),
 });
 
 export interface ContentStudioResponse {

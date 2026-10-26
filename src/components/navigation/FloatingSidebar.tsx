@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTheme } from "../../src/components/ThemeProvider";
-import { useAuth } from "../../src/components/AuthProvider";
-import { SeorchableLogo } from "../../src/components/marketing/SeorchableLogo";
+import { useTheme } from "@/components/ThemeProvider";
+import { useAuth } from "@/components/AuthProvider";
+import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import {
   Home,
   BarChart2,
