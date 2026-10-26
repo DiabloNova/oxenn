@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { createContentSnippet } from "./docs-snippet";
 
 export interface DocMeta {
   slug: string;
@@ -77,7 +78,7 @@ function getAllDocs(basePath = "docs"): DocMeta[] {
                     )
                     .join(" ");
             } else {
-                contentSnippet = content.substring(0, 500).replace(/\n/g, ' ');
+                contentSnippet = createContentSnippet(content);
             }
         } catch (_e) {}
 
