@@ -247,7 +247,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Relational Database Persistence Model",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Relational Database Persistence Model  This document details the PostgreSQL table structures, query optimizations, soft deletion strategy, and optimistic concurrency locks.  ## UUID Entity Persistence  Every record persisted across the administrative subsystem uses globally unique UUID primary keys.  ## Optimistic Concurrency Control  Optimistic Locking is enforced on all state updates to prevent concurrency conflicts or racing administrative commands:  - Each table (e.g., \`brands\`, \`feature_f`
+    snippet: `# Relational Database Persistence Model  This document details the PostgreSQL table structures, query optimizations, soft deletion strategy, and optimistic concurrency locks.  ## UUID Entity Persistence  Every record persisted across the administrative subsystem uses globally unique UUID primary keys.  ## Optimistic Concurrency Control  Optimistic Locking is enforced on all state updates to prevent concurrency conflicts or racing administrative commands:  - Each table (e.g., \`brands\`, \`feature_flags\`,`
   },
   {
     slug: "PLATFORM_MONITORING",
@@ -346,6 +346,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Service Documentation  This section describes the internal application services, their boundaries, and responsibilities.  ## Status Dictionary - **Implemented**: Verified existing service. - **Partial**: Service exists but is missing functionality. - **Planned**: Not currently implemented.  ## Core Services  ### Asynchronous Job Processing (\`src/services/jobs/\`) Defines a canonical, infrastructure-agnostic background processing boundary via \`IJobQueue\`, \`IJobExecutor\`, and \`IJobRepository\` int`
   },
   {
+    slug: "api-keys-prefix-index-reconciliation",
+    titleEn: "Remove Redundant API-Key Prefix Index",
+    titleFa: "Remove Redundant API-Key Prefix Index",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Remove Redundant API-Key Prefix Index  ## Finding  The api_keys prefix column already has a uniqueness constraint, which PostgreSQL backs with a unique index. A separate non-unique index on the same prefix column duplicates that index for the same leading-column lookup pattern. This change removes only the redundant non-unique index and preserves the uniqueness guarantee.  ## Implementation  - Removed the standalone prefix index declaration from the current Drizzle schema. - Added migration 0013`
+  },
+  {
     slug: "phase-2-code-security",
     titleEn: "Phase 2 — Code Security (H1, M8)",
     titleFa: "Phase 2 — Code Security (H1, M8)",
@@ -359,7 +367,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Phase 3 — Repository and Configuration Hygiene",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Phase 3 — Repository and Configuration Hygiene  **Status:** INCOMPLETE — VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c`
+    snippet: `# Phase 3 — Repository and Configuration Hygiene  **Status:** INCOMPLETE — VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c2\``
   },
   {
     slug: "audit-gate-stage3-regression-tests",
@@ -391,6 +399,6 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "User Guides",
     category: "user-guides",
     categoryFa: "User Guides",
-    snippet: `# User Guides  This section provides user-facing documentation for navigating and operating Seorchable.  ## Status Dictionary - **Implemented**: Verified user workflows supported by the UI/backend. - **Partial**: Workflow is accessible but missing edge cases or polished UI. - **Planned**: Not currently implemented.  ## Core Concepts & Workflows  ### Dashboard Navigation The platform offers an authenticated unified Dashboard Shell with collapsible responsive sidebars, directional support (RTL/LTR`
+    snippet: `# User Guides  This section provides user-facing documentation for navigating and operating Seorchable.  ## Status Dictionary - **Implemented**: Verified user workflows supported by the UI/backend. - **Partial**: Workflow is accessible but missing edge cases or polished UI. - **Planned**: Not currently implemented.  ## Core Concepts & Workflows  ### Dashboard Navigation The platform offers an authenticated unified Dashboard Shell with collapsible responsive sidebars, directional support (RTL/LTR),`
   },
 ];
