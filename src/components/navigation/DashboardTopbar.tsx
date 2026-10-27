@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthProvider";
@@ -43,7 +43,6 @@ export default function DashboardTopbar({
   onHelpTrigger
 }: DashboardTopbarProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const { theme, setTheme, direction, language, setLanguage } = useTheme();
   const { session, logout } = useAuth();
   const isRtl = language === "fa";
@@ -58,15 +57,6 @@ export default function DashboardTopbar({
   const toggleLanguage = () => {
     const newLang = language === "en" ? "fa" : "en";
     setLanguage(newLang);
-    if (pathname) {
-      const segments = pathname.split("/");
-      if (segments[1] === "en" || segments[1] === "fa") {
-        segments[1] = newLang;
-        router.push(segments.join("/"));
-      } else {
-        router.push(`/${newLang}${pathname}`);
-      }
-    }
   };
 
   // --- Workspaces ---
