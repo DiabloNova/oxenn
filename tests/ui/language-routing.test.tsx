@@ -217,4 +217,50 @@ describe("localized language routing contract", () => {
     );
     expect(navigation.router.push).not.toHaveBeenCalled();
   });
+
+  it("syncs language and direction when the localized pathname changes", async () => {
+    navigation.pathname = "/fa/pricing";
+    setBrowserUrl("/fa/pricing");
+    localStorage.setItem("language", "fa");
+
+    const view = renderLanguageProbe("fa", "fa");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("language")).toHaveTextContent("fa");
+      expect(screen.getByTestId("direction")).toHaveTextContent("rtl");
+    });
+
+    navigation.pathname = "/en/pricing";
+    setBrowserUrl("/en/pricing");
+    view.rerender(
+      <ThemeProvider initialLanguage="fa">
+        <LanguageProbe targetLanguage="fa" />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("language")).toHaveTextContent("en");
+      expect(screen.getByTestId("direction")).toHaveTextContent("ltr");
+      expect(document.documentElement).toHaveAttribute("lang", "en");
+      expect(document.documentElement).toHaveAttribute("dir", "ltr");
+    });
+    expect(localStorage.getItem("language")).toBe("en");
+  });
+
+  it("does not navigate when the selected language already matches the route", async () => {
+    navigation.pathname = "/fa/pricing";
+    setBrowserUrl("/fa/pricing");
+
+    renderLanguageProbe("fa", "fa");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("language")).toHaveTextContent("fa");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set language" }));
+
+    expect(navigation.router.replace).not.toHaveBeenCalled();
+    expect(navigation.router.push).not.toHaveBeenCalled();
+  });
+
 });
