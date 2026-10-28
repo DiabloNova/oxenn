@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NAVIGATION_START_EVENT } from "@/lib/navigation-transition";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
@@ -84,6 +85,59 @@ export default function FloatingSidebar() {
 
   const [isHovered, setIsHovered] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [navigationFromPath, setNavigationFromPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleNavigationStart = () => {
+      setNavigationFromPath(pathname ?? null);
+    };
+
+    const handleInternalLinkClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const anchor = target.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+
+      try {
+        const destination = new URL(anchor.href, window.location.href);
+        if (destination.origin === window.location.origin && destination.pathname !== window.location.pathname) {
+          handleNavigationStart();
+        }
+      } catch {
+        // Ignore malformed or non-navigation link targets.
+      }
+    };
+
+    const handlePopState = () => {
+      // Back/forward may change only query/hash state; do not leave the dock hidden
+      // when the pathname itself did not change.
+      if (pathname && window.location.pathname === pathname) {
+        setNavigationFromPath(null);
+      }
+    };
+
+    window.addEventListener(NAVIGATION_START_EVENT, handleNavigationStart);
+    document.addEventListener("click", handleInternalLinkClick, true);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener(NAVIGATION_START_EVENT, handleNavigationStart);
+      document.removeEventListener("click", handleInternalLinkClick, true);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [pathname]);
 
   // Match only supported locale-prefixed workspace routes. Segment-aware
   // matching avoids rendering the dock on unrelated paths containing these words.
@@ -91,7 +145,9 @@ export default function FloatingSidebar() {
     pathname ?? ""
   );
 
-  if (!isWorkspace) return null;
+  const isNavigationPending = pathname !== null && navigationFromPath === pathname;
+
+  if (!isWorkspace || isNavigationPending) return null;
 
   const getLocalizedHref = (path: string) => {
     return `/${language}${path === "/" ? "" : path}`;

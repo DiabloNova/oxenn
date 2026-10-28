@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowUp, Home } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
+import { notifyNavigationStart } from "@/lib/navigation-transition";
 
 export default function GlobalNavigationControls() {
   const pathname = usePathname();
@@ -34,9 +35,12 @@ export default function GlobalNavigationControls() {
   const handleBack = () => {
     // Attempt to go back, otherwise fall back to home page
     if (window.history.length > 1) {
+      notifyNavigationStart();
       router.back();
     } else {
-      router.push(`/${language}`);
+      const destination = `/${language}`;
+      notifyNavigationStart(destination);
+      router.push(destination);
     }
   };
 

@@ -367,7 +367,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "PR #98 — Language routing and workspace navigation flash",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# PR #98 — Language routing and workspace navigation flash  **Status:** INCOMPLETE — generated-index drift corrected in a follow-up commit; latest CI and live visual transition verification remain pending.  **Scope:** \`fix/language-toggle-route-sync\` (PR #98). This task covers the floating-navigation flash during route changes and the route contract for unprefixed application paths.  ## Invariant  The floating workspace dock must be owned by workspace route branches and must not remain mounted a`
+    snippet: `# PR #98 — Language routing and workspace navigation flash  **Status:** INCOMPLETE — transition-aware dock hiding and route normalization committed for CI; live visual verification is blocked by Vercel deployment protection.  **Scope:** \`fix/language-toggle-route-sync\` (PR #98). This task covers the floating-navigation flash during route changes and the route contract for unprefixed application paths.  ## Invariant  The floating workspace dock must be owned by workspace route branches and must n`
   },
   {
     slug: "phase-3-repository-configuration-hygiene",

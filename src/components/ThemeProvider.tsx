@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { notifyNavigationStart } from "@/lib/navigation-transition";
 
 type Theme = "light" | "dark";
 type Direction = "ltr" | "rtl";
@@ -71,6 +72,7 @@ export function ThemeProvider({
       }
 
       if (localizedPath !== pathname) {
+        notifyNavigationStart(localizedPath);
         router.replace(`${localizedPath}${window.location.search}${window.location.hash}`);
       }
     }

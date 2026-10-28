@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
+import { notifyNavigationStart } from "@/lib/navigation-transition";
 import { useAuth } from "@/components/AuthProvider";
 import {
   dashboardNavigation,
@@ -124,7 +125,9 @@ export default function DashboardSidebar({
       if (item.href === "#help") {
         if (onHelpClick) onHelpClick();
       } else {
-        router.push(getLocalizedHref(item.href));
+        const destination = getLocalizedHref(item.href);
+        notifyNavigationStart(destination);
+        router.push(destination);
         setMobileOpen(false);
       }
     } else {
@@ -133,7 +136,9 @@ export default function DashboardSidebar({
   };
 
   const handleSubItemClick = (child: NavigationSubItem) => {
-    router.push(getLocalizedHref(child.href));
+    const destination = getLocalizedHref(child.href);
+    notifyNavigationStart(destination);
+    router.push(destination);
     setMobileOpen(false);
   };
 
