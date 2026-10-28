@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import DashboardTopbar from "@/components/navigation/DashboardTopbar";
 import FloatingSidebar from "@/components/navigation/FloatingSidebar";
-import FloatingSidebar from "@/components/navigation/FloatingSidebar";
 
 const navigation = vi.hoisted(() => ({
   pathname: "/fa/dashboard/seo/technical",
