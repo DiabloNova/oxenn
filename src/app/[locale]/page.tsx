@@ -11,7 +11,7 @@ import {
   Moon,
   Network,
   Radar,
-  ShieldCheck,
+  Search,
   Sun,
   Target,
   TrendingUp,
@@ -72,6 +72,7 @@ export default function MarketingLandingPage({ params }: { params: Promise<{ loc
   const t = isFa ? copy.fa : copy.en;
   const [dark, setDark] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [activeSignal, setActiveSignal] = useState(0);
 
   return (
@@ -82,7 +83,9 @@ export default function MarketingLandingPage({ params }: { params: Promise<{ loc
         <div className="oxenn-nav-links">
           {t.nav.map((item) => <a key={item} href={`#${item.toLowerCase()}`}>{item}<ChevronDown size={12} /></a>)}
         </div>
-        <div className="oxenn-nav-actions">
+        <div className={`oxenn-nav-actions ${searchOpen ? "search-is-open" : ""}`}>
+          {searchOpen && <input className="nav-search" autoFocus type="search" placeholder={isFa ? "جست‌وجو" : "Search Oxenn"} aria-label={isFa ? "جست‌وجو در اکسن" : "Search Oxenn"} />}
+          <button className="icon-button" onClick={() => setSearchOpen(!searchOpen)} aria-label={searchOpen ? "Close search" : "Open search"}>{searchOpen ? <X size={16} /> : <Search size={16} />}</button>
           <button className="icon-button" onClick={() => setDark(!dark)} aria-label="Toggle theme">{dark ? <Sun size={16} /> : <Moon size={16} />}</button>
           <Link className="lang-switch" href={`/${isFa ? "en" : "fa"}`}><Languages size={15} />{isFa ? "EN" : "فا"}</Link>
           <Link className="nav-cta" href={`/${locale}/register`}>Get started <ArrowUpRight size={15} /></Link>
@@ -98,7 +101,7 @@ export default function MarketingLandingPage({ params }: { params: Promise<{ loc
           <h1>{t.hero.split("\n").map((line, i) => <span key={line} className={i === 1 ? "hero-gradient" : ""}>{line}</span>)}</h1>
           <p>{t.sub}</p>
           <div className="hero-buttons"><Link className="button-primary" href={`/${locale}/register`}>{t.primary}<ArrowUpRight size={17} /></Link><a className="button-ghost" href="#platform">{t.secondary}<span className="button-arrow">↓</span></a></div>
-          <div className="hero-footnote"><ShieldCheck size={15} /> SOC 2-ready infrastructure <span /> No credit card required</div>
+          <div className="hero-footnote"><span className="signal-check" /> Built around your brand signals <span /> Conceptual preview</div>
         </div>
         <div className="hero-visual" aria-label="Oxenn AI visibility preview">
           <div className="visual-glow" />
