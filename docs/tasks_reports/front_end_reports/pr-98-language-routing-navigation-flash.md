@@ -1,6 +1,6 @@
 # PR #98 — Language routing and workspace navigation flash
 
-**Status:** INCOMPLETE — patch committed for CI; live visual transition verification remains pending.
+**Status:** INCOMPLETE — generated-index drift corrected in a follow-up commit; latest CI and live visual transition verification remain pending.
 
 **Scope:** `fix/language-toggle-route-sync` (PR #98). This task covers the floating-navigation flash during route changes and the route contract for unprefixed application paths.
 
@@ -19,7 +19,7 @@ The floating workspace dock must be owned by workspace route branches and must n
 ## Verification
 
 - Previous PR-head checks were green for Build and Test, Unit Tests, and Isolation Suite at `b09972163d0cb0baf3c09ee183372ba7dfbe1c83`; those results do not verify this patch.
-- New unit/UI test results: pending on this commit.
+- On implementation commit `e4af71d3af5ee819af2e0d4bf065b18cef1af4f3`, Unit Tests (including UI tests), Isolation Suite, Typecheck, Lint, and the production Build passed. The aggregate CI failed only because adding this report caused the generated `src/lib/docsIndex.ts` metadata check to detect drift; the expected generated entry is included in this follow-up.
 - Four-way rendered visual review (English/Persian × light/dark), including a clickability check during navigation transitions: pending.
 
 ## Negative paths covered
@@ -33,4 +33,4 @@ The floating workspace dock must be owned by workspace route branches and must n
 
 Update this report with actual post-commit CI results and live visual transition evidence before marking the task complete.
 
-**Counts:** verified: 0; failed: 0; not verified: 3 (post-patch CI, live transition/clickability, four locale/theme visual combinations); not applicable: 0.
+**Counts:** verified: 1 (unit/UI, isolation, typecheck, lint, build on implementation commit); failed: 1 (generated-index freshness check on implementation commit, corrected here); not verified: 2 (latest follow-up CI, live transition/clickability and four locale/theme visual combinations); not applicable: 0.
