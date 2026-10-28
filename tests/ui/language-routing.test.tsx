@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import DashboardTopbar from "@/components/navigation/DashboardTopbar";
+import FloatingSidebar from "@/components/navigation/FloatingSidebar";
 
 const navigation = vi.hoisted(() => ({
   pathname: "/fa/dashboard/seo/technical",
@@ -15,6 +16,34 @@ const navigation = vi.hoisted(() => ({
     prefetch: vi.fn(),
   },
 }));
+
+vi.mock("next/link", async () => {
+  const ReactModule = await import("react");
+  return {
+    default: (props: Record<string, unknown>) => {
+      const { href, children, ...rest } = props;
+      return ReactModule.createElement(
+        "a",
+        { ...(rest as React.AnchorHTMLAttributes<HTMLAnchorElement>), href: String(href) },
+        children as React.ReactNode
+      );
+    },
+  };
+});
+
+vi.mock("next/link", async () => {
+  const ReactModule = await import("react");
+  return {
+    default: (props: Record<string, unknown>) => {
+      const { href, children, ...rest } = props;
+      return ReactModule.createElement(
+        "a",
+        { ...(rest as React.AnchorHTMLAttributes<HTMLAnchorElement>), href: String(href) },
+        children as React.ReactNode
+      );
+    },
+  };
+});
 
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
@@ -284,6 +313,45 @@ describe("localized language routing contract", () => {
     );
     expect(navigation.router.push).not.toHaveBeenCalled();
   });
+  it("hides the floating workspace dock immediately during route transition and restores it on a workspace destination", async () => {
+    navigation.pathname = "/fa/dashboard/seo/technical";
+    setBrowserUrl("/fa/dashboard/seo/technical");
+
+    const view = render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    const desktopDock = view.container.querySelector('div[class*="fixed bottom-6"]');
+    expect(desktopDock).not.toBeNull();
+    fireEvent.mouseEnter(desktopDock!);
+
+    let settingsLink: HTMLAnchorElement | null = null;
+    await waitFor(() => {
+      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/settings"]');
+      expect(settingsLink).not.toBeNull();
+    });
+
+    fireEvent.click(settingsLink!);
+
+    await waitFor(() => {
+      expect(view.container.querySelector('a[href="/fa/settings"]')).toBeNull();
+    });
+
+    navigation.pathname = "/fa/settings";
+    setBrowserUrl("/fa/settings");
+    view.rerender(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(view.container.querySelector('a[href="/fa/profile"]')).not.toBeNull();
+    });
+  });
+
   it("does not navigate when the selected language already matches the route", async () => {
     navigation.pathname = "/fa/pricing";
     setBrowserUrl("/fa/pricing");
