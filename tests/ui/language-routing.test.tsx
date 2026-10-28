@@ -357,6 +357,54 @@ describe("localized language routing contract", () => {
     });
   });
 
+  it("restores the dock when navigation returns to its source path before the settle timer expires", async () => {
+    const sourcePath = "/fa/dashboard/seo/technical";
+    navigation.pathname = sourcePath;
+    setBrowserUrl(sourcePath);
+
+    const view = render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    const desktopDock = view.container.querySelector('div[class*="fixed bottom-6"]');
+    expect(desktopDock).not.toBeNull();
+    fireEvent.mouseEnter(desktopDock!);
+
+    let settingsLink: HTMLAnchorElement | null = null;
+    await waitFor(() => {
+      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/settings"]');
+      expect(settingsLink).not.toBeNull();
+    });
+
+    fireEvent.click(settingsLink!);
+    expect(view.container.querySelector('a[href="/fa/settings"]')).toBeNull();
+
+    navigation.pathname = "/fa/settings";
+    setBrowserUrl("/fa/settings");
+    view.rerender(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+    expect(view.container.querySelector('a[href="/fa/profile"]')).toBeNull();
+
+    // Simulate an immediate Back/redirect to the original pathname, before 300 ms elapses.
+    navigation.pathname = sourcePath;
+    setBrowserUrl(sourcePath);
+    view.rerender(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+    expect(view.container.querySelector('a[href="/fa/settings"]')).toBeNull();
+
+    await waitFor(() => {
+      expect(view.container.querySelector('a[href="/fa/settings"]')).not.toBeNull();
+    });
+  });
+
   it("restores the floating workspace dock if a route transition never commits", async () => {
     navigation.pathname = "/fa/dashboard/seo/technical";
     setBrowserUrl("/fa/dashboard/seo/technical");

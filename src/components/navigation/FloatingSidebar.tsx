@@ -86,6 +86,7 @@ export default function FloatingSidebar() {
   const [isHovered, setIsHovered] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [navigationFromPath, setNavigationFromPath] = useState<string | null>(null);
+  const [settlePath, setSettlePath] = useState<string | null>(null);
 
   useEffect(() => {
     let recoveryTimer: number | undefined;
@@ -100,6 +101,8 @@ export default function FloatingSidebar() {
     const handleNavigationStart = () => {
       const sourcePath = pathname ?? null;
       setNavigationFromPath(sourcePath);
+      // A new transition supersedes any previous settle window.
+      setSettlePath(null);
       clearRecoveryTimer();
 
       // If a client-side navigation fails without changing pathname, recover the
@@ -146,6 +149,7 @@ export default function FloatingSidebar() {
       if (pathname && window.location.pathname === pathname) {
         clearRecoveryTimer();
         setNavigationFromPath(null);
+        setSettlePath(null);
       }
     };
 
@@ -161,19 +165,30 @@ export default function FloatingSidebar() {
     };
   }, [pathname]);
 
-  // Keep the dock hidden briefly after pathname changes as well; App Router can
-  // commit the new pathname before the destination's loading/transition UI settles.
+  // Track that a pathname change occurred independently of the current path.
+  // If the user immediately returns to the source path, the settle window must
+  // still expire instead of leaving navigationFromPath stuck at that source.
   useEffect(() => {
-    if (navigationFromPath === null || navigationFromPath === pathname) return;
+    if (navigationFromPath === null || pathname === null || navigationFromPath === pathname) {
+      return;
+    }
+
+    setSettlePath(pathname);
+  }, [pathname, navigationFromPath]);
+
+  // Keep the dock hidden briefly after the observed pathname change so it does
+  // not overlay the destination's loading/transition frame. A subsequent path
+  // change restarts the window; a return to the source path still settles.
+  useEffect(() => {
+    if (settlePath === null) return;
 
     const settleTimer = window.setTimeout(() => {
-      setNavigationFromPath((pendingPath) =>
-        pendingPath === navigationFromPath ? null : pendingPath
-      );
+      setNavigationFromPath(null);
+      setSettlePath(null);
     }, 300);
 
     return () => window.clearTimeout(settleTimer);
-  }, [pathname, navigationFromPath]);
+  }, [settlePath, pathname]);
 
   // Match only supported locale-prefixed workspace routes. Segment-aware
   // matching avoids rendering the dock on unrelated paths containing these words.
