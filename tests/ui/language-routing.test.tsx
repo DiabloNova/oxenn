@@ -165,6 +165,7 @@ describe("localized language routing contract", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it("changes fa to en with one route replacement while preserving the page, query, and hash", async () => {
