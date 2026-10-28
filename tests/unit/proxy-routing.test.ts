@@ -62,10 +62,20 @@ describe("locale routing proxy", () => {
     (path) => expectNext(runProxy(path))
   );
 
-  it.each(["/xx", "/xx/dashboard", "/en-US/pricing", "/fil/blog"])(
-    "does not disguise unsupported locale-like prefix %s as the default locale",
-    (path) => expectNext(runProxy(path))
-  );
+  it.each([
+    ["/xx", "/fa/xx"],
+    ["/xx/dashboard", "/fa/xx/dashboard"],
+    ["/en-US/pricing", "/fa/en-US/pricing"],
+    ["/fil/blog", "/fa/fil/blog"],
+    ["/app", "/fa/app"],
+    ["/faq", "/fa/faq"],
+    ["/apiary", "/fa/apiary"],
+  ])("normalizes non-locale path segment %s to %s", (input, expected) => {
+    const response = runProxy(input);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`${ORIGIN}${expected}`);
+  });
 
   it.each([
     "/api",

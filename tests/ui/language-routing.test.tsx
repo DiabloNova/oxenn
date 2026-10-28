@@ -247,6 +247,43 @@ describe("localized language routing contract", () => {
     expect(localStorage.getItem("language")).toBe("en");
   });
 
+  it("adds the selected locale to an unprefixed route and preserves query/hash", async () => {
+    navigation.pathname = "/dashboard/seo/technical";
+    setBrowserUrl("/dashboard/seo/technical?tab=links#findings");
+
+    renderLanguageProbe("fa", "en");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("language")).toHaveTextContent("fa");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set language" }));
+
+    expect(navigation.router.replace).toHaveBeenCalledTimes(1);
+    expect(navigation.router.replace).toHaveBeenCalledWith(
+      "/en/dashboard/seo/technical?tab=links#findings"
+    );
+    expect(navigation.router.push).not.toHaveBeenCalled();
+  });
+
+  it("canonicalizes an unprefixed route even when the selected language is already Persian", async () => {
+    navigation.pathname = "/dashboard/seo/technical";
+    setBrowserUrl("/dashboard/seo/technical?tab=links#findings");
+
+    renderLanguageProbe("fa", "fa");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("language")).toHaveTextContent("fa");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set language" }));
+
+    expect(navigation.router.replace).toHaveBeenCalledTimes(1);
+    expect(navigation.router.replace).toHaveBeenCalledWith(
+      "/fa/dashboard/seo/technical?tab=links#findings"
+    );
+    expect(navigation.router.push).not.toHaveBeenCalled();
+  });
   it("does not navigate when the selected language already matches the route", async () => {
     navigation.pathname = "/fa/pricing";
     setBrowserUrl("/fa/pricing");

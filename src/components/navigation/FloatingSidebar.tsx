@@ -85,11 +85,11 @@ export default function FloatingSidebar() {
   const [isHovered, setIsHovered] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Only render on workspace routes (dashboard, settings, profile) and never on main marketing page
-  const isWorkspace =
-    pathname?.includes("/dashboard") ||
-    pathname?.includes("/settings") ||
-    pathname?.includes("/profile");
+  // Match only supported locale-prefixed workspace routes. Segment-aware
+  // matching avoids rendering the dock on unrelated paths containing these words.
+  const isWorkspace = /^\/(?:fa|en)\/(?:dashboard|settings|profile)(?:\/|$)/.test(
+    pathname ?? ""
+  );
 
   if (!isWorkspace) return null;
 

@@ -59,7 +59,17 @@ export function ThemeProvider({
     // The localized URL selects page content; keep it in sync with the control.
     // Replacing the locale segment preserves the current page and query/hash state.
     if (pathname) {
-      const localizedPath = pathname.replace(/^\/(?:fa|en)(?=\/|$)/, `/${newLang}`);
+      const localePrefix = /^\/(?:fa|en)(?=\/|$)/;
+      let localizedPath = pathname;
+
+      if (localePrefix.test(pathname)) {
+        localizedPath = pathname.replace(localePrefix, `/${newLang}`);
+      } else if (pathname === "/") {
+        localizedPath = `/${newLang}`;
+      } else {
+        localizedPath = `/${newLang}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+      }
+
       if (localizedPath !== pathname) {
         router.replace(`${localizedPath}${window.location.search}${window.location.hash}`);
       }

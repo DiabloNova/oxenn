@@ -4,11 +4,6 @@ import { DEFAULT_LOCALE, isSupportedLocale } from "@/config/i18n";
 
 const INFRASTRUCTURE_PREFIXES = ["/api", "/_next", "/_vercel"] as const;
 
-// Locale-looking but unsupported prefixes must reach [locale]/layout.tsx,
-// where they are rejected with notFound(), rather than being reinterpreted as
-// an unprefixed page and silently redirected to Persian.
-const LOCALE_LIKE_SEGMENT = /^[a-z]{2,3}(?:-[a-z]{2,4})?$/i;
-
 function shouldBypass(pathname: string): boolean {
   if (
     INFRASTRUCTURE_PREFIXES.some(
@@ -24,8 +19,9 @@ function shouldBypass(pathname: string): boolean {
 
 /**
  * Adds the default locale to application routes that do not have a locale.
- * Existing supported locale prefixes are preserved, while unsupported
- * locale-looking prefixes are left for the locale layout to reject.
+ * Only the configured locale allowlist is treated as a locale prefix. All other
+ * application paths are normalized under the default locale, avoiding accidental
+ * 404s for ordinary slugs such as "/app" or "/faq".
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -40,9 +36,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (firstSegment && LOCALE_LIKE_SEGMENT.test(firstSegment)) {
-    return NextResponse.next();
-  }
 
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname =
@@ -54,5 +47,5 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Exclude API/Next/Vercel internals and file-like paths from the matcher.
   // shouldBypass is retained as a defensive check for direct calls.
-  matcher: ["/((?!api|_next/static|_next/image|_vercel|.*\\..*).*)"],
+  matcher: ["/((?!api(?:/|$)|_next(?:/|$)|_vercel(?:/|$)|.*\\..*).*)"],
 };

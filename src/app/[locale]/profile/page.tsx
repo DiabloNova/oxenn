@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { GlassCard } from "@/components/GlassCard";
 import { useTheme } from "@/components/ThemeProvider";
+import FloatingSidebar from "@/components/navigation/FloatingSidebar";
 import { User, AlertTriangle } from "lucide-react";
 import { deactivateAccountAction } from "@/app/actions/account";
 
@@ -44,6 +45,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in p-6">
+      <FloatingSidebar />
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-black tracking-tight text-[var(--text-primary)] font-display flex items-center gap-2.5">

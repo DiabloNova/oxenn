@@ -6,6 +6,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import DashboardSidebar from "@/components/navigation/DashboardSidebar";
 import DashboardTopbar from "@/components/navigation/DashboardTopbar";
+import FloatingSidebar from "@/components/navigation/FloatingSidebar";
 import { HelpCircle, Mail, BookOpen, X } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -171,6 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </AnimatePresence>
       </div>
+      <FloatingSidebar />
     </ProtectedRoute>
   );
 }
