@@ -1,37 +1,40 @@
 # PR #98 — Language routing and workspace navigation flash
 
-**Status:** INCOMPLETE — transition-aware dock hiding and route normalization committed for CI; live visual verification is blocked by Vercel deployment protection.
+**Status:** IMPLEMENTED — automated checks passed on source commit `ebe2e470a8a2f78c7e85df3da5216826799fd0db`; manual visual verification of the protected Vercel preview remains unavailable.
 
-**Scope:** `fix/language-toggle-route-sync` (PR #98). This task covers the floating-navigation flash during route changes and the route contract for unprefixed application paths.
+**Scope:** `fix/language-toggle-route-sync` (PR #98). This task covers the floating-navigation flash during route transitions, all navigation initiators associated with that dock, and the contract for unprefixed application paths.
 
 ## Invariant
 
-The floating workspace dock must be owned by workspace route branches and must not remain mounted as a sibling of every localized page. Locale routing recognizes only configured locales (`en`, `fa`), normalizes unprefixed application paths under the default locale (`fa`), and preserves query/hash state when the language control changes routes.
+A single persistent `FloatingSidebar` instance is mounted in `src/app/[locale]/layout.tsx`. It renders only on segment-matched workspace routes (`/{fa|en}/{dashboard|settings|profile}`) and remains able to observe navigation starts across route boundaries. Locale routing recognizes only configured prefixes (`en`, `fa`); other non-static application paths normalize under the default locale (`fa`). Language changes preserve query and hash state.
 
 ## Implementation
 
-- Removed `FloatingSidebar` from persistent `src/app/[locale]/layout.tsx` and mounted it under the dashboard layout and standalone profile/settings pages where it is intended. This keeps it out of unrelated marketing-route loading states.
-- Made the dock route check segment-aware for `/{fa|en}/{dashboard|settings|profile}`. It now hides immediately when an internal route change starts (anchor clicks, dashboard sidebar/topbar router calls, global back/home controls, and language changes) and reappears only if the committed destination remains a workspace route.
-- Updated `ThemeProvider.setLanguage` to add a locale prefix when the current path is unprefixed, including when the chosen language already matches the active language; query and hash are preserved.
-- Made the Proxy treat only `en` and `fa` as locale prefixes. Other non-static application paths, including short slugs such as `/app` and `/faq`, normalize under `/fa`. Tightened infrastructure matcher boundaries.
-- Added unit/UI regressions for ambiguous first path segments, `/apiary`, locale insertion, query/hash preservation, and immediate dock hiding/restoration during a workspace route transition.
+- Kept one `FloatingSidebar` instance in the persistent localized root layout and removed duplicate mounts from the dashboard, profile, and settings pages. This preserves transition state while Next.js changes between those routes and avoids duplicate docks.
+- Made the dock route guard segment-aware. An unrelated path that merely contains `dashboard`, `profile`, or `settings` does not display it.
+- Added a shared `oxenn:navigation-start` event. The dock detects ordinary same-origin anchor navigation at the document capture phase and receives explicit signals from dashboard sidebar/topbar route calls, global back/home navigation, and `ThemeProvider.setLanguage`.
+- The dock hides at navigation start, remains hidden for 300 ms after the pathname changes so it does not overlay the destination's settling/loading frame, and has a 10-second recovery if navigation starts but the pathname never changes. Back/forward changes that affect only query/hash clear the pending state rather than leaving the dock hidden.
+- Updated `ThemeProvider.setLanguage` to add the locale prefix when a client-side path is unprefixed, even if the selected language already matches the active language; query and hash remain intact.
+- Updated `src/proxy.ts` so only `fa` and `en` count as locale prefixes. Unprefixed human routes such as `/app`, `/faq`, and `/apiary` are normalized under `/fa`; actual `/api`, `/_next`, `/_vercel`, and file-like requests remain bypassed.
+- Added regression cases for locale insertion, query/hash preservation, ordinary short slugs, `/apiary`, immediate dock hiding, post-path settle delay, and recovery when navigation never commits.
 
 ## Verification
 
-- Previous PR-head checks were green for Build and Test, Unit Tests, and Isolation Suite at `b09972163d0cb0baf3c09ee183372ba7dfbe1c83`; those results do not verify this patch.
-- On implementation commit `e4af71d3af5ee819af2e0d4bf065b18cef1af4f3`, Unit Tests (including UI tests), Isolation Suite, Typecheck, Lint, and the production Build passed. The aggregate CI failed only because adding this report caused the generated `src/lib/docsIndex.ts` metadata check to detect drift; the expected generated entry is included in this follow-up.
-- Follow-up CI at commit `7407c79162fd3639f9dbbd2abb402424c866bd96`: Build and Test, Unit Tests, and Isolation Suite completed successfully. This new transition-aware change has fresh CI pending.
-- Attempted browser inspection on the Vercel preview, but deployment protection redirected the session to Vercel login; no temporary public access link was created. Visual clickability across the four locale/theme combinations is therefore still unverified.
+- [GitHub Actions — source commit `ebe2e470`](https://github.com/DiabloNova/oxenn/actions/runs/40762190455): **Build and Test: success; Unit Tests: success; Isolation Suite: success.**
+- Unit Tests: **243 passed**, 1 todo, 1 skipped test file. The proxy routing suite passed **30 tests**.
+- UI Tests: **15 passed** across 3 files; `tests/ui/language-routing.test.tsx` passed **10 tests**, including route-transition hide/restore and stalled-navigation recovery.
+- Typecheck, Lint, tenant schema alignment, RLS migration coverage, Drizzle migration chain, production Build, Build Reference Matrix, and generated tracked-file/no-drift verification all passed on the source commit.
+- The user manually confirmed that language switching and the light/dark background/theme change work correctly. I could not independently verify the transition visually because the Vercel preview redirected browser inspection to deployment authentication. I did not create a public/shareable access bypass.
 
-## Negative paths covered
+## Review findings and earlier corrected CI attempts
 
-- Unsupported locale-looking segments are not mistaken for configured locales.
-- Short ordinary slugs (`/app`, `/faq`) receive the default locale prefix instead of being treated as invalid locales.
-- `/apiary` is not treated as the `/api` infrastructure route. Actual API, Next/Vercel internal, and file-like paths remain bypassed.
-- Language switching preserves query/hash state and avoids a second `router.push`.
+- Gitar/Cubic's duplicate-navigation concern was valid at the earlier commit. The duplicate `router.push` path was removed; `ThemeProvider` owns locale replacement and preserves query/hash.
+- Cubic's unprefixed-path finding was valid at the earlier implementation. The provider now adds the locale prefix, and the Proxy consistently normalizes unprefixed human paths.
+- Two interim CI failures were corrected before the verified source commit: generated `src/lib/docsIndex.ts` drift after introducing this report, and a duplicate test import introduced while iterating on the UI regression. The final source commit passed the full required CI jobs.
+- The Cubic duplicate-navigation thread is the only outstanding review thread; it will be replied to and resolved with the verified fix.
 
-## Known limitations
+## Known limitation
 
-The previous follow-up CI is green. Update this report with the new transition-aware commit's CI results; live visual transition evidence requires authenticated preview access.
+The final route logic is covered by automated tests, but the real-browser check of the dock's clickability during a white transition frame remains not verified because authenticated Preview access was unavailable.
 
-**Counts:** verified: 1 (previous route-normalization follow-up CI); failed: 1 (generated-index freshness on the earlier implementation commit, corrected in a follow-up); not verified: 2 (CI for this transition-aware patch, authenticated live visual/clickability checks); not applicable: 0.
+**Counts:** verified: 4 (all required CI jobs; 243 unit tests; 15 UI tests; 30 Proxy route tests, including no-prefix cases); failed: 2 (interim generated-index drift and duplicate-import typecheck failures, both corrected); not verified: 1 (manual visual/clickability verification on the protected Vercel preview); not applicable: 0.
