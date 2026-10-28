@@ -161,13 +161,27 @@ export default function FloatingSidebar() {
     };
   }, [pathname]);
 
+  // Keep the dock hidden briefly after pathname changes as well; App Router can
+  // commit the new pathname before the destination's loading/transition UI settles.
+  useEffect(() => {
+    if (navigationFromPath === null || navigationFromPath === pathname) return;
+
+    const settleTimer = window.setTimeout(() => {
+      setNavigationFromPath((pendingPath) =>
+        pendingPath === navigationFromPath ? null : pendingPath
+      );
+    }, 300);
+
+    return () => window.clearTimeout(settleTimer);
+  }, [pathname, navigationFromPath]);
+
   // Match only supported locale-prefixed workspace routes. Segment-aware
   // matching avoids rendering the dock on unrelated paths containing these words.
   const isWorkspace = /^\/(?:fa|en)\/(?:dashboard|settings|profile)(?:\/|$)/.test(
     pathname ?? ""
   );
 
-  const isNavigationPending = pathname !== null && navigationFromPath === pathname;
+  const isNavigationPending = navigationFromPath !== null;
 
   if (!isWorkspace || isNavigationPending) return null;
 

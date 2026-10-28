@@ -348,6 +348,10 @@ describe("localized language routing contract", () => {
       </ThemeProvider>
     );
 
+    // The target pathname is committed, but the transition guard must keep the
+    // dock hidden for the short settling window so it cannot overlay a white frame.
+    expect(view.container.querySelector('a[href="/fa/profile"]')).toBeNull();
+
     await waitFor(() => {
       expect(view.container.querySelector('a[href="/fa/profile"]')).not.toBeNull();
     });
