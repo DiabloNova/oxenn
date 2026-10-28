@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import DashboardTopbar from "@/components/navigation/DashboardTopbar";
@@ -350,6 +350,38 @@ describe("localized language routing contract", () => {
     await waitFor(() => {
       expect(view.container.querySelector('a[href="/fa/profile"]')).not.toBeNull();
     });
+  });
+
+  it("restores the floating workspace dock if a route transition never commits", async () => {
+    navigation.pathname = "/fa/dashboard/seo/technical";
+    setBrowserUrl("/fa/dashboard/seo/technical");
+
+    const view = render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    const desktopDock = view.container.querySelector('div[class*="fixed bottom-6"]');
+    expect(desktopDock).not.toBeNull();
+    fireEvent.mouseEnter(desktopDock!);
+
+    let settingsLink: HTMLAnchorElement | null = null;
+    await waitFor(() => {
+      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/settings"]');
+      expect(settingsLink).not.toBeNull();
+    });
+
+    vi.useFakeTimers();
+    fireEvent.click(settingsLink!);
+    expect(view.container.querySelector('a[href="/fa/settings"]')).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(view.container.querySelector('a[href="/fa/settings"]')).not.toBeNull();
+    vi.useRealTimers();
   });
 
   it("does not navigate when the selected language already matches the route", async () => {

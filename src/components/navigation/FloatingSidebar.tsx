@@ -88,8 +88,28 @@ export default function FloatingSidebar() {
   const [navigationFromPath, setNavigationFromPath] = useState<string | null>(null);
 
   useEffect(() => {
+    let recoveryTimer: number | undefined;
+
+    const clearRecoveryTimer = () => {
+      if (recoveryTimer !== undefined) {
+        window.clearTimeout(recoveryTimer);
+        recoveryTimer = undefined;
+      }
+    };
+
     const handleNavigationStart = () => {
-      setNavigationFromPath(pathname ?? null);
+      const sourcePath = pathname ?? null;
+      setNavigationFromPath(sourcePath);
+      clearRecoveryTimer();
+
+      // If a client-side navigation fails without changing pathname, recover the
+      // dock after a bounded interval instead of leaving it hidden indefinitely.
+      recoveryTimer = window.setTimeout(() => {
+        setNavigationFromPath((pendingPath) =>
+          pendingPath === sourcePath ? null : pendingPath
+        );
+        recoveryTimer = undefined;
+      }, 10_000);
     };
 
     const handleInternalLinkClick = (event: MouseEvent) => {
@@ -124,6 +144,7 @@ export default function FloatingSidebar() {
       // Back/forward may change only query/hash state; do not leave the dock hidden
       // when the pathname itself did not change.
       if (pathname && window.location.pathname === pathname) {
+        clearRecoveryTimer();
         setNavigationFromPath(null);
       }
     };
@@ -133,6 +154,7 @@ export default function FloatingSidebar() {
     window.addEventListener("popstate", handlePopState);
 
     return () => {
+      clearRecoveryTimer();
       window.removeEventListener(NAVIGATION_START_EVENT, handleNavigationStart);
       document.removeEventListener("click", handleInternalLinkClick, true);
       window.removeEventListener("popstate", handlePopState);
