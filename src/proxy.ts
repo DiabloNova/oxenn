@@ -45,13 +45,14 @@ export function proxy(request: NextRequest) {
   }
 
   const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = pathname === "/" ? `/${DEFAULT_LOCALE}` : `/${DEFAULT_LOCALE}${pathname}`;
+  redirectUrl.pathname =
+    pathname === "/" ? `/${DEFAULT_LOCALE}` : `/${DEFAULT_LOCALE}${pathname}`;
 
   return NextResponse.redirect(redirectUrl);
 }
 
 export const config = {
-  // Keep APIs, Next internals, Vercel internals, and file-like paths out of
-  // the proxy; shouldBypass is retained as a defensive check for direct calls.
-  matcher: ["/((?!_next/static|_next/image|_vercel|.*\\..*).*)"],
+  // Exclude API/Next/Vercel internals and file-like paths from the matcher.
+  // shouldBypass is retained as a defensive check for direct calls.
+  matcher: ["/((?!api|_next/static|_next/image|_vercel|.*\\..*).*)"],
 };
