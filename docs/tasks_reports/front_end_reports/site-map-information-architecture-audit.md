@@ -310,7 +310,7 @@ flowchart TD
     DEFAULT --> LOCALE["Locale prefix: /fa یا /en"]
 
     LOCALE --> PUBLIC["Public marketing — index candidate"]
-    PUBLIC --> HOME["/ — Home"]
+    PUBLIC --> HOME["/[locale] — Home"]
     PUBLIC --> FEATURES["/features"]
     PUBLIC --> SOLUTIONS["/solutions"]
     SOLUTIONS --> AEO["/solutions/aeo"]
@@ -343,7 +343,7 @@ flowchart TD
     DASH --> AUDITS["/dashboard/audits and /dashboard/audits/[id]"]
     DASH --> SEO["SEO: /dashboard/seo/technical, /dashboard/seo/schema"]
     DASH --> AEOAPP["AEO: /dashboard/aeo/audits, /dashboard/aeo/content, /dashboard/aeo/playground"]
-    DASH --> ANALYTICS["Analytics: /dashboard/analytics, /analytics/llm, /analytics/llm-bias"]
+    DASH --> ANALYTICS["Analytics: /dashboard/analytics, /dashboard/analytics/llm, /dashboard/analytics/llm-bias"]
     DASH --> COMPETE["Competitive: /dashboard/competitive, /dashboard/competitors/radar"]
     DASH --> CONTENT["Content: /dashboard/content, /dashboard/content/studio, /dashboard/content/ingestion"]
     DASH --> KNOWLEDGE["Knowledge: /dashboard/entities, /dashboard/entities/graph, /dashboard/query, /dashboard/intelligence"]
