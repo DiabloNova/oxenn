@@ -1,92 +1,130 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAVIGATION_START_EVENT } from "@/lib/navigation-transition";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthProvider";
-import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
-import {
-  Home,
-  BarChart2,
-  Globe,
-  Shield,
-  Radar,
-  Settings,
-  User,
-  Menu,
-  X,
-  LogOut,
-  Sun,
-  Moon,
-  Languages,
-  Receipt
-} from "lucide-react";
+import { NAVIGATION_START_EVENT } from "@/lib/navigation-transition";
+import { BarChart2, FileText, LogOut, Menu, Sparkles, X, Check } from "lucide-react";
 
-interface SidebarItem {
+interface QuickAction {
+  id: "playground" | "analytics" | "content";
   icon: React.ComponentType<{ className?: string }>;
   labelEn: string;
   labelFa: string;
   path: string;
 }
 
-const SIDEBAR_ITEMS: SidebarItem[] = [
+const QUICK_ACTIONS: QuickAction[] = [
   {
-    icon: Home,
-    labelEn: "Command Center",
-    labelFa: "صفحه نخست",
-    path: "/"
+    id: "playground",
+    icon: Sparkles,
+    labelEn: "AI Model Playground",
+    labelFa: "محیط آزمون مدل‌های هوش مصنوعی",
+    path: "/dashboard/aeo/playground",
   },
   {
+    id: "analytics",
     icon: BarChart2,
-    labelEn: "GEO Optimization Engine",
-    labelFa: "موتور بهینه‌سازی GEO",
-    path: "/solutions/geo"
+    labelEn: "Reports & Analytics Explorer",
+    labelFa: "کاوشگر گزارش‌ها و تحلیل‌ها",
+    path: "/dashboard/analytics/llm-bias",
   },
   {
-    icon: Globe,
-    labelEn: "AEO Optimization Studio",
-    labelFa: "استودیو بهینه‌سازی AEO",
-    path: "/solutions/aeo"
+    id: "content",
+    icon: FileText,
+    labelEn: "Content Studio",
+    labelFa: "استودیوی محتوا",
+    path: "/dashboard/content/studio",
   },
-  {
-    icon: Shield,
-    labelEn: "Cognitive Brand Protection",
-    labelFa: "محافظت از هویت برند",
-    path: "/solutions/protection"
-  },
-  {
-    icon: Radar,
-    labelEn: "Competitive Intelligence Radar",
-    labelFa: "رادار تحلیل رقابتی برند",
-    path: "/solutions/radar"
-  },
-  {
-    icon: Settings,
-    labelEn: "System Configuration",
-    labelFa: "پیکربندی سیستم",
-    path: "/settings"
-  },
-  {
-    icon: User,
-    labelEn: "User Account Profile",
-    labelFa: "حساب کاربری",
-    path: "/profile"
-  }
 ];
 
 export default function FloatingSidebar() {
-  const { language, setLanguage, theme, setTheme } = useTheme();
+  const { language } = useTheme();
   const { logout } = useAuth();
   const pathname = usePathname();
   const isFa = language === "fa";
+  const reduceMotion = useReducedMotion() ?? false;
 
-  const [isHovered, setIsHovered] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileArmed, setIsMobileArmed] = useState(false);
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const [navigationFromPath, setNavigationFromPath] = useState<string | null>(null);
+
+  const dockRef = useRef<HTMLDivElement | null>(null);
+  const desktopTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const mobileTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const hoverTimerRef = useRef<number | undefined>(undefined);
+  const mobileActivationTimerRef = useRef<number | undefined>(undefined);
   const hasObservedPathChangeRef = useRef(false);
+
+  const clearHoverTimer = () => {
+    if (hoverTimerRef.current !== undefined) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = undefined;
+    }
+  };
+
+  const clearMobileActivationTimer = () => {
+    if (mobileActivationTimerRef.current !== undefined) {
+      window.clearTimeout(mobileActivationTimerRef.current);
+      mobileActivationTimerRef.current = undefined;
+    }
+  };
+
+  const openDock = () => {
+    clearHoverTimer();
+    clearMobileActivationTimer();
+    setIsOpen(true);
+    setIsMobileArmed(false);
+    setShowLogoutConfirmation(false);
+    setLogoutError(null);
+  };
+
+  const closeDock = () => {
+    clearHoverTimer();
+    clearMobileActivationTimer();
+    setIsOpen(false);
+    setIsMobileArmed(false);
+    setShowLogoutConfirmation(false);
+    setLogoutError(null);
+  };
+
+  const scheduleDesktopOpen = () => {
+    clearHoverTimer();
+    hoverTimerRef.current = window.setTimeout(() => {
+      hoverTimerRef.current = undefined;
+      setIsOpen(true);
+      setIsMobileArmed(false);
+      setShowLogoutConfirmation(false);
+      setLogoutError(null);
+    }, 1_000);
+  };
+
+  const handleMobileTrigger = () => {
+    if (isMobileArmed) {
+      openDock();
+      return;
+    }
+
+    clearMobileActivationTimer();
+    setIsMobileArmed(true);
+    mobileActivationTimerRef.current = window.setTimeout(() => {
+      mobileActivationTimerRef.current = undefined;
+      setIsMobileArmed(false);
+    }, 3_000);
+  };
+
+  const getLocalizedHref = (path: string) => "/" + language + path;
+
+  const isItemActive = (path: string) => {
+    const localizedPath = getLocalizedHref(path);
+    return pathname === localizedPath || pathname?.startsWith(localizedPath + "/");
+  };
 
   useEffect(() => {
     let recoveryTimer: number | undefined;
@@ -101,12 +139,15 @@ export default function FloatingSidebar() {
     const handleNavigationStart = () => {
       const sourcePath = pathname ?? null;
       setNavigationFromPath(sourcePath);
-      // A new transition supersedes any previous settle window.
       hasObservedPathChangeRef.current = false;
       clearRecoveryTimer();
+      clearHoverTimer();
+      clearMobileActivationTimer();
+      setIsOpen(false);
+      setIsMobileArmed(false);
+      setShowLogoutConfirmation(false);
+      setLogoutError(null);
 
-      // If a client-side navigation fails without changing pathname, recover the
-      // dock after a bounded interval instead of leaving it hidden indefinitely.
       recoveryTimer = window.setTimeout(() => {
         setNavigationFromPath((pendingPath) =>
           pendingPath === sourcePath ? null : pendingPath
@@ -135,7 +176,10 @@ export default function FloatingSidebar() {
 
       try {
         const destination = new URL(anchor.href, window.location.href);
-        if (destination.origin === window.location.origin && destination.pathname !== window.location.pathname) {
+        if (
+          destination.origin === window.location.origin &&
+          destination.pathname !== window.location.pathname
+        ) {
           handleNavigationStart();
         }
       } catch {
@@ -144,8 +188,6 @@ export default function FloatingSidebar() {
     };
 
     const handlePopState = () => {
-      // Back/forward may change only query/hash state; do not leave the dock hidden
-      // when the pathname itself did not change.
       if (pathname && window.location.pathname === pathname) {
         clearRecoveryTimer();
         setNavigationFromPath(null);
@@ -159,15 +201,14 @@ export default function FloatingSidebar() {
 
     return () => {
       clearRecoveryTimer();
+      clearHoverTimer();
+      clearMobileActivationTimer();
       window.removeEventListener(NAVIGATION_START_EVENT, handleNavigationStart);
       document.removeEventListener("click", handleInternalLinkClick, true);
       window.removeEventListener("popstate", handlePopState);
     };
   }, [pathname]);
 
-  // Track the first observed pathname change without setting React state from
-  // an Effect. The ref survives a quick return to the source path, allowing the
-  // settle timer to finish instead of leaving the dock hidden indefinitely.
   useEffect(() => {
     if (navigationFromPath === null || pathname === null) return;
 
@@ -177,9 +218,6 @@ export default function FloatingSidebar() {
 
     if (!hasObservedPathChangeRef.current) return;
 
-    // Keep the dock hidden briefly after a route change so it does not overlay
-    // the destination's loading frame. Every subsequent pathname change restarts
-    // this window, including a rapid return to the original path.
     const settleTimer = window.setTimeout(() => {
       setNavigationFromPath(null);
       hasObservedPathChangeRef.current = false;
@@ -188,309 +226,246 @@ export default function FloatingSidebar() {
     return () => window.clearTimeout(settleTimer);
   }, [navigationFromPath, pathname]);
 
-  // Match only supported locale-prefixed workspace routes. Segment-aware
-  // matching avoids rendering the dock on unrelated paths containing these words.
+  useEffect(() => {
+    if (!isOpen && !isMobileArmed) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      closeDock();
+      const desktop = window.matchMedia("(min-width: 768px)").matches;
+      (desktop ? desktopTriggerRef.current : mobileTriggerRef.current)?.focus();
+    };
+
+    const handleOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+
+      if (
+        dockRef.current?.contains(target) ||
+        desktopTriggerRef.current?.contains(target) ||
+        mobileTriggerRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      closeDock();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handleOutsidePointerDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handleOutsidePointerDown);
+    };
+  }, [isOpen, isMobileArmed]);
+
   const isWorkspace = /^\/(?:fa|en)\/(?:dashboard|settings|profile)(?:\/|$)/.test(
     pathname ?? ""
   );
-
   const isNavigationPending = navigationFromPath !== null;
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setLogoutError(null);
+
+    try {
+      await logout();
+      closeDock();
+    } catch {
+      setLogoutError(
+        isFa
+          ? "خروج انجام نشد. لطفاً دوباره تلاش کنید."
+          : "Sign out failed. Please try again."
+      );
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   if (!isWorkspace || isNavigationPending) return null;
 
-  const getLocalizedHref = (path: string) => {
-    return `/${language}${path === "/" ? "" : path}`;
-  };
-
-  const isItemActive = (path: string) => {
-    const localizedPath = getLocalizedHref(path);
-    if (path === "/") {
-      return pathname === localizedPath;
-    }
-    return pathname === localizedPath || pathname?.startsWith(localizedPath);
-  };
-
-  const toggleMobileMenu = () => setIsOpen(!isOpen);
-
   return (
     <>
-      {/* DESKTOP HORIZONTAL FLOATING DOCK */}
-      <div
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] hidden md:block"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <div
-          className={`glass-panel border border-white/10 dark:border-white/5 shadow-2xl rounded-full px-5 py-3 flex items-center gap-4 transition-all duration-500 ease-in-out backdrop-blur-2xl bg-slate-950/85 text-white ${
-            isHovered ? "max-w-[95vw] scale-100 opacity-100" : "max-w-[280px] scale-95 opacity-90"
-          }`}
-          style={{
-            boxShadow: isHovered
-              ? "0 25px 50px -12px rgba(56, 189, 248, 0.25), 0px 0px 15px rgba(249, 115, 22, 0.15)"
-              : "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
-          }}
-        >
-          <AnimatePresence mode="wait">
-            {!isHovered ? (
-              // Collapsed/Subtle Pill State
-              <motion.div
-                key="collapsed"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3 }}
-                className="flex items-center gap-3 select-none"
-              >
-                <div className="relative">
-                  <SeorchableLogo className="w-8 h-8" glow={true} />
-                </div>
-                <div className="flex flex-col text-start">
-                  <span className="text-[11px] font-black tracking-wider text-[var(--sky-blue-500)] uppercase font-display">
-                    {isFa ? "منوی هوشمند ناوبری" : "SMART NAVIGATION"}
-                  </span>
-                  <span className="text-[9px] text-slate-400 font-medium font-mono">
-                    {isFa ? "برای نمایش نگه دارید" : "Hover to Expand"}
-                  </span>
-                </div>
-              </motion.div>
-            ) : (
-              // Expanded Horizontal State
-              <motion.div
-                key="expanded"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.4 }}
-                className="flex items-center gap-5"
-                dir={isFa ? "rtl" : "ltr"}
-              >
-                {/* Logo and Brand */}
-                <div className="flex items-center gap-2 px-1 border-r border-white/10 rtl:border-r-0 rtl:border-l pl-3 rtl:pl-0 rtl:pr-3 shrink-0">
-                  <SeorchableLogo className="w-7 h-7" glow={false} />
-                  <span className="text-[11px] font-black bg-gradient-to-r from-[var(--sky-blue-500)] to-[var(--orange-500)] bg-clip-text text-transparent font-display">
-                    {isFa ? "سئورچبل" : "Seorchable"}
-                  </span>
-                </div>
-
-                {/* Horizontal Navigation Links */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {SIDEBAR_ITEMS.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = isItemActive(item.path);
-                    const label = isFa ? item.labelFa : item.labelEn;
-
-                    return (
-                      <Link
-                        key={item.path}
-                        href={getLocalizedHref(item.path)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 border ${
-                          isActive
-                            ? "bg-gradient-to-r from-[var(--sky-blue-500)]/20 to-[var(--orange-500)]/10 text-white border-[var(--sky-blue-500)]/40 font-black shadow-inner"
-                            : "text-slate-300 hover:bg-white/10 hover:text-white border-transparent"
-                        }`}
-                      >
-                        <Icon
-                          className={`w-4 h-4 shrink-0 transition-transform duration-300 ${
-                            isActive ? "text-[var(--sky-blue-500)]" : "text-slate-400"
-                          }`}
-                        />
-                        <span className="whitespace-nowrap">{label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-6 bg-white/10 shrink-0" />
-
-                {/* Theme, Language and Invoice Controls right next to each other */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {/* Language */}
-                  <button
-                    onClick={() => setLanguage(language === "fa" ? "en" : "fa")}
-                    title={isFa ? "Switch to English" : "تغییر به فارسی"}
-                    className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer text-[10px] font-black flex items-center gap-0.5"
-                  >
-                    <Languages className="w-4 h-4 text-[var(--sky-blue-500)]" />
-                    <span>{isFa ? "EN" : "فا"}</span>
-                  </button>
-
-                  {/* Theme Toggle */}
-                  <button
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    title={isFa ? "تغییر پوسته" : "Toggle Theme"}
-                    className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                  >
-                    {theme === "dark" ? (
-                      <Sun className="w-4 h-4 text-[var(--orange-500)]" />
-                    ) : (
-                      <Moon className="w-4 h-4 text-[var(--orange-500)]" />
-                    )}
-                  </button>
-
-                  {/* Invoice */}
-                  <Link
-                    href={`/${language}/invoice`}
-                    title={isFa ? "پرداخت صورتحساب" : "Invoice Payment"}
-                    className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                  >
-                    <Receipt className="w-4 h-4 text-[var(--sky-blue-500)]" />
-                  </Link>
-
-                  {/* Logout */}
-                  <button
-                    onClick={async () => {
-                      await logout();
-                    }}
-                    title={isFa ? "خروج از سیستم" : "Sign Out"}
-                    className="p-1.5 rounded-full text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition-colors cursor-pointer"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+      {!isOpen && (
+        <div className="fixed bottom-6 left-1/2 z-[999] hidden -translate-x-1/2 md:block">
+          <button
+            ref={desktopTriggerRef}
+            type="button"
+            data-testid="desktop-dock-trigger"
+            aria-label={isFa ? "باز کردن دسترسی‌های سریع" : "Open quick actions"}
+            aria-expanded={false}
+            title={isFa ? "برای باز شدن مکث کنید یا کلیک کنید" : "Hover for one second or click to open"}
+            onMouseEnter={scheduleDesktopOpen}
+            onMouseLeave={clearHoverTimer}
+            onFocus={scheduleDesktopOpen}
+            onBlur={clearHoverTimer}
+            onClick={openDock}
+            className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-slate-950/85 text-slate-100 shadow-[0_16px_40px_rgba(2,6,23,0.42)] backdrop-blur-2xl transition-colors hover:border-sky-300/35 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80"
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* MOBILE TRIGGER IN THE CENTER BOTTOM OF THE PAGE */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] md:hidden">
-        <button
-          onClick={toggleMobileMenu}
-          className="px-6 py-3 rounded-full bg-gradient-to-r from-[var(--sky-blue-500)] to-[var(--orange-500)] text-white flex items-center gap-2 shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold text-xs"
-          style={{ boxShadow: "0 10px 30px rgba(56, 189, 248, 0.4)" }}
-        >
-          {isOpen ? (
-            <>
-              <X className="w-4 h-4" />
-              <span>{isFa ? "بستن منو" : "Close Menu"}</span>
-            </>
-          ) : (
-            <>
-              <Menu className="w-4 h-4" />
-              <span>{isFa ? "منوی ناوبری هوشمند" : "Smart Menu"}</span>
-            </>
+      {!isOpen && (
+        <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[999] md:hidden">
+          {isMobileArmed && (
+            <span
+              role="status"
+              aria-live="polite"
+              className="absolute bottom-full right-0 mb-3 whitespace-nowrap rounded-lg border border-white/10 bg-slate-950/95 px-3 py-2 text-xs font-medium text-white shadow-xl"
+            >
+              {isFa ? "دوباره ضربه بزنید" : "Tap again to open"}
+            </span>
           )}
-        </button>
-      </div>
+          <button
+            ref={mobileTriggerRef}
+            type="button"
+            data-testid="mobile-dock-trigger"
+            aria-label={
+              isFa
+                ? isMobileArmed
+                  ? "برای باز کردن، دوباره ضربه بزنید"
+                  : "فعال‌کردن دسترسی‌های سریع"
+                : isMobileArmed
+                  ? "Tap again to open quick actions"
+                  : "Activate quick actions"
+            }
+            aria-expanded={false}
+            onClick={handleMobileTrigger}
+            className={[
+              "flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-slate-950/90 text-white shadow-[0_12px_32px_rgba(2,6,23,0.38)] backdrop-blur-2xl transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80",
+              isMobileArmed ? "opacity-100 ring-2 ring-sky-300/50" : "opacity-35 hover:opacity-100",
+            ].join(" ")}
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
-      {/* MOBILE MENU OVERLAY CONTAINER */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[998] md:hidden" dir={isFa ? "rtl" : "ltr"}>
-            {/* Dark blur backdrop */}
+          <motion.div
+            ref={dockRef}
+            key="workspace-quick-action-dock"
+            data-testid="workspace-quick-action-dock"
+            dir={isFa ? "rtl" : "ltr"}
+            className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 left-auto z-[999] max-w-[calc(100vw-2rem)] translate-x-0 md:bottom-6 md:right-auto md:left-1/2 md:-translate-x-1/2"
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+            transition={{ duration: reduceMotion ? 0 : 0.72, ease: [0.2, 0.85, 0.2, 1] }}
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="absolute inset-0 bg-slate-950/75 backdrop-blur-2xl"
-              onClick={toggleMobileMenu}
-            />
-
-            {/* Centered / Slide-up Content Sheet */}
-            <motion.div
-              initial={{ opacity: 0, y: "15%" }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: "15%" }}
-              transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
-              className="absolute bottom-24 left-4 right-4 glass-panel border border-white/10 rounded-3xl p-6 bg-slate-950/95 text-white shadow-2xl flex flex-col gap-4 max-h-[75vh] overflow-y-auto"
+              className="relative flex items-center gap-0.5 rounded-full border border-white/10 bg-slate-950/[0.88] p-1.5 text-white shadow-[0_18px_45px_rgba(2,6,23,0.46)] backdrop-blur-2xl"
+              animate={reduceMotion ? undefined : { y: [0, -2, 0] }}
+              transition={reduceMotion ? undefined : { duration: 7, repeat: Infinity, ease: "easeInOut" }}
             >
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <SeorchableLogo className="w-8 h-8" />
-                  <span className="text-sm font-black bg-gradient-to-r from-[var(--sky-blue-500)] to-[var(--orange-500)] bg-clip-text text-transparent font-display">
-                    {isFa ? "منوی ناوبری پیشرفته" : "Advanced Navigation Menu"}
-                  </span>
-                </div>
-                <button
-                  onClick={toggleMobileMenu}
-                  className="p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+              {QUICK_ACTIONS.map((item) => {
+                const Icon = item.icon;
+                const label = isFa ? item.labelFa : item.labelEn;
+                const isActive = isItemActive(item.path);
 
-              {/* Quick controls inside Mobile overlay */}
-              <div className="flex items-center justify-around py-2.5 bg-white/5 rounded-xl border border-white/5">
-                <button
-                  onClick={() => setLanguage(language === "fa" ? "en" : "fa")}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-white/10 text-slate-300 hover:text-white cursor-pointer"
-                >
-                  <Languages className="w-4 h-4 text-[var(--sky-blue-500)]" />
-                  <span>{isFa ? "English" : "فارسی"}</span>
-                </button>
-
-                <button
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-white/10 text-slate-300 hover:text-white cursor-pointer"
-                >
-                  {theme === "dark" ? (
-                    <Sun className="w-4 h-4 text-[var(--orange-500)]" />
-                  ) : (
-                    <Moon className="w-4 h-4 text-[var(--orange-500)]" />
-                  )}
-                  <span>{isFa ? "پوسته" : "Theme"}</span>
-                </button>
-
-                <Link
-                  href={`/${language}/invoice`}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-white/10 text-slate-300 hover:text-white cursor-pointer"
-                >
-                  <Receipt className="w-4 h-4 text-[var(--sky-blue-500)]" />
-                  <span>{isFa ? "صورتحساب" : "Invoice"}</span>
-                </Link>
-              </div>
-
-              {/* Mobile item list */}
-              <div className="flex flex-col gap-2">
-                {SIDEBAR_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = isItemActive(item.path);
-                  const label = isFa ? item.labelFa : item.labelEn;
-
-                  return (
-                    <Link
-                      key={item.path}
-                      href={getLocalizedHref(item.path)}
-                      onClick={() => setIsOpen(false)}
-                      className={`flex items-center gap-3.5 p-3.5 rounded-2xl transition-all duration-300 border ${
-                        isActive
-                          ? "bg-gradient-to-r from-[var(--sky-blue-500)]/20 to-[var(--orange-500)]/10 text-white border-[var(--sky-blue-500)]/40 font-black shadow-inner"
-                          : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
-                      }`}
+                return (
+                  <Link
+                    key={item.id}
+                    href={getLocalizedHref(item.path)}
+                    data-testid={"quick-action-" + item.id}
+                    aria-label={label}
+                    aria-current={isActive ? "page" : undefined}
+                    title={label}
+                    className={[
+                      "group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80",
+                      isActive
+                        ? "border-sky-300/35 bg-sky-300/15 text-sky-200"
+                        : "border-transparent text-slate-300 hover:border-white/10 hover:bg-white/10 hover:text-white",
+                    ].join(" ")}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    <span
+                      role="tooltip"
+                      className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-slate-900/95 px-2.5 py-1.5 text-[11px] font-medium text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
                     >
-                      <Icon
-                        className={`w-5 h-5 shrink-0 ${
-                          isActive ? "text-[var(--sky-blue-500)]" : "text-slate-400"
-                        }`}
-                      />
-                      <span className="text-sm">{label}</span>
-                    </Link>
-                  );
-                })}
+                      {label}
+                    </span>
+                  </Link>
+                );
+              })}
 
-                {/* Mobile Logout Button */}
-                <button
-                  onClick={async () => {
-                    setIsOpen(false);
-                    await logout();
-                  }}
-                  className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl transition-all duration-300 border text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 border-transparent cursor-pointer text-start"
+              <span className="mx-0.5 h-7 w-px shrink-0 bg-white/15" aria-hidden="true" />
+
+              <button
+                type="button"
+                data-testid="quick-action-logout"
+                aria-label={isFa ? "خروج از حساب کاربری" : "Sign out"}
+                title={isFa ? "خروج از حساب کاربری" : "Sign out"}
+                onClick={() => {
+                  setShowLogoutConfirmation(true);
+                  setLogoutError(null);
+                }}
+                className="group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-transparent text-rose-300 transition-colors hover:border-rose-300/15 hover:bg-rose-400/10 hover:text-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/80"
+              >
+                <LogOut className="h-5 w-5" aria-hidden="true" />
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-slate-900/95 px-2.5 py-1.5 text-[11px] font-medium text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
                 >
-                  <LogOut className="w-5 h-5 shrink-0 text-rose-400" />
-                  <span className="text-sm">{isFa ? "خروج از حساب کاربری" : "Logout of Account"}</span>
-                </button>
-              </div>
+                  {isFa ? "خروج از حساب کاربری" : "Sign out"}
+                </span>
+              </button>
 
-              {/* Branding Footer inside mobile drawer */}
-              <div className="pt-3 border-t border-white/10 text-center text-[10px] text-slate-500">
-                <span>{isFa ? "سئورچبل — seorchable.ir" : "seorchable.ir — Brand Premium"}</span>
-              </div>
+              <button
+                type="button"
+                aria-label={isFa ? "بستن دسترسی‌های سریع" : "Close quick actions"}
+                onClick={closeDock}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-transparent text-slate-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+
+              {showLogoutConfirmation && (
+                <div
+                  role="group"
+                  aria-label={isFa ? "تأیید خروج از حساب" : "Confirm sign out"}
+                  className="absolute bottom-full right-0 mb-3 w-[min(17rem,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-start shadow-2xl backdrop-blur-2xl"
+                >
+                  <p className="text-sm font-semibold text-white">
+                    {isFa ? "از حساب کاربری خارج می‌شوید؟" : "Sign out of your account?"}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">
+                    {isFa ? "برای جلوگیری از خروج تصادفی، این اقدام را تأیید کنید." : "Confirm to avoid signing out by mistake."}
+                  </p>
+                  {logoutError && <p role="alert" className="mt-2 text-xs text-rose-300">{logoutError}</p>}
+                  <div className="mt-3 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowLogoutConfirmation(false)}
+                      disabled={isLoggingOut}
+                      className="rounded-lg px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 disabled:opacity-50"
+                    >
+                      {isFa ? "انصراف" : "Cancel"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-200 hover:bg-rose-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/80 disabled:opacity-50"
+                    >
+                      {isLoggingOut ? null : <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                      {isLoggingOut
+                        ? isFa
+                          ? "در حال خروج..."
+                          : "Signing out..."
+                        : isFa
+                          ? "تأیید خروج"
+                          : "Sign out"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
