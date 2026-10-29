@@ -227,3 +227,159 @@
 - فارسی و انگلیسی برای تمام صفحات عمومی و داشبورد از نظر مسیر، title, description, direction، لینک مقصد و تم روشن/تاریک تست شده‌اند.
 
 **وضعیت این سند:** نتیجه ممیزی و پیشنهاد معماری است؛ هیچ route، sitemap، redirect یا UI در این شاخه پیاده‌سازی نشده است.
+
+
+---
+
+## 9. بازبینی تکمیلی بر اساس کد واقعی شاخه main
+
+- commit بررسی‌شده: `0a85219c90ccba91d0f796dc6cdd344d84b6e003`
+- تاریخ بازبینی تکمیلی: ۲۰۲۶-۱۰-۲۹
+- روش: بررسی درخت کامل مخزن، فایل‌های route، لایه locale، provider زبان/تم، هدر و فوتر، کاتالوگ مستندات، و اسناد معماری/نقشه راه.
+- محدودیت: این مرحله ممیزی ایستا است؛ کلیک واقعی در مرورگر، پاسخ HTTP همه URLها، و آزمون بصری تمام viewportها در این مرحله اجرا نشده است. مواردی که از کد قابل اثبات‌اند از فرضیه‌های نیازمند آزمون جدا شده‌اند.
+
+### 9.1 تأیید نقشه فعلی و وضعیت فنی SEO
+
+در commit بررسی‌شده، در مجموع **۵۸ فایل page در مسیر `src/app/[locale]`** وجود دارد: **۳۴ مسیر داشبورد** و **۲۴ مسیر غیرداشبورد**. این عدد تعداد فایل‌های page است؛ نه تعداد همه URLهای نهایی، چون localeها و پارامترهای پویا می‌توانند URLهای بیشتری ایجاد کنند.
+
+درخت کامل مخزن هیچ‌یک از این موارد را ندارد:
+- `src/app/sitemap.ts` یا route متناظر `sitemap.xml`
+- `src/app/robots.ts` یا فایل `robots.txt`
+- فایل مستقل اجرایی برای تولید canonical/hreflang سراسری
+
+بنابراین sitemap و robots اجرایی وجودشان در مخزن تأیید نمی‌شود؛ سند معماری موجود جایگزین route اجرایی نیست. فایل `src/proxy.ts` فقط برای مسیر دقیق `/` matcher دارد و آن را به `/fa` هدایت می‌کند؛ این proxy به‌خودی‌خود اعتبار locale را برای مسیرهای دیگر کنترل نمی‌کند.
+
+در صفحات عمومی زیر، export مستقل `metadata` یا `generateMetadata` پیدا نشد: صفحه خانه، Features، Solutions، Solutions/GEO، Solutions/AEO، Industries، Pricing، About، Contact، Resources، Blog و Privacy. metadata مشترک در `src/app/[locale]/layout.tsx` تعریف شده است و عنوان پیش‌فرض/description آن فارسی و ثابت است. در این لایه canonical، `alternates.languages`/hreflang یا سیاست robots تعریف نشده است. تنظیم `metadataBase` به‌تنهایی canonical صفحه تولید نمی‌کند. نتیجه عملی: metadata یکتا برای هر صفحه و هر زبان هنوز اثبات نشده است.
+
+### 9.2 ممیزی مقصدهای واقعی لینک‌ها
+
+| محل | مقصد فعلی | یافته | اقدام پیشنهادی |
+|---|---|---|---|
+| `LandingHeader`، CTA «Login» | `/[locale]/dashboard` | مسیر ورود مستقل `/[locale]/login` وجود دارد؛ برچسب Login با مقصد dashboard هم‌خوان نیست. | مقصد CTA به login تغییر کند؛ مسیر بازگشت بعد از ورود به‌صورت صریح حفظ شود. |
+| `LandingHeader`، «Pricing» | `/[locale]/#pricing` | anchor مربوط به `#pricing` در خانه وجود دارد، پس لینک فعلی از نظر anchor بی‌مقصد نیست؛ اما از route مستقل `/[locale]/pricing` عبور نمی‌کند. | یک رفتار canonical انتخاب شود: صفحه تعرفه یا بخش تعرفه خانه؛ navbar و footer یکسان عمل کنند. |
+| فوتر، پنج پیوند مستندات | `introduction-to-brandgraph`, `infrastructure-architecture`, `ai-pipeline-architecture`, `multi-tenant-isolation`, `knowledge-graph-design` | هیچ‌یک slug دقیق موجود در `DOCS_INDEX` نیست و هیچ‌یک از نام فایل‌های Markdown مخزن نیز با این نام‌ها (حتی با نادیده‌گرفتن حروف بزرگ/کوچک) تطبیق ندارد. route مستندات محتوای فایل را با نام دقیق `${slug}.md` می‌یابد؛ در نتیجه این مقصدها به احتمال بسیار بالا و بر مبنای resolver فعلی خطای 404 می‌دهند. | پیوندها باید از registry واقعی مستندات تولید و در آزمون build اعتبارسنجی شوند؛ slug را دستی حدس نزنید. |
+| فوتر، «Prompt Monitoring» | `/[locale]/dashboard` | مقصد کلی داشبورد است، نه ابزار مشخص؛ مسیرهایی مرتبط مانند `/dashboard/query` وجود دارد، اما معادل بودن معنایی باید تأیید شود. | مقصد دقیق ابزار بعد از تثبیت تعریف قابلیت تعیین شود. |
+| فوتر، «AI Search Analytics» | `/[locale]/dashboard` | مقصد کلی است؛ `/dashboard/analytics/llm` و `/dashboard/analytics` وجود دارند. | به route تحلیلی canonical هدایت شود. |
+| فوتر، «Careers» | `/[locale]/about` | صفحه اختصاصی فرصت‌های شغلی وجود ندارد؛ برچسب، مقصد اختصاصی را القا می‌کند ولی آن را باز نمی‌کند. | یا بخش واقعی Careers به About اضافه شود یا لینک تا آماده‌شدن مقصد حذف/تغییر نام یابد. |
+| فوتر، «Case Studies» و «Industry Benchmarks» | `/[locale]/blog` | این برچسب‌ها به مقصد عمومی بلاگ می‌روند، نه مجموعه اختصاصی مطالعات موردی یا بنچ‌مارک. | فقط در صورت وجود محتوا/route واقعی صفحه اختصاصی بسازید؛ در غیر این صورت برچسب را به Blog/Insights تغییر دهید. |
+| فوتر، «Changelog & Roadmap» | `/[locale]/dashboard` | مقصد با معنی برچسب هم‌خوان نیست و صفحه roadmap عمومی در inventory وجود ندارد. | پیوند را حذف/تغییرنام دهید یا پس از آماده‌شدن محتوای واقعی، مقصد مشخص ایجاد کنید. |
+| فوتر، «Terms of Service» و «Compliance Stand» | `/[locale]/privacy` | هر دو به همان صفحه «حفاظت از داده/حریم خصوصی» می‌روند؛ route یا بخش مشخص برای شرایط استفاده/Compliance اثبات نشده است. | ساختار حقوقی و محتوای معتبر تعیین شود؛ هیچ صفحه حقوقی خالی یا متن ساختگی اضافه نشود. |
+| فوتر، «Enterprise Solutions» | `/[locale]/contact` | راهکار سازمانی صفحه معرفی مستقل ندارد؛ لینک به فرم/صفحه تماس هدایت می‌کند. | تا زمان ایجاد صفحه محصول سازمانی، برچسب به «تماس برای خدمات سازمانی» تغییر کند؛ صفحه جدید فقط با محتوای اثبات‌پذیر ساخته شود. |
+
+همچنین فوتر برای «Official SDK Library» و «Webhooks Stream» به مقصدهای مستندات نامنطبق اشاره می‌کند. پیوندهای بیرونی LinkedIn و X/Telegram در حال حاضر به دامنه‌های عمومی `linkedin.com` و `t.me` می‌روند، نه URL حساب رسمی برند؛ بنابراین نباید آنها را کانال تأییدشده برند معرفی کرد. در متن فوتر، عبارت `BrandGraph / seorchable.ir` نیز با نام غالب برند `Seorchable` یک‌دست نیست. عبارت اطمینان‌بخش «Enterprise System Channels Secure» بهتر است فقط در صورت وجود شواهد فنی قابل ارائه منتشر شود.
+
+### 9.3 پورتال مستندات: شناسه‌های تکراری و resolver حساس به نام فایل
+
+بررسی `src/lib/docsIndex.ts` تعداد **۴۹ ورودی ولی فقط ۴۶ slug یکتا** را نشان می‌دهد:
+- `product` دو بار تکرار شده است.
+- `architecture` سه بار تکرار شده است.
+
+صفحه جزئیات از `DOCS_INDEX.find((topic) => topic.slug === slug)` استفاده می‌کند؛ بنابراین slug تکراری metadata اولین مورد را انتخاب می‌کند، در حالی که API متن مستند را با جست‌وجوی فایل `${slug}.md` پیدا می‌کند. این دو lookup ممکن است title/category و محتوای صفحه را ناهم‌خوان کنند. API مستندات همچنین پوشه `docs/project` را عمداً از جست‌وجوی فایل مستثنا می‌کند. مسیرهای مستندات باید از یک registry یکتا و canonical ساخته شوند؛ slug باید یکتا باشد و resolver همان شناسه را برای metadata و content به‌کار ببرد.
+
+### 9.4 زبان، جهت و تم
+
+- در `src/app/[locale]/layout.tsx` ویژگی‌های HTML اولیه از URL می‌آیند: `lang={locale}` و `dir={locale === "fa" ? "rtl" : "ltr"}`.
+- در `ThemeProvider`، مقدار ذخیره‌شده `localStorage.language` پس از mount بر `initialLanguage` غلبه می‌کند. صفحه خانه متن را از locale مسیر می‌گیرد، در حالی که `LandingHeader` زبان را از `useTheme()` می‌خواند. بنابراین locale ذخیره‌شده می‌تواند عنوان/محتوای خانه و منو را ناهم‌زبان کند؛ مقدار اولیه `lang/dir` سند نیز با مقدار ذخیره‌شده تغییر می‌کند.
+- صفحه Pricing، برخلاف صفحات عمومی اصلی بررسی‌شده، `LandingHeader` و `LandingFooter` را import نمی‌کند؛ همچنین رشته‌های آن از `useTheme().language` مشتق می‌شوند، نه مستقیم از locale URL. این صفحه در حال حاضر shell عمومی یکسانی با خانه و صفحه Features ندارد و در معرض همان ناهماهنگی locale است.
+- صفحه مستندات از رنگ‌ها و سطوحی مانند `text-white`، `bg-slate-900` و `text-slate-300` به‌صورت ثابت استفاده می‌کند. سازگاری واقعی آن با تم روشن باید در آزمون بصری بررسی شود؛ بر اساس کد، تبعیت کامل آن از توکن‌های تم اثبات نشده است.
+- کد خانه برای داشبوردهای نمایشی از عبارت `Mock Dashboard visualizations` استفاده می‌کند. شاخص‌ها، نمودارها و ادعاهای «real-time/live» یا هر ادعای تضمینی باید یا به منبع واقعی و قابل راستی‌آزمایی متصل شوند، یا به‌وضوح به‌عنوان نمونه/دمو برچسب بخورند. صرف نمایش تصویری، پیاده‌سازی عملیاتی را ثابت نمی‌کند.
+
+این یافته‌ها در این مرحله فقط ثبت شده‌اند؛ زبان‌گردانی یا PR شماره ۹۸ در این شاخه اصلاح نمی‌شود.
+
+### 9.5 ناسازگاری‌های سند معماری route با کد و نقشه راه
+
+سند `docs/architecture/SITEMAP_AND_ROUTE_SPECIFICATION.md` مفید است، اما پیش از تبدیل‌شدن به منبع قابل‌اجرای route registry باید با کد و نقشه راه واقعی reconcile شود:
+
+1. این سند مسیر اسناد منبع را `docs/roadmap/...` معرفی می‌کند، در حالی که مسیر واقعی آنها در مخزن `docs/project/roadmap/...` است. نسخه فعلی `docs/project/tasks/TASK13.0.md` الزام می‌کند route، محتوا، locale، SEO و همه مقصدهای منو از وضعیت واقعی مخزن بررسی شوند.
+2. یک بخش از سند locale را به‌صورت `/[locale]/en` و `/[locale]/fa` توصیف می‌کند، اما ساختار واقعی `src/app/[locale]` و proxy از URLهایی مانند `/en` و `/fa` پشتیبانی می‌کنند؛ شکل nesting در عبارت فوق نادرست است.
+3. ماتریس سند مسیر `/[locale]/dashboard/audit` را EXISTING می‌نامد، اما در درخت route فایل `dashboard/audit/page.tsx` وجود ندارد؛ فقط `audit/free` و `audit/premium` وجود دارند.
+4. سند `/dashboard/ingestion` را canonical می‌داند، ولی `src/config/dashboardNavigation.ts` مقصد `/dashboard/content/ingestion` را عرضه می‌کند و هر دو route در درخت موجودند. قبل از هر redirect باید تصمیم canonical روشن و همه منوها/لینک‌ها با همان تصمیم هماهنگ شوند.
+5. سند `/dashboard/graph` را به `/dashboard/entities` هدایت می‌کند، اما منوی داشبورد به `/dashboard/entities/graph` اشاره می‌کند. این تفاوت باید به‌صورت تصمیم route ثبت شود، نه با redirect حدسی.
+6. سند فعلی `/[locale]/settings` را legacy و هدف را `/[locale]/profile` می‌داند، در حالی که route `/settings` واقعی و مستقل است و `/dashboard/settings` نیز تنظیمات workspace را دارد. نقش personal settings در برابر workspace settings باید روشن شود.
+7. سند موجود یک «Read-Only Planning Blueprint» است، نه اثبات اجرای redirect یا route. وجود توصیه در سند به معنی اجرای آن در `next.config.ts` یا `src/proxy.ts` نیست.
+
+**قاعده توقف:** تا زمانی که اختلاف‌های canonical بالا به یک ماتریس route واحد تبدیل نشده‌اند، پیاده‌سازی redirect دائمی، حذف route یا درج routeهای هدف در sitemap موتور جست‌وجو انجام نشود.
+
+### 9.6 دیاگرام پیشنهادی معماری اطلاعات
+
+در نمودار زیر `/[locale]` به یکی از دو locale موجود، یعنی `/fa` یا `/en` اشاره دارد. شاخه‌های «Target» پیشنهاد معماری‌اند و نباید تا زمان تأیید، محتوای معتبر و پیاده‌سازی واقعی به‌عنوان route موجود یا مقصد عملیاتی لینک شوند.
+
+```mermaid
+flowchart TD
+    ROOT["/"] --> DEFAULT["/fa (redirect فعلی)"]
+    DEFAULT --> LOCALE["Locale prefix: /fa یا /en"]
+
+    LOCALE --> PUBLIC["Public marketing — index candidate"]
+    PUBLIC --> HOME["/ — Home"]
+    PUBLIC --> FEATURES["/features"]
+    PUBLIC --> SOLUTIONS["/solutions"]
+    SOLUTIONS --> AEO["/solutions/aeo"]
+    SOLUTIONS --> GEO["/solutions/geo"]
+    SOLUTIONS --> PROTECT["/solutions/protection"]
+    SOLUTIONS --> RADAR["/solutions/radar"]
+    PUBLIC --> INDUSTRIES["/industries"]
+    PUBLIC --> PRICING["/pricing"]
+    PUBLIC --> RESOURCES["/resources"]
+    PUBLIC --> BLOG["/blog"]
+    PUBLIC --> DOCS["/docs"]
+    DOCS --> DOCDETAIL["/docs/[slug] — valid unique slugs only"]
+    PUBLIC --> ABOUT["/about"]
+    PUBLIC --> CONTACT["/contact"]
+    PUBLIC --> PRIVACY["/privacy — current combined legal page"]
+
+    LOCALE --> ACCESS["Authentication and account — noindex/access policy"]
+    ACCESS --> LOGIN["/login"]
+    ACCESS --> REGISTER["/register"]
+    ACCESS --> RESET["/forgot-password"]
+    ACCESS --> VERIFY["/verify-email"]
+    ACCESS --> PROFILE["/profile"]
+    ACCESS --> SETTINGS["/settings — canonical decision required"]
+    ACCESS --> INVOICE["/invoice — verify access/noindex"]
+    ACCESS --> TOKENS["/design-system/tokens — exclude from public sitemap"]
+
+    LOCALE --> WORKSPACE["Authenticated workspace — noindex"]
+    WORKSPACE --> DASH["/dashboard"]
+    DASH --> CATALOG["/dashboard/services"]
+    DASH --> AUDITS["/dashboard/audits and /dashboard/audits/[id]"]
+    DASH --> SEO["SEO: /dashboard/seo/technical, /dashboard/seo/schema"]
+    DASH --> AEOAPP["AEO: /dashboard/aeo/audits, /content, /playground"]
+    DASH --> ANALYTICS["Analytics: /dashboard/analytics, /analytics/llm, /analytics/llm-bias"]
+    DASH --> COMPETE["Competitive: /dashboard/competitive, /dashboard/competitors/radar"]
+    DASH --> CONTENT["Content: /dashboard/content, /content/studio, /content/ingestion"]
+    DASH --> KNOWLEDGE["Knowledge: /dashboard/entities, /entities/graph, /query, /intelligence"]
+    DASH --> ADMIN["Reports, billing and workspace settings"]
+
+    LOCALE -. "Target; add only with approved content/evidence" .-> TARGET["Product / Enterprise / Demo"]
+    TARGET --> LLM["/product/llm-infrastructure"]
+    TARGET --> AITOOLS["/product/ai-tooling"]
+    TARGET --> APIS["/product/api-platform"]
+    TARGET --> ENTERPRISE["/enterprise"]
+    TARGET --> DEMO["/demo"]
+    TARGET --> TWIN["Dashboard targets: DBT, DTGA, plans/executions"]
+
+    LOCALE --> DISCOVERY["Search-engine discovery — not implemented"]
+    DISCOVERY --> XML["/sitemap.xml — target"]
+    DISCOVERY --> ROBOTS["/robots.txt — target"]
+```
+
+### 9.7 سیاست پیشنهادی برای XML sitemap و indexability
+
+1. sitemap فقط از route registry canonical ساخته شود؛ پیمایش دستی یا فهرست مستقل در چند فایل منبع حقیقت ایجاد نکند.
+2. در شروع، فقط صفحات عمومی موجود با محتوای اصیل و metadata اختصاصی نامزد index هستند: خانه، Features، Solutions و زیرصفحات واقعی آن، Industries، Pricing، About، Contact، Resources، Blog، صفحه مستندات و فقط slugهای مستندات معتبر. `/privacy` نیز فقط با محتوای حقوقی کامل و نهایی وارد شود.
+3. `/[locale]/dashboard/*`، ورود/ثبت‌نام/بازیابی رمز/تأیید ایمیل، پروفایل، تنظیمات، invoice، صفحات ابزار داخلی و design tokens در XML sitemap عمومی قرار نگیرند. عدم حضور در sitemap به‌تنهایی جایگزین کنترل دسترسی یا `noindex` نیست.
+4. برای هر صفحه عمومی ترجمه‌شده، title، description، canonical و hreflang باید از URL و locale واقعی مشتق شوند. `hreflang` فقط برای ترجمه متناظر واقعی درج شود؛ زبان فارسی یا انگلیسی صرفاً به دلیل وجود دو URL برای تمام صفحات قابل فرض نیست.
+5. URLهای alias/redirect، پارامترهای غیرمحتوایی و صفحات Planned/Thin در sitemap وارد نشوند. صفحه «در حال توسعه» تنها وقتی indexable می‌شود که محتوای واقعاً مفید، metadata درست و وضعیت محصول صادقانه داشته باشد.
+6. تا زمان تعیین canonical برای `/dashboard/ingestion`، `/dashboard/content/ingestion`، `/dashboard/graph`، `/dashboard/entities/graph` و `/settings`، این تصمیم‌ها در route registry با وضعیت `BLOCKED — CANONICAL DECISION REQUIRED` ثبت شوند.
+
+### 9.8 ترتیب اقدام پس از تکمیل ممیزی
+
+| اولویت | اقدام | دلیل |
+|---|---|---|
+| P0 | اصلاح مقصدهای لینک موجود و پنج slug شکسته مستندات؛ رفع slugهای تکراری | لینک‌های داخلی و محتوای مستندات مقصد معتبر ندارند. |
+| P0 | توافق بر یک ماتریس canonical و legacy که با نقشه راه و منوها سازگار باشد | جلوگیری از redirect نادرست، حلقه redirect یا دو نسخه قابل ایندکس. |
+| P1 | ساخت route registry یکتا شامل path، locale، title، description، status، auth/noindex، canonical و link target | منو، فوتر، مستندات، کاتالوگ و sitemap باید از یک داده مشترک مشتق شوند. |
+| P1 | تکمیل metadata اختصاصی، canonical، locale alternates، robots و XML sitemap؛ همراه آزمون URL/locale | metadata فعلی در سطح layout عمومی و ثابت است. |
+| P1 | همسان‌سازی locale URL با `ThemeProvider` و اطمینان از shell مشترک صفحات عمومی | جلوگیری از ناهم‌خوانی زبان و مقصد CTAها؛ اجرای اصلاح مربوط به PR #98 خارج از این شاخه می‌ماند. |
+| P2 | افزودن صفحات معرفی Product/Enterprise/Demo یا ابزارهای DBT/DTGA فقط پس از تأیید دامنه و وجود محتوای واقعی | جلوگیری از مقصد ساختگی و ادعاهای محصولی بدون مدرک. |
+
+**وضعیت اجرایی Part One:** این شاخه فقط گزارش ممیزی را تکمیل می‌کند. هیچ route برنامه، metadata، proxy، redirect، فایل sitemap/robots، UI یا رفتار PR #98 در این مرحله تغییر نکرده است. مرحله بعدی تا بسته‌شدن و ارائه نتیجه همین ممیزی آغاز نمی‌شود.
