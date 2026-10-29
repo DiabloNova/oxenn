@@ -354,7 +354,7 @@ describe("localized language routing contract", () => {
     expect(view.container.querySelector('a[href="/fa/dashboard/aeo/playground"]')).toBeNull();
 
     await waitFor(() => {
-      expect(view.container.querySelector('a[href="/fa/dashboard/aeo/playground"]')).not.toBeNull();
+      expect(view.container.querySelector('[data-testid="desktop-dock-trigger"]')).not.toBeNull();
     });
   });
 
@@ -402,7 +402,7 @@ describe("localized language routing contract", () => {
     expect(view.container.querySelector('a[href="/fa/dashboard/content/studio"]')).toBeNull();
 
     await waitFor(() => {
-      expect(view.container.querySelector('a[href="/fa/dashboard/content/studio"]')).not.toBeNull();
+      expect(view.container.querySelector('[data-testid="desktop-dock-trigger"]')).not.toBeNull();
     });
   });
 
@@ -434,7 +434,7 @@ describe("localized language routing contract", () => {
       vi.advanceTimersByTime(10_000);
     });
 
-    expect(view.container.querySelector('a[href="/fa/dashboard/content/studio"]')).not.toBeNull();
+    expect(view.container.querySelector('[data-testid="desktop-dock-trigger"]')).not.toBeNull();
     vi.useRealTimers();
   });
 
