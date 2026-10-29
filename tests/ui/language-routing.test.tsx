@@ -534,4 +534,76 @@ describe("localized language routing contract", () => {
     expect(screen.getByRole("button", { name: "تأیید خروج" })).toBeInTheDocument();
   });
 
+
+  it("cancels desktop opening when the pointer leaves before the one-second delay", () => {
+    vi.useFakeTimers();
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    const trigger = screen.getByTestId("desktop-dock-trigger");
+    fireEvent.mouseEnter(trigger);
+    act(() => {
+      vi.advanceTimersByTime(999);
+    });
+    fireEvent.mouseLeave(trigger);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+
+    expect(screen.queryByTestId("workspace-quick-action-dock")).toBeNull();
+    expect(screen.getByTestId("desktop-dock-trigger")).toBeInTheDocument();
+  });
+
+  it("closes the expanded dock on Escape and outside pointer interaction", () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    expect(screen.getByTestId("quick-action-playground")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByTestId("workspace-quick-action-dock")).toBeNull();
+    expect(screen.getByTestId("desktop-dock-trigger")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    expect(screen.getByTestId("quick-action-playground")).toBeInTheDocument();
+
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByTestId("workspace-quick-action-dock")).toBeNull();
+    expect(screen.getByTestId("desktop-dock-trigger")).toBeInTheDocument();
+  });
+
+  it("keeps quick-action destinations localized on English workspace routes", () => {
+    navigation.pathname = "/en/dashboard/aeo/playground";
+    setBrowserUrl("/en/dashboard/aeo/playground");
+
+    render(
+      <ThemeProvider initialLanguage="en">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+
+    expect(screen.getByTestId("quick-action-playground")).toHaveAttribute(
+      "href",
+      "/en/dashboard/aeo/playground"
+    );
+    expect(screen.getByTestId("quick-action-playground")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByTestId("quick-action-analytics")).toHaveAttribute(
+      "href",
+      "/en/dashboard/analytics/llm-bias"
+    );
+    expect(screen.getByTestId("quick-action-content")).toHaveAttribute(
+      "href",
+      "/en/dashboard/content/studio"
+    );
+  });
+
 });
