@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -86,7 +86,7 @@ export default function FloatingSidebar() {
   const [isHovered, setIsHovered] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [navigationFromPath, setNavigationFromPath] = useState<string | null>(null);
-  const [settlePath, setSettlePath] = useState<string | null>(null);
+  const hasObservedPathChangeRef = useRef(false);
 
   useEffect(() => {
     let recoveryTimer: number | undefined;
@@ -102,7 +102,7 @@ export default function FloatingSidebar() {
       const sourcePath = pathname ?? null;
       setNavigationFromPath(sourcePath);
       // A new transition supersedes any previous settle window.
-      setSettlePath(null);
+      hasObservedPathChangeRef.current = false;
       clearRecoveryTimer();
 
       // If a client-side navigation fails without changing pathname, recover the
@@ -149,7 +149,7 @@ export default function FloatingSidebar() {
       if (pathname && window.location.pathname === pathname) {
         clearRecoveryTimer();
         setNavigationFromPath(null);
-        setSettlePath(null);
+        hasObservedPathChangeRef.current = false;
       }
     };
 
@@ -165,30 +165,28 @@ export default function FloatingSidebar() {
     };
   }, [pathname]);
 
-  // Track that a pathname change occurred independently of the current path.
-  // If the user immediately returns to the source path, the settle window must
-  // still expire instead of leaving navigationFromPath stuck at that source.
+  // Track the first observed pathname change without setting React state from
+  // an Effect. The ref survives a quick return to the source path, allowing the
+  // settle timer to finish instead of leaving the dock hidden indefinitely.
   useEffect(() => {
-    if (navigationFromPath === null || pathname === null || navigationFromPath === pathname) {
-      return;
+    if (navigationFromPath === null || pathname === null) return;
+
+    if (pathname !== navigationFromPath) {
+      hasObservedPathChangeRef.current = true;
     }
 
-    setSettlePath(pathname);
-  }, [pathname, navigationFromPath]);
+    if (!hasObservedPathChangeRef.current) return;
 
-  // Keep the dock hidden briefly after the observed pathname change so it does
-  // not overlay the destination's loading/transition frame. A subsequent path
-  // change restarts the window; a return to the source path still settles.
-  useEffect(() => {
-    if (settlePath === null) return;
-
+    // Keep the dock hidden briefly after a route change so it does not overlay
+    // the destination's loading frame. Every subsequent pathname change restarts
+    // this window, including a rapid return to the original path.
     const settleTimer = window.setTimeout(() => {
       setNavigationFromPath(null);
-      setSettlePath(null);
+      hasObservedPathChangeRef.current = false;
     }, 300);
 
     return () => window.clearTimeout(settleTimer);
-  }, [settlePath, pathname]);
+  }, [navigationFromPath, pathname]);
 
   // Match only supported locale-prefixed workspace routes. Segment-aware
   // matching avoids rendering the dock on unrelated paths containing these words.
