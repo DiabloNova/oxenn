@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -62,39 +62,39 @@ export default function FloatingSidebar() {
   const mobileActivationTimerRef = useRef<number | undefined>(undefined);
   const hasObservedPathChangeRef = useRef(false);
 
-  const clearHoverTimer = () => {
+  const clearHoverTimer = useCallback(() => {
     if (hoverTimerRef.current !== undefined) {
       window.clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = undefined;
     }
-  };
+  }, []);
 
-  const clearMobileActivationTimer = () => {
+  const clearMobileActivationTimer = useCallback(() => {
     if (mobileActivationTimerRef.current !== undefined) {
       window.clearTimeout(mobileActivationTimerRef.current);
       mobileActivationTimerRef.current = undefined;
     }
-  };
+  }, []);
 
-  const openDock = () => {
+  const openDock = useCallback(() => {
     clearHoverTimer();
     clearMobileActivationTimer();
     setIsOpen(true);
     setIsMobileArmed(false);
     setShowLogoutConfirmation(false);
     setLogoutError(null);
-  };
+  }, [clearHoverTimer, clearMobileActivationTimer]);
 
-  const closeDock = () => {
+  const closeDock = useCallback(() => {
     clearHoverTimer();
     clearMobileActivationTimer();
     setIsOpen(false);
     setIsMobileArmed(false);
     setShowLogoutConfirmation(false);
     setLogoutError(null);
-  };
+  }, [clearHoverTimer, clearMobileActivationTimer]);
 
-  const scheduleDesktopOpen = () => {
+  const scheduleDesktopOpen = useCallback(() => {
     clearHoverTimer();
     hoverTimerRef.current = window.setTimeout(() => {
       hoverTimerRef.current = undefined;
@@ -103,9 +103,9 @@ export default function FloatingSidebar() {
       setShowLogoutConfirmation(false);
       setLogoutError(null);
     }, 1_000);
-  };
+  }, [clearHoverTimer]);
 
-  const handleMobileTrigger = () => {
+  const handleMobileTrigger = useCallback(() => {
     if (isMobileArmed) {
       openDock();
       return;
@@ -117,7 +117,7 @@ export default function FloatingSidebar() {
       mobileActivationTimerRef.current = undefined;
       setIsMobileArmed(false);
     }, 3_000);
-  };
+  }, [isMobileArmed, clearMobileActivationTimer, openDock]);
 
   const getLocalizedHref = (path: string) => "/" + language + path;
 
@@ -207,7 +207,7 @@ export default function FloatingSidebar() {
       document.removeEventListener("click", handleInternalLinkClick, true);
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [pathname]);
+  }, [pathname, clearHoverTimer, clearMobileActivationTimer]);
 
   useEffect(() => {
     if (navigationFromPath === null || pathname === null) return;
@@ -258,7 +258,7 @@ export default function FloatingSidebar() {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("pointerdown", handleOutsidePointerDown);
     };
-  }, [isOpen, isMobileArmed]);
+  }, [isOpen, isMobileArmed, closeDock]);
 
   const isWorkspace = /^\/(?:fa|en)\/(?:dashboard|settings|profile)(?:\/|$)/.test(
     pathname ?? ""
