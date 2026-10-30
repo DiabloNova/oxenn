@@ -702,7 +702,7 @@ describe("localized language routing contract", () => {
     expect(document.activeElement).not.toBe(screen.getByTestId("desktop-dock-trigger"));
   });
 
-  it("keeps the mobile logout confirmation opposite the global navigation controls", () => {
+  it("portals the mobile logout confirmation outside the transformed dock and keeps its actions interactive", () => {
     render(
       <ThemeProvider initialLanguage="fa">
         <>
@@ -716,9 +716,19 @@ describe("localized language routing contract", () => {
     fireEvent.click(screen.getByTestId("mobile-dock-trigger"));
     fireEvent.click(screen.getByTestId("quick-action-logout"));
 
+    const dock = screen.getByTestId("workspace-quick-action-dock");
+    const confirmation = screen.getByTestId("logout-confirmation");
+
+    expect(confirmation.parentElement).toBe(document.body);
+    expect(dock.contains(confirmation)).toBe(false);
+    expect(confirmation.className).toContain("fixed");
     expect(screen.getByTestId("global-navigation-controls").className).toContain("left-6");
-    expect(screen.getByTestId("logout-confirmation").className).toContain("right-4");
-    expect(screen.getByTestId("logout-confirmation").className).toContain("w-[min(17rem,calc(100vw-6rem))]");
+    expect(confirmation.className).toContain("right-4");
+    expect(confirmation.className).toContain("w-[min(17rem,calc(100vw-6rem))]");
+
+    // A portaled confirmation remains an inside interaction, not an outside-pointer dismissal.
+    fireEvent.pointerDown(screen.getByRole("button", { name: "تأیید خروج" }));
+    expect(screen.getByTestId("workspace-quick-action-dock")).toBeInTheDocument();
   });
 
   it("keeps quick-action destinations localized on English workspace routes", () => {
