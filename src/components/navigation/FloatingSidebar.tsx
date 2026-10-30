@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NAVIGATION_START_EVENT } from "@/lib/navigation-transition";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
@@ -84,14 +85,118 @@ export default function FloatingSidebar() {
 
   const [isHovered, setIsHovered] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [navigationFromPath, setNavigationFromPath] = useState<string | null>(null);
+  const hasObservedPathChangeRef = useRef(false);
 
-  // Only render on workspace routes (dashboard, settings, profile) and never on main marketing page
-  const isWorkspace =
-    pathname?.includes("/dashboard") ||
-    pathname?.includes("/settings") ||
-    pathname?.includes("/profile");
+  useEffect(() => {
+    let recoveryTimer: number | undefined;
 
-  if (!isWorkspace) return null;
+    const clearRecoveryTimer = () => {
+      if (recoveryTimer !== undefined) {
+        window.clearTimeout(recoveryTimer);
+        recoveryTimer = undefined;
+      }
+    };
+
+    const handleNavigationStart = () => {
+      const sourcePath = pathname ?? null;
+      setNavigationFromPath(sourcePath);
+      // A new transition supersedes any previous settle window.
+      hasObservedPathChangeRef.current = false;
+      clearRecoveryTimer();
+
+      // If a client-side navigation fails without changing pathname, recover the
+      // dock after a bounded interval instead of leaving it hidden indefinitely.
+      recoveryTimer = window.setTimeout(() => {
+        setNavigationFromPath((pendingPath) =>
+          pendingPath === sourcePath ? null : pendingPath
+        );
+        recoveryTimer = undefined;
+      }, 10_000);
+    };
+
+    const handleInternalLinkClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const anchor = target.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+
+      try {
+        const destination = new URL(anchor.href, window.location.href);
+        if (destination.origin === window.location.origin && destination.pathname !== window.location.pathname) {
+          handleNavigationStart();
+        }
+      } catch {
+        // Ignore malformed or non-navigation link targets.
+      }
+    };
+
+    const handlePopState = () => {
+      // Back/forward may change only query/hash state; do not leave the dock hidden
+      // when the pathname itself did not change.
+      if (pathname && window.location.pathname === pathname) {
+        clearRecoveryTimer();
+        setNavigationFromPath(null);
+        hasObservedPathChangeRef.current = false;
+      }
+    };
+
+    window.addEventListener(NAVIGATION_START_EVENT, handleNavigationStart);
+    document.addEventListener("click", handleInternalLinkClick, true);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      clearRecoveryTimer();
+      window.removeEventListener(NAVIGATION_START_EVENT, handleNavigationStart);
+      document.removeEventListener("click", handleInternalLinkClick, true);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [pathname]);
+
+  // Track the first observed pathname change without setting React state from
+  // an Effect. The ref survives a quick return to the source path, allowing the
+  // settle timer to finish instead of leaving the dock hidden indefinitely.
+  useEffect(() => {
+    if (navigationFromPath === null || pathname === null) return;
+
+    if (pathname !== navigationFromPath) {
+      hasObservedPathChangeRef.current = true;
+    }
+
+    if (!hasObservedPathChangeRef.current) return;
+
+    // Keep the dock hidden briefly after a route change so it does not overlay
+    // the destination's loading frame. Every subsequent pathname change restarts
+    // this window, including a rapid return to the original path.
+    const settleTimer = window.setTimeout(() => {
+      setNavigationFromPath(null);
+      hasObservedPathChangeRef.current = false;
+    }, 300);
+
+    return () => window.clearTimeout(settleTimer);
+  }, [navigationFromPath, pathname]);
+
+  // Match only supported locale-prefixed workspace routes. Segment-aware
+  // matching avoids rendering the dock on unrelated paths containing these words.
+  const isWorkspace = /^\/(?:fa|en)\/(?:dashboard|settings|profile)(?:\/|$)/.test(
+    pathname ?? ""
+  );
+
+  const isNavigationPending = navigationFromPath !== null;
+
+  if (!isWorkspace || isNavigationPending) return null;
 
   const getLocalizedHref = (path: string) => {
     return `/${language}${path === "/" ? "" : path}`;

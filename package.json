@@ -92,7 +92,8 @@
       "brace-expansion@5": "^5.0.12",
       "undici@7": ">=7.29.1 <8",
       "@mendable/firecrawl-js>zod": "4.6.7",
-      "firecrawl>zod": "4.6.7"
+      "firecrawl>zod": "4.6.7",
+      "systeminformation": "5.33.16"
     }
   }
 }
