@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -54,8 +55,10 @@ export default function FloatingSidebar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [navigationFromPath, setNavigationFromPath] = useState<string | null>(null);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
   const dockRef = useRef<HTMLDivElement | null>(null);
+  const logoutConfirmationRef = useRef<HTMLDivElement | null>(null);
   const desktopTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mobileTriggerRef = useRef<HTMLButtonElement | null>(null);
   const focusDockOnOpenRef = useRef(false);
@@ -63,6 +66,10 @@ export default function FloatingSidebar() {
   const hoverTimerRef = useRef<number | undefined>(undefined);
   const mobileActivationTimerRef = useRef<number | undefined>(undefined);
   const hasObservedPathChangeRef = useRef(false);
+
+  useEffect(() => {
+    setPortalRoot(document.body);
+  }, []);
 
   const clearHoverTimer = useCallback(() => {
     if (hoverTimerRef.current !== undefined) {
@@ -268,6 +275,7 @@ export default function FloatingSidebar() {
 
       if (
         dockRef.current?.contains(target) ||
+        logoutConfirmationRef.current?.contains(target) ||
         desktopTriggerRef.current?.contains(target) ||
         mobileTriggerRef.current?.contains(target)
       ) {
@@ -450,55 +458,58 @@ export default function FloatingSidebar() {
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
 
-              {showLogoutConfirmation && (
-                <div
-                  role="group"
-                  aria-label={isFa ? "تأیید خروج از حساب" : "Confirm sign out"}
-                  data-testid="logout-confirmation"
-                  className={[
-                    "fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[1000] w-[min(17rem,calc(100vw-6rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-start shadow-2xl backdrop-blur-2xl",
-                    isFa ? "right-4" : "left-4",
-                    "md:absolute md:bottom-full md:left-auto md:right-0 md:mb-3 md:w-[min(17rem,calc(100vw-2rem))]",
-                  ].join(" ")}
-                >
-                  <p className="text-sm font-semibold text-white">
-                    {isFa ? "از حساب کاربری خارج می‌شوید؟" : "Sign out of your account?"}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">
-                    {isFa ? "برای جلوگیری از خروج تصادفی، این اقدام را تأیید کنید." : "Confirm to avoid signing out by mistake."}
-                  </p>
-                  {logoutError && <p role="alert" className="mt-2 text-xs text-rose-300">{logoutError}</p>}
-                  <div className="mt-3 flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowLogoutConfirmation(false)}
-                      disabled={isLoggingOut}
-                      className="rounded-lg px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 disabled:opacity-50"
-                    >
-                      {isFa ? "انصراف" : "Cancel"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      disabled={isLoggingOut}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-200 hover:bg-rose-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/80 disabled:opacity-50"
-                    >
-                      {isLoggingOut ? null : <Check className="h-3.5 w-3.5" aria-hidden="true" />}
-                      {isLoggingOut
-                        ? isFa
-                          ? "در حال خروج..."
-                          : "Signing out..."
-                        : isFa
-                          ? "تأیید خروج"
-                          : "Sign out"}
-                    </button>
-                  </div>
-                </div>
-              )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+      {showLogoutConfirmation && portalRoot && createPortal(
+        <div
+          ref={logoutConfirmationRef}
+          role="group"
+          aria-label={isFa ? "تأیید خروج از حساب" : "Confirm sign out"}
+          data-testid="logout-confirmation"
+          className={[
+            "fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[1000] w-[min(17rem,calc(100vw-6rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-start shadow-2xl backdrop-blur-2xl",
+            isFa ? "right-4" : "left-4",
+            "md:bottom-[calc(5.75rem+env(safe-area-inset-bottom))] md:left-1/2 md:right-auto md:w-[min(17rem,calc(100vw-2rem))] md:-translate-x-1/2",
+          ].join(" ")}
+        >
+          <p className="text-sm font-semibold text-white">
+            {isFa ? "از حساب کاربری خارج می‌شوید؟" : "Sign out of your account?"}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">
+            {isFa ? "برای جلوگیری از خروج تصادفی، این اقدام را تأیید کنید." : "Confirm to avoid signing out by mistake."}
+          </p>
+          {logoutError && <p role="alert" className="mt-2 text-xs text-rose-300">{logoutError}</p>}
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowLogoutConfirmation(false)}
+              disabled={isLoggingOut}
+              className="rounded-lg px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 disabled:opacity-50"
+            >
+              {isFa ? "انصراف" : "Cancel"}
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-200 hover:bg-rose-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/80 disabled:opacity-50"
+            >
+              {isLoggingOut ? null : <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+              {isLoggingOut
+                ? isFa
+                  ? "در حال خروج..."
+                  : "Signing out..."
+                : isFa
+                  ? "تأیید خروج"
+                  : "Sign out"}
+            </button>
+          </div>
+        </div>,
+        portalRoot
+      )}
+      <div data-testid="logout-confirmation-portal" hidden={!showLogoutConfirmation || !portalRoot} />
     </>
   );
 }
