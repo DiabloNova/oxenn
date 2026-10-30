@@ -55,7 +55,6 @@ export default function FloatingSidebar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [navigationFromPath, setNavigationFromPath] = useState<string | null>(null);
-  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
   const dockRef = useRef<HTMLDivElement | null>(null);
   const logoutConfirmationRef = useRef<HTMLDivElement | null>(null);
@@ -66,10 +65,6 @@ export default function FloatingSidebar() {
   const hoverTimerRef = useRef<number | undefined>(undefined);
   const mobileActivationTimerRef = useRef<number | undefined>(undefined);
   const hasObservedPathChangeRef = useRef(false);
-
-  useEffect(() => {
-    setPortalRoot(document.body);
-  }, []);
 
   const clearHoverTimer = useCallback(() => {
     if (hoverTimerRef.current !== undefined) {
@@ -462,7 +457,7 @@ export default function FloatingSidebar() {
           </motion.div>
         )}
       </AnimatePresence>
-      {showLogoutConfirmation && portalRoot && createPortal(
+      {showLogoutConfirmation && typeof document !== "undefined" && createPortal(
         <div
           ref={logoutConfirmationRef}
           role="group"
@@ -507,7 +502,7 @@ export default function FloatingSidebar() {
             </button>
           </div>
         </div>,
-        portalRoot
+        document.body
       )}
     </>
   );
