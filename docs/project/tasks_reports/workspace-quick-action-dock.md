@@ -1,7 +1,7 @@
 # Workspace Quick-Action Dock — Implementation Report
 
 **Implementation branch:** `feat/workspace-quick-action-dock`  
-**Parent change:** PR #98 (`fix/language-toggle-route-sync`), head `283efb616203ccd20f8b3a0d22cf7a23679da262`  
+**Parent change:** PR #98 (`fix/language-toggle-route-sync`), merged into `main` before this branch was synchronized.  
 **Safety invariant:** All dock changes are isolated from `main`. The locale-routing fix and the pre-existing `systeminformation@5.33.16` security override/lockfile resolution remain intact.
 
 ## Delivered behavior
@@ -13,12 +13,16 @@
 - Desktop uses a compact matte-glass icon dock. Hover opens it after one second; leaving early cancels the timer. Click and keyboard activation remain available. Labels appear as hover/focus tooltips, not persistent labels.
 - Mobile uses a subdued bottom-right trigger and a two-step activation: first tap arms it and announces a localized hint; a second tap within three seconds opens the dock. The activation expires after three seconds.
 - The expanded dock supports Escape, outside-pointer dismissal, explicit close, localized routes, focus-visible styles, 44 px action targets, and reduced-motion preference.
+- Keyboard activation moves focus into the first quick action; Escape and explicit close restore focus after the trigger remounts. Pointer-outside dismissal does not steal focus.
+- Desktop hover is pointer-only; focusing the trigger does not schedule an unexpected open.
+- Sign-out cannot be dismissed while its request is in flight; failures remain visible in the confirmation panel for retry.
+- On mobile, the sign-out confirmation panel is positioned opposite the global navigation controls to avoid covering them.
 - The global navigation controls are raised on mobile to avoid overlap with the bottom-right trigger.
 
 ## Automated verification
 
 **GitHub Actions CI run #523:** [Success](https://github.com/DiabloNova/oxenn/actions/runs/40907779787)  
-**Tested source SHA:** `9e4efb471f9d7a7aed389a70100798cb6538517c`
+**Previously tested source SHA:** `9e4efb471f9d7a7aed389a70100798cb6538517c` (pre-remediation; does not verify the current head).
 
 All required jobs and gates passed:
 - Dependency audit gate and audit-gate regression tests.
@@ -35,4 +39,4 @@ A human visual check against the Vercel preview on both desktop and mobile has n
 
 ## Review and merge safety
 
-The dock PR is intended to be stacked on PR #98 (base `fix/language-toggle-route-sync`), **not directly on `main`**, to avoid duplicating PR #98 changes in the diff. It remains a draft until visual QA/review is complete. Neither PR is merged by this task.
+PR #98 has been merged into `main`; this branch is synchronized directly with `main`. The PR remains open pending post-remediation CI, review-thread verification, and manual visual QA. This remediation does not merge the PR.

@@ -50,6 +50,7 @@ export default function GlobalNavigationControls() {
 
   return (
     <div
+      data-testid="global-navigation-controls"
       className={`fixed bottom-[calc(7rem+env(safe-area-inset-bottom))] md:bottom-6 z-[900] flex flex-col gap-3.5 ${
         isFa ? "left-6" : "right-6"
       }`}

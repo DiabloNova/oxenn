@@ -58,6 +58,8 @@ export default function FloatingSidebar() {
   const dockRef = useRef<HTMLDivElement | null>(null);
   const desktopTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mobileTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const focusDockOnOpenRef = useRef(false);
+  const restoreFocusRef = useRef(false);
   const hoverTimerRef = useRef<number | undefined>(undefined);
   const mobileActivationTimerRef = useRef<number | undefined>(undefined);
   const hasObservedPathChangeRef = useRef(false);
@@ -76,18 +78,25 @@ export default function FloatingSidebar() {
     }
   }, []);
 
-  const openDock = useCallback(() => {
+  const openDock = useCallback((moveFocus = false) => {
     clearHoverTimer();
     clearMobileActivationTimer();
+    focusDockOnOpenRef.current =
+      moveFocus ||
+      document.activeElement === desktopTriggerRef.current ||
+      document.activeElement === mobileTriggerRef.current;
+    restoreFocusRef.current = false;
     setIsOpen(true);
     setIsMobileArmed(false);
     setShowLogoutConfirmation(false);
     setLogoutError(null);
   }, [clearHoverTimer, clearMobileActivationTimer]);
 
-  const closeDock = useCallback(() => {
+  const closeDock = useCallback((restoreFocus = false) => {
     clearHoverTimer();
     clearMobileActivationTimer();
+    restoreFocusRef.current = restoreFocus;
+    focusDockOnOpenRef.current = false;
     setIsOpen(false);
     setIsMobileArmed(false);
     setShowLogoutConfirmation(false);
@@ -98,6 +107,8 @@ export default function FloatingSidebar() {
     clearHoverTimer();
     hoverTimerRef.current = window.setTimeout(() => {
       hoverTimerRef.current = undefined;
+      focusDockOnOpenRef.current =
+        document.activeElement === desktopTriggerRef.current;
       setIsOpen(true);
       setIsMobileArmed(false);
       setShowLogoutConfirmation(false);
@@ -107,7 +118,7 @@ export default function FloatingSidebar() {
 
   const handleMobileTrigger = useCallback(() => {
     if (isMobileArmed) {
-      openDock();
+      openDock(true);
       return;
     }
 
@@ -227,16 +238,31 @@ export default function FloatingSidebar() {
   }, [navigationFromPath, pathname]);
 
   useEffect(() => {
+    if (isOpen && focusDockOnOpenRef.current) {
+      focusDockOnOpenRef.current = false;
+      dockRef.current
+        ?.querySelector<HTMLElement>('a[href], button:not([disabled])')
+        ?.focus();
+      return;
+    }
+
+    if (isOpen || !restoreFocusRef.current) return;
+
+    restoreFocusRef.current = false;
+    const desktop = window.matchMedia("(min-width: 768px)").matches;
+    (desktop ? desktopTriggerRef.current : mobileTriggerRef.current)?.focus();
+  }, [isOpen, isMobileArmed]);
+
+  useEffect(() => {
     if (!isOpen && !isMobileArmed) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      closeDock();
-      const desktop = window.matchMedia("(min-width: 768px)").matches;
-      (desktop ? desktopTriggerRef.current : mobileTriggerRef.current)?.focus();
+      if (event.key !== "Escape" || isLoggingOut) return;
+      closeDock(true);
     };
 
     const handleOutsidePointerDown = (event: PointerEvent) => {
+      if (isLoggingOut) return;
       const target = event.target;
       if (!(target instanceof Node)) return;
 
@@ -258,7 +284,7 @@ export default function FloatingSidebar() {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("pointerdown", handleOutsidePointerDown);
     };
-  }, [isOpen, isMobileArmed, closeDock]);
+  }, [isOpen, isMobileArmed, isLoggingOut, closeDock]);
 
   const isWorkspace = /^\/(?:fa|en)\/(?:dashboard|settings|profile)(?:\/|$)/.test(
     pathname ?? ""
@@ -266,6 +292,7 @@ export default function FloatingSidebar() {
   const isNavigationPending = navigationFromPath !== null;
 
   const handleLogout = async () => {
+    if (isLoggingOut) return;
     setIsLoggingOut(true);
     setLogoutError(null);
 
@@ -298,9 +325,7 @@ export default function FloatingSidebar() {
             title={isFa ? "برای باز شدن مکث کنید یا کلیک کنید" : "Hover for one second or click to open"}
             onMouseEnter={scheduleDesktopOpen}
             onMouseLeave={clearHoverTimer}
-            onFocus={scheduleDesktopOpen}
-            onBlur={clearHoverTimer}
-            onClick={openDock}
+            onClick={() => openDock(true)}
             className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-slate-950/85 text-slate-100 shadow-[0_16px_40px_rgba(2,6,23,0.42)] backdrop-blur-2xl transition-colors hover:border-sky-300/35 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
@@ -418,7 +443,8 @@ export default function FloatingSidebar() {
               <button
                 type="button"
                 aria-label={isFa ? "بستن دسترسی‌های سریع" : "Close quick actions"}
-                onClick={closeDock}
+                onClick={() => closeDock(true)}
+                disabled={isLoggingOut}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-transparent text-slate-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -428,7 +454,12 @@ export default function FloatingSidebar() {
                 <div
                   role="group"
                   aria-label={isFa ? "تأیید خروج از حساب" : "Confirm sign out"}
-                  className="absolute bottom-full right-0 mb-3 w-[min(17rem,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-start shadow-2xl backdrop-blur-2xl"
+                  data-testid="logout-confirmation"
+                  className={[
+                    "fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[1000] w-[min(17rem,calc(100vw-6rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-start shadow-2xl backdrop-blur-2xl",
+                    isFa ? "right-4" : "left-4",
+                    "md:absolute md:bottom-full md:left-auto md:right-0 md:mb-3 md:w-[min(17rem,calc(100vw-2rem))]",
+                  ].join(" ")}
                 >
                   <p className="text-sm font-semibold text-white">
                     {isFa ? "از حساب کاربری خارج می‌شوید؟" : "Sign out of your account?"}
