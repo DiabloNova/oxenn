@@ -509,7 +509,6 @@ export default function FloatingSidebar() {
         </div>,
         portalRoot
       )}
-      <div data-testid="logout-confirmation-portal" hidden={!showLogoutConfirmation || !portalRoot} />
     </>
   );
 }
