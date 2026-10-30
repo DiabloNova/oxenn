@@ -16,7 +16,7 @@
 - Keyboard activation moves focus into the first quick action; Escape and explicit close restore focus after the trigger remounts. Pointer-outside dismissal does not steal focus.
 - Desktop hover is pointer-only; focusing the trigger does not schedule an unexpected open.
 - Sign-out cannot be dismissed while its request is in flight; failures remain visible in the confirmation panel for retry.
-- On mobile, the sign-out confirmation panel is positioned opposite the global navigation controls to avoid covering them.
+- The sign-out confirmation is portaled to `document.body`, outside the dock's animated transform ancestors, so its fixed positioning remains viewport-relative. On mobile it stays opposite the global navigation controls; the desktop panel is centered above the dock.
 - The global navigation controls are raised on mobile to avoid overlap with the bottom-right trigger.
 
 ## Automated verification
