@@ -371,7 +371,7 @@ export const DOCS_INDEX: DocMeta[] = [
   },
   {
     slug: "site-map-information-architecture-audit",
-    titleEn: "ممیزی معماری اطلاعات و نقشه سایت Oxenn / Seorchable",
+    titleEn: "Site Map and Product Information Architecture Audit — Oxenn / Seorchable",
     titleFa: "ممیزی معماری اطلاعات و نقشه سایت Oxenn / Seorchable",
     category: "tasks_reports",
     categoryFa: "tasks_reports",

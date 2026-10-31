@@ -22,6 +22,13 @@ const CATEGORY_MAP: Record<string, string> = {
   "database": "Database"
 };
 
+// Explicit locale labels for documents whose source heading is not bilingual.
+const DOC_TITLE_OVERRIDES: Record<string, { titleEn?: string; titleFa?: string }> = {
+  "site-map-information-architecture-audit": {
+    titleEn: "Site Map and Product Information Architecture Audit — Oxenn / Seorchable"
+  }
+};
+
 function getAllDocs(basePath = "docs"): DocMeta[] {
   const fullPath = path.join(process.cwd(), basePath);
   let docs: DocMeta[] = [];
@@ -112,12 +119,14 @@ export interface DocMeta {
 export const DOCS_INDEX: DocMeta[] = [\n`;
 
   for (const doc of docs) {
-    const title = doc.title.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const titleOverride = DOC_TITLE_OVERRIDES[doc.slug];
+    const titleEn = (titleOverride?.titleEn ?? doc.title).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const titleFa = (titleOverride?.titleFa ?? doc.title).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     const snippet = doc.contentSnippet.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
     indexOutput += `  {
     slug: "${doc.slug}",
-    titleEn: "${title}",
-    titleFa: "${title}",
+    titleEn: "${titleEn}",
+    titleFa: "${titleFa}",
     category: "${doc.category}",
     categoryFa: "${CATEGORY_MAP[doc.category] || doc.category}",
     snippet: \`${snippet}\`
