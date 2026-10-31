@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
+import { notifyNavigationStart } from "@/lib/navigation-transition";
 import { useAuth } from "@/components/AuthProvider";
 import {
   Menu,
@@ -43,7 +44,6 @@ export default function DashboardTopbar({
   onHelpTrigger
 }: DashboardTopbarProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const { theme, setTheme, direction, language, setLanguage } = useTheme();
   const { session, logout } = useAuth();
   const isRtl = language === "fa";
@@ -52,21 +52,17 @@ export default function DashboardTopbar({
     return `/${language}${href === "/" ? "" : href}`;
   };
 
+  const navigateTo = (href: string) => {
+    notifyNavigationStart(href);
+    router.push(href);
+  };
+
   // --- Theme / Language Toggles ---
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
 
   const toggleLanguage = () => {
     const newLang = language === "en" ? "fa" : "en";
     setLanguage(newLang);
-    if (pathname) {
-      const segments = pathname.split("/");
-      if (segments[1] === "en" || segments[1] === "fa") {
-        segments[1] = newLang;
-        router.push(segments.join("/"));
-      } else {
-        router.push(`/${newLang}${pathname}`);
-      }
-    }
   };
 
   // --- Workspaces ---
@@ -168,17 +164,17 @@ export default function DashboardTopbar({
     {
       label: isRtl ? "پروفایل کاربری" : "My Account Profile",
       value: "profile",
-      onClick: () => router.push(`/${language}/profile`)
+      onClick: () => navigateTo(`/${language}/profile`)
     },
     {
       label: isRtl ? "تنظیمات فضای کاری" : "Workspace Settings",
       value: "settings",
-      onClick: () => router.push(`/${language}/dashboard/settings`)
+      onClick: () => navigateTo(`/${language}/dashboard/settings`)
     },
     {
       label: isRtl ? "اشتراک و صورت‌حساب" : "Billing & Invoices",
       value: "billing",
-      onClick: () => router.push(`/${language}/dashboard/billing`)
+      onClick: () => navigateTo(`/${language}/dashboard/billing`)
     },
     {
       label: isRtl ? "راهنما و پشتیبانی" : "Help & Documentation",
@@ -474,7 +470,7 @@ export default function DashboardTopbar({
                         <button
                           key={item.id}
                           onClick={() => {
-                            router.push(getLocalizedHref(item.href));
+                            navigateTo(getLocalizedHref(item.href));
                             setIsSearchOpen(false);
                             setSearchQuery("");
                           }}
