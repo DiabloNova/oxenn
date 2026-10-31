@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import DashboardTopbar from "@/components/navigation/DashboardTopbar";
 import FloatingSidebar from "@/components/navigation/FloatingSidebar";
+import GlobalNavigationControls from "@/components/navigation/GlobalNavigationControls";
+
+const authMocks = vi.hoisted(() => ({ logout: vi.fn() }));
+const motionMocks = vi.hoisted(() => ({ reduceMotion: false }));
 
 const navigation = vi.hoisted(() => ({
   pathname: "/fa/dashboard/seo/technical",
@@ -61,7 +65,7 @@ vi.mock("@/components/AuthProvider", () => ({
       expiresAt: null,
       status: "authenticated",
     },
-    logout: vi.fn().mockResolvedValue(undefined),
+    logout: authMocks.logout,
   }),
 }));
 
@@ -111,6 +115,7 @@ vi.mock("framer-motion", async () => {
     motion,
     AnimatePresence: ({ children }: { children?: React.ReactNode }) =>
       ReactModule.createElement(ReactModule.Fragment, null, children),
+    useReducedMotion: () => motionMocks.reduceMotion,
   };
 });
 
@@ -143,6 +148,9 @@ function setBrowserUrl(path: string) {
 describe("localized language routing contract", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authMocks.logout.mockReset();
+    authMocks.logout.mockResolvedValue(undefined);
+    motionMocks.reduceMotion = false;
     localStorage.clear();
     navigation.pathname = "/fa/dashboard/seo/technical";
     setBrowserUrl("/fa/dashboard/seo/technical?tab=links#findings");
@@ -326,22 +334,22 @@ describe("localized language routing contract", () => {
 
     const desktopDock = view.container.querySelector('div[class*="fixed bottom-6"]');
     expect(desktopDock).not.toBeNull();
-    fireEvent.mouseEnter(desktopDock!);
+    fireEvent.click(view.container.querySelector('[data-testid="desktop-dock-trigger"]')!);
 
     let settingsLink: HTMLAnchorElement | null = null;
     await waitFor(() => {
-      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/settings"]');
+      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/dashboard/content/studio"]');
       expect(settingsLink).not.toBeNull();
     });
 
     fireEvent.click(settingsLink!);
 
     await waitFor(() => {
-      expect(view.container.querySelector('a[href="/fa/settings"]')).toBeNull();
+      expect(view.container.querySelector('a[href="/fa/dashboard/content/studio"]')).toBeNull();
     });
 
-    navigation.pathname = "/fa/settings";
-    setBrowserUrl("/fa/settings");
+    navigation.pathname = "/fa/dashboard/content/studio";
+    setBrowserUrl("/fa/dashboard/content/studio");
     view.rerender(
       <ThemeProvider initialLanguage="fa">
         <FloatingSidebar />
@@ -350,10 +358,10 @@ describe("localized language routing contract", () => {
 
     // The target pathname is committed, but the transition guard must keep the
     // dock hidden for the short settling window so it cannot overlay a white frame.
-    expect(view.container.querySelector('a[href="/fa/profile"]')).toBeNull();
+    expect(view.container.querySelector('[data-testid="desktop-dock-trigger"]')).toBeNull();
 
     await waitFor(() => {
-      expect(view.container.querySelector('a[href="/fa/profile"]')).not.toBeNull();
+      expect(view.container.querySelector('[data-testid="desktop-dock-trigger"]')).not.toBeNull();
     });
   });
 
@@ -370,25 +378,25 @@ describe("localized language routing contract", () => {
 
     const desktopDock = view.container.querySelector('div[class*="fixed bottom-6"]');
     expect(desktopDock).not.toBeNull();
-    fireEvent.mouseEnter(desktopDock!);
+    fireEvent.click(view.container.querySelector('[data-testid="desktop-dock-trigger"]')!);
 
     let settingsLink: HTMLAnchorElement | null = null;
     await waitFor(() => {
-      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/settings"]');
+      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/dashboard/content/studio"]');
       expect(settingsLink).not.toBeNull();
     });
 
     fireEvent.click(settingsLink!);
-    expect(view.container.querySelector('a[href="/fa/settings"]')).toBeNull();
+    expect(view.container.querySelector('a[href="/fa/dashboard/content/studio"]')).toBeNull();
 
-    navigation.pathname = "/fa/settings";
-    setBrowserUrl("/fa/settings");
+    navigation.pathname = "/fa/dashboard/content/studio";
+    setBrowserUrl("/fa/dashboard/content/studio");
     view.rerender(
       <ThemeProvider initialLanguage="fa">
         <FloatingSidebar />
       </ThemeProvider>
     );
-    expect(view.container.querySelector('a[href="/fa/profile"]')).toBeNull();
+    expect(view.container.querySelector('a[href="/fa/dashboard/aeo/playground"]')).toBeNull();
 
     // Simulate an immediate Back/redirect to the original pathname, before 300 ms elapses.
     navigation.pathname = sourcePath;
@@ -398,10 +406,10 @@ describe("localized language routing contract", () => {
         <FloatingSidebar />
       </ThemeProvider>
     );
-    expect(view.container.querySelector('a[href="/fa/settings"]')).toBeNull();
+    expect(view.container.querySelector('a[href="/fa/dashboard/content/studio"]')).toBeNull();
 
     await waitFor(() => {
-      expect(view.container.querySelector('a[href="/fa/settings"]')).not.toBeNull();
+      expect(view.container.querySelector('[data-testid="desktop-dock-trigger"]')).not.toBeNull();
     });
   });
 
@@ -417,23 +425,23 @@ describe("localized language routing contract", () => {
 
     const desktopDock = view.container.querySelector('div[class*="fixed bottom-6"]');
     expect(desktopDock).not.toBeNull();
-    fireEvent.mouseEnter(desktopDock!);
+    fireEvent.click(view.container.querySelector('[data-testid="desktop-dock-trigger"]')!);
 
     let settingsLink: HTMLAnchorElement | null = null;
     await waitFor(() => {
-      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/settings"]');
+      settingsLink = view.container.querySelector<HTMLAnchorElement>('a[href="/fa/dashboard/content/studio"]');
       expect(settingsLink).not.toBeNull();
     });
 
     vi.useFakeTimers();
     fireEvent.click(settingsLink!);
-    expect(view.container.querySelector('a[href="/fa/settings"]')).toBeNull();
+    expect(view.container.querySelector('a[href="/fa/dashboard/content/studio"]')).toBeNull();
 
     act(() => {
       vi.advanceTimersByTime(10_000);
     });
 
-    expect(view.container.querySelector('a[href="/fa/settings"]')).not.toBeNull();
+    expect(view.container.querySelector('[data-testid="desktop-dock-trigger"]')).not.toBeNull();
     vi.useRealTimers();
   });
 
@@ -451,6 +459,353 @@ describe("localized language routing contract", () => {
 
     expect(navigation.router.replace).not.toHaveBeenCalled();
     expect(navigation.router.push).not.toHaveBeenCalled();
+  });
+
+
+  it("does not open the desktop dock merely because its trigger receives focus", () => {
+    vi.useFakeTimers();
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    const trigger = screen.getByTestId("desktop-dock-trigger");
+    fireEvent.focus(trigger);
+    act(() => { vi.advanceTimersByTime(1_000); });
+    expect(screen.queryByTestId("workspace-quick-action-dock")).toBeNull();
+    expect(screen.getByTestId("desktop-dock-trigger")).toBeInTheDocument();
+  });
+
+  it("opens the dock when reduced motion is preferred", () => {
+    motionMocks.reduceMotion = true;
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    expect(screen.getByTestId("workspace-quick-action-dock")).toBeInTheDocument();
+  });
+
+  it("opens the desktop quick-action dock only after the hover delay", () => {
+    vi.useFakeTimers();
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    const trigger = screen.getByTestId("desktop-dock-trigger");
+    fireEvent.mouseEnter(trigger);
+    act(() => {
+      vi.advanceTimersByTime(999);
+    });
+    expect(screen.queryByTestId("quick-action-playground")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByTestId("quick-action-playground")).toHaveAttribute(
+      "href",
+      "/fa/dashboard/aeo/playground"
+    );
+  });
+
+  it("requires a second mobile tap within three seconds to open the dock", () => {
+    vi.useFakeTimers();
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    const trigger = screen.getByTestId("mobile-dock-trigger");
+    fireEvent.click(trigger);
+    expect(screen.getByRole("status")).toHaveTextContent("دوباره ضربه بزنید");
+    expect(screen.queryByTestId("quick-action-playground")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(2_999);
+    });
+    fireEvent.click(trigger);
+    expect(screen.getByTestId("quick-action-playground")).toHaveAttribute(
+      "href",
+      "/fa/dashboard/aeo/playground"
+    );
+  });
+
+  it("expires the mobile activation hint after three seconds without opening the dock", () => {
+    vi.useFakeTimers();
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("mobile-dock-trigger"));
+    expect(screen.getByRole("status")).toHaveTextContent("دوباره ضربه بزنید");
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByTestId("quick-action-playground")).toBeNull();
+  });
+
+  it("defers logout until explicit confirmation and invokes it exactly once", async () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    fireEvent.click(screen.getByTestId("quick-action-logout"));
+
+    expect(authMocks.logout).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "تأیید خروج" }));
+
+    await waitFor(() => {
+      expect(authMocks.logout).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("keeps the dock and logout error visible when sign-out fails", async () => {
+    authMocks.logout.mockRejectedValueOnce(new Error("network failure"));
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    fireEvent.click(screen.getByTestId("quick-action-logout"));
+    fireEvent.click(screen.getByRole("button", { name: "تأیید خروج" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "خروج انجام نشد. لطفاً دوباره تلاش کنید."
+    );
+    expect(screen.getByTestId("workspace-quick-action-dock")).toBeInTheDocument();
+    expect(authMocks.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it("prevents dock dismissal while logout is in flight", async () => {
+    let resolveLogout!: () => void;
+    authMocks.logout.mockImplementation(
+      () => new Promise<void>((resolve) => { resolveLogout = resolve; })
+    );
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    fireEvent.click(screen.getByTestId("quick-action-logout"));
+    fireEvent.click(screen.getByRole("button", { name: "تأیید خروج" }));
+
+    const confirm = screen.getByRole("button", { name: "در حال خروج..." });
+    expect(confirm).toBeDisabled();
+    expect(screen.getByRole("button", { name: "بستن دسترسی‌های سریع" })).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.pointerDown(document.body);
+    expect(screen.getByTestId("workspace-quick-action-dock")).toBeInTheDocument();
+
+    await act(async () => { resolveLogout(); });
+    await waitFor(() => {
+      expect(screen.queryByTestId("workspace-quick-action-dock")).toBeNull();
+    });
+  });
+
+
+  it("cancels desktop opening when the pointer leaves before the one-second delay", () => {
+    vi.useFakeTimers();
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    const trigger = screen.getByTestId("desktop-dock-trigger");
+    fireEvent.mouseEnter(trigger);
+    act(() => {
+      vi.advanceTimersByTime(999);
+    });
+    fireEvent.mouseLeave(trigger);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+
+    expect(screen.queryByTestId("workspace-quick-action-dock")).toBeNull();
+    expect(screen.getByTestId("desktop-dock-trigger")).toBeInTheDocument();
+  });
+
+  it("moves focus into the dock on activation and restores it after Escape", async () => {
+    window.matchMedia = vi.fn().mockImplementation((media: string) => ({
+      matches: true,
+      media,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    const firstAction = screen.getByTestId("quick-action-playground");
+    await waitFor(() => expect(document.activeElement).toBe(firstAction));
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(document.activeElement).toBe(
+      screen.getByTestId("desktop-dock-trigger")
+    ));
+    expect(screen.queryByTestId("workspace-quick-action-dock")).toBeNull();
+  });
+
+  it("restores mobile trigger focus after closing the expanded dock", async () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("mobile-dock-trigger"));
+    fireEvent.click(screen.getByTestId("mobile-dock-trigger"));
+    const firstAction = screen.getByTestId("quick-action-playground");
+    await waitFor(() => expect(document.activeElement).toBe(firstAction));
+
+    fireEvent.click(screen.getByRole("button", { name: "بستن دسترسی‌های سریع" }));
+    await waitFor(() => expect(document.activeElement).toBe(
+      screen.getByTestId("mobile-dock-trigger")
+    ));
+  });
+
+  it("does not steal focus on outside-pointer dismissal", async () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByTestId("workspace-quick-action-dock")).toBeNull();
+    expect(document.activeElement).not.toBe(screen.getByTestId("desktop-dock-trigger"));
+  });
+
+  it("moves keyboard focus into the portaled logout confirmation and restores it on cancel", async () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    const logoutTrigger = screen.getByTestId("quick-action-logout");
+    fireEvent.click(logoutTrigger);
+
+    const confirmation = screen.getByTestId("logout-confirmation");
+    const cancel = screen.getByRole("button", { name: "انصراف" });
+    const confirm = screen.getByRole("button", { name: "تأیید خروج" });
+
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    expect(confirmation.contains(document.activeElement)).toBe(true);
+
+    cancel.focus();
+    expect(document.activeElement).toBe(cancel);
+    confirm.focus();
+    expect(document.activeElement).toBe(confirm);
+
+    fireEvent.click(cancel);
+    await waitFor(() => expect(document.activeElement).toBe(logoutTrigger));
+  });
+
+  it("returns focus to the logout trigger when Escape dismisses the confirmation", async () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    const logoutTrigger = screen.getByTestId("quick-action-logout");
+    fireEvent.click(logoutTrigger);
+
+    const cancel = screen.getByRole("button", { name: "انصراف" });
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(document.activeElement).toBe(logoutTrigger));
+    expect(screen.queryByTestId("logout-confirmation")).toBeNull();
+    expect(screen.getByTestId("workspace-quick-action-dock")).toBeInTheDocument();
+  });
+
+  it("portals the mobile logout confirmation outside the transformed dock and keeps its actions interactive", async () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <>
+          <FloatingSidebar />
+          <GlobalNavigationControls />
+        </>
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("mobile-dock-trigger"));
+    fireEvent.click(screen.getByTestId("mobile-dock-trigger"));
+    fireEvent.click(screen.getByTestId("quick-action-logout"));
+
+    const dock = screen.getByTestId("workspace-quick-action-dock");
+    const confirmation = screen.getByTestId("logout-confirmation");
+
+    expect(confirmation.parentElement).toBe(document.body);
+    expect(dock.contains(confirmation)).toBe(false);
+    expect(confirmation.className).toContain("fixed");
+    expect(screen.getByTestId("global-navigation-controls").className).toContain("left-6");
+    expect(confirmation.className).toContain("right-4");
+    expect(confirmation.className).toContain("w-[min(17rem,calc(100vw-6rem))]");
+    await waitFor(() => expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "انصراف" })
+    ));
+
+    // A portaled confirmation remains an inside interaction, not an outside-pointer dismissal.
+    fireEvent.pointerDown(screen.getByRole("button", { name: "تأیید خروج" }));
+    expect(screen.getByTestId("workspace-quick-action-dock")).toBeInTheDocument();
+  });
+
+  it("keeps quick-action destinations localized on English workspace routes", () => {
+    navigation.pathname = "/en/dashboard/aeo/playground";
+    setBrowserUrl("/en/dashboard/aeo/playground");
+
+    render(
+      <ThemeProvider initialLanguage="en">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+
+    expect(screen.getByTestId("quick-action-playground")).toHaveAttribute(
+      "href",
+      "/en/dashboard/aeo/playground"
+    );
+    expect(screen.getByTestId("quick-action-playground")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByTestId("quick-action-analytics")).toHaveAttribute(
+      "href",
+      "/en/dashboard/analytics/llm-bias"
+    );
+    expect(screen.getByTestId("quick-action-content")).toHaveAttribute(
+      "href",
+      "/en/dashboard/content/studio"
+    );
   });
 
 });
