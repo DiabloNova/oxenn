@@ -58,6 +58,8 @@ export default function FloatingSidebar() {
 
   const dockRef = useRef<HTMLDivElement | null>(null);
   const logoutConfirmationRef = useRef<HTMLDivElement | null>(null);
+  const logoutTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const restoreLogoutTriggerFocusRef = useRef(false);
   const desktopTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mobileTriggerRef = useRef<HTMLButtonElement | null>(null);
   const focusDockOnOpenRef = useRef(false);
@@ -240,6 +242,21 @@ export default function FloatingSidebar() {
   }, [navigationFromPath, pathname]);
 
   useEffect(() => {
+    if (showLogoutConfirmation) {
+      logoutConfirmationRef.current
+        ?.querySelector<HTMLButtonElement>('button:not([disabled])')
+        ?.focus();
+      return;
+    }
+
+    if (restoreLogoutTriggerFocusRef.current && isOpen) {
+      restoreLogoutTriggerFocusRef.current = false;
+      logoutTriggerRef.current?.focus();
+      return;
+    }
+  }, [showLogoutConfirmation, isOpen]);
+
+  useEffect(() => {
     if (isOpen && focusDockOnOpenRef.current) {
       focusDockOnOpenRef.current = false;
       dockRef.current
@@ -260,6 +277,11 @@ export default function FloatingSidebar() {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || isLoggingOut) return;
+      if (showLogoutConfirmation) {
+        restoreLogoutTriggerFocusRef.current = true;
+        setShowLogoutConfirmation(false);
+        return;
+      }
       closeDock(true);
     };
 
@@ -287,7 +309,7 @@ export default function FloatingSidebar() {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("pointerdown", handleOutsidePointerDown);
     };
-  }, [isOpen, isMobileArmed, isLoggingOut, closeDock]);
+  }, [isOpen, isMobileArmed, isLoggingOut, showLogoutConfirmation, closeDock]);
 
   const isWorkspace = /^\/(?:fa|en)\/(?:dashboard|settings|profile)(?:\/|$)/.test(
     pathname ?? ""
@@ -425,10 +447,12 @@ export default function FloatingSidebar() {
 
               <button
                 type="button"
+                ref={logoutTriggerRef}
                 data-testid="quick-action-logout"
                 aria-label={isFa ? "خروج از حساب کاربری" : "Sign out"}
                 title={isFa ? "خروج از حساب کاربری" : "Sign out"}
                 onClick={() => {
+                  restoreLogoutTriggerFocusRef.current = false;
                   setShowLogoutConfirmation(true);
                   setLogoutError(null);
                 }}
@@ -479,7 +503,10 @@ export default function FloatingSidebar() {
           <div className="mt-3 flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={() => setShowLogoutConfirmation(false)}
+              onClick={() => {
+                restoreLogoutTriggerFocusRef.current = true;
+                setShowLogoutConfirmation(false);
+              }}
               disabled={isLoggingOut}
               className="rounded-lg px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 disabled:opacity-50"
             >
