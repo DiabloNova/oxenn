@@ -702,7 +702,54 @@ describe("localized language routing contract", () => {
     expect(document.activeElement).not.toBe(screen.getByTestId("desktop-dock-trigger"));
   });
 
-  it("portals the mobile logout confirmation outside the transformed dock and keeps its actions interactive", () => {
+  it("moves keyboard focus into the portaled logout confirmation and restores it on cancel", async () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    const logoutTrigger = screen.getByTestId("quick-action-logout");
+    fireEvent.click(logoutTrigger);
+
+    const confirmation = screen.getByTestId("logout-confirmation");
+    const cancel = screen.getByRole("button", { name: "انصراف" });
+    const confirm = screen.getByRole("button", { name: "تأیید خروج" });
+
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    expect(confirmation.contains(document.activeElement)).toBe(true);
+
+    cancel.focus();
+    expect(document.activeElement).toBe(cancel);
+    confirm.focus();
+    expect(document.activeElement).toBe(confirm);
+
+    fireEvent.click(cancel);
+    await waitFor(() => expect(document.activeElement).toBe(logoutTrigger));
+  });
+
+  it("returns focus to the logout trigger when Escape dismisses the confirmation", async () => {
+    render(
+      <ThemeProvider initialLanguage="fa">
+        <FloatingSidebar />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("desktop-dock-trigger"));
+    const logoutTrigger = screen.getByTestId("quick-action-logout");
+    fireEvent.click(logoutTrigger);
+
+    const cancel = screen.getByRole("button", { name: "انصراف" });
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(document.activeElement).toBe(logoutTrigger));
+    expect(screen.queryByTestId("logout-confirmation")).toBeNull();
+    expect(screen.getByTestId("workspace-quick-action-dock")).toBeInTheDocument();
+  });
+
+  it("portals the mobile logout confirmation outside the transformed dock and keeps its actions interactive", async () => {
     render(
       <ThemeProvider initialLanguage="fa">
         <>
@@ -725,6 +772,9 @@ describe("localized language routing contract", () => {
     expect(screen.getByTestId("global-navigation-controls").className).toContain("left-6");
     expect(confirmation.className).toContain("right-4");
     expect(confirmation.className).toContain("w-[min(17rem,calc(100vw-6rem))]");
+    await waitFor(() => expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "انصراف" })
+    ));
 
     // A portaled confirmation remains an inside interaction, not an outside-pointer dismissal.
     fireEvent.pointerDown(screen.getByRole("button", { name: "تأیید خروج" }));
