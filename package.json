@@ -93,7 +93,8 @@
       "undici@7": ">=7.29.1 <8",
       "@mendable/firecrawl-js>zod": "4.6.7",
       "firecrawl>zod": "4.6.7",
-      "systeminformation": "5.33.16"
+      "systeminformation": "5.33.16",
+      "follow-redirects": ">=1.16.2 <2"
     }
   }
 }
