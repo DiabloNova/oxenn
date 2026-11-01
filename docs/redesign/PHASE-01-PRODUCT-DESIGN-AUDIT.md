@@ -27,11 +27,11 @@ The Superdesign CLI preflight was attempted twice but timed out both times. Per 
 
 ## 3. Findings and implications
 
-### F1 — Language selection can diverge from route-rendered content
+### F1 — Locale navigation exists; rendered-copy parity still needs end-to-end verification
 
-The locale segment determines the `locale` read by the homepage and its `isFa` content branches. `ThemeProvider.setLanguage` changes document `lang`/`dir`, local storage, and context state, but does not itself navigate the locale route. This can make the control's language state disagree with the URL and server/route-selected content.
+The locale segment determines the `locale` read by the homepage and its `isFa` content branches. `ThemeProvider.setLanguage` updates document `lang`/`dir`, local storage, and context state, then replaces the leading `/fa` or `/en` segment with the selected locale using `router.replace`. It preserves the current path, query string, and hash. The route-navigation mechanism therefore already exists; the remaining question is whether each localized destination actually renders the expected copy after navigation.
 
-**Design/engineering consequence:** treat locale switching as route navigation between equivalent `/fa` and `/en` paths, preserve relevant nested route/query state where supported, and test a direct visit plus refresh for both languages. Do not implement this only as a visual toggle.
+**Design/engineering consequence:** retain the existing route-aware setter rather than reimplementing locale navigation. Verify `/fa` ↔ `/en`, equivalent nested routes, query/hash preservation, direct entry, and refresh. If visible copy remains in the previous language, isolate that page/content or deployment-state issue without duplicating the router logic.
 
 ### F2 — The design system has a dark-oriented token base, while the requested flagship starts in light mode
 

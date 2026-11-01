@@ -29,7 +29,7 @@ Redesign the Oxenn public homepage and its shared visual language, using the upl
 | Framework and scripts | `package.json` | Next.js 16.4.2, React 19, TypeScript, Tailwind CSS v4. Scripts include lint, typecheck, test, and build. |
 | Homepage entry | `src/app/[locale]/page.tsx` | A large client-side page containing the marketing story, stateful dashboard-preview tabs, section refs, and many product-module claims. This is the main page to decompose carefully. |
 | Locale layout | `src/app/[locale]/layout.tsx` | Sets initial HTML `lang` and `dir` from the route segment. It mounts AuthProvider, ThemeProvider, FloatingSidebar, and GlobalNavigationControls. |
-| Theme and language | `src/components/ThemeProvider.tsx` | Persists theme/language to localStorage. The language setter changes document attributes and context state but does not navigate the locale URL; this can make rendered page copy disagree with the active locale segment. |
+| Theme and language | `src/components/ThemeProvider.tsx` | Persists theme/language to localStorage and uses `router.replace` to switch between `/fa` and `/en`, preserving the path, query, and hash. Verify rendered copy and nested-route behavior end to end; do not add a second locale-navigation implementation. |
 | Design tokens | `src/styles/tokens.css`, `src/app/globals.css` | Existing semantic tokens already cover color, spacing, radius, shadows, motion, and light mode. Base/root defaults are described as dark slate with sky-blue and orange accents; the reference instead leads with a light neutral canvas and orange-red primary. |
 | Font setup | `src/config/fonts.ts` | Local YekanBakh (body), Peyda (Persian display), and BoxFace (English title) are configured. Preserve these until local files, glyph coverage, rendering, weights, and licensing are verified; do not introduce an Arabic-only face. |
 | Marketing header | `src/components/marketing/LandingHeader.tsx` | Existing sticky header, menu drawer, theme/language controls, solution/platform links, and logo are reusable starting points. It currently has a broad menu/navigation pattern rather than the requested compact icon-first floating nav. |
@@ -58,8 +58,9 @@ The supplied image's hierarchy is light-first: white/off-white canvas, orange-re
 ### B. Navigation overlap and competing patterns
 The locale layout mounts global controls on all localized routes, while the marketing header also has its own menu, language/theme controls, and drawer. FloatingSidebar is route-conditional, but GlobalNavigationControls is not. Audit actual route visibility, z-index, mobile collision, keyboard focus, and redundant controls before consolidating the marketing header.
 
-### C. Locale source-of-truth mismatch
-The route segment determines the page's initial locale and HTML direction, but ThemeProvider's `setLanguage` changes the root attributes and localStorage without changing the route. Since the homepage copy uses the route parameter, this can produce a mismatch between displayed copy and document language/direction. Language switching must navigate to the equivalent locale route and preserve a meaningful route when that equivalent exists.
+### C. Locale routing is implemented; rendered-copy parity remains to verify
+
+The route segment determines the page's initial locale and HTML direction. `ThemeProvider.setLanguage` already replaces the route's `/fa` or `/en` segment through `router.replace`, preserving the current path, query, and hash while syncing document language/direction and persisted state. The audit should therefore not describe locale navigation as missing. The remaining risk is a route or page that renders stale/wrong copy after the transition; verify both directions, equivalent nested routes, direct entry, and refresh before changing this working routing logic.
 
 ### D. Product-truth and copy risks
 The homepage describes real-time monitoring, named AI systems, citation share, authority scoring, and other sophisticated outcomes. Source inspection of the homepage alone does not prove those capabilities are backed by live production data. Every claim and dashboard metric must be mapped to a service/API contract; unsupported examples must be visibly labeled illustrative and must never be represented as live.
@@ -88,7 +89,7 @@ The homepage page component includes many imports, a large module array, multipl
 |---|---|
 | Replacing tokens breaks dashboard/admin screens | Inventory token consumers and theme classes; scope marketing theme changes and verify sibling routes. |
 | Redesign implies unavailable product functionality | Trace CTA, metrics, and module claims to actual handlers/API/data; label concept-only data. |
-| Language switch produces inconsistent URL/copy/direction | Route-aware locale navigation; test direct entry, refresh, and equivalent nested routes. |
+| Language switch produces inconsistent URL/copy/direction | Preserve the existing `router.replace` behavior and test rendered copy, direction, direct entry, refresh, and equivalent nested routes end to end. |
 | Several fixed nav controls overlap on mobile | Establish one marketing navigation owner; test 320px, 375px, tablet, and desktop widths. |
 | New visual style regresses Persian typography | Inspect actual font assets and test Persian/Latin mixed strings and responsive wrapping. |
 | Motion reduces accessibility/performance | Use existing motion primitives where appropriate; honor reduced motion and keep essential content static/readable. |
