@@ -6,7 +6,6 @@
 @theme {
   --font-sans: var(--font-persian-primary), 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: var(--font-persian-display), 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-english-title: var(--font-english-title);
 
   --animate-fade-in: fade-in 0.35s ease-out forwards;
   --animate-slide-up: slide-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
