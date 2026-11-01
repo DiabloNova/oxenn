@@ -51,4 +51,4 @@ export const apiKeys = pgTable("api_keys", {
 }, (table) => [
   index("idx_api_keys_organization").on(table.organizationId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();

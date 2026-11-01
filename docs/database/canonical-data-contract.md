@@ -2,13 +2,13 @@
 
 ## Architecture & Governance
 
-The Oxenn database is defined strictly through **Drizzle ORM**. There is exactly one canonical representation of the application schema: the Drizzle declarations located in `database/schema/index.ts`. Physical database behavior is realized by the migration history, including SQL-only operations such as enabling and forcing row-level security (RLS). Schema changes should originate in the declarations; migration files remain the record of how those changes are applied.
+The Oxenn database is defined strictly through **Drizzle ORM**. The canonical schema entry point is `database/schema/index.ts`, including the modular table declarations it imports and re-exports. Every policy-bearing tenant table must declare its PostgreSQL policies and call `.enableRLS()`; Drizzle snapshots must record `isRLSEnabled: true` for those tables. The migration history remains the record of physical DDL: `ENABLE ROW LEVEL SECURITY` is generated from the schema state, while `FORCE ROW LEVEL SECURITY` remains a SQL-only invariant that must be preserved in migration history. Schema changes should originate in the canonical declarations; generated snapshots, journal entries, and SQL migrations must be produced and reviewed together.
 
 ### Quarantined Legacy Definitions
-The `database/schema/_legacy/` directory contains legacy object-based schemas (`TableDefinition`). These are physically quarantined. They **must not** be imported or used as authoritative representations of the data model. `database/schema/index.ts` is the single source of truth.
+The `database/schema/_legacy/` directory contains legacy object-based schemas (`TableDefinition`). These are physically quarantined. They **must not** be imported or used as authoritative representations of the data model. `database/schema/index.ts` is the single canonical entry point; its imported and re-exported modules are part of that same source of truth.
 
 ### Generated Artifacts
-While `database/schema/index.ts` is the source, it is compiled into several critical artifacts used for migration, validation, and testing:
+The canonical schema entry point and its re-exported modules are compiled into several critical artifacts used for migration, validation, and testing:
 
 1. **Drizzle Migration Journal** (`database/drizzle/meta/_journal.json` & SQL files):
    - This is the canonical source for physical database migrations.
@@ -38,7 +38,7 @@ Global tables contain core application configurations, user identities, system m
 ### 2. Tenant-Scoped Tables
 Tenant-scoped tables contain domain data belonging to a specific workspace or organization.
 
-- **Tenant RLS policy declared (✅):** They *must* have a PostgreSQL policy linking access to `current_setting('app.current_tenant_id', true)`.
+- **Tenant RLS policy and activation declared (✅):** They *must* have a PostgreSQL policy linking access to `current_setting('app.current_tenant_id', true)` and the table declaration must call `.enableRLS()`. The latest Drizzle snapshot must record `isRLSEnabled: true` for every policy-bearing table.
 - **Access Rule:** Can only be queried by non-owner roles (e.g., `app_runtime`) when the session has properly set the `app.current_tenant_id` parameter using `set_config`. Attempting to query these without a context will result in empty result sets or RLS constraint violations (42501).
 - **Isolation Enforcement:** Directly validated via `tests/isolation/suite.ts` which provisions a real database and executes assertions proving that cross-tenant read/write/update/delete operations are explicitly blocked by the database layer.
 
@@ -62,7 +62,7 @@ The data contract is verified via multiple independent testing paths:
 
 3. **Schema Policy and Migration Verification** (`verify-tenant-tables.ts` and `verify-rls-migrations.ts`)
    - `verify-tenant-tables.ts` compares policy-bearing table names in the latest Drizzle snapshot with `TENANT_SCOPED_TABLES`; it does not compare source `pgPolicy` expressions or inspect a live database.
-   - `verify-rls-migrations.ts` checks the checked-in migration history for `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` statements for every policy-bearing table. This is a static migration audit, not proof that migrations have been applied to production.
+   - `verify-rls-migrations.ts` verifies that every policy-bearing table is marked `isRLSEnabled: true` in the latest Drizzle snapshot and that the journal-ordered SQL history leaves both `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` active. This is a static source/snapshot/migration audit, not proof that migrations have been applied to a live database.
    - The `test:isolation` CI job provisions ephemeral PostgreSQL and exercises tenant isolation. The `test:db` script is not currently invoked by CI; SQL invariants must be included in the isolation suite or the workflow must be updated before claiming those tests run.
 
 ---
@@ -71,7 +71,7 @@ The data contract is verified via multiple independent testing paths:
 
 Certain database behaviors are enforced directly by PostgreSQL but are difficult or impossible to strictly replicate in the stateless unit testing layer. These represent the boundaries where SQL is the authoritative enforcer:
 
-- **Row Level Security (RLS) enforcement:** The simulator cannot perfectly emulate PostgreSQL's policy evaluation engine. RLS violations are tested strictly in `tests/isolation/suite.ts`.
+- **PostgreSQL RLS policy evaluation and FORCE behavior:** Drizzle schema and snapshots represent policy declarations and RLS activation (`.enableRLS()` / `isRLSEnabled`); `FORCE ROW LEVEL SECURITY` remains SQL-only in the migration history. The simulator cannot perfectly emulate PostgreSQL's policy evaluation engine. RLS violations are tested in `tests/isolation/suite.ts` against its configured ephemeral PostgreSQL service; unit/simulator tests do not prove database-layer enforcement.
 - **Foreign Key Constraints (`ON DELETE CASCADE`):** Drizzle `schema/index.ts` declarations like `references(() => users.id, { onDelete: "cascade" })` are evaluated by PG triggers. Mock databases do not cascade deletes automatically.
 - **Unique Indexes with Functions:** Indexes such as `uniqueIndex("idx_users_lower_email").on(sql\`lower(${table.email})\`)` are enforced by the Postgres b-tree constraint system. The simulator may replicate basic string lowering, but the authoritative proof remains in the SQL schema.
 - **Check Constraints:** Specialized data integrity rules (e.g., JSONB structure validation or numeric boundaries) defined via `check(...)`.

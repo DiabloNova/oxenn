@@ -7,6 +7,7 @@ interface Journal {
 interface SnapshotTable {
   name: string;
   policies?: Record<string, unknown>;
+  isRLSEnabled?: boolean;
 }
 interface Snapshot {
   tables: Record<string, SnapshotTable>;
@@ -344,8 +345,13 @@ function main(): void {
     String(journal.entries[journal.entries.length - 1].idx).padStart(4, "0") + "_snapshot.json",
   );
   const snapshot: Snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
-  const policyTables = Object.values(snapshot.tables)
-    .filter((table) => table.policies && Object.keys(table.policies).length > 0)
+  const policyBearingTables = Object.values(snapshot.tables)
+    .filter((table) => table.policies && Object.keys(table.policies).length > 0);
+  const policyTables = policyBearingTables
+    .map((table) => normalizeTableName(table.name))
+    .sort();
+  const snapshotRlsDisabled = policyBearingTables
+    .filter((table) => table.isRLSEnabled !== true)
     .map((table) => normalizeTableName(table.name))
     .sort();
 
@@ -370,8 +376,11 @@ function main(): void {
   const missingEnable = policyTables.filter((table) => !state.get(table)?.enabled);
   const missingForce = policyTables.filter((table) => !state.get(table)?.forced);
 
-  if (missingEnable.length || missingForce.length) {
-    console.error("RLS migration final-state verification failed.");
+  if (snapshotRlsDisabled.length || missingEnable.length || missingForce.length) {
+    console.error("RLS schema/snapshot and migration verification failed.");
+    if (snapshotRlsDisabled.length) {
+      console.error("RLS not enabled in latest Drizzle snapshot:", snapshotRlsDisabled.join(", "));
+    }
     if (missingEnable.length) console.error("RLS not enabled at end of journal:", missingEnable.join(", "));
     if (missingForce.length) console.error("RLS not forced at end of journal:", missingForce.join(", "));
     process.exitCode = 1;
@@ -379,7 +388,7 @@ function main(): void {
   }
 
   console.log(
-    `RLS migration final-state verified for ${policyTables.length} policy-bearing tables (journal order; ENABLE + FORCE active).`,
+    `RLS migration final-state verified for ${policyTables.length} policy-bearing tables (snapshot ENABLE; journal ENABLE + FORCE).`,
   );
   console.log("Static migration verification only; this does not inspect a live database.");
 }

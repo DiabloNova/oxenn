@@ -150,7 +150,7 @@ export const organizationMembers = pgTable("organization_members", {
   uniqueIndex("idx_org_members_user_org").on(table.organizationId, table.userId),
   index("idx_org_members_user_id").on(table.userId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const organizationInvitations = pgTable("organization_invitations", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -166,7 +166,7 @@ export const organizationInvitations = pgTable("organization_invitations", {
   index("idx_org_invitations_email").on(table.email),
   index("idx_org_invitations_token").on(table.tokenHash),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // FROZEN-LEGACY: roles and permissions tables are no longer used for authorization decisions.
@@ -271,7 +271,7 @@ export const tenantQuotas = pgTable("tenant_quotas", {
 }, (table) => [
   index("idx_tenant_quotas_tenant").on(table.tenantId),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const creditTransactions = pgTable("credit_transactions", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -284,7 +284,7 @@ export const creditTransactions = pgTable("credit_transactions", {
 }, (table) => [
   index("idx_credit_transactions_tenant").on(table.tenantId),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const tenantSubscriptions = pgTable("tenant_subscriptions", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -301,7 +301,7 @@ export const tenantSubscriptions = pgTable("tenant_subscriptions", {
 }, (table) => [
   index("idx_tenant_subscriptions_tenant").on(table.tenantId),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const aiProviderConfigs = pgTable("ai_provider_configs", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -337,7 +337,7 @@ export const brands = pgTable("brands", {
   index("idx_brands_organization").on(table.organizationId),
   index("idx_brands_domain").on(table.canonicalDomain),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const entities = pgTable("entities", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -356,7 +356,7 @@ export const entities = pgTable("entities", {
   index("idx_entities_organization").on(table.organizationId),
   index("idx_entities_type").on(table.entityType),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const entityRelationships = pgTable("entity_relationships", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -376,7 +376,7 @@ export const entityRelationships = pgTable("entity_relationships", {
   index("idx_entity_relationships_source").on(table.sourceEntityId),
   index("idx_entity_relationships_target").on(table.targetEntityId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // 4. UNIFIED INTELLIGENCE & WEBSITE DOMAIN
@@ -400,7 +400,7 @@ export const websites = pgTable("websites", {
   index("idx_websites_organization").on(table.organizationId),
   uniqueIndex("idx_websites_domain_org").on(table.organizationId, table.domain).where(sql`deleted_at IS NULL`),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const pages = pgTable("pages", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -431,7 +431,7 @@ export const pages = pgTable("pages", {
   index("idx_pages_website").on(table.websiteId),
   uniqueIndex("idx_pages_url_org").on(table.organizationId, table.normalizedUrl).where(sql`deleted_at IS NULL`),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const keywords = pgTable("keywords", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -452,7 +452,7 @@ export const keywords = pgTable("keywords", {
   index("idx_keywords_organization").on(table.organizationId),
   uniqueIndex("idx_keywords_term_org").on(table.organizationId, table.normalizedTerm).where(sql`deleted_at IS NULL`),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const topics = pgTable("topics", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -472,7 +472,7 @@ export const topics = pgTable("topics", {
   index("idx_topics_organization").on(table.organizationId),
   uniqueIndex("idx_topics_name_org").on(table.organizationId, table.name).where(sql`deleted_at IS NULL`),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const competitors = pgTable("competitors", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -492,7 +492,7 @@ export const competitors = pgTable("competitors", {
   index("idx_competitors_organization").on(table.organizationId),
   uniqueIndex("idx_competitors_domain_org").on(table.organizationId, table.domain).where(sql`deleted_at IS NULL`),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const historicalMetrics = pgTable("historical_metrics", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -508,7 +508,7 @@ export const historicalMetrics = pgTable("historical_metrics", {
   index("idx_historical_metrics_lookup").on(table.organizationId, table.entityType, table.entityId, table.metricName),
   index("idx_historical_metrics_time").on(table.recordedAt),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const pagesKeywords = pgTable("pages_keywords", {
   pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }),
@@ -586,7 +586,7 @@ export const diagnosticFindings = pgTable("diagnostic_findings", {
   index("idx_diagnostic_findings_domain").on(table.domain),
   index("idx_diagnostic_findings_status").on(table.status),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const diagnosticFindingRelationships = pgTable("diagnostic_finding_relationships", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -600,7 +600,7 @@ export const diagnosticFindingRelationships = pgTable("diagnostic_finding_relati
   index("idx_diagnostic_rel_parent").on(table.parentFindingId),
   index("idx_diagnostic_rel_child").on(table.childFindingId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // 6. PROMPTS & AI ENGINES
@@ -638,7 +638,7 @@ export const prompts = pgTable("prompts", {
   index("idx_prompts_organization").on(table.organizationId),
   index("idx_prompts_brand").on(table.brandId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const promptDefinitions = pgTable("prompt_definitions", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -664,7 +664,7 @@ export const promptDefinitions = pgTable("prompt_definitions", {
 }, (table) => [
   index("idx_prompt_definitions_tenant").on(table.organizationId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const promptSchedules = pgTable("prompt_schedules", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -683,7 +683,7 @@ export const promptSchedules = pgTable("prompt_schedules", {
 }, (table) => [
   index("idx_prompt_schedules_tenant").on(table.organizationId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const promptExecutions = pgTable("prompt_executions", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -710,7 +710,7 @@ export const promptExecutions = pgTable("prompt_executions", {
   index("idx_prompt_executions_status").on(table.status),
   check("prompt_executions_status_check", sql`status IN ('queued', 'running', 'succeeded', 'failed', 'timed_out', 'cancelled')`),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const positionObservations = pgTable("position_observations", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -727,7 +727,7 @@ export const positionObservations = pgTable("position_observations", {
 }, (table) => [
   index("idx_position_obs_tenant").on(table.organizationId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // 7. OBSERVATIONS & CITATIONS
@@ -752,7 +752,7 @@ export const aiObservations = pgTable("ai_observations", {
   index("idx_ai_observations_prompt").on(table.promptId),
   index("idx_ai_observations_engine").on(table.engineId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const brandMentions = pgTable("brand_mentions", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -772,7 +772,7 @@ export const brandMentions = pgTable("brand_mentions", {
   index("idx_brand_mentions_organization").on(table.organizationId),
   index("idx_brand_mentions_brand").on(table.brandId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const citations = pgTable("citations", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -793,7 +793,7 @@ export const citations = pgTable("citations", {
   index("idx_citations_observation").on(table.observationId),
   index("idx_citations_domain").on(table.domain),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const citationSources = pgTable("citation_sources", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -811,7 +811,7 @@ export const citationSources = pgTable("citation_sources", {
   index("idx_citation_sources_tenant").on(table.organizationId),
   uniqueIndex("idx_citation_sources_url_org").on(table.organizationId, table.url),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const citationOccurrences = pgTable("citation_occurrences", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -829,7 +829,7 @@ export const citationOccurrences = pgTable("citation_occurrences", {
   index("idx_citation_occurrences_tenant").on(table.organizationId),
   index("idx_citation_occurrences_source").on(table.sourceId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // 8. BRAND INTELLIGENCE & AUDITS
@@ -854,7 +854,7 @@ export const visibilityScores = pgTable("visibility_scores", {
   index("idx_visibility_scores_organization").on(table.organizationId),
   index("idx_visibility_scores_brand").on(table.brandId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const recommendations = pgTable("recommendations", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -877,7 +877,7 @@ export const recommendations = pgTable("recommendations", {
   index("idx_recommendations_organization").on(table.organizationId),
   index("idx_recommendations_brand").on(table.brandId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const brandAssociations = pgTable("brand_associations", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -893,7 +893,7 @@ export const brandAssociations = pgTable("brand_associations", {
   index("idx_brand_associations_tenant").on(table.organizationId),
   index("idx_brand_associations_brand").on(table.brandId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const recommendationObservations = pgTable("recommendation_observations", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -911,7 +911,7 @@ export const recommendationObservations = pgTable("recommendation_observations",
   index("idx_recommendation_obs_tenant").on(table.organizationId),
   index("idx_recommendation_obs_brand").on(table.brandId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const aiVisibilityAudits = pgTable("ai_visibility_audits", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -936,7 +936,7 @@ export const aiVisibilityAudits = pgTable("ai_visibility_audits", {
   index("idx_ai_vis_audits_brand").on(table.targetBrandName),
   index("idx_ai_vis_audits_status").on(table.status),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const auditPrompts = pgTable("audit_prompts", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -950,7 +950,7 @@ export const auditPrompts = pgTable("audit_prompts", {
   index("idx_audit_prompts_audit").on(table.auditId),
   index("idx_audit_prompts_org").on(table.organizationId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const premiumAudits = pgTable("premium_audits", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -966,7 +966,7 @@ export const premiumAudits = pgTable("premium_audits", {
 }, (table) => [
   index("idx_premium_audits_organization").on(table.organizationId),
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const technicalAudits = pgTable("technical_audits", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -982,7 +982,7 @@ export const technicalAudits = pgTable("technical_audits", {
   createdAt: timestamp("created_at", { withTimezone: true }).default(defaultNow),
 }, (table) => [
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 export const competitiveAnalyses = pgTable("competitive_analyses", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -998,7 +998,7 @@ export const competitiveAnalyses = pgTable("competitive_analyses", {
   createdAt: timestamp("created_at", { withTimezone: true }).default(defaultNow),
 }, (table) => [
   ...tenantPolicy("organization_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // 9. AEO CONTENT INTELLIGENCE
@@ -1022,7 +1022,7 @@ export const aeoAnalyses = pgTable("aeo_analyses", {
   index("idx_aeo_analyses_tenant").on(table.tenantId),
   index("idx_aeo_analyses_url").on(table.url),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const faqOpportunities = pgTable("faq_opportunities", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -1037,7 +1037,7 @@ export const faqOpportunities = pgTable("faq_opportunities", {
   index("idx_faq_opps_tenant").on(table.tenantId),
   index("idx_faq_opps_analysis").on(table.aeoAnalysisId),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const kgAlignments = pgTable("kg_alignments", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -1053,7 +1053,7 @@ export const kgAlignments = pgTable("kg_alignments", {
   index("idx_kg_alignments_tenant").on(table.tenantId),
   index("idx_kg_alignments_analysis").on(table.aeoAnalysisId),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // 10. COMPETITOR & COMPETITIVE FINDINGS
@@ -1073,7 +1073,7 @@ export const competitorChanges = pgTable("competitor_changes", {
   index("idx_competitor_changes_comp").on(table.competitorId),
   index("idx_competitor_changes_type").on(table.changeType),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const competitiveSeoFindings = pgTable("competitive_seo_findings", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -1096,7 +1096,7 @@ export const competitiveSeoFindings = pgTable("competitive_seo_findings", {
     'ai_visibility_gap', 'citation_gap', 'prompt_gap', 'brand_mention_gap', 'ai_recommendation_gap', 'citation_overlap'
   )`),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // 11. KNOWLEDGE GRAPH & VECTOR STORE
@@ -1112,7 +1112,7 @@ export const documentEmbeddings = pgTable("document_embeddings", {
   index("idx_document_embeddings_tenant").on(table.tenantId),
   index("idx_document_embeddings_embedding").using("hnsw", table.embedding.op("vector_cosine_ops")),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const kgEntities = pgTable("kg_entities", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -1126,7 +1126,7 @@ export const kgEntities = pgTable("kg_entities", {
   index("idx_kg_entities_tenant").on(table.tenantId),
   index("idx_kg_entities_name").on(table.name),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const kgRelationships = pgTable("kg_relationships", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -1142,7 +1142,7 @@ export const kgRelationships = pgTable("kg_relationships", {
   index("idx_kg_relationships_source").on(table.sourceEntityId),
   index("idx_kg_relationships_target").on(table.targetEntityId),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 // ==========================================
 // 12. CRAWL ACQUISITION & WORKER
@@ -1195,7 +1195,7 @@ export const crawlJobs = pgTable("crawl_jobs", {
   check("crawl_jobs_cache_outcome_check", sql`cache_outcome IS NULL OR cache_outcome IN ('HIT', 'MISS', 'STALE', 'BYPASS')`),
   check("crawl_jobs_version_check", sql`version > 0`),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const crawlResults = pgTable("crawl_results", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -1207,7 +1207,7 @@ export const crawlResults = pgTable("crawl_results", {
   uniqueIndex("crawl_results_job_unique").on(table.jobId),
   uniqueIndex("crawl_results_tenant_job_unique").on(table.tenantId, table.jobId),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 export const crawlCache = pgTable("crawl_cache", {
   id: uuid("id").primaryKey().default(defaultUuid),
@@ -1222,7 +1222,7 @@ export const crawlCache = pgTable("crawl_cache", {
   uniqueIndex("idx_crawl_cache_key").on(table.tenantId, table.cacheScope, table.cacheKey),
   check("crawl_cache_scope_check", sql`cache_scope = 'tenant'`),
   ...tenantPolicy("tenant_id")
-]);
+]).enableRLS();
 
 // Website Monitoring additions
 export const monitoringConfigs = pgTable("monitoring_configs", {
@@ -1240,7 +1240,7 @@ export const monitoringConfigs = pgTable("monitoring_configs", {
     index("idx_monitoring_configs_website").on(t.websiteId),
     ...tenantPolicy("organization_id")
   ];
-});
+}).enableRLS();
 
 export const crawlSnapshots = pgTable("crawl_snapshots", {
   id: uuid("id").default(defaultUuid).primaryKey(),
@@ -1258,7 +1258,7 @@ export const crawlSnapshots = pgTable("crawl_snapshots", {
     index("idx_crawl_snapshots_captured").on(t.capturedAt),
     ...tenantPolicy("organization_id")
   ];
-});
+}).enableRLS();
 
 export const monitoringAlerts = pgTable("monitoring_alerts", {
   id: uuid("id").default(defaultUuid).primaryKey(),
@@ -1278,5 +1278,5 @@ export const monitoringAlerts = pgTable("monitoring_alerts", {
     uniqueIndex("idx_monitoring_alerts_dedup").on(table.organizationId, table.dedupKey),
     ...tenantPolicy("organization_id")
   ];
-});
+}).enableRLS();
 export * from "./api-keys";

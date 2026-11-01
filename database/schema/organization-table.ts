@@ -34,4 +34,4 @@ export const organizations = pgTable("organizations", {
     for: "delete",
     using: sql`id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid`
   })
-]);
+]).enableRLS();

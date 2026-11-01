@@ -2,12 +2,28 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { getTableConfig } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it } from "vitest";
+import * as schema from "../../../../database/schema/index";
+
+interface SnapshotTable {
+  name: string;
+  policies?: Record<string, unknown>;
+  isRLSEnabled?: boolean;
+}
+
+interface Snapshot {
+  tables: Record<string, SnapshotTable>;
+}
+
+interface MigrationJournal {
+  entries: { idx: number; tag: string }[];
+}
 
 const temporaryRoots: string[] = [];
 const verifierPath = path.resolve(process.cwd(), "scripts/database/verify-rls-migrations.ts");
 
-function runVerifier(finalMigration: string) {
+function runVerifier(finalMigration: string, snapshotRlsEnabled: boolean | null = true) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "rls-verifier-regression-"));
   temporaryRoots.push(root);
 
@@ -31,6 +47,7 @@ function runVerifier(finalMigration: string) {
         tenant_data: {
           name: "tenant_data",
           policies: { tenant_policy: {} },
+          ...(snapshotRlsEnabled === null ? {} : { isRLSEnabled: snapshotRlsEnabled }),
         },
       },
     }),
@@ -51,6 +68,66 @@ afterEach(() => {
   for (const root of temporaryRoots.splice(0)) {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+describe("RLS migration verifier schema snapshot alignment", () => {
+  it("requires every runtime policy-bearing Drizzle table to enable RLS and match the latest snapshot", () => {
+    const isPgTable = (value: unknown): value is Parameters<typeof getTableConfig>[0] =>
+      typeof value === "object" &&
+      value !== null &&
+      "enableRLS" in value &&
+      typeof (value as { enableRLS?: unknown }).enableRLS === "function";
+    const runtimePolicyTables = Object.values(schema)
+      .filter(isPgTable)
+      .map((table) => getTableConfig(table))
+      .filter((table) => table.policies.length > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const journal: MigrationJournal = JSON.parse(
+      fs.readFileSync(path.resolve(process.cwd(), "database/drizzle/meta/_journal.json"), "utf8"),
+    );
+    const latestEntry = journal.entries[journal.entries.length - 1];
+    const snapshot: Snapshot = JSON.parse(
+      fs.readFileSync(
+        path.resolve(
+          process.cwd(),
+          "database/drizzle/meta",
+          `${String(latestEntry.idx).padStart(4, "0")}_snapshot.json`,
+        ),
+        "utf8",
+      ),
+    );
+    const snapshotPolicyTables = Object.values(snapshot.tables)
+      .filter((table) => table.policies && Object.keys(table.policies).length > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    expect(runtimePolicyTables).toHaveLength(51);
+    expect(snapshotPolicyTables).toHaveLength(runtimePolicyTables.length);
+    expect(snapshotPolicyTables.map((table) => table.name)).toEqual(
+      runtimePolicyTables.map((table) => table.name),
+    );
+    expect(runtimePolicyTables.every((table) => table.enableRLS)).toBe(true);
+    expect(snapshotPolicyTables.every((table) => table.isRLSEnabled === true)).toBe(true);
+  });
+  it("rejects policy-bearing tables with RLS disabled in the latest snapshot", () => {
+    const result = runVerifier("", false);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RLS not enabled in latest Drizzle snapshot: tenant_data");
+  });
+
+  it("rejects policy-bearing tables when the snapshot omits isRLSEnabled", () => {
+    const result = runVerifier("", null);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RLS not enabled in latest Drizzle snapshot: tenant_data");
+  });
+
+  it("accepts a policy-bearing table when snapshot and migration RLS states agree", () => {
+    const result = runVerifier("");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("RLS migration final-state verified");
+  });
 });
 
 describe("RLS migration verifier DO-block fail-closed behavior", () => {

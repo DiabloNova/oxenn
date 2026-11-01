@@ -99,6 +99,13 @@
       "when": 1792578550000,
       "tag": "0013_remove_api_keys_prefix_index",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793513515275,
+      "tag": "0014_rls_schema_snapshot_alignment",
+      "breakpoints": true
     }
   ]
 }
