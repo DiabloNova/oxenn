@@ -306,6 +306,30 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Product Documentation  This section describes the implemented product capabilities of Seorchable.  ## Status Dictionary - **Implemented**: Fully operational in the current codebase. - **Partial**: Feature exists but may be incomplete or experimental. - **Planned**: Not currently implemented.  ## Implemented Capabilities  ### AI Visibility Audit Engine Measures brand representation across large language models, evaluates metrics for 8 visibility dimensions, and calculates a deterministic weight`
   },
   {
+    slug: "PHASE-01-PRODUCT-DESIGN-AUDIT",
+    titleEn: "Phase 01 — Product and Design Audit",
+    titleFa: "Phase 01 — Product and Design Audit",
+    category: "redesign",
+    categoryFa: "redesign",
+    snippet: `# Phase 01 — Product and Design Audit  **Project:** Oxenn / اوژن   **Repository:** https://github.com/DiabloNova/oxenn   **Baseline branch:** \`main\`   **Execution branch:** \`redesign/oxenn-world-class-experience\`   **Audit date:** 2026-10-29   **Status:** Repository/source inspection completed for the first audit pass. Route-by-route reconciliation and executable baseline checks remain open.  ## 1. Scope and method  This audit checks the existing repository entry points, shared styles, locale/theme/navigation`
+  },
+  {
+    slug: "PHASE-01-STYLEGUIDE-AND-CODEBASE-AUDIT",
+    titleEn: "Phase 01 — Existing Product & Design-System Audit",
+    titleFa: "Phase 01 — Existing Product & Design-System Audit",
+    category: "redesign",
+    categoryFa: "redesign",
+    snippet: `# Phase 01 — Existing Product & Design-System Audit  **Product:** Oxenn / Seorchable   **Repository:** DiabloNova/oxenn   **Branch:** \`redesign/oxenn-world-class-experience\`   **Audit scope:** Existing homepage, shared navigation, theme/locale provider, typography configuration, tokens, marketing components, and the supplied Product UI Styleguide image.   **Status:** Source inspection completed for the files listed below. No production UI code was changed in this phase.  ## 1. Design brief groun`
+  },
+  {
+    slug: "PHASE-02-CREATIVE-DIRECTION",
+    titleEn: "Phase 02 — Creative Concept and Design Direction",
+    titleFa: "Phase 02 — Creative Concept and Design Direction",
+    category: "redesign",
+    categoryFa: "redesign",
+    snippet: `# Phase 02 — Creative Concept and Design Direction  **Concept name:** Signal Atlas — Oxenn's Living Digital Twin   **Design thesis:** Turn fragmented search and AI visibility signals into a clear model of where a brand stands, what is missing, and what to do next.   **Reference concept:** The generated Oxenn homepage image shared in the project conversation (1536 × 1024). It is an art-direction reference, not a production screenshot or proof of shipped functionality.  ## 1. Brand principles  1. `
+  },
+  {
     slug: "RBAC_MODEL",
     titleEn: "Hierarchical RBAC Security Model",
     titleFa: "Hierarchical RBAC Security Model",
