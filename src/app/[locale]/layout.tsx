@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { persianPrimary, persianDisplay, englishTitleFont } from "@/config/fonts";
+import { persianPrimary, persianDisplay } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { isSupportedLocale } from "@/config/i18n";
 import FloatingSidebar from "@/components/navigation/FloatingSidebar";
@@ -54,8 +54,8 @@ export default async function RootLayout({ children, params }: LayoutProps) {
     notFound();
   }
 
-  // Apply all primary, display, and English title font variable classes to html
-  const fontClasses = `${persianPrimary.variable} ${persianDisplay.variable} ${englishTitleFont.variable}`;
+  // Apply the Persian body and display font variables to the document.
+  const fontClasses = `${persianPrimary.variable} ${persianDisplay.variable}`;
 
   return (
     <html
