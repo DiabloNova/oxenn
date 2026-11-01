@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { notifyNavigationStart } from "@/lib/navigation-transition";
 
 type Theme = "light" | "dark";
 type Direction = "ltr" | "rtl";
@@ -19,7 +21,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 /**
  * Provides theme, language, and text-direction settings to descendant components.
  *
- * @param initialLanguage - The language used when no persisted language is available.
+ * @param initialLanguage - Fallback language when the current route has no locale
+ *   and no valid persisted language is available.
  * @returns A context provider containing theme, language, and direction settings.
  */
 export function ThemeProvider({
@@ -29,6 +32,8 @@ export function ThemeProvider({
   children: React.ReactNode;
   initialLanguage?: Language;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [theme, setThemeState] = useState<Theme>("light");
   const [language, setLanguageState] = useState<Language>(initialLanguage);
   const [direction, setDirection] = useState<Direction>(initialLanguage === "fa" ? "rtl" : "ltr");
@@ -51,7 +56,27 @@ export function ThemeProvider({
 
     setLanguageState(newLang);
     setDirection(dir);
-  }, []);
+
+    // The localized URL selects page content; keep it in sync with the control.
+    // Replacing the locale segment preserves the current page and query/hash state.
+    if (pathname) {
+      const localePrefix = /^\/(?:fa|en)(?=\/|$)/;
+      let localizedPath = pathname;
+
+      if (localePrefix.test(pathname)) {
+        localizedPath = pathname.replace(localePrefix, `/${newLang}`);
+      } else if (pathname === "/") {
+        localizedPath = `/${newLang}`;
+      } else {
+        localizedPath = `/${newLang}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+      }
+
+      if (localizedPath !== pathname) {
+        notifyNavigationStart(localizedPath);
+        router.replace(`${localizedPath}${window.location.search}${window.location.hash}`);
+      }
+    }
+  }, [pathname, router]);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme") as Theme | null;
@@ -62,14 +87,21 @@ export function ThemeProvider({
     root.classList.remove("light", "dark");
     root.classList.add(initialTheme);
 
-    const storedLang = localStorage.getItem("language") as Language | null;
-    let currentLang = initialLanguage;
-    let currentDir: Direction = initialLanguage === "fa" ? "rtl" : "ltr";
+    // The URL locale is authoritative on localized routes. Only use persisted
+    // language as a fallback when the current path has no recognized locale.
+    const routeLanguage = pathname?.match(/^\/(fa|en)(?=\/|$)/)?.[1];
+    const storedLanguage = localStorage.getItem("language");
+    let currentLang: Language = initialLanguage;
 
-    if (storedLang) {
-      currentLang = storedLang;
-      currentDir = storedLang === "fa" ? "rtl" : "ltr";
+    if (routeLanguage === "fa" || routeLanguage === "en") {
+      currentLang = routeLanguage;
+      // Keep persistence consistent with the locale actually being displayed.
+      localStorage.setItem("language", currentLang);
+    } else if (storedLanguage === "fa" || storedLanguage === "en") {
+      currentLang = storedLanguage;
     }
+
+    const currentDir: Direction = currentLang === "fa" ? "rtl" : "ltr";
 
     root.setAttribute("lang", currentLang);
     root.setAttribute("dir", currentDir);
@@ -81,7 +113,7 @@ export function ThemeProvider({
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [initialLanguage]);
+  }, [initialLanguage, pathname]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, direction, language, setLanguage }}>

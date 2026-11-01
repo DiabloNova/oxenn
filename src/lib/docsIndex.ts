@@ -362,6 +362,22 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Phase 2 — Code Security (H1, M8)  **Status: INCOMPLETE — VERIFICATION PENDING**   **Date:** 2026-10-19   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Oxenn Audit Report and Remediation Plan](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [PATCH-LlmAnalyticsPanel-XSS.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/PATCH-LlmAnalyticsPanel-XSS.md)   **Branch:** \`fix/audit-remediation-p2\`   **Pull req`
   },
   {
+    slug: "pr-98-language-routing-navigation-flash",
+    titleEn: "PR #98 — Language routing and workspace navigation flash",
+    titleFa: "PR #98 — Language routing and workspace navigation flash",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# PR #98 — Language routing and workspace navigation flash  **Status:** IMPLEMENTED — automated checks passed on source commit \`ebe2e470a8a2f78c7e85df3da5216826799fd0db\`; manual visual verification of the protected Vercel preview remains unavailable.  **Scope:** \`fix/language-toggle-route-sync\` (PR #98). This task covers the floating-navigation flash during route transitions, all navigation initiators associated with that dock, and the contract for unprefixed application paths.  ## Invariant  A `
+  },
+  {
+    slug: "site-map-information-architecture-audit",
+    titleEn: "Site Map and Product Information Architecture Audit — Oxenn / Seorchable",
+    titleFa: "ممیزی معماری اطلاعات و نقشه سایت Oxenn / Seorchable",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# ممیزی معماری اطلاعات و نقشه سایت Oxenn / Seorchable  - تاریخ بررسی: ۲۰۲۶-۱۰-۲۹ - شاخه ممیزی: \`docs/site-map-and-product-information-architecture\` - شاخه مبنا: \`main\` - commit مبنا: \`0a85219c90ccba91d0f796dc6cdd344d84b6e003\` - نوع اقدام: بررسی و مستندسازی فقط؛ هیچ صفحه، مسیر برنامه یا رفتار اجرایی در این شاخه تغییر نکرده است.  ## 1. تصمیم‌های معماری که باید رعایت شوند  1. «راهکارها و خدمات» فقط سطح معرفی، توضیح ارزش، مخاطب هدف، موارد استفاده، وضعیت عرضه و CTA است. کار واقعی با ابزارها در داشبور`
+  },
+  {
     slug: "phase-3-repository-configuration-hygiene",
     titleEn: "Phase 3 — Repository and Configuration Hygiene",
     titleFa: "Phase 3 — Repository and Configuration Hygiene",

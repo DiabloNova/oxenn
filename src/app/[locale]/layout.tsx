@@ -1,9 +1,11 @@
 import React from "react";
 import type { Metadata, Viewport } from "next";
+import { notFound } from "next/navigation";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { persianPrimary, persianDisplay, englishTitleFont } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
+import { isSupportedLocale } from "@/config/i18n";
 import FloatingSidebar from "@/components/navigation/FloatingSidebar";
 import GlobalNavigationControls from "@/components/navigation/GlobalNavigationControls";
 import "../globals.css";
@@ -48,6 +50,10 @@ interface LayoutProps {
 export default async function RootLayout({ children, params }: LayoutProps) {
   const { locale } = await params;
 
+  if (!isSupportedLocale(locale)) {
+    notFound();
+  }
+
   // Apply all primary, display, and English title font variable classes to html
   const fontClasses = `${persianPrimary.variable} ${persianDisplay.variable} ${englishTitleFont.variable}`;
 
@@ -59,7 +65,7 @@ export default async function RootLayout({ children, params }: LayoutProps) {
       style={{ backgroundColor: "var(--background)" }}
     >
       <body>
-        <ThemeProvider initialLanguage={locale as "en" | "fa"}>
+        <ThemeProvider initialLanguage={locale}>
           <AuthProvider>
             {children}
             <FloatingSidebar />
