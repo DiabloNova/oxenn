@@ -27,18 +27,6 @@ export const persianPrimary = localFont({
 });
 
 // ==========================================
-// ENGLISH TITLE FONT — Brand SEO Font
-// ==========================================
-export const englishTitleFont = localFont({
-  src: [
-    { path: "../../public/fonts/BoxFace.ttf", weight: "400", style: "normal" },
-  ],
-  variable: "--font-english-title",
-  display: "swap",
-  fallback: ["Impact", "Arial Black", "sans-serif"],
-});
-
-// ==========================================
 // PEYDA — Display / heading typeface (titles)
 // ==========================================
 export const persianDisplay = localFont({
