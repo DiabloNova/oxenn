@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { scrapeUrlMock, generateTextMock, runWithTenantContextMock } = vi.hoisted(() => ({
+const { scrapeUrlMock, generateTextMock, runWithTenantContextMock, authorizeApiRequestMock } = vi.hoisted(() => ({
   scrapeUrlMock: vi.fn(),
   generateTextMock: vi.fn(),
   runWithTenantContextMock: vi.fn(),
+  authorizeApiRequestMock: vi.fn(),
 }));
 
 vi.mock("@/lib/firecrawl", () => ({ firecrawlApp: { scrapeUrl: scrapeUrlMock } }));
@@ -15,12 +16,18 @@ vi.mock("@/core/database/tenant-context", () => ({
   TenantContextManager: { runWithTenantContext: runWithTenantContextMock },
 }));
 
+vi.mock("@/services/auth/authorization", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/auth/authorization")>();
+  return { ...actual, authorizeApiRequest: authorizeApiRequestMock };
+});
+
 import { POST } from "@/app/api/v1/content/studio/route";
 import { getLLMClient } from "@/services/ai/llm-client";
 
 describe("Content Studio request bounds", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authorizeApiRequestMock.mockResolvedValue({ userId: "user-test", tenantId: "tenant-test" });
     vi.stubEnv("FIRECRAWL_API_KEY", "fc-test-key");
     runWithTenantContextMock.mockImplementation((...args: unknown[]) => {
       const callback = args[args.length - 1];
@@ -37,7 +44,11 @@ describe("Content Studio request bounds", () => {
   async function post(fields: Record<string, unknown>) {
     return POST(new NextRequest("http://localhost/api/v1/content/studio", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-tenant-id": "tenant-test" },
+      headers: {
+        "content-type": "application/json",
+        "x-tenant-id": "forged-tenant",
+        "x-user-id": "forged-user",
+      },
       body: JSON.stringify({ url: "https://example.com", ...fields }),
     }));
   }
@@ -56,9 +67,10 @@ describe("Content Studio request bounds", () => {
   it("accepts keywords and brand voice exactly at their configured limits", async () => {
     const response = await post({ targetKeywords: Array.from({ length: 100 }, () => "k".repeat(200)), brandVoice: "v".repeat(200) });
     expect(response.status).toBe(200);
+    expect(authorizeApiRequestMock).toHaveBeenCalledTimes(1);
     expect(runWithTenantContextMock).toHaveBeenCalledWith(
       "tenant-test",
-      "usr-studio-default",
+      "user-test",
       "req-content-studio",
       expect.any(Function),
     );

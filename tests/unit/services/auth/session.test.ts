@@ -149,6 +149,22 @@ describe('Auth Session & Security Regression Suite', () => {
     await expect(requireWorkspaceMembership(mockUser.id, "ws-other-hacker-tenant")).rejects.toThrow("is not a member");
   });
 
+  it('rejects caller-supplied identity headers when no valid server session exists', async () => {
+    const headerOnlyRequest = {
+      headers: {
+        get: (name: string) => ({
+          "x-user-id": "usr-test-123",
+          "x-tenant-id": "ws-test-99",
+        }[name.toLowerCase()] ?? null),
+      },
+    } as unknown as NextRequest;
+
+    await expect(authorizeApiRequest(headerOnlyRequest)).rejects.toMatchObject({
+      statusCode: 401,
+      name: "AuthorizationError",
+    });
+  });
+
   it('overrides spoofed request headers with active signed session info', async () => {
     function createMockRequest(headers: Record<string, string>): NextRequest {
       const headerMap = new Map();
