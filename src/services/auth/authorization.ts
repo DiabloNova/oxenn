@@ -119,47 +119,22 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
 }
 
 /**
- * Validates and resolves the authoritative user and tenant identity for API routes.
- * If an active signed server session is present, its identity overrides all client-provided headers.
- * Otherwise, falls closed if neither valid session nor proper headers are present.
+ * Resolves the authoritative user and workspace identity exclusively from the
+ * signed server session. Client-supplied identity headers are metadata only and
+ * must never establish an authenticated principal.
+ *
+ * Integrations that need machine-to-machine access must use a separately
+ * authenticated API credential flow; x-user-id/x-tenant-id are not credentials.
  */
-export async function authorizeApiRequest(req: NextRequest): Promise<{ userId: string; tenantId: string }> {
+export async function authorizeApiRequest(_req: NextRequest): Promise<{ userId: string; tenantId: string }> {
   const session = await getSession();
 
-  if (session && session.user) {
-    return {
-      userId: session.user!.id,
-      tenantId: session.user.workspaceId
-    };
-  }
-
-  // Fallback to headers for developer API integration, with validation
-  const headerUserId = req.headers.get("x-user-id");
-  const headerTenantId = req.headers.get("x-tenant-id");
-
-  if (!headerUserId || headerUserId.trim() === "" || !headerTenantId || headerTenantId.trim() === "") {
-    throw new AuthorizationError(401, "Unauthorized: Valid session or API headers required.");
-  }
-
-  // To keep developer API integrations secure, we verify the user belongs to the requested header tenant
-  const hasAccess = await TenantContextManager.runWithSystemContext(headerUserId, "sys-auth-api-check", async () => {
-      const client = TenantContextManager.getDbClient();
-      if (!client) {
-          throw new Error("Failed to get DB client in system context");
-      }
-      const { rows } = await client.query(
-          "SELECT 1 FROM organization_members m JOIN organizations o ON m.organization_id = o.id WHERE m.user_id = $1 AND m.organization_id = $2 AND o.deleted_at IS NULL",
-          [headerUserId, headerTenantId]
-      );
-      return rows.length > 0;
-  });
-
-  if (!hasAccess) {
-      throw new AuthorizationError(403, "Forbidden: User is not a member of the requested workspace.");
+  if (!session?.user?.id || !session.user.workspaceId) {
+    throw new AuthorizationError(401, "Unauthorized: An active server session is required.");
   }
 
   return {
-    userId: headerUserId,
-    tenantId: headerTenantId
+    userId: session.user.id,
+    tenantId: session.user.workspaceId,
   };
 }
