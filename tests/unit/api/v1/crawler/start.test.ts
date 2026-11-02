@@ -38,6 +38,21 @@ describe("Legacy crawler start request bounds", () => {
     }));
   }
 
+  it("returns 401 and does not start a campaign when authorization fails despite forged identity headers", async () => {
+    const { AuthorizationError } = await import("@/services/auth/authorization");
+    authorizeApiRequestMock.mockRejectedValueOnce(
+      new AuthorizationError(401, "Unauthorized: A valid server session is required."),
+    );
+
+    const response = await post(["https://example.com"]);
+    const body = await response.json();
+
+    expect(authorizeApiRequestMock).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(401);
+    expect(body.error).toBe("Unauthorized");
+    expect(runCrawlerCampaignMock).not.toHaveBeenCalled();
+  });
+
   it("rejects more than 50 seed URLs before starting a campaign", async () => {
     const response = await post(Array.from({ length: 51 }, (_, index) => `https://example${index}.com`));
     expect(response.status).toBe(400);
