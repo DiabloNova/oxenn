@@ -179,6 +179,15 @@ describe("Competitive Analysis API authorization and business flow", () => {
       expect.any(Function),
     );
     expect(competitorSaveMock).toHaveBeenCalledTimes(1);
+    expect(competitorSaveMock).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: "tenant-test" }),
+    );
     expect(queryMock).toHaveBeenCalledTimes(1);
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining("organization_id"),
+      expect.arrayContaining(["tenant-test"]),
+    );
+    const auditInsertParams = queryMock.mock.calls[0]?.[1] as unknown[];
+    expect(auditInsertParams[0]).toBe("tenant-test");
   });
 });

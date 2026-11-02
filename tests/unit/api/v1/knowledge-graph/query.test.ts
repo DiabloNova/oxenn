@@ -6,11 +6,17 @@ const {
   requireWorkspaceMembershipMock,
   runWithTenantContextMock,
   entityServiceConstructorMock,
+  getEntityByNameMock,
+  getNeighborhoodMock,
+  projectNeighborhoodMock,
 } = vi.hoisted(() => ({
   requireSessionMock: vi.fn(),
   requireWorkspaceMembershipMock: vi.fn(),
   runWithTenantContextMock: vi.fn(),
   entityServiceConstructorMock: vi.fn(),
+  getEntityByNameMock: vi.fn(),
+  getNeighborhoodMock: vi.fn(),
+  projectNeighborhoodMock: vi.fn(),
 }));
 
 vi.mock("@/services/auth/session", () => ({
@@ -37,8 +43,16 @@ vi.mock("@/features/ai-intelligence/services/entity-service", () => ({
     constructor() {
       entityServiceConstructorMock();
     }
+
+    getEntityByName(...args: unknown[]) {
+      return getEntityByNameMock(...args);
+    }
+
+    getNeighborhood(...args: unknown[]) {
+      return getNeighborhoodMock(...args);
+    }
   },
-  projectNeighborhoodForVisualization: vi.fn(),
+  projectNeighborhoodForVisualization: projectNeighborhoodMock,
 }));
 
 import { AuthorizationError } from "@/services/auth/authorization";
@@ -106,6 +120,49 @@ describe("Knowledge Graph API authorization status mapping", () => {
       "req-kg-test",
       expect.any(Function),
     );
+    expect(requireWorkspaceMembershipMock).toHaveBeenCalledWith("user-test", "tenant-test");
+    expect(requireWorkspaceMembershipMock).not.toHaveBeenCalledWith("forged-user", "forged-tenant");
     expect(entityServiceConstructorMock).not.toHaveBeenCalled();
+  });
+
+  it("uses session identity and executes the entity query path despite forged identity headers", async () => {
+    requireSessionMock.mockResolvedValueOnce({
+      user: {
+        id: "user-test",
+        workspaceId: "tenant-test",
+      },
+    });
+    requireWorkspaceMembershipMock.mockResolvedValueOnce(undefined);
+
+    const centralEntity = { id: "entity-test", name: "Optimus AI" };
+    const neighborhood = {
+      nodes: [centralEntity],
+      edges: [],
+    };
+    const projectedGraph = {
+      nodes: [{ id: "entity-test", label: "Optimus AI" }],
+      edges: [],
+    };
+    getEntityByNameMock.mockResolvedValueOnce(centralEntity);
+    getNeighborhoodMock.mockResolvedValueOnce(neighborhood);
+    projectNeighborhoodMock.mockReturnValueOnce(projectedGraph);
+
+    const response = await post();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual(projectedGraph);
+    expect(runWithTenantContextMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "user-test",
+      "req-kg-test",
+      expect.any(Function),
+    );
+    expect(requireWorkspaceMembershipMock).toHaveBeenCalledWith("user-test", "tenant-test");
+    expect(requireWorkspaceMembershipMock).not.toHaveBeenCalledWith("forged-user", "forged-tenant");
+    expect(entityServiceConstructorMock).toHaveBeenCalledTimes(1);
+    expect(getEntityByNameMock).toHaveBeenCalledWith("tenant-test", "Optimus AI");
+    expect(getNeighborhoodMock).toHaveBeenCalledWith("tenant-test", "entity-test", 2, 100);
+    expect(projectNeighborhoodMock).toHaveBeenCalledWith(neighborhood.nodes, neighborhood.edges);
   });
 });
