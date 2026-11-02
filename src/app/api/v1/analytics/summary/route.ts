@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizeApiRequest, AuthorizationError } from "@/services/auth/authorization";
 import { TenantContextManager } from "@/core/database/tenant-context";
 
 export async function GET(req: NextRequest) {
   try {
-    const organizationId = req.headers.get("x-tenant-id") || "tenant-pipeline-a";
-    const userId = req.headers.get("x-user-id") || "usr-1001";
+    const { tenantId: organizationId, userId } = await authorizeApiRequest(req);
     const requestId = req.headers.get("x-request-id") || `req-analytics-${Date.now()}`;
     const { searchParams } = new URL(req.url);
     const locale = searchParams.get("locale") || "fa";
@@ -69,6 +69,12 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 403 ? "Forbidden" : "Unauthorized", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[API Analytics Summary Route Error]:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

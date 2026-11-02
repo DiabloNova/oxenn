@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizeApiRequest, AuthorizationError } from "@/services/auth/authorization";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { CrawlerOrchestrator } from "@/services/crawler/crawler-orchestrator";
@@ -15,17 +16,8 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate check: Extract tenant ID from request headers
-    const tenantId = req.headers.get("x-tenant-id");
-    if (!tenantId || tenantId.trim() === "") {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Tenant isolation violation: missing valid x-tenant-id header." },
-        { status: 401 }
-      );
-    }
-
-    // 2. Extract optional user ID and request ID from request headers
-    const userId = req.headers.get("x-user-id") || "system_crawler";
+    // Resolve identity from the validated server session; request headers are not trusted.
+    const { userId, tenantId } = await authorizeApiRequest(req);
     const requestId = req.headers.get("x-request-id") || randomUUID();
 
     // 3. Parse and validate JSON request body
@@ -61,6 +53,12 @@ export async function POST(req: NextRequest) {
     // 5. Return success result with status 200 OK
     return NextResponse.json(result, { status: 200 });
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 403 ? "Forbidden" : "Unauthorized", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[API Crawler Campaign Start Route Error]:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

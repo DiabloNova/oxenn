@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizeApiRequest, AuthorizationError } from "@/services/auth/authorization";
 import { z } from "zod";
 import { firecrawlApp } from "@/lib/firecrawl";
 import { getLLMClient } from "@/services/ai/llm-client";
@@ -41,16 +42,8 @@ export interface PremiumAuditResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate Tenant (Paid feature check)
-    const tenantId = req.headers.get("x-tenant-id");
-    const userId = req.headers.get("x-user-id") || "usr-premium-default";
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "شناسه مستأجر معتبر ارسال نشده است. این ویژگی نیاز به اشتراک فعال دارد." },
-        { status: 401 }
-      );
-    }
+    // Resolve identity from the validated server session.
+    const { userId, tenantId } = await authorizeApiRequest(req);
 
     // 2. Parse and Validate Request
     const body = await req.json();
@@ -307,6 +300,12 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 403 ? "Forbidden" : "Unauthorized", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[Premium SEO Audit Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای ناشناخته در ارزیابی پریمیوم رخ داد.";
     return NextResponse.json(

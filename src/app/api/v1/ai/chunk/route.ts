@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { authorizeApiRequest, AuthorizationError } from '@/services/auth/authorization';
 import { z } from 'zod';
 import { chunkText } from '@/services/ai/text-chunker';
 import { TenantContextManager } from '@/core/database/tenant-context';
@@ -12,6 +13,7 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const { tenantId: organizationId, userId } = await authorizeApiRequest(req);
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
 
@@ -25,8 +27,6 @@ export async function POST(req: NextRequest) {
     const { text, maxChunkSize, overlap } = parsed.data;
 
     // Strict Tenant Context Isolation wrapping
-    const organizationId = req.headers.get('x-tenant-id') || 'tenant-pipeline-a';
-    const userId = req.headers.get('x-user-id') || 'usr-1001';
     const requestId = req.headers.get('x-request-id') || `req-${Date.now()}`;
 
     const chunks = await TenantContextManager.runWithTenantContext(
@@ -40,6 +40,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ chunks });
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 403 ? "Forbidden" : "Unauthorized", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error('[API Chunk Route Error]:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

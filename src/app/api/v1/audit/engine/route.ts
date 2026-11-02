@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizeApiRequest, AuthorizationError } from "@/services/auth/authorization";
 import { z } from "zod";
 import { executeAudit } from "@/lib/audit-engine/builder";
 import { TenantContextManager } from "@/core/database/tenant-context";
@@ -11,19 +12,8 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // 2. Tenant Context Extraction and Authentication Check
-    const tenantId = req.headers.get("x-tenant-id");
-    const userId = req.headers.get("x-user-id") || "usr-engine-default";
-
-    if (!tenantId) {
-      return NextResponse.json(
-        {
-          error: "Unauthorized",
-          message: "شناسه مستأجر معتبر (x-tenant-id) ارسال نشده است. این ویژگی نیاز به حساب کاربری فعال دارد."
-        },
-        { status: 401 }
-      );
-    }
+    // 2. Resolve identity from the validated server session.
+    const { userId, tenantId } = await authorizeApiRequest(req);
 
     // 3. Parse and Validate Body
     const body = await req.json();
@@ -89,6 +79,12 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 403 ? "Forbidden" : "Unauthorized", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[Core Audit Engine API Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای ناشناخته در لایه موتور ارزیابی رخ داد.";
     return NextResponse.json(

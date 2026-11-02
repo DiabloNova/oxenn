@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizeApiRequest, AuthorizationError } from "@/services/auth/authorization";
 import { z } from "zod";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
@@ -34,16 +35,8 @@ export interface LlmAnalyticsResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate Tenant (Required parameter context)
-    const tenantId = req.headers.get("x-tenant-id");
-    const userId = req.headers.get("x-user-id") || "usr-analytics-default";
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "شناسه مستأجر معتبر ارسال نشده است. این ویژگی نیاز به اشتراک فعال دارد." },
-        { status: 401 }
-      );
-    }
+    // Resolve identity from the validated server session; request headers are not trusted.
+    const { userId, tenantId } = await authorizeApiRequest(req);
 
     // 2. Parse and Validate Payload
     const body = await req.json();
@@ -137,6 +130,12 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 403 ? "Forbidden" : "Unauthorized", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[LLM Analytics API Error]:", error);
     const message = error instanceof Error ? error.message : "خطای سرور در تحلیل مدل‌های زبانی رخ داد.";
     return NextResponse.json(

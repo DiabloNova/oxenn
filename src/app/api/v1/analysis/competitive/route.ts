@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizeApiRequest, AuthorizationError } from "@/services/auth/authorization";
 import { z } from "zod";
 import { firecrawlApp } from "@/lib/firecrawl";
 import { getLLMClient } from "@/services/ai/llm-client";
@@ -77,16 +78,8 @@ export interface CompetitiveAnalysisResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Enforce Tenant Isolation Context Headers
-    const userId = req.headers.get("x-user-id") || "usr-1001";
-    const tenantId = req.headers.get("x-tenant-id");
-
-    if (!tenantId || tenantId.trim() === "") {
-      return NextResponse.json(
-        { error: "Bad Request", message: "Missing x-tenant-id header context" },
-        { status: 400 }
-      );
-    }
+    // Resolve identity from the validated server session; request headers are not trusted.
+    const { userId, tenantId } = await authorizeApiRequest(req);
 
     // 2. Parse and Validate Request Body
     const body = await req.json();
@@ -439,6 +432,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(resultPayload);
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 403 ? "Forbidden" : "Unauthorized", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[Competitive Analysis API Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای داخلی سرور رخ داده است.";
     return NextResponse.json(
