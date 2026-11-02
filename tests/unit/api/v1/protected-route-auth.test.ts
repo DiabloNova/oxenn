@@ -330,6 +330,12 @@ const protectedRouteCases: Array<[string, () => Promise<Response>]> = [
   ["POST /api/v1/rag/query", () => ragQueryPost(postRequest("/api/v1/rag/query", { question: "What is this?" }))],
 ];
 
+const crawlMethodCases: Array<[string, () => Promise<Response>]> = [
+  ["POST", () => crawlPost(postRequest("/api/v1/crawl", { requestedUrl: "https://example.com" }))],
+  ["GET", () => crawlGet(getRequest("/api/v1/crawl?jobId=job-test"))],
+  ["DELETE", () => crawlDelete(getRequest("/api/v1/crawl?jobId=job-test"))],
+];
+
 describe("Protected API route session boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -351,11 +357,7 @@ describe("Protected API route session boundary", () => {
     },
   );
 
-  it.each([
-    ["POST", () => crawlPost(postRequest("/api/v1/crawl", { requestedUrl: "https://example.com" }))],
-    ["GET", () => crawlGet(getRequest("/api/v1/crawl?jobId=job-test"))],
-    ["DELETE", () => crawlDelete(getRequest("/api/v1/crawl?jobId=job-test"))],
-  ])(
+  it.each(crawlMethodCases)(
     "%s /api/v1/crawl rejects a request without a server session before touching crawl services",
     async (_method, invoke) => {
       const response = await invoke();
