@@ -3,6 +3,7 @@ import { z } from "zod";
 import { executeAudit } from "@/lib/audit-engine/builder";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
+import { authorizeApiRequest, AuthorizationError } from "@/services/auth/authorization";
 
 // 1. Zod Request Schema
 const requestSchema = z.object({
@@ -11,19 +12,18 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // 2. Tenant Context Extraction and Authentication Check
-    const tenantId = req.headers.get("x-tenant-id");
-    const userId = req.headers.get("x-user-id") || "usr-engine-default";
-
-    if (!tenantId) {
+    // Resolve identity from the signed server session; request headers are never identity.
+    let authContext: { userId: string; tenantId: string };
+    try {
+      authContext = await authorizeApiRequest(req);
+    } catch (authError: unknown) {
+      const status = authError instanceof AuthorizationError ? authError.statusCode : 401;
       return NextResponse.json(
-        {
-          error: "Unauthorized",
-          message: "شناسه مستأجر معتبر (x-tenant-id) ارسال نشده است. این ویژگی نیاز به حساب کاربری فعال دارد."
-        },
-        { status: 401 }
+        { error: "Unauthorized", message: "An active authenticated session is required." },
+        { status }
       );
     }
+    const { tenantId, userId } = authContext;
 
     // 3. Parse and Validate Body
     const body = await req.json();
