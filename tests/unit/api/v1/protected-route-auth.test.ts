@@ -15,7 +15,10 @@ const {
   postgresQueryMock,
   executeAuditMock,
   crawlerCampaignMock,
+  crawlOrchestratorConstructorMock,
+  crawlSubmitMock,
   dashboardSummaryMock,
+  documentIngestionConstructorMock,
   documentIngestMock,
   answerQuestionMock,
   repositoryConstructorMock,
@@ -41,7 +44,10 @@ const {
     postgresQueryMock: vi.fn(),
     executeAuditMock: vi.fn(),
     crawlerCampaignMock: vi.fn(),
+    crawlOrchestratorConstructorMock: vi.fn(),
+    crawlSubmitMock: vi.fn(),
     dashboardSummaryMock: vi.fn(),
+    documentIngestionConstructorMock: vi.fn(),
     documentIngestMock: vi.fn(),
     answerQuestionMock: vi.fn(),
     repositoryConstructorMock: vi.fn(),
@@ -165,7 +171,12 @@ vi.mock("@/features/ai-intelligence/services", () => ({
 
 vi.mock("@/features/acquisition/application/orchestrator", () => ({
   CrawlOrchestrator: class {
-    submit = vi.fn();
+    constructor() {
+      crawlOrchestratorConstructorMock();
+    }
+    submit(...args: unknown[]) {
+      return crawlSubmitMock(...args);
+    }
   },
 }));
 
@@ -181,7 +192,12 @@ vi.mock("@/features/acquisition/infrastructure/persistence/postgres", () => ({
 
 vi.mock("@/services/ingestion/document-ingestion", () => ({
   DocumentIngestionService: class {
-    ingestDocument = documentIngestMock;
+    constructor() {
+      documentIngestionConstructorMock();
+    }
+    ingestDocument(...args: unknown[]) {
+      return documentIngestMock(...args);
+    }
   },
 }));
 
@@ -256,7 +272,10 @@ const downstreamMocks = [
   postgresQueryMock,
   executeAuditMock,
   crawlerCampaignMock,
+  crawlOrchestratorConstructorMock,
+  crawlSubmitMock,
   dashboardSummaryMock,
+  documentIngestionConstructorMock,
   documentIngestMock,
   answerQuestionMock,
   repositoryConstructorMock,
@@ -364,6 +383,8 @@ describe("Protected API route session boundary", () => {
 
       expect(response.status).toBe(401);
       expect(runWithTenantContextMock).not.toHaveBeenCalled();
+      expect(crawlOrchestratorConstructorMock).not.toHaveBeenCalled();
+      expect(crawlSubmitMock).not.toHaveBeenCalled();
       expect(crawlJobRepositoryConstructorMock).not.toHaveBeenCalled();
       expect(crawlJobGetByIdMock).not.toHaveBeenCalled();
       expect(crawlJobCancelMock).not.toHaveBeenCalled();
