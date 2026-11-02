@@ -24,6 +24,14 @@ vi.mock("@/features/public-api/services/api-quota-service", () => ({
   },
 }));
 
+vi.mock("@/core/database/tenant-context", () => ({
+  TenantContextViolationException: class extends Error {},
+}));
+
+vi.mock("@/features/admin/infrastructure/persistence/postgres", () => ({
+  DatabaseUnavailableError: class extends Error {},
+}));
+
 import {
   withPublicApi,
   type AuthenticatedApiRequest,
