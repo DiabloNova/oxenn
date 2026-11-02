@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { createContentSnippet } from "./docs-snippet";
+import { isPublicDocumentation } from "../src/lib/docs-visibility";
 
 export interface DocMeta {
   slug: string;
@@ -64,6 +65,7 @@ function getAllDocs(basePath = "docs"): DocMeta[] {
 
         try {
             const content = fs.readFileSync(res, "utf-8");
+            if (!isPublicDocumentation(content)) continue;
             const firstLine = content.split('\n').find(line => line.startsWith('# '));
             if (firstLine) {
                 title = firstLine.replace('# ', '').trim();

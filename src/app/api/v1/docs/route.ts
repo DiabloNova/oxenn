@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { isPublicDocumentation } from '@/lib/docs-visibility';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -47,6 +48,9 @@ export async function GET(request: Request) {
     }
 
     const content = fs.readFileSync(targetPath, 'utf-8');
+    if (!isPublicDocumentation(content)) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     return NextResponse.json({ content });
   } catch (e) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
