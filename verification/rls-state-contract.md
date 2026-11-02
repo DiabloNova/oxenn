@@ -1,7 +1,7 @@
 # Oxenn RLS State Contract — Phase 1
 
 **Status:** Phase 1 architecture contract  
-**Version:** 1.0  
+**Version:** 1.1  
 **Reviewed baseline:** `main` at `1517034c5820fb2215567ad3dff2bf04da30c800`  
 **Branch:** `phase-1/rls-state-contract`  
 **Scope:** Architecture and state semantics only. This file does not modify application behavior, database objects, migrations, tests, CI, or the existing canonical-data documentation.
@@ -45,9 +45,16 @@ In Drizzle Kit 0.31.11, the provenance of the serialized `isRLSEnabled` field ma
 
 Therefore, `isRLSEnabled` is not a provenance-free, universally interpretable runtime status. Its meaning depends on how the snapshot was produced. A consumer MUST know whether a snapshot came from Schema generation or database introspection before interpreting this field.
 
-For Oxenn's checked-in migration snapshots, the configured migration-generation entry point is `drizzle.config.ts` ( `database/schema/index.ts` -> `database/drizzle` ) and the package script is `pnpm db:generate`. Under the current SQL-managed RLS contract, the checked-in Schema-generated value `false` means that the Drizzle table declaration has not opted into Drizzle-managed ENABLE generation. It does **not** mean that PostgreSQL has RLS disabled.
+Oxenn's normal migration-generation path is schema-driven: `drizzle.config.ts` points Drizzle Kit at `database/schema/index.ts` and writes output to `database/drizzle`; the package script is `pnpm db:generate`. When this path produces a snapshot, `isRLSEnabled: false` means that the Schema table declaration has not opted into Drizzle-managed ENABLE generation. It does **not** establish that PostgreSQL has RLS disabled.
 
-A snapshot produced by database introspection is different: there, the same field represents the observed `relrowsecurity` value at introspection time. The snapshot file itself does not encode this provenance; the workflow that produced it must be recorded.
+However, the JSON snapshot does not encode which producer path created it. The checked-in value is consistent with the configured Schema-to-snapshot workflow and the current absence of `.enableRLS()`, but the historical provenance of every checked-in snapshot has not been independently recorded. Therefore, consumers MUST treat the provenance of historical snapshots as **not self-describing** unless the generating command and target are separately evidenced.
+
+A snapshot produced by database introspection is different: there, the same field represents the observed `pg_class.relrowsecurity` value at introspection time. It still does not record `relforcerowsecurity`. Such a snapshot is only a point-in-time observation of ENABLE; it is not a proof of current state after later database changes.
+
+Version-pinned source evidence:
+- Drizzle ORM 0.45.2, tag commit [`273c78071d4841b497f5144734b38294df7ec64b`](https://github.com/drizzle-team/drizzle-orm/tree/273c78071d4841b497f5144734b38294df7ec64b): `drizzle-orm/src/pg-core/table.ts` (default marker and `.enableRLS()` setter) and `drizzle-orm/src/pg-core/utils.ts` (separate extraction of policies and `enableRLS`).
+- Drizzle Kit 0.31.11, tag commit [`15454dbe49d827c6081f3d0231e2e7985e517295`](https://github.com/drizzle-team/drizzle-orm/tree/15454dbe49d827c6081f3d0231e2e7985e517295): `drizzle-kit/src/serializer/pgSerializer.ts` (Schema serialization uses `enableRLS`; introspection reads `c.relrowsecurity`).
+
 
 ### 2.3 PostgreSQL catalog state
 
@@ -106,8 +113,12 @@ For the current expression form `NULLIF(current_setting('app.current_tenant_id',
 
 The intended application role split is:
 
-- `app_owner`: migration/DDL ownership role;
-- `app_runtime`: narrowly scoped application DML role.
+- `app_owner`: intended migration/DDL ownership role;
+- `app_runtime`: intended narrowly scoped application DML role.
+
+The distinction between intended and proven identity is mandatory. `src/core/database/migrator.ts` chooses its connection string from the explicit argument, then `MIGRATION_DATABASE_URL`, then `DATABASE_URL`; it does not issue `SET ROLE app_owner` or independently verify `current_user`. The isolation suite runs migrations and then explicitly changes table ownership to `app_owner` as part of its disposable test setup. That test fixture does not prove that another deployment's migration connection creates or owns tables as `app_owner`. The actual migration principal and table owners MUST be read from the target database.
+
+Also, `database/bootstrap.sql` creates `app_owner` and `app_runtime` only when they do not already exist. It does not reconcile or verify attributes of pre-existing roles. A successful bootstrap invocation therefore MUST NOT be treated as evidence that existing roles are non-superuser or lack `BYPASSRLS`.
 
 For tenant isolation, `app_runtime` MUST be:
 - non-superuser;
@@ -167,6 +178,19 @@ The reviewed `main` baseline contains:
 The repeat ENABLE statements in migration 0005 are historical source-controlled DDL. This contract does not authorize rewriting or removing them. It also does not authorize generating a new migration to repeat them.
 
 The repository's CI workflow provisions an ephemeral PostgreSQL 16 service for `tests/isolation/suite.ts`. That is real PostgreSQL test evidence when the job runs successfully; it is not evidence about a Production database. The main application database remains the internal simulator in the reviewed user context, so live Production Catalog state is **UNVERIFIED**.
+
+The current code also does not provide a complete tenant-vs-global classification for all 70 snapshot tables:
+- the generated tenant registry contains 51 tables;
+- `GLOBAL_TABLES` in `tests/isolation/suite.ts` contains 14 tables;
+- the two sets have no overlap;
+- five snapshot tables occur in neither set and are therefore **UNCLASSIFIED**, not implicitly global:
+  - `auth_rate_limits`
+  - `email_verification_tokens`
+  - `password_reset_tokens`
+  - `sessions`
+  - `user_credentials`
+
+The 14-entry `GLOBAL_TABLES` test constant is not a canonical security inventory. The five unclassified tables require an explicit security classification in a later approved phase; this contract does not classify them or change their access behavior.
 
 ## 8. Architecture decisions
 
