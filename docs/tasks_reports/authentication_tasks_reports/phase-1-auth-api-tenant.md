@@ -48,12 +48,27 @@ Require a valid server-side session before protected dashboard/API handlers rece
 - No deployment or production secret changes.
 - No automatic acceptance of Bearer API keys by internal dashboard routes.
 - The locale-aware `ProtectedRoute` redirect to `/{locale}/login` was not changed in this API-focused patch; it remains an identified authentication UX follow-up because this phase did not perform the required four-state visual verification.
+- `DashboardTopbar` still has a client-side workspace selector with hardcoded workspace options; the existing server-side workspace-switch action is not yet wired to that selector. This UI integration remains a separate workspace-phase task.
+- This patch establishes authenticated session identity and tenant context; it does not claim a complete route-by-route RBAC/entitlement policy audit. Per-feature role/permission checks remain subject to the dedicated authorization review.
+- The separate Bearer API-key middleware is retained but was not made universal across internal dashboard endpoints.
 
-## Verification
+## Verification — 2026-11-02
 
-- Automated tests are updated but must be executed by CI on this branch/PR; no local pnpm runner is available in this execution environment.
-- Required CI checks: typecheck, lint, build, unit tests, UI tests, tenant-table/RLS verification, migration-chain check, and isolation suite.
-- No live database was used. A successful CI run with its disposable PostgreSQL isolation service would be evidence for the tested migration/isolation cases, not evidence that a primary production database is connected.
+Final verified code commit: `9521c30cbe4d9d0a223cab490de2f51d820e0cd3`.
+
+GitHub Actions CI run `41422932746` (run #550) completed with **success**. The following passed:
+- Dependency audit gate and audit-gate regression tests.
+- Typecheck and lint (218 warnings, zero lint errors; within the repository gate).
+- Unit tests and UI tests.
+- Disposable-container tenant isolation suite.
+- Tenant table schema alignment, RLS migration coverage, and Drizzle migration chain checks.
+- Production build, generated documentation/reference matrix, and tracked generated-file no-drift check.
+- All three Vercel preview status contexts and DeepSource Secrets check.
+
+No primary production database was used or connected. The isolation suite used its disposable CI containers only. The successful DB-related CI checks verify the repository's test/migration contracts; they do not mean a production database is connected.
+
+The final CI run is available at:
+`https://github.com/DiabloNova/oxenn/actions/runs/41422932746`.
 
 ## Acceptance criteria
 

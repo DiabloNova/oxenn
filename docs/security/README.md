@@ -9,7 +9,7 @@ This section describes the security model and critical mechanisms in Seorchable.
 
 ### Server-Side Identity Boundary
 The server-side identity boundary is based on the opaque `oxenn_session` cookie. `getSession()` validates the session token against server-side session records and the active user/workspace membership. Protected API identity is resolved by `authorizeApiRequest()` exclusively from that validated session. Caller-supplied `x-user-id` and `x-tenant-id` headers and legacy plain-text identity cookies are non-authoritative. Bearer API keys are validated separately by `withPublicApi` on routes that explicitly use that middleware.
-*Status: Implementation updated; CI verification pending*
+*Status: Implemented and verified by CI on 2026-11-02 (run #550; code commit `9521c30c`)*
 
 ### Authentication and Authorization
 The `AuthProvider` stores user session credentials client-side for UI mocking purposes, but the client synchronizes this state from the server session (`getServerSessionAction`) on mount. Server-side Role-Based Access Control (RBAC) hierarchy and workspace membership validation rules are managed in `src/services/auth/authorization.ts` through `requireWorkspaceMembership(userId, workspaceId)` and `requireRole(requiredRole)`.
