@@ -123,7 +123,9 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
  * Caller-controlled identity headers are never an authentication mechanism.
  * Bearer API keys must use the dedicated withPublicApi middleware instead.
  */
-export async function authorizeApiRequest(_req: NextRequest): Promise<{ userId: string; tenantId: string }> {
+export async function authorizeApiRequest(req: NextRequest): Promise<{ userId: string; tenantId: string }> {
+  // The request is accepted for API compatibility, but its identity headers are intentionally ignored.
+  void req;
   const session = await getSession();
 
   if (!session?.user) {
