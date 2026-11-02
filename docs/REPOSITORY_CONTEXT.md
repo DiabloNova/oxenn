@@ -110,7 +110,7 @@ The intended model is multi-tenant PostgreSQL with explicit Row-Level Security:
 - Tenant context is transaction-local; the architecture documentation specifies `SET LOCAL app.current_tenant_id = $1` within an active transaction.
 - Normal application access should use the restricted `app_runtime` role, which must not own protected tables and must not bypass RLS.
 - `app_owner` is the privileged owner/migration role. Do not use it as a substitute for normal application access tests.
-- System-context access through `runWithSystemContext` bypasses tenant validation. Every such path must be registered in `src/core/database/privileged-paths.ts`, have a distinct purpose tag and explicit table scope, and be documented in `docs/security/privileged-paths.md`.
+- System-context access through `runWithSystemContext` bypasses tenant validation. Register each path in `src/core/database/privileged-paths.ts` with a distinct purpose tag and keep its `allowedTables` metadata synchronized with `docs/security/privileged-paths.md`. **This registry is not an enforced SQL/table allowlist:** `runWithSystemContext` validates the purpose tag, but `allowedTables` is currently used for audit metadata and does not restrict executed SQL. Inspect each call site's actual SQL and do not treat the registry as a security boundary.
 - For authorization, `organization_members.role` is the authoritative role source; do not authorize using a potentially stale `session.user.role` snapshot.
 - `super_admin` is operator-only and must be granted only through the dedicated CLI flow described in `AGENTS.md`, not ordinary registration or API flows.
 
