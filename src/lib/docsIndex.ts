@@ -23,7 +23,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "API Documentation",
     category: "api",
     categoryFa: "API",
-    snippet: `# API Documentation  This section describes the application's API surface.  ## Status Dictionary - **Implemented**: API endpoint is verified and functional. - **Partial**: API endpoint is in development or missing edge case handling. - **Planned**: Endpoint is not currently implemented.  ## Authentication and Tenant Context  Protected internal endpoints under \`src/app/api/v1/\` resolve the current user and workspace from a validated server-side session (the opaque \`oxenn_session\` cookie), through`src/app/api/v1/\` utilize the \`authorizeApiRequest\` function to securely resolve user and tenant contexts, prioritizing validated server sessions over client-provided r`
+    snippet: `# API Documentation  This section describes the application's API surface.  ## Status Dictionary - **Implemented**: API endpoint is verified and functional. - **Partial**: API endpoint is in development or missing edge case handling. - **Planned**: Endpoint is not currently implemented.  ## Authentication and Tenant Context  Protected internal endpoints under \`src/app/api/v1/\` resolve the current user and workspace from a validated server-side session (the opaque \`oxenn_session\` cookie), through`
   },
   {
     slug: "CACHING_AND_COST_CONTROL",
@@ -343,7 +343,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Security Documentation",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Security Documentation  This section describes the security model and critical mechanisms in Seorchable.  ## Status Dictionary - **Implemented**: Security mechanism is enforced in the current codebase.  ## Core Security Mechanisms  ### Server-Side Identity Boundary The server-side identity boundary is based on the opaque \`oxenn_session\` cookie. \`getSession()\` validates the session token against server-side session records and the active user/workspace membership. Protected API identity is reso`user_id\` and \`tenant_id\` cookies are strictly non-authoritative on the server. The comprehensive security suite validates resilience against user/tenant cookie tamperi`
+    snippet: `# Security Documentation  This section describes the security model and critical mechanisms in Seorchable.  ## Status Dictionary - **Implemented**: Security mechanism is enforced in the current codebase.  ## Core Security Mechanisms  ### Server-Side Identity Boundary The server-side identity boundary is based on the opaque \`oxenn_session\` cookie. \`getSession()\` validates the session token against server-side session records and the active user/workspace membership. Protected API identity is reso`
   },
   {
     slug: "SECURITY_MODEL",
