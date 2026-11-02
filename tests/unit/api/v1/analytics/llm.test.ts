@@ -28,6 +28,8 @@ describe("LLM Analytics server-side authorization", () => {
     vi.clearAllMocks();
     authorizeApiRequestMock.mockResolvedValue({ userId: "user-test", tenantId: "tenant-test" });
     runWithTenantContextMock.mockImplementation(async (...args: unknown[]) => {
+      expect(args[0]).toBe("tenant-test");
+      expect(args[1]).toBe("user-test");
       const callback = args[3] as () => Promise<unknown>;
       return callback();
     });
