@@ -143,8 +143,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ nodes, edges });
 
   } catch (error: unknown) {
-    console.error("[API KG Query Route Error]:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
+    // requireSession() throws a plain Error for missing/invalid sessions.
+    // Preserve the authentication boundary as 401 instead of masking it as 500.
+    if (error instanceof Error && message.startsWith("Unauthorized:")) {
+      return NextResponse.json(
+        { error: "Unauthorized", message },
+        { status: 401 }
+      );
+    }
+    console.error("[API KG Query Route Error]:", error);
     return NextResponse.json(
       { error: "Internal Server Error", message },
       { status: 500 }
