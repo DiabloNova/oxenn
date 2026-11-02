@@ -1,7 +1,7 @@
 # Oxenn RLS State Contract — Phase 1
 
 **Status:** Phase 1 architecture contract  
-**Version:** 1.1  
+**Version:** 1.2  
 **Reviewed baseline:** `main` at `1517034c5820fb2215567ad3dff2bf04da30c800`  
 **Branch:** `phase-1/rls-state-contract`  
 **Scope:** Architecture and state semantics only. This file does not modify application behavior, database objects, migrations, tests, CI, or the existing canonical-data documentation.
@@ -53,7 +53,7 @@ A snapshot produced by database introspection is different: there, the same fiel
 
 Version-pinned source evidence:
 - Drizzle ORM 0.45.2, tag commit [`273c78071d4841b497f5144734b38294df7ec64b`](https://github.com/drizzle-team/drizzle-orm/tree/273c78071d4841b497f5144734b38294df7ec64b): `drizzle-orm/src/pg-core/table.ts` (default marker and `.enableRLS()` setter) and `drizzle-orm/src/pg-core/utils.ts` (separate extraction of policies and `enableRLS`).
-- Drizzle Kit 0.31.11, tag commit [`15454dbe49d827c6081f3d0231e2e7985e517295`](https://github.com/drizzle-team/drizzle-orm/tree/15454dbe49d827c6081f3d0231e2e7985e517295): `drizzle-kit/src/serializer/pgSerializer.ts` (Schema serialization uses `enableRLS`; introspection reads `c.relrowsecurity`).
+- Drizzle Kit 0.31.11, tag commit [`15454dbe49d827c6081f3d0231e2e7985e517295`](https://github.com/drizzle-team/drizzle-orm/tree/15454dbe49d827c6081f3d0231e2e7985e517295): `drizzle-kit/src/serializer/pgSerializer.ts` (Schema serialization uses `enableRLS`; introspection reads `c.relrowsecurity`); `drizzle-kit/src/snapshotsDiffer.ts` (a false-to-true marker transition emits an `enable_rls` diff); and `drizzle-kit/src/sqlgenerator.ts` (that diff becomes `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, not FORCE).
 
 
 ### 2.3 PostgreSQL catalog state
@@ -84,7 +84,7 @@ For a table and a statement, RLS policy evaluation is effective only when all of
 7. At least one applicable permissive policy allows the row operation, and all applicable restrictive policy conditions are satisfied.
 8. The policy expression receives a valid and correctly scoped tenant context where tenant isolation is required.
 
-This is a conceptual acceptance predicate, not a replacement for PostgreSQL's own policy evaluation.
+This is a conceptual acceptance predicate, not a replacement for PostgreSQL's own policy evaluation. It is based on the PostgreSQL 18 definitions of [row-security behavior](https://www.postgresql.org/docs/18/ddl-rowsecurity.html), [catalog flags](https://www.postgresql.org/docs/18/catalog-pg-class.html), [role attributes](https://www.postgresql.org/docs/current/role-attributes.html), and [ALTER TABLE ENABLE/FORCE semantics](https://www.postgresql.org/docs/18/sql-altertable.html).
 
 PostgreSQL policy combination rules MUST be respected:
 - applicable permissive policies are combined using OR;
@@ -128,7 +128,7 @@ For tenant isolation, `app_runtime` MUST be:
 
 If the architecture intends `app_owner` to be subject to FORCE RLS when it accesses tenant data, `app_owner` MUST also be non-superuser and without `BYPASSRLS`. Table ownership alone is bypassed by FORCE; the `BYPASSRLS` attribute and superuser status remain independent bypass paths.
 
-The effective role executing a query matters. Tests that connect as an administrative role must explicitly switch to the intended runtime role before claiming to test application RLS behavior.
+The effective role executing a query matters. Tests that connect as an administrative role must explicitly switch to the intended runtime role before claiming to test application RLS behavior. Role attributes such as SUPERUSER and BYPASSRLS are not ordinary inherited object privileges; the test and runtime contract must account for the actual effective role, role memberships, and any permitted `SET ROLE` transition. See the [PostgreSQL role-membership rules](https://www.postgresql.org/docs/current/role-membership.html).
 
 The current `database/bootstrap.sql` comments and role declarations do not fully express this contract: role attributes are not explicitly set in the CREATE ROLE statements, and the comment about `app_owner` and BYPASSRLS is ambiguous relative to the requirement that FORCE subject the owner to policies. This is a contract gap to address in a later, separately scoped phase; no role definition is changed here.
 
