@@ -84,7 +84,12 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     try {
       await login(email, password);
       // Success redirect
-      router.push(`/${locale}/dashboard`);
+      const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+      const safeReturnTo =
+        returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+          ? returnTo
+          : `/${locale}/dashboard`;
+      router.replace(safeReturnTo);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
