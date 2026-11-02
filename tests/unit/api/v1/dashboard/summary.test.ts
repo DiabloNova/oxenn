@@ -23,33 +23,38 @@ vi.mock("@/services/dashboard-home", () => ({
 import { AuthorizationError } from "@/services/auth/authorization";
 import { GET } from "@/app/api/v1/dashboard/summary/route";
 
+const authorizationFailures: Array<[number, string]> = [
+  [401, "Unauthorized"],
+  [403, "Forbidden"],
+];
+
 describe("Dashboard Summary authorization status mapping", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it.each([
-    [401, "Unauthorized"],
-    [403, "Forbidden"],
-  ])("preserves HTTP %i when authorization rejects the request", async (statusCode, errorLabel) => {
-    authorizeApiRequestMock.mockRejectedValueOnce(
-      new AuthorizationError(statusCode, String(errorLabel) + ": test authorization failure"),
-    );
+  it.each(authorizationFailures)(
+    "preserves HTTP %i when authorization rejects the request",
+    async (statusCode, errorLabel) => {
+      authorizeApiRequestMock.mockRejectedValueOnce(
+        new AuthorizationError(statusCode, errorLabel + ": test authorization failure"),
+      );
 
-    const request = new NextRequest("http://localhost/api/v1/dashboard/summary?locale=en", {
-      headers: {
-        "x-user-id": "forged-user",
-        "x-tenant-id": "forged-tenant",
-        authorization: "Bearer seo_test_api_key",
-      },
-    });
+      const request = new NextRequest("http://localhost/api/v1/dashboard/summary?locale=en", {
+        headers: {
+          "x-user-id": "forged-user",
+          "x-tenant-id": "forged-tenant",
+          authorization: "Bearer seo_test_api_key",
+        },
+      });
 
-    const response = await GET(request);
-    const body = await response.json();
+      const response = await GET(request);
+      const body = await response.json();
 
-    expect(response.status).toBe(statusCode);
-    expect(body.error).toBe(errorLabel);
-    expect(authorizeApiRequestMock).toHaveBeenCalledTimes(1);
-    expect(getDashboardSummaryMock).not.toHaveBeenCalled();
-  });
+      expect(response.status).toBe(statusCode);
+      expect(body.error).toBe(errorLabel);
+      expect(authorizeApiRequestMock).toHaveBeenCalledTimes(1);
+      expect(getDashboardSummaryMock).not.toHaveBeenCalled();
+    },
+  );
 });
