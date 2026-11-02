@@ -23,7 +23,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "API Documentation",
     category: "api",
     categoryFa: "API",
-    snippet: `# API Documentation  This section describes the application's API surface.  ## Status Dictionary - **Implemented**: API endpoint is verified and functional. - **Partial**: API endpoint is in development or missing edge case handling. - **Planned**: Endpoint is not currently implemented.  ## Overview  Developer API endpoints under \`src/app/api/v1/\` utilize the \`authorizeApiRequest\` function to securely resolve user and tenant contexts, prioritizing validated server sessions over client-provided r`
+    snippet: `# API Documentation  This section describes the application's API surface.  ## Status Dictionary - **Implemented**: API endpoint is verified and functional. - **Partial**: API endpoint is in development or missing edge case handling. - **Planned**: Endpoint is not currently implemented.  ## Authentication and Tenant Context  Protected internal endpoints under \`src/app/api/v1/\` resolve the current user and workspace from a validated server-side session (the opaque \`oxenn_session\` cookie), through`src/app/api/v1/\` utilize the \`authorizeApiRequest\` function to securely resolve user and tenant contexts, prioritizing validated server sessions over client-provided r`
   },
   {
     slug: "CACHING_AND_COST_CONTROL",
@@ -343,7 +343,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Security Documentation",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Security Documentation  This section describes the security model and critical mechanisms in Seorchable.  ## Status Dictionary - **Implemented**: Security mechanism is enforced in the current codebase.  ## Core Security Mechanisms  ### Server-Side Identity Boundary The server-side identity boundary is fully hardened. Plain-text \`user_id\` and \`tenant_id\` cookies are strictly non-authoritative on the server. The comprehensive security suite validates resilience against user/tenant cookie tamperi`
+    snippet: `# Security Documentation  This section describes the security model and critical mechanisms in Seorchable.  ## Status Dictionary - **Implemented**: Security mechanism is enforced in the current codebase.  ## Core Security Mechanisms  ### Server-Side Identity Boundary The server-side identity boundary is based on the opaque \`oxenn_session\` cookie. \`getSession()\` validates the session token against server-side session records and the active user/workspace membership. Protected API identity is reso`user_id\` and \`tenant_id\` cookies are strictly non-authoritative on the server. The comprehensive security suite validates resilience against user/tenant cookie tamperi`
   },
   {
     slug: "SECURITY_MODEL",
@@ -368,6 +368,14 @@ export const DOCS_INDEX: DocMeta[] = [
     category: "services",
     categoryFa: "Services",
     snippet: `# Service Documentation  This section describes the internal application services, their boundaries, and responsibilities.  ## Status Dictionary - **Implemented**: Verified existing service. - **Partial**: Service exists but is missing functionality. - **Planned**: Not currently implemented.  ## Core Services  ### Asynchronous Job Processing (\`src/services/jobs/\`) Defines a canonical, infrastructure-agnostic background processing boundary via \`IJobQueue\`, \`IJobExecutor\`, and \`IJobRepository\` int`
+  },
+  {
+    slug: "phase-1-auth-api-tenant",
+    titleEn: "Phase 1 — Authentication, API Identity, and Tenant Boundary",
+    titleFa: "Phase 1 — Authentication, API Identity, and Tenant Boundary",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Phase 1 — Authentication, API Identity, and Tenant Boundary  ## Objective  Require a valid server-side session before protected dashboard/API handlers receive user and workspace identity. Client-supplied \`x-user-id\` and \`x-tenant-id\` values must not authenticate a request or select its tenant.  ## Baseline  - Base branch: \`main\` - Base commit: \`1517034c5820fb2215567ad3dff2bf04da30c800\` - Work branch: \`security/phase-1-auth-api-tenant\` - No database schema or migration changes are part of this `
   },
   {
     slug: "api-keys-prefix-index-reconciliation",
