@@ -1,1 +1,3 @@
-export function isPublicDocumentation(_content: string): boolean {\n  return true;\n}\n
+export function isPublicDocumentation(_content: string): boolean {
+  return true;
+}

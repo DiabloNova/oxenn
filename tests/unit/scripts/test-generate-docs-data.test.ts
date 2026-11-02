@@ -56,18 +56,18 @@ describe("createContentSnippet", () => {
 
 describe("documentation visibility", () => {
   it("keeps documents public when no visibility front matter is present", () => {
-    expect(isPublicDocumentation("# Public documentation\\n\\nContent")).toBe(true);
+    expect(isPublicDocumentation("# Public documentation\n\nContent")).toBe(true);
   });
 
   it("excludes documents explicitly marked internal", () => {
-    expect(isPublicDocumentation("---\\nvisibility: internal\\n---\\n# Internal documentation")).toBe(false);
+    expect(isPublicDocumentation("---\nvisibility: internal\n---\n# Internal documentation")).toBe(false);
   });
 
   it("does not treat body text as visibility front matter", () => {
-    expect(isPublicDocumentation("# Public documentation\\n\\nvisibility: internal")).toBe(true);
+    expect(isPublicDocumentation("# Public documentation\n\nvisibility: internal")).toBe(true);
   });
 
   it("supports CRLF front matter", () => {
-    expect(isPublicDocumentation("---\\r\\nvisibility: internal\\r\\n---\\r\\n# Internal documentation")).toBe(false);
+    expect(isPublicDocumentation("---\r\nvisibility: internal\r\n---\r\n# Internal documentation")).toBe(false);
   });
 });
