@@ -37,7 +37,7 @@ Require a valid server-side session before protected dashboard/API handlers rece
 - Existing session-protected paths (`/api/v1/crawl`, `/api/v1/knowledge-graph/query`) remain session-bound. `/api/v1/ingest/document` and `/api/v1/rag/query` inherit the hardened central helper.
 - Public `/api/v1/audit/free` and `/api/v1/docs` are intentionally not changed; they do not establish tenant-scoped authenticated context.
 - The standalone `withPublicApi` Bearer-key middleware remains separate. No API-key access was added implicitly to internal dashboard routes.
-- Added regression coverage for rejecting header-only identity without a valid session, while preserving the existing session-overrides-forged-headers check. Updated Content Studio, crawler, and LLM Analytics route tests to use a server-authenticated test identity.
+- Added regression coverage for rejecting header-only identity without a valid session, while preserving the existing session-overrides-forged-headers check. Updated Content Studio, crawler, and LLM Analytics route tests to use a server-authenticated test identity; added sentiment-route unauthorized/forged-header tests; aligned the standalone premium-audit and competitive-analysis smoke tests with the session-only contract.
 - Corrected API/security documentation to describe the actual session boundary and to distinguish simulated LLM analytics from direct provider execution.
 
 ## Explicit exclusions
@@ -76,6 +76,6 @@ The additional review-fix commits made after `e7de0a4bbb77603244b01809d179bea2c8
 
 - A request with only `x-user-id` and `x-tenant-id` cannot establish an authenticated identity.
 - A valid server session determines both user and workspace, even when request headers contain forged values.
-- Protected API routes listed above do not create tenant context from client-provided IDs or default/fallback identities.
+- Protected API routes listed above do not create tenant context from client-provided IDs or default/fallback identities. The Knowledge Graph query route maps missing/invalid session failures to HTTP 401 rather than a generic 500.
 - Public routes and the separate API-key middleware retain their prior contract.
 - CI is green and the resulting branch diff contains only the authorized files.
