@@ -159,7 +159,7 @@ describe("Premium Audit API authentication and business flow", () => {
     expect(runWithTenantContextMock).toHaveBeenCalledWith(
       "tenant-test",
       "user-test",
-      "req-premium-test",
+      "req-premium-audit",
       expect.any(Function),
     );
     expect(crawlUrlMock).toHaveBeenCalledWith(

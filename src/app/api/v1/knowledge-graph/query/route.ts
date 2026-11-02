@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { TenantContextManager } from '@/core/database/tenant-context';
 import { requireSession } from '@/services/auth/session';
-import { requireWorkspaceMembership } from '@/services/auth/authorization';
+import { AuthorizationError, requireWorkspaceMembership } from '@/services/auth/authorization';
 import { EntityService, projectNeighborhoodForVisualization } from '@/features/ai-intelligence/services/entity-service';
 
 // Validation schema with Persian error message
@@ -143,6 +143,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ nodes, edges });
 
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError && (error.statusCode === 401 || error.statusCode === 403)) {
+      return NextResponse.json(
+        {
+          error: error.statusCode === 403 ? "Forbidden" : "Unauthorized",
+          message: error.message,
+        },
+        { status: error.statusCode }
+      );
+    }
+
     const message = error instanceof Error ? error.message : "Unknown error";
     // requireSession() throws a plain Error for missing/invalid sessions.
     // Preserve the authentication boundary as 401 instead of masking it as 500.
