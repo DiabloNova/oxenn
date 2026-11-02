@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { DEFAULT_LOCALE, isSupportedLocale } from "@/config/i18n";
 import { useAuth } from "./AuthProvider";
 import { UserRole } from "@/types/auth";
 
@@ -16,15 +17,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { session, hasPermission } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (session.status === "unauthenticated") {
-      router.push("/");
+      const firstSegment = pathname.split("/").filter(Boolean)[0] ?? "";
+      const locale = isSupportedLocale(firstSegment) ? firstSegment : DEFAULT_LOCALE;
+      const returnTo = pathname + (typeof window !== "undefined" ? window.location.search : "");
+      router.replace("/" + locale + "/login?returnTo=" + encodeURIComponent(returnTo));
     } else if (session.status === "authenticated" && requiredRole && !hasPermission(requiredRole)) {
       // Forbidden: Redirect back to main dashboard
       router.push("/dashboard");
     }
-  }, [session.status, requiredRole, hasPermission, router]);
+  }, [session.status, requiredRole, hasPermission, pathname, router]);
 
   if (session.status === "loading") {
     return (
