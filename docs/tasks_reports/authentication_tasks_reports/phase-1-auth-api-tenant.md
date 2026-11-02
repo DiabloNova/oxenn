@@ -54,9 +54,9 @@ Require a valid server-side session before protected dashboard/API handlers rece
 
 ## Verification — 2026-11-02
 
-Final verified code commit: `9521c30cbe4d9d0a223cab490de2f51d820e0cd3`.
+The latest CI run verified before the review-fix commits was GitHub Actions run `41423325717` (run #551) on commit `e7de0a4bbb77603244b01809d179bea2c8bafa95`. The run completed with **success**. The earlier run #550 on commit `9521c30cbe4d9d0a223cab490de2f51d820e0cd3` also completed successfully.
 
-GitHub Actions CI run `41422932746` (run #550) completed with **success**. The following passed:
+The run #551 result supports the following checks for that exact commit:
 - Dependency audit gate and audit-gate regression tests.
 - Typecheck and lint (218 warnings, zero lint errors; within the repository gate).
 - Unit tests and UI tests.
@@ -67,8 +67,10 @@ GitHub Actions CI run `41422932746` (run #550) completed with **success**. The f
 
 No primary production database was used or connected. The isolation suite used its disposable CI containers only. The successful DB-related CI checks verify the repository's test/migration contracts; they do not mean a production database is connected.
 
-The final CI run is available at:
-`https://github.com/DiabloNova/oxenn/actions/runs/41422932746`.
+The latest pre-review-fix CI run is available at:
+`https://github.com/DiabloNova/oxenn/actions/runs/41423325717`.
+
+The additional review-fix commits made after `e7de0a4bbb77603244b01809d179bea2c8bafa95` have not yet been covered by a subsequent CI run; their verification remains pending.
 
 ## Acceptance criteria
 
