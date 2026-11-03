@@ -22,6 +22,7 @@ describe("GET /api/v1/docs visibility enforcement", () => {
 
   it.each([
     ["quoted YAML visibility key", '---\n"visibility": internal\n---\n# Private'],
+    ["multiline YAML visibility value", "---\nvisibility:\n  internal\n---\n# Private"],
     ["UTF-8 BOM", '\uFEFF--- \r\nvisibility: internal\r\n--- \r\n# Private'],
     ["unclosed front matter", "--- \nvisibility: internal\n# Private"],
   ])("returns 404 for internal documentation with %s", async (slugCase, content) => {
