@@ -1,4 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect } from "vitest";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { generateDocsIndex } from "../../../scripts/docs-index-generator";
 import { createContentSnippet } from "../../../scripts/docs-snippet";
 import { isPublicDocumentation } from "../../../src/lib/docs-visibility";
 
@@ -69,5 +73,58 @@ describe("documentation visibility", () => {
 
   it("supports CRLF front matter", () => {
     expect(isPublicDocumentation("---\r\nvisibility: internal\r\n---\r\n# Internal documentation")).toBe(false);
+  });
+});
+
+
+describe("documentation visibility front matter", () => {
+  it.each([
+    ["a quoted YAML key", '---\\n"visibility": internal\\n---\\n# Private'],
+    ["a UTF-8 BOM and whitespace after the opening delimiter", '\\uFEFF--- \\r\\nvisibility: internal\\r\\n--- \\r\\n# Private'],
+    ["an unclosed front matter block", '--- \\nvisibility: internal\\n# Private'],
+  ])("marks internal documents private when front matter contains %s", (_label, content) => {
+    expect(isPublicDocumentation(content)).toBe(false);
+  });
+});
+
+describe("docs index generation visibility", () => {
+  let fixtureRoot: string;
+  let docsDirectory: string;
+  let outputFile: string;
+
+  beforeEach(() => {
+    fixtureRoot = mkdtempSync(path.join(tmpdir(), "oxenn-docs-index-"));
+    docsDirectory = path.join(fixtureRoot, "docs");
+    outputFile = path.join(fixtureRoot, "src", "lib", "docsIndex.ts");
+    mkdirSync(docsDirectory, { recursive: true });
+    mkdirSync(path.dirname(outputFile), { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it("omits BOM, quoted-key, and malformed internal docs from the generated public index", () => {
+    writeFileSync(path.join(docsDirectory, "public-guide.md"), "# Public guide\\nPublic content");
+    writeFileSync(
+      path.join(docsDirectory, "quoted-private.md"),
+      '---\\n"visibility": internal\\n---\\n# Quoted private content'
+    );
+    writeFileSync(
+      path.join(docsDirectory, "bom-private.md"),
+      '\\uFEFF--- \\r\\nvisibility: internal\\r\\n--- \\r\\n# BOM private content'
+    );
+    writeFileSync(
+      path.join(docsDirectory, "unclosed-private.md"),
+      "--- \\nvisibility: internal\\n# Unclosed private content"
+    );
+
+    generateDocsIndex({ docsDirectory, outputFile });
+
+    const generatedIndex = readFileSync(outputFile, "utf-8");
+    expect(generatedIndex).toContain('slug: "public-guide"');
+    expect(generatedIndex).not.toContain('slug: "quoted-private"');
+    expect(generatedIndex).not.toContain('slug: "bom-private"');
+    expect(generatedIndex).not.toContain('slug: "unclosed-private"');
   });
 });
