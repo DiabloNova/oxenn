@@ -79,9 +79,9 @@ describe("documentation visibility", () => {
 
 describe("documentation visibility front matter", () => {
   it.each([
-    ["a quoted YAML key", '---\\n"visibility": internal\\n---\\n# Private'],
-    ["a UTF-8 BOM and whitespace after the opening delimiter", '\\uFEFF--- \\r\\nvisibility: internal\\r\\n--- \\r\\n# Private'],
-    ["an unclosed front matter block", '--- \\nvisibility: internal\\n# Private'],
+    ["a quoted YAML key", '---\n"visibility": internal\n---\n# Private'],
+    ["a UTF-8 BOM and whitespace after the opening delimiter", '\uFEFF--- \r\nvisibility: internal\r\n--- \r\n# Private'],
+    ["an unclosed front matter block", '--- \nvisibility: internal\n# Private'],
   ])("marks internal documents private when front matter contains %s", (_label, content) => {
     expect(isPublicDocumentation(content)).toBe(false);
   });
@@ -105,18 +105,18 @@ describe("docs index generation visibility", () => {
   });
 
   it("omits BOM, quoted-key, and malformed internal docs from the generated public index", () => {
-    writeFileSync(path.join(docsDirectory, "public-guide.md"), "# Public guide\\nPublic content");
+    writeFileSync(path.join(docsDirectory, "public-guide.md"), "# Public guide\nPublic content");
     writeFileSync(
       path.join(docsDirectory, "quoted-private.md"),
-      '---\\n"visibility": internal\\n---\\n# Quoted private content'
+      '---\n"visibility": internal\n---\n# Quoted private content'
     );
     writeFileSync(
       path.join(docsDirectory, "bom-private.md"),
-      '\\uFEFF--- \\r\\nvisibility: internal\\r\\n--- \\r\\n# BOM private content'
+      '\uFEFF--- \r\nvisibility: internal\r\n--- \r\n# BOM private content'
     );
     writeFileSync(
       path.join(docsDirectory, "unclosed-private.md"),
-      "--- \\nvisibility: internal\\n# Unclosed private content"
+      "--- \nvisibility: internal\n# Unclosed private content"
     );
 
     generateDocsIndex({ docsDirectory, outputFile });
