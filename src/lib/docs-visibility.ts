@@ -1,7 +1,7 @@
 const FRONT_MATTER_OPENING_PATTERN = /^---[ \t]*(?:\r?\n|$)/;
 const FRONT_MATTER_CLOSING_PATTERN = /^---[ \t]*\r?$/m;
 const INTERNAL_VISIBILITY_PATTERN =
-  /^[ \t]*(?:visibility|"visibility"|'visibility')[ \t]*:[ \t]*(?:"internal"|'internal'|internal)[ \t]*(?:#.*)?$/im;
+  /^[ \t]*(?:visibility|"visibility"|'visibility')[ \t]*:\s*(?:"internal"|'internal'|internal)[ \t]*(?:#.*)?$/im;
 
 export function isPublicDocumentation(content: string): boolean {
   const normalizedContent = content.startsWith("\uFEFF") ? content.slice(1) : content;
