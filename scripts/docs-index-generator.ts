@@ -130,9 +130,9 @@ export const DOCS_INDEX: DocMeta[] = [\n`;
 
   for (const doc of docs) {
     const titleOverride = DOC_TITLE_OVERRIDES[doc.slug];
-    const titleEn = (titleOverride?.titleEn ?? doc.title).replace(/\\\\/g, "\\\\\\").replace(/"/g, '\\\"');
-    const titleFa = (titleOverride?.titleFa ?? doc.title).replace(/\\\\/g, "\\\\\\").replace(/"/g, '\\\"');
-    const snippet = doc.contentSnippet.replace(/\\\\/g, "\\\\\\").replace(/\x60/g, "\\`").replace(/\$/g, "\\$");
+    const titleEn = (titleOverride?.titleEn ?? doc.title).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const titleFa = (titleOverride?.titleFa ?? doc.title).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const snippet = doc.contentSnippet.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
     indexOutput += `  {
     slug: "${doc.slug}",
     titleEn: "${titleEn}",
