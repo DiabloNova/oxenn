@@ -96,7 +96,10 @@ function getAllDocs(docsRoot: string, currentDirectory = docsRoot): DocMeta[] {
         } else {
           contentSnippet = createContentSnippet(content);
         }
-      } catch (_e) {}
+      } catch (_e) {
+        // Fail closed: unreadable documents cannot be verified as public.
+        continue;
+      }
 
       docs.push({
         slug,
