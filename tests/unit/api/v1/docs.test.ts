@@ -21,9 +21,9 @@ describe("GET /api/v1/docs visibility enforcement", () => {
   });
 
   it.each([
-    ["quoted YAML visibility key", '---\\n"visibility": internal\\n---\\n# Private'],
-    ["UTF-8 BOM", '\\uFEFF--- \\r\\nvisibility: internal\\r\\n--- \\r\\n# Private'],
-    ["unclosed front matter", "--- \\nvisibility: internal\\n# Private"],
+    ["quoted YAML visibility key", '---\n"visibility": internal\n---\n# Private'],
+    ["UTF-8 BOM", '\uFEFF--- \r\nvisibility: internal\r\n--- \r\n# Private'],
+    ["unclosed front matter", "--- \nvisibility: internal\n# Private"],
   ])("returns 404 for internal documentation with %s", async (slugCase, content) => {
     const slug = slugCase.replaceAll(" ", "-");
     writeFileSync(path.join(docsDirectory, `${slug}.md`), content);
@@ -36,14 +36,14 @@ describe("GET /api/v1/docs visibility enforcement", () => {
   it("continues to serve public docs", async () => {
     writeFileSync(
       path.join(docsDirectory, "public-guide.md"),
-      "# Public guide\\n\\nThe phrase visibility: internal appears here as ordinary body text."
+      "# Public guide\n\nThe phrase visibility: internal appears here as ordinary body text."
     );
 
     const response = await GET(new Request("http://localhost/api/v1/docs?slug=public-guide"));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      content: "# Public guide\\n\\nThe phrase visibility: internal appears here as ordinary body text.",
+      content: "# Public guide\n\nThe phrase visibility: internal appears here as ordinary body text.",
     });
   });
 });
