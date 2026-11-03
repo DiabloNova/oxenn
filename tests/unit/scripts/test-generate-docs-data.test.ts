@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it, expect } from "vitest";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { generateDocsIndex } from "../../../scripts/docs-index-generator";
@@ -80,6 +80,7 @@ describe("documentation visibility", () => {
 describe("documentation visibility front matter", () => {
   it.each([
     ["a quoted YAML key", '---\n"visibility": internal\n---\n# Private'],
+    ["a multiline YAML visibility value", "---\nvisibility:\n  internal\n---\n# Private"],
     ["a UTF-8 BOM and whitespace after the opening delimiter", '\uFEFF--- \r\nvisibility: internal\r\n--- \r\n# Private'],
     ["an unclosed front matter block", '--- \nvisibility: internal\n# Private'],
   ])("marks internal documents private when front matter contains %s", (_label, content) => {
@@ -118,6 +119,11 @@ describe("docs index generation visibility", () => {
       path.join(docsDirectory, "unclosed-private.md"),
       "--- \nvisibility: internal\n# Unclosed private content"
     );
+    writeFileSync(
+      path.join(docsDirectory, "multiline-private.md"),
+      "---\nvisibility:\n  internal\n---\n# Multiline private content"
+    );
+    symlinkSync(path.join(fixtureRoot, "missing-doc-target.md"), path.join(docsDirectory, "unreadable-internal.md"));
 
     generateDocsIndex({ docsDirectory, outputFile });
 
@@ -126,5 +132,7 @@ describe("docs index generation visibility", () => {
     expect(generatedIndex).not.toContain('slug: "quoted-private"');
     expect(generatedIndex).not.toContain('slug: "bom-private"');
     expect(generatedIndex).not.toContain('slug: "unclosed-private"');
+    expect(generatedIndex).not.toContain('slug: "multiline-private"');
+    expect(generatedIndex).not.toContain('slug: "unreadable-internal"');
   });
 });
