@@ -133,10 +133,10 @@ Therefore:
 - [x] Confirm package manager, runtime engine, and available test/build/migration scripts.
 - [x] Define the two MVP journeys and explicitly defer the remaining dashboard tools.
 - [x] Record documentation/runtime readiness conflicts and operational unknowns.
-- [ ] Inspect current branch CI workflow and capture its exact required checks.
-- [ ] Produce a route → API/action → service → repository → database/provider trace for each MVP journey.
-- [ ] Produce an environment-variable inventory with purpose and required/optional classification; never include secret values.
-- [ ] Confirm the canonical MVP entities and their existing schema/migration coverage without modifying the database.
+- [x] Inspect current `.github/workflows/ci.yml` and capture its exact required checks.
+- [x] Produce an initial UI → Server Action → Service/Repository → provider/data trace for both MVP journeys.
+- [x] Produce an environment-variable inventory with purpose and required/optional classification; no secret values included.
+- [ ] Confirm migration coverage and canonical ownership for the MVP entities without modifying the database.
 - [ ] Review the Phase 0 findings and acceptance criteria before opening Phase 1 implementation work.
 
 ## 8. Phase 0 exit criteria
@@ -151,3 +151,136 @@ Phase 0 is complete only when:
 6. No production connectivity, migration, or provider operation is represented as verified without direct authorized evidence.
 
 **Next phase:** Phase 1 — Security and Tenant Isolation. It must not begin as public-beta work until the SSRF and API authentication/authorization findings from the audit are addressed and verified with negative-path tests.
+
+
+## 9. Fresh implementation trace — main baseline
+
+These are source-level observations from files fetched from `main` at the baseline commit. They describe the current wiring, not a claim that production services or credentials were exercised.
+
+### 9.1 Technical SEO
+
+**Observed path**
+
+`src/app/[locale]/dashboard/seo/technical/page.tsx`  
+→ imports and calls `getTechnicalSeoDashboardAction`  
+→ `src/app/actions/technical-seo.ts`  
+→ requires a Session and Workspace membership, then opens a TenantContext  
+→ constructs `WebsiteRepository`, `PageRepository`, `PostgresDiagnosticFindingRepository`, `TechnicalSeoAnalyzerService`, and `DiagnosticEngine`.
+
+**Blocking implementation gap**
+
+The action currently looks up the hard-coded domain `secure-site.com`, provisions it when missing, and seeds two default pages when no pages are found. It then constructs `SeoSignals` using `createMockPageSeoSignals` instead of consuming a real crawl result. The analyzer logic itself is deterministic and can be reused, but its current page input is synthetic. The current UI is therefore connected to an action, but the action is not an end-to-end live crawl-to-audit journey.
+
+**Relevant files**
+- `src/app/[locale]/dashboard/seo/technical/page.tsx`
+- `src/app/actions/technical-seo.ts`
+- `src/services/technical-seo-analyzer.ts`
+- `src/features/ai-intelligence/repositories/index.ts`
+- `src/services/crawler/web-crawler.ts`
+
+### 9.2 AI Visibility Audit
+
+**Observed path**
+
+`src/app/[locale]/dashboard/aeo/audits/page.tsx`  
+→ calls `getBrandsAction`, `createAndRunAuditAction`, and `getAuditDetailsAction`  
+→ `src/app/actions/ai-visibility-audit.ts`  
+→ requires a Session and Workspace membership, then opens a TenantContext  
+→ `AIVisibilityAuditEngine.executeAudit`  
+→ creates seven prompt records and asks `AIVisibilityProviderRegistry.getProvider(providerType)` to execute them.
+
+**Blocking implementation gaps**
+
+- The action calls `executeAudit` without a provider type. The engine therefore reaches the registry's default branch.
+- `AIVisibilityProviderRegistry` returns `MockAIVisibilityProvider` unless `providerType === "gemini"` and `GOOGLE_AI_API_KEY` is configured. The UI action does not explicitly select Gemini.
+- `getBrandsAction` creates a default `Rasha Gostar` brand at `https://secure-site.com` when the tenant has no brands.
+- `BrandRepository` reads and writes the in-memory `db.brands` Map.
+- The AI audit repository attempts PostgreSQL reads but has a memory fallback when the query fails or returns no row. This must be reviewed before it can be treated as durable production persistence.
+
+**Relevant files**
+- `src/app/[locale]/dashboard/aeo/audits/page.tsx`
+- `src/app/actions/ai-visibility-audit.ts`
+- `src/features/ai-intelligence/services/ai-visibility-audit-engine.ts`
+- `src/services/ai/ai-visibility-provider.ts`
+- `src/services/ai/llm-client.ts`
+- `src/features/ai-intelligence/repositories/index.ts`
+
+### 9.3 Repository persistence observation
+
+In the current repository implementation:
+- `BrandRepository` is backed by the in-memory `db.brands` Map.
+- `WebsiteRepository` and `PageRepository` issue SQL queries, but their read methods shown in the inspected source discard query rows and return data from in-memory Maps.
+- `PostgresDiagnosticFindingRepository` similarly issues SELECT queries but returns from the in-memory Map on reads.
+- `AIVisibilityAuditRepository` maps PostgreSQL rows when present, but its read path includes a memory fallback.
+
+This is a material persistence boundary issue for both MVP journeys. Do not treat the presence of SQL statements or successful query execution as proof that reads are sourced from PostgreSQL.
+
+## 10. Current CI and test baseline
+
+The current `.github/workflows/ci.yml` on `main` defines three jobs:
+
+1. **Build and Test**
+   - Dependency audit gate and its regression tests
+   - TypeScript typecheck
+   - ESLint with `--max-warnings=218`
+   - Tenant-table schema alignment
+   - RLS migration coverage
+   - Drizzle migration-chain check
+   - Next.js build
+   - Documentation/reference-matrix generation and generated-file drift check
+
+2. **Unit Tests**
+   - `pnpm test:unit`
+   - `pnpm test:ui`
+
+3. **Isolation Suite**
+   - PostgreSQL/pgvector 16 service
+   - `pnpm run test:isolation`
+   - Ephemeral CI database credentials scoped to that job
+
+The workflow does **not** invoke `pnpm test:db`, and no E2E job or E2E script is declared in the inspected `package.json`. The previous audit's observed 257 unit tests, 32 UI tests, and 51-table/488-assertion isolation result belong to the previously inspected CI run; this newly created branch has no workflow run reported for its documentation-only commits.
+
+## 11. Environment-variable inventory
+
+Variable names and purposes below are taken from `.env.example` and `scripts/env-check.ts`. No secret values are recorded.
+
+| Variable | Declared purpose | Required by current env-check |
+|---|---|---|
+| `DATABASE_URL` | Application PostgreSQL connection | Yes: dev, build, migrate, test |
+| `MIGRATION_DATABASE_URL` | Optional migration connection override | No; migrate only if supplied |
+| `SESSION_SECRET` | Session/authentication secret | Yes: dev, build |
+| `GOOGLE_AI_API_KEY` | Gemini provider credential | No |
+| `FIRECRAWL_API_KEY` | Firecrawl credential | No |
+| `USE_MOCK_CRAWLER` | Enables crawler mock behavior | No |
+| `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` | Background job integration | No |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Redis rate-limiting integration | No |
+| `AUTHENTICATOR_DATABASE_URL`, `AUTHENTICATOR_POOL_MAX` | Privileged/system database pool | No |
+| `VERIFICATION_PROBE_ACTIVE` | Test/verification-only probe gate | No |
+| `ALLOW_DB_PUSH`, `DISPOSABLE_DB` | Database push safety controls | Optional validation in dev/migrate/test |
+| `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL` | Public frontend/API URLs | Optional format validation in dev/build |
+| `APP_MODE` | Environment mode hint | Used to resolve mode |
+| `EMAIL_PROVIDER` | Email delivery provider selection | Not required; example explicitly says unset until implementation is ready |
+
+**MVP implication:** current environment validation does not require Gemini or Firecrawl credentials. A successful environment check therefore does not prove that either live provider is configured or reachable.
+
+## 12. Schema inventory observations
+
+A direct scan of the exported `pgTable` declarations in `database/schema/index.ts` found 68 table declarations. Among the MVP-relevant declarations are:
+
+- `brands`
+- `websites`
+- `pages`
+- `diagnostic_findings`
+- `prompts`
+- `prompt_definitions`
+- `prompt_executions`
+- `ai_visibility_audits`
+- `audit_prompts`
+- `crawl_jobs`
+- `crawl_results`
+- `crawl_cache`
+- `crawl_snapshots`
+
+This is only a declaration inventory. It does not establish that the corresponding migrations have been applied to staging or production.
+
+**Count discrepancy:** `docs/architecture/README.md` describes 57 modeled tables, while the direct declaration scan above found 68 exported `pgTable` declarations in `database/schema/index.ts`. The repository context also refers to 51 RLS-protected tables in the CI isolation suite. These counts may refer to different table subsets or snapshots; they must not be conflated. Reconcile their definitions and generated migration coverage before Phase 0 is closed.
