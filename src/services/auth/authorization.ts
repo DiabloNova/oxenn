@@ -70,7 +70,6 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
   }
 
   // Authoritatively fetch role from database instead of trusting session snapshot
-  const roleCheckWorkspace = targetWorkspaceId || session.user.workspaceId;
   const dbRole = await TenantContextManager.runWithSystemContext(session.user!.id, "sys-auth-role-check", async () => {
       const client = TenantContextManager.getDbClient();
       if (!client) {
@@ -126,6 +125,7 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
  * designed, cryptographically verified API credential instead of user headers.
  */
 export async function authorizeApiRequest(_req: NextRequest): Promise<{ userId: string; tenantId: string }> {
+  void _req;
   const session = await getSession();
 
   if (!session?.user) {
