@@ -6,7 +6,6 @@ import { GlassCard } from "@/components/GlassCard";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/components/AuthProvider";
 import {
   Globe, Zap, Sparkles, Loader2, Award,
   RefreshCw, Layers, Download, Plus,
@@ -22,7 +21,6 @@ import { CompetitiveAnalysisResponse } from "@/app/api/v1/analysis/competitive/r
 
 export const CompetitiveAnalysisPanel: React.FC = () => {
   const { language } = useTheme();
-  const { session } = useAuth();
   const isRtl = language === "fa";
 
   const [mounted, setMounted] = useState(false);
@@ -99,13 +97,10 @@ export const CompetitiveAnalysisPanel: React.FC = () => {
     setData(null);
 
     try {
-      const workspaceId = session.user?.workspaceId || "ws-tehran";
       const response = await fetch("/api/v1/analysis/competitive", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-id": workspaceId,
-          "x-user-id": session.user?.id || "usr-1001"
         },
         body: JSON.stringify({
           userUrl,

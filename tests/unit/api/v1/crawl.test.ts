@@ -38,6 +38,22 @@ describe("Crawl API policy bounds", () => {
     }));
   }
 
+  it("rejects forged identity headers when no real session exists", async () => {
+    getSessionMock.mockResolvedValue(null);
+    const response = await POST(new NextRequest("http://localhost/api/v1/crawl", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-tenant-id": "attacker-tenant",
+        "x-user-id": "attacker-user",
+      },
+      body: JSON.stringify({ requestedUrl: "https://example.com" }),
+    }));
+
+    expect(response.status).toBe(401);
+    expect(submitMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["more than eight allowed schemes", { allowedSchemes: Array.from({ length: 9 }, () => "https") }],
     ["an allowed scheme longer than 16 characters", { allowedSchemes: ["s".repeat(17)] }],

@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireSession, getSession } from "./session";
 import { UserRole } from "@/types/auth";
 import { TenantContextManager } from "@/core/database/tenant-context";
@@ -136,4 +136,16 @@ export async function authorizeApiRequest(_req: NextRequest): Promise<{ userId: 
     userId: session.user.id,
     tenantId: session.user.workspaceId,
   };
+}
+
+
+/** Convert a known authorization failure into a safe HTTP response. */
+export function authorizationErrorResponse(error: unknown): NextResponse | null {
+  if (!(error instanceof AuthorizationError)) return null;
+
+  const unauthorized = error.statusCode === 401;
+  return NextResponse.json(
+    { error: unauthorized ? "Unauthorized" : "Forbidden", message: error.message },
+    { status: error.statusCode }
+  );
 }

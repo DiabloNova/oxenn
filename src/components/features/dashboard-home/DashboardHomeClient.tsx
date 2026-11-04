@@ -42,13 +42,10 @@ export default function DashboardHomeClient({ initialData, user }: DashboardHome
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      const workspaceId = user?.workspaceId || "ws-default";
       const response = await fetch(`/api/v1/dashboard/summary?locale=${language}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-id": workspaceId,
-          "x-user-id": user?.id || "usr-default",
         },
       });
 
@@ -90,13 +87,10 @@ export default function DashboardHomeClient({ initialData, user }: DashboardHome
     setIsSubmitting(true);
 
     try {
-      const workspaceId = user?.workspaceId || "ws-default";
       const response = await fetch("/api/v1/audit/engine", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-id": workspaceId,
-          "x-user-id": user?.id || "usr-default",
         },
         body: JSON.stringify({ url: trimmed }),
       });

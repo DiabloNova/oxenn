@@ -1565,12 +1565,13 @@ The new \`/api/v1/crawl\` route requires an actual signed session and derives
 tenant identity from that session. It does not accept \`x-tenant-id\` or
 \`x-user-id\` as identity.
 
-The legacy \`POST /api/v1/crawler/start\` route remains vulnerable and is
-deliberately untouched because it is outside Task 4.0. It accepts tenant
-identity from an unauthenticated \`x-tenant-id\` header, accepts user-provided
-seed URLs, and passes them to \`CrawlerOrchestrator\` without SSRF validation.
-Follow-up remediation should require a real session, route all URLs through
-the acquisition SSRF boundary, and retire the legacy path.
+Both the new \`POST /api/v1/crawl\` route and the legacy
+\`POST /api/v1/crawler/start\` route now require a validated server session and
+derive tenant/user identity from it. Neither route accepts \`x-tenant-id\` or
+\`x-user-id\` as identity. The legacy route still uses the older campaign
+orchestrator, but its HTTP fetches now pass through the shared public-URL
+fetch guard. Header-only developer integrations are rejected; non-browser
+integrations need a separately designed signed credential flow.
 
 ## Deduplication, cache, and lifecycle
 

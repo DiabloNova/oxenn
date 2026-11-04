@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { TenantContextManager } from '@/core/database/tenant-context';
-import { requireSession } from '@/services/auth/session';
-import { requireWorkspaceMembership } from '@/services/auth/authorization';
+import { authorizationErrorResponse, authorizeApiRequest, requireWorkspaceMembership } from '@/services/auth/authorization';
 import { EntityService, projectNeighborhoodForVisualization } from '@/features/ai-intelligence/services/entity-service';
 
 // Validation schema with Persian error message
@@ -12,6 +11,7 @@ const querySchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId, tenantId: organizationId } = await authorizeApiRequest(req);
     const body = await req.json();
     const parsed = querySchema.safeParse(body);
 
@@ -24,17 +24,7 @@ export async function POST(req: NextRequest) {
 
     const { entityName } = parsed.data;
 
-    // 1. Secure Server-Side Session and Workspace Membership validation
-    const session = await requireSession();
-    if (!session.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'Active user not resolved from secure session.' },
-        { status: 401 }
-      );
-    }
-
-    const organizationId = session.user.workspaceId;
-    const userId = session.user.id;
+    // 1. Verify active workspace membership before tenant-scoped queries.
     const requestId = req.headers.get("x-request-id") || `req-kg-api-${Date.now()}`;
 
     // 2. Wrap executing DB lookups strictly under RLS tenant isolation context
@@ -143,6 +133,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ nodes, edges });
 
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("[API KG Query Route Error]:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

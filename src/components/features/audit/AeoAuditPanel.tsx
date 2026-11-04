@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/components/AuthProvider";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -54,7 +53,6 @@ interface RadarData {
 
 export const AeoAuditPanel: React.FC = () => {
   const { language, direction } = useTheme();
-  const { session } = useAuth();
   const isRtl = language === "fa";
 
   const [targetBrand, setTargetBrand] = useState("");
@@ -119,14 +117,11 @@ export const AeoAuditPanel: React.FC = () => {
 
     startTransition(async () => {
       try {
-        const workspaceId = session.user?.workspaceId || "ws-tehran";
 
         const res = await fetch("/api/v1/audit/aeo-insight", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-id": workspaceId,
-            "x-user-id": session.user?.id || "usr-1001",
           },
           body: JSON.stringify({ targetBrandOrEntity: trimmed })
         });

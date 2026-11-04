@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/Card"
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/components/AuthProvider";
 import { MessageSquare, Send, BookOpen, AlertCircle } from "lucide-react";
 
 interface Message {
@@ -31,7 +30,6 @@ interface Message {
  */
 export const BrandIntelligenceChat: React.FC = () => {
   const { language } = useTheme();
-  const { session } = useAuth();
 
   // Lazy initializer to set up initial greeting message
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -75,13 +73,10 @@ export const BrandIntelligenceChat: React.FC = () => {
     setError(null);
 
     try {
-      const tenantId = session.user?.workspaceId || "org-enterprise-rag-01";
       const res = await fetch("/api/v1/rag/query", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-          "x-user-id": session.user?.id || "usr-1001"
         },
         body: JSON.stringify({ question: currentInput, limit: 5 })
       });

@@ -4,7 +4,6 @@ import React, { useState, useTransition, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/components/AuthProvider";
 import { ContentStudioResponse } from "@/app/api/v1/content/studio/route";
 import {
   Sparkles,
@@ -24,7 +23,6 @@ import {
 
 export const ContentStudio: React.FC = () => {
   const { language, direction } = useTheme();
-  const { session } = useAuth();
   const isRtl = language === "fa";
 
   const [url, setUrl] = useState("");
@@ -160,14 +158,11 @@ export const ContentStudio: React.FC = () => {
 
     startTransition(async () => {
       try {
-        const workspaceId = session?.user?.workspaceId || "ws-tehran";
 
         const response = await fetch("/api/v1/content/studio", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-id": workspaceId,
-            "x-user-id": session?.user?.id || "usr-studio-default",
           },
           body: JSON.stringify({ url, brandVoice, targetKeywords: keywords }),
         });

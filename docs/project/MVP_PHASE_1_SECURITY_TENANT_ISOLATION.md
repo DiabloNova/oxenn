@@ -1,15 +1,15 @@
 # Oxenn MVP — Phase 1: Security and Tenant Isolation
 
-**Status:** In progress — focused verification passed; broader security review remains open  
-**Branch:** `mvp/phase-1-security-tenant-isolation`  
-**Base:** `mvp/phase-0-scope-baseline`  
+**Status:** In progress — API identity audit and local verification passed; provider/DB/CI validation remains open
+**Branch:** `mvp/phase-1-security-tenant-isolation`
+**Base:** `mvp/phase-0-scope-baseline`
 **Started:** 2026-11-04
 
 ## 1. Objective
 
 Close the highest-priority security gaps found in the repository audit before the MVP user journeys are exposed beyond trusted development environments. Phase 1 prioritizes server-derived identity for API routes and safe outbound crawler networking.
 
-This document records code changes on this branch. It does not claim that tests have passed, that production is secure, or that a live database was inspected.
+This document records code changes and local verification on this branch. Passing local tests do not establish production security or prove effective RLS behavior in a live database.
 
 ## 2. Implemented on this branch
 
@@ -17,16 +17,43 @@ This document records code changes on this branch. It does not claim that tests 
 
 `authorizeApiRequest` now accepts identity only from `getSession()`, which validates the HttpOnly session token against the database and requires active workspace membership. The `x-user-id` and `x-tenant-id` headers are no longer accepted as an authentication fallback.
 
-The following API routes now use that helper and return 401/403 for authorization failures:
+All 16 tenant-scoped API endpoints were reviewed. Routes with user/workspace
+context derive it from the validated server session; request correlation IDs
+remain caller-supplied metadata only and are never used as identity.
 
-- `src/app/api/v1/crawler/start/route.ts`
-- `src/app/api/v1/analysis/competitive/route.ts`
-- `src/app/api/v1/analytics/llm/route.ts`
-- `src/app/api/v1/optimization/technical/route.ts`
+The following additional endpoints were migrated from caller-controlled
+identity headers/default IDs to authorizeApiRequest:
 
-Request correlation IDs may still be supplied by the caller; they are not used to establish identity.
+- src/app/api/v1/ai/chunk/route.ts
+- src/app/api/v1/ai/sentiment/route.ts
+- src/app/api/v1/analytics/summary/route.ts
+- src/app/api/v1/audit/aeo-insight/route.ts
+- src/app/api/v1/audit/engine/route.ts
+- src/app/api/v1/audit/premium/route.ts
+- src/app/api/v1/content/studio/route.ts
 
-**Compatibility note:** header-only developer integrations are intentionally rejected. A future non-browser integration must use a separately designed, cryptographically verified API credential, not caller-supplied user and tenant IDs.
+Previously protected endpoints were also checked: competitive analysis, LLM
+analytics, crawler campaign start, technical optimization, crawl jobs,
+dashboard summary, document ingestion, knowledge graph, and RAG. The shared
+authorizationErrorResponse helper preserves 401/403 responses instead of
+allowing authorization failures to surface as generic 500 responses.
+
+All browser UI callers have had x-tenant-id and x-user-id removed. Same-origin
+session cookies are the authentication mechanism.
+
+Non-tenant / public endpoint classification:
+
+- /api/v1/audit/free is intentionally public (free audit lead magnet) and does
+  not create tenant context.
+- /api/v1/docs is intentionally public but serves only documentation approved
+  by isPublicDocumentation.
+- /api/inngest delegates request handling to the Inngest serve adapter. The
+  deployed signing-key configuration was not verified in this task.
+
+Compatibility note: header-only developer integrations are intentionally
+rejected. A future non-browser integration must use a separately designed,
+cryptographically verified API credential, not caller-supplied user and tenant
+IDs.
 
 ### 2.2 Outbound crawler requests are SSRF-restricted
 
@@ -46,34 +73,52 @@ The crawler consumers now use this helper instead of native `fetch`:
 - `src/services/crawler/link-discovery.ts`
 - `src/services/crawler/web-crawler.ts`
 
-### 2.3 Negative-path tests added
+### 2.3 Negative-path tests added and updated
 
-- `tests/unit/services/auth/authorize-api-request.test.ts`: rejects spoofed identity headers without a server session and verifies that the returned identity comes from the validated session.
-- `tests/unit/services/crawler/safe-http-fetch.test.ts`: covers private/reserved IPv4 and IPv6, unsafe URL forms, and mixed public/private DNS answers.
+- tests/unit/services/auth/authorize-api-request.test.ts: rejects spoofed
+  identity headers without a server session and verifies that returned
+  identity comes from the validated session.
+- tests/unit/api/v1/tenant-auth-boundaries.test.ts: rejects forged tenant/user
+  headers across 15 tenant-scoped API handlers and verifies 401/403 mapping.
+- tests/unit/api/v1/crawl.test.ts: verifies forged identity headers cannot
+  submit a crawl without a real session.
+- tests/unit/api/v1/content/studio.test.ts: verifies the tenant/user passed
+  into tenant context are session-derived even when forged headers are sent.
+- tests/unit/services/crawler/safe-http-fetch.test.ts: covers private/reserved
+  IPv4 and IPv6, unsafe URL forms, and mixed public/private DNS answers.
 
-These tests are **executed locally and passing**. The full unit suite was also run after updating route tests to mock the trusted session helper rather than relying on caller-supplied identity headers.
+Legacy direct-route feature harnesses for competitive analysis, technical
+optimization, premium audit, and content studio now test rejection of spoofed
+identity headers rather than assuming those headers authenticate the caller.
 
 ## 3. Remaining Phase 1 work
 
-- [ ] Run TypeScript, lint, and the focused unit tests on this branch; resolve any failures.
-- [ ] Run the complete required CI workflow and record the run URL/result before marking this phase complete.
-- [ ] Inventory every API route for caller-controlled tenant/user headers and confirm that all tenant-sensitive routes use a trusted server identity or an explicit API-credential verifier.
-- [ ] Add integration/negative-path coverage for redirect-to-private-IP, redirect loops, response size limits, and request timeouts.
-- [ ] Review service-to-service authentication requirements and implement a dedicated API-key/bearer credential flow if required; do not restore header-based identity fallback.
-- [ ] Reassess authorization and crawler behavior after the tests, including role permissions and tenant isolation at the database boundary.
+- [ ] Run the complete GitHub Actions workflow and record its result before
+  marking Phase 1 complete.
+- [ ] Add integration/negative-path coverage for redirect-to-private-IP,
+  redirect loops, response-size limits, and request timeouts in the safe HTTP
+  fetcher.
+- [ ] Review service-to-service authentication requirements and implement a
+  dedicated signed API credential flow if required; do not restore
+  header-based identity fallback.
+- [ ] Validate behavior against an isolated PostgreSQL test environment and
+  verify effective RLS behavior.
+- [ ] Complete authorization/role review and deployed end-to-end testing.
 
 ## 4. Verification boundaries
 
 Not verified by this branch operation:
 
-- Production or staging database connectivity, migration state, grants, and effective RLS behavior.
-- Live DNS, outbound network, or external provider behavior from the deployed runtime.
-- CI status for these commits.
-- Complete API route inventory beyond the explicitly listed routes.
+- Production or staging database connectivity, migration state, grants, and
+  effective RLS behavior.
+- Live DNS, outbound network, or external provider behavior from the deployed
+  runtime.
+- Inngest signing-key configuration in deployed environments.
+- GitHub Actions status for these commits.
 - End-to-end security behavior in a deployed environment.
 
-No database migration, database query, secret change, production operation, or deployment was performed for this phase.
-
+No database migration, production database query, secret change, production
+operation, or deployment was performed for this phase.
 
 ## 5. Local verification — 2026-11-04
 
@@ -82,18 +127,22 @@ The branch was cloned into an isolated, disposable Sprite environment. Dependenc
 | Check | Result |
 |---|---|
 | TypeScript `tsc --noEmit` | PASS |
-| Focused auth + SSRF unit tests | PASS — 18 tests |
-| Full `pnpm test:unit` | PASS — 53 files passed, 275 tests passed, 1 file skipped, 1 todo |
-| Full repository ESLint (`--max-warnings=218`) | PASS — 0 errors, 217 warnings |
+| Focused security boundary tests | PASS — 28 tests across 4 files |
+| Full unit suite (`vitest run --project unit`) | PASS — 54 files passed, 292 tests passed, 1 file skipped, 1 todo |
+| Full repository ESLint (`--max-warnings=218`) | PASS — 0 errors, 215 warnings |
 | Focused ESLint on changed runtime/test files | PASS — 0 errors, 2 existing warnings |
 
-The full unit suite initially exposed 5 failures in two API test files because those tests still relied on `x-tenant-id` / `x-user-id` headers. The tests were updated to mock the server-side authorization helper; the crawler test now verifies the session-derived user ID is passed to the orchestrator. The full unit suite was rerun and passed.
+The initial full unit run exposed tests that relied on caller-supplied identity headers. Those tests were updated to mock the server-side authorization helper; the crawler test verifies session-derived identity reaches the orchestrator. The expanded API boundary suite now covers 15 protected handlers, and the complete unit suite passed.
 
-The two focused ESLint warnings are existing unused heuristic variables in the competitive-analysis route; there are no lint errors in the changed files. Full repository ESLint also passed with 217 warnings (the workflow limit is 218).
+Full repository ESLint passed with 215 warnings (the workflow limit is 218), with zero lint errors.
 
 ### Remaining verification
 
-- [ ] Run the complete GitHub Actions workflow on this branch; no workflow run is claimed here.
-- [ ] Add route-level tests for all four protected endpoints and redirect/timeout/response-size integration tests for the safe fetcher.
-- [ ] Complete the wider API route inventory and service-to-service authentication design.
-- [ ] Validate the behavior against a real isolated PostgreSQL test environment and verify effective RLS behavior; no live database was accessed during this run.
+- [ ] Run the complete GitHub Actions workflow on this branch; no workflow run
+  is claimed here.
+- [ ] Add redirect/timeout/response-size integration tests for the safe fetcher.
+- [ ] Complete service-to-service credential design if integrations require
+  non-cookie authentication.
+- [ ] Validate behavior against a real isolated PostgreSQL test environment
+  and verify effective RLS behavior; no live database was accessed during
+  this run.

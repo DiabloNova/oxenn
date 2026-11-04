@@ -4,6 +4,7 @@ import { firecrawlApp } from "@/lib/firecrawl";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
+import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 
 // Validator schema
 const requestSchema = z.object({
@@ -41,18 +42,10 @@ export interface PremiumAuditResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate Tenant (Paid feature check)
-    const tenantId = req.headers.get("x-tenant-id");
-    const userId = req.headers.get("x-user-id") || "usr-premium-default";
+    // Authenticate the current server session and derive its active workspace.
+    const { tenantId, userId } = await authorizeApiRequest(req);
 
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "شناسه مستأجر معتبر ارسال نشده است. این ویژگی نیاز به اشتراک فعال دارد." },
-        { status: 401 }
-      );
-    }
-
-    // 2. Parse and Validate Request
+    // Parse and validate request.
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
 
@@ -307,6 +300,8 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("[Premium SEO Audit Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای ناشناخته در ارزیابی پریمیوم رخ داد.";
     return NextResponse.json(
