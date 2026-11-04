@@ -43,7 +43,7 @@ describe("crawler outbound URL policy", () => {
     vi.mocked(lookup).mockResolvedValue([
       { address: "93.184.216.34", family: 4 },
       { address: "10.0.0.8", family: 4 },
-    ]);
+    ] as never);
 
     await expect(fetchPublicUrl("https://example.com/"))
       .rejects.toThrow("non-public DNS address");
