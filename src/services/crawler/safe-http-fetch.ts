@@ -296,7 +296,9 @@ function requestOnce(
       const location = headerValue(response.headers, "location");
 
       if (REDIRECT_STATUSES.has(status) && location) {
-        response.resume();
+        // Redirect bodies are irrelevant; close the hop instead of draining an
+        // untrusted response body before validating and opening the next target.
+        response.destroy();
         clearHardTimeout();
         resolve({
           status,
