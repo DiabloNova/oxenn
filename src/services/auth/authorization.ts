@@ -119,11 +119,6 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
 }
 
 /**
- * Validates and resolves the authoritative user and tenant identity for API routes.
- * If an active signed server session is present, its identity overrides all client-provided headers.
- * Otherwise, falls closed if neither valid session nor proper headers are present.
- */
-/**
  * Resolves API identity exclusively from the server-validated, database-backed
  * session cookie. Caller-supplied identity headers are never authentication.
  *
