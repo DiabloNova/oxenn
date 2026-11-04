@@ -33,13 +33,36 @@ describe("safe crawler fetcher", () => {
         response.writeHead(302, { location: "/final" }).end();
         return;
       }
-      if (request.url?.startsWith("/chain/")) {
-        const hop = Number(request.url.split("/").at(-1));
-        if (hop < 7) {
-          response.writeHead(302, { location: `/chain/${hop + 1}` }).end();
-        } else {
-          response.writeHead(200, { "content-type": "text/plain" }).end("paid-ok");
-        }
+      if (request.url === "/chain/0") {
+        response.writeHead(302, { location: "/chain/1" }).end();
+        return;
+      }
+      if (request.url === "/chain/1") {
+        response.writeHead(302, { location: "/chain/2" }).end();
+        return;
+      }
+      if (request.url === "/chain/2") {
+        response.writeHead(302, { location: "/chain/3" }).end();
+        return;
+      }
+      if (request.url === "/chain/3") {
+        response.writeHead(302, { location: "/chain/4" }).end();
+        return;
+      }
+      if (request.url === "/chain/4") {
+        response.writeHead(302, { location: "/chain/5" }).end();
+        return;
+      }
+      if (request.url === "/chain/5") {
+        response.writeHead(302, { location: "/chain/6" }).end();
+        return;
+      }
+      if (request.url === "/chain/6") {
+        response.writeHead(302, { location: "/chain/7" }).end();
+        return;
+      }
+      if (request.url === "/chain/7") {
+        response.writeHead(200, { "content-type": "text/plain" }).end("paid-ok");
         return;
       }
       if (request.url === "/loop-a") {

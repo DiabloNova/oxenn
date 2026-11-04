@@ -34,10 +34,12 @@ describe("Legacy crawler start request bounds", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authorizeApiRequestMock.mockResolvedValue({ tenantId: "tenant-test", userId: "user-test" });
-    runWithTenantContextMock.mockImplementation((...args: unknown[]) => {
-      const callback = args[args.length - 1];
-      return (callback as () => unknown)();
-    });
+    runWithTenantContextMock.mockImplementation((
+      _tenantId: string,
+      _userId: string,
+      _requestId: string,
+      callback: () => unknown
+    ) => callback());
     getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "free" } });
     runCrawlerCampaignMock.mockResolvedValue({ success: true, campaignId: "campaign-test" });
   });

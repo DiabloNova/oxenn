@@ -28,10 +28,12 @@ describe("Crawl API policy bounds", () => {
     vi.clearAllMocks();
     getSessionMock.mockResolvedValue({ user: { id: "user-test", workspaceId: "tenant-test" } });
     getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "free" } });
-    runWithTenantContextMock.mockImplementation((...args: unknown[]) => {
-      const callback = args[args.length - 1];
-      return (callback as () => unknown)();
-    });
+    runWithTenantContextMock.mockImplementation((
+      _tenantId: string,
+      _userId: string,
+      _requestId: string,
+      callback: () => unknown
+    ) => callback());
     submitMock.mockResolvedValue({ job: { id: "job-test", status: "queued" }, cacheOutcome: "MISS", result: null });
   });
 
