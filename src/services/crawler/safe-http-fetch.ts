@@ -218,12 +218,32 @@ export function parsePublicHttpUrl(input: string): URL {
   return url;
 }
 
-async function resolvePublicAddress(url: URL): Promise<ResolvedAddress> {
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
+async function resolvePublicAddress(url: URL, timeoutMs: number): Promise<ResolvedAddress> {
   const hostname = normalizedHostname(url);
   const family = isIP(hostname);
 
   const addresses = family === 0
-    ? await lookup(hostname, { all: true, verbatim: true })
+    ? await withTimeout(
+        lookup(hostname, { all: true, verbatim: true }),
+        timeoutMs,
+        "Crawler DNS lookup timed out."
+      )
     : [{ address: hostname, family }];
 
   if (addresses.length === 0 || addresses.some((entry) => !isPublicIpAddress(entry.address))) {
@@ -267,12 +287,17 @@ function requestOnce(
     };
 
     let request: ClientRequest;
+    let hardTimeout: ReturnType<typeof setTimeout> | undefined;
+    const clearHardTimeout = () => {
+      if (hardTimeout) clearTimeout(hardTimeout);
+    };
     const onResponse = (response: IncomingMessage) => {
       const status = response.statusCode ?? 0;
       const location = headerValue(response.headers, "location");
 
       if (REDIRECT_STATUSES.has(status) && location) {
         response.resume();
+        clearHardTimeout();
         resolve({
           status,
           statusText: response.statusMessage ?? "",
@@ -290,12 +315,16 @@ function requestOnce(
         const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
         receivedBytes += buffer.length;
         if (receivedBytes > maxBytes) {
-          request.destroy(new Error("Crawler response exceeded the configured size limit."));
+          const error = new Error("Crawler response exceeded the configured size limit.");
+          clearHardTimeout();
+          request.destroy(error);
+          reject(error);
           return;
         }
         chunks.push(buffer);
       });
       response.on("end", () => {
+        clearHardTimeout();
         resolve({
           status,
           statusText: response.statusMessage ?? "",
@@ -303,8 +332,14 @@ function requestOnce(
           body: Buffer.concat(chunks),
         });
       });
-      response.on("aborted", () => reject(new Error("Crawler response was interrupted.")));
-      response.on("error", reject);
+      response.on("aborted", () => {
+        clearHardTimeout();
+        reject(new Error("Crawler response was interrupted."));
+      });
+      response.on("error", (error) => {
+        clearHardTimeout();
+        reject(error);
+      });
     };
 
     const options = url.protocol === "https:"
@@ -318,10 +353,19 @@ function requestOnce(
       ? httpsRequest(options, onResponse)
       : httpRequest(options, onResponse);
 
+    hardTimeout = setTimeout(() => {
+      const error = new Error("Crawler request exceeded the absolute time limit.");
+      request.destroy(error);
+      clearHardTimeout();
+      reject(error);
+    }, timeoutMs);
     request.setTimeout(timeoutMs, () => {
-      request.destroy(new Error("Crawler request timed out."));
+      request.destroy(new Error("Crawler request timed out due to inactivity."));
     });
-    request.on("error", reject);
+    request.on("error", (error) => {
+      clearHardTimeout();
+      reject(error);
+    });
     request.end();
   });
 }
@@ -347,7 +391,7 @@ export async function fetchPublicUrl(
     }
     visited.add(normalizedUrl);
 
-    const address = await resolvePublicAddress(currentUrl);
+    const address = await resolvePublicAddress(currentUrl, timeoutMs);
     const response = await requestOnce(currentUrl, address, timeoutMs, maxBytes);
 
     if (response.redirectLocation) {
