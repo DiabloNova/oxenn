@@ -38,7 +38,7 @@ The helper:
 - Resolves DNS and rejects the hostname if any returned A/AAAA address is non-public.
 - Connects to the selected resolved IP directly, preserving the original Host header and TLS server name, to reduce DNS-rebinding exposure.
 - Revalidates every redirect target and rejects redirect loops; maximum 5 redirects.
-- Applies a 10-second per-request timeout and a 2 MiB response-body limit.
+- Applies a 10-second DNS lookup timeout, a 10-second absolute request deadline plus socket inactivity timeout, and a 2 MiB response-body limit.
 - Uses GET only and does not forward caller cookies or authorization headers.
 
 The crawler consumers now use this helper instead of native `fetch`:
