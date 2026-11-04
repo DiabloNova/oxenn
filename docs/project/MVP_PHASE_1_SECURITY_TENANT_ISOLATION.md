@@ -84,11 +84,12 @@ The branch was cloned into an isolated, disposable Sprite environment. Dependenc
 | TypeScript `tsc --noEmit` | PASS |
 | Focused auth + SSRF unit tests | PASS — 18 tests |
 | Full `pnpm test:unit` | PASS — 53 files passed, 275 tests passed, 1 file skipped, 1 todo |
-| Focused ESLint on changed runtime/test files | PASS — 0 errors, 4 warnings |
+| Full repository ESLint (`--max-warnings=218`) | PASS — 0 errors, 217 warnings |
+| Focused ESLint on changed runtime/test files | PASS — 0 errors, 2 existing warnings |
 
 The full unit suite initially exposed 5 failures in two API test files because those tests still relied on `x-tenant-id` / `x-user-id` headers. The tests were updated to mock the server-side authorization helper; the crawler test now verifies the session-derived user ID is passed to the orchestrator. The full unit suite was rerun and passed.
 
-The four remaining ESLint warnings are in existing heuristic variables and authorization helper code; there are no lint errors in the changed files. The repository's full lint baseline allows up to 218 warnings.
+The two focused ESLint warnings are existing unused heuristic variables in the competitive-analysis route; there are no lint errors in the changed files. Full repository ESLint also passed with 217 warnings (the workflow limit is 218).
 
 ### Remaining verification
 
