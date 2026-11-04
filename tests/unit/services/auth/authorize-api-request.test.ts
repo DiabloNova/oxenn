@@ -5,6 +5,7 @@ import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authori
 
 vi.mock("@/services/auth/session", () => ({
   getSession: vi.fn(),
+  requireSession: vi.fn(),
 }));
 
 function makeRequest(headers: Record<string, string>): NextRequest {
