@@ -286,10 +286,10 @@ function requestOnce(
       },
     };
 
-    let request: ClientRequest;
-    let hardTimeout: ReturnType<typeof setTimeout> | undefined;
+    const requestRef: { current?: ClientRequest } = {};
+    const timeoutRef: { current?: ReturnType<typeof setTimeout> } = {};
     const clearHardTimeout = () => {
-      if (hardTimeout) clearTimeout(hardTimeout);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
     const onResponse = (response: IncomingMessage) => {
       const status = response.statusCode ?? 0;
@@ -319,7 +319,7 @@ function requestOnce(
         if (receivedBytes > maxBytes) {
           const error = new Error("Crawler response exceeded the configured size limit.");
           clearHardTimeout();
-          request.destroy(error);
+          requestRef.current?.destroy(error);
           reject(error);
           return;
         }
@@ -351,11 +351,12 @@ function requestOnce(
         }
       : requestOptions;
 
-    request = url.protocol === "https:"
+    const request = url.protocol === "https:"
       ? httpsRequest(options, onResponse)
       : httpRequest(options, onResponse);
+    requestRef.current = request;
 
-    hardTimeout = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       const error = new Error("Crawler request exceeded the absolute time limit.");
       request.destroy(error);
       clearHardTimeout();
