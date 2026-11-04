@@ -64,8 +64,10 @@ The helper:
 - Allows HTTP/HTTPS only; rejects embedded credentials, reserved hostnames, non-public literal IPs, and non-standard ports.
 - Resolves DNS and rejects the hostname if any returned A/AAAA address is non-public.
 - Connects to the selected resolved IP directly, preserving the original Host header and TLS server name, to reduce DNS-rebinding exposure.
-- Revalidates every redirect target and rejects redirect loops; maximum 5 redirects.
-- Applies a 10-second DNS lookup timeout, a 10-second absolute request deadline plus socket inactivity timeout, and a 2 MiB response-body limit.
+- Revalidates every redirect target and rejects redirect loops. Free workspaces are limited to 5 redirects; paid workspaces have no redirect-hop count cap.
+- Both tiers retain a hard 60-second redirect-chain budget, and redirect response bodies are closed without being downloaded. The legacy fetcher uses 10-second DNS/request deadlines and a 2 MiB body cap; Acquisition uses a 10-second DNS deadline, policy-bounded connect/request deadlines (10/30 seconds by default), and a 5 MiB default response cap (25 MiB hard policy ceiling).
+- The effective plan is resolved from the tenant subscription on the server. A client-supplied policy cannot raise the free-tier limit or remove the paid-tier time/resource budgets.
+- IPv6 validation permits the specifically globally reachable special-purpose allocations while retaining blocks for reserved, transition, documentation, and non-global ranges.
 - Uses GET only and does not forward caller cookies or authorization headers.
 
 The crawler consumers now use this helper instead of native `fetch`:
@@ -84,8 +86,13 @@ The crawler consumers now use this helper instead of native `fetch`:
   submit a crawl without a real session.
 - tests/unit/api/v1/content/studio.test.ts: verifies the tenant/user passed
   into tenant context are session-derived even when forged headers are sent.
-- tests/unit/services/crawler/safe-http-fetch.test.ts: covers private/reserved
-  IPv4 and IPv6, unsafe URL forms, and mixed public/private DNS answers.
+- tests/unit/services/crawler/safe-http-fetch.test.ts: covers public/reserved
+  IPv4 and IPv6, unsafe URL forms, mixed DNS answers, private redirects,
+  redirect loops, free/paid hop policy, response-size limits, and DNS/request
+  timeouts.
+- tests/unit/features/acquisition/fetcher.test.ts: covers per-hop SSRF checks,
+  redirect loops, free/paid hop policy, streamed and declared response-size
+  limits, and DNS/request timeout behavior.
 
 Legacy direct-route feature harnesses for competitive analysis, technical
 optimization, premium audit, and content studio now test rejection of spoofed
@@ -95,9 +102,9 @@ identity headers rather than assuming those headers authenticate the caller.
 
 - [ ] Run the complete GitHub Actions workflow and record its result before
   marking Phase 1 complete.
-- [ ] Add integration/negative-path coverage for redirect-to-private-IP,
-  redirect loops, response-size limits, and request timeouts in the safe HTTP
-  fetcher.
+- [x] Add integration/negative-path coverage for redirect-to-private-IP,
+  redirect loops, response-size limits, and request/DNS timeouts in both
+  crawler HTTP fetch paths.
 - [ ] Review service-to-service authentication requirements and implement a
   dedicated signed API credential flow if required; do not restore
   header-based identity fallback.
@@ -140,7 +147,7 @@ Full repository ESLint passed with 215 warnings (the workflow limit is 218), wit
 
 - [ ] Run the complete GitHub Actions workflow on this branch; no workflow run
   is claimed here.
-- [ ] Add redirect/timeout/response-size integration tests for the safe fetcher.
+- [x] Add redirect/timeout/response-size integration tests for both safe fetchers.
 - [ ] Complete service-to-service credential design if integrations require
   non-cookie authentication.
 - [ ] Validate behavior against a real isolated PostgreSQL test environment

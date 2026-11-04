@@ -5,6 +5,7 @@ import {
 } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { CrawlError } from "../../domain/errors";
+import { MAX_REDIRECT_CHAIN_DURATION_MS } from "@/core/network/crawler-redirect-policy";
 import type { CrawlPolicy } from "../../domain/policy";
 import {
   normalizeUrl,
@@ -24,11 +25,40 @@ export interface SafeFetcherResponse {
   redirects: number;
 }
 
+const DNS_TIMEOUT_MS = 10_000;
+
 export interface SafeFetcherOptions {
   policy: CrawlPolicy;
   signal?: AbortSignal;
   resolver?: Resolver;
   hostValidator?: (host: string) => Promise<HostValidationResult>;
+}
+
+function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  error: CrawlError
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(error), timeoutMs);
+    operation.then(
+      value => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      cause => {
+        clearTimeout(timer);
+        reject(cause);
+      }
+    );
+  });
+}
+
+function contentLength(headers: IncomingMessage["headers"]): number | null {
+  const raw = headers["content-length"];
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) ? value : null;
 }
 
 function contentType(headers: IncomingMessage["headers"]): string {
@@ -58,6 +88,11 @@ export async function safeFetch(
 
   const visited = new Set<string>();
   let redirects = 0;
+  // Older persisted crawl jobs may not contain this field; treat them as Free.
+  const maxRedirects = options.policy.maxRedirects === undefined
+    ? 5
+    : options.policy.maxRedirects;
+  let redirectChainStartedAt: number | null = null;
   while (true) {
     if (Date.now() - startedAt >= options.policy.maxDurationMs) {
       throw new CrawlError("TIMEOUT", "Crawl request exceeded its deadline");
@@ -67,32 +102,53 @@ export async function safeFetch(
     }
     visited.add(current.value.canonical);
 
-    const validation = options.hostValidator
-      ? await options.hostValidator(current.value.asciiHost)
-      : await resolveAndValidateHost(current.value.asciiHost, options.resolver);
+    const remaining = options.policy.maxDurationMs - (Date.now() - startedAt);
+    const redirectRemaining = redirectChainStartedAt === null
+      ? remaining
+      : MAX_REDIRECT_CHAIN_DURATION_MS - (Date.now() - redirectChainStartedAt);
+    const hopBudget = Math.min(remaining, redirectRemaining);
+    if (hopBudget <= 0) {
+      throw new CrawlError("TIMEOUT", "Crawl or redirect chain exceeded its time budget");
+    }
+    const validation = await withTimeout(
+      options.hostValidator
+        ? options.hostValidator(current.value.asciiHost)
+        : resolveAndValidateHost(current.value.asciiHost, options.resolver),
+      Math.min(DNS_TIMEOUT_MS, hopBudget),
+      new CrawlError("TIMEOUT", "DNS lookup timed out")
+    );
     if (!validation.ok) {
       throw validation.error;
     }
 
-    const remaining = options.policy.maxDurationMs - (Date.now() - startedAt);
-    if (remaining <= 0) {
-      throw new CrawlError("TIMEOUT", "Crawl request exceeded its deadline");
+    const afterDnsRemaining = options.policy.maxDurationMs - (Date.now() - startedAt);
+    const afterDnsRedirectRemaining = redirectChainStartedAt === null
+      ? afterDnsRemaining
+      : MAX_REDIRECT_CHAIN_DURATION_MS - (Date.now() - redirectChainStartedAt);
+    const requestBudget = Math.min(afterDnsRemaining, afterDnsRedirectRemaining);
+    if (requestBudget <= 0) {
+      throw new CrawlError("TIMEOUT", "Crawl or redirect chain exceeded its time budget");
     }
     const response = await requestOnce(
       current.value,
       validation.ips,
       options,
-      remaining
+      requestBudget
     );
 
     if (response.status >= 300 && response.status < 400 && response.headers.location) {
       if (
         !options.policy.followRedirects ||
-        redirects >= options.policy.maxRedirects
+        (maxRedirects !== null && redirects >= maxRedirects)
       ) {
         throw new CrawlError("REDIRECT_LIMIT", "Redirect limit exceeded", {
           redirects
         });
+      }
+      if (redirectChainStartedAt === null) {
+        redirectChainStartedAt = Date.now();
+      } else if (Date.now() - redirectChainStartedAt >= MAX_REDIRECT_CHAIN_DURATION_MS) {
+        throw new CrawlError("TIMEOUT", "Redirect chain exceeded its time budget");
       }
       const location = Array.isArray(response.headers.location)
         ? response.headers.location[0]
@@ -163,6 +219,7 @@ function requestOnce(
     let received = 0;
     const chunks: Buffer[] = [];
     const transport = url.scheme === "https" ? httpsRequest : httpRequest;
+    let abortHandler: (() => void) | undefined;
     const request = transport(
       {
         hostname: url.asciiHost,
@@ -181,10 +238,43 @@ function requestOnce(
         const fail = (error: CrawlError): void => {
           if (!settled) {
             settled = true;
+            cleanup();
             request.destroy(error);
             reject(error);
           }
         };
+        response.on("error", error =>
+          fail(new CrawlError("NETWORK_FAILURE", "Response stream failed", {}, { cause: error }))
+        );
+        response.on("aborted", () =>
+          fail(new CrawlError("NETWORK_FAILURE", "Response stream was aborted"))
+        );
+
+        if (
+          response.statusCode !== undefined &&
+          response.statusCode >= 300 &&
+          response.statusCode < 400 &&
+          response.headers.location
+        ) {
+          settled = true;
+          cleanup();
+          const headers = Object.fromEntries(
+            Object.entries(response.headers).filter(([key]) => key !== "set-cookie")
+          );
+          response.destroy();
+          resolve({
+            status: response.statusCode,
+            headers,
+            body: Buffer.alloc(0)
+          });
+          return;
+        }
+
+        const declaredLength = contentLength(response.headers);
+        if (declaredLength !== null && declaredLength > options.policy.maxResponseBytes) {
+          fail(new CrawlError("RESPONSE_TOO_LARGE", "Response exceeded configured limit"));
+          return;
+        }
         response.on("data", chunk => {
           const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
           received += data.length;
@@ -202,6 +292,7 @@ function requestOnce(
         response.on("end", () => {
           if (!settled) {
             settled = true;
+            cleanup();
             resolve({
               status: response.statusCode ?? 0,
               headers: Object.fromEntries(
@@ -213,16 +304,6 @@ function requestOnce(
             });
           }
         });
-        response.on("error", error =>
-          fail(
-            new CrawlError(
-              "NETWORK_FAILURE",
-              "Response stream failed",
-              {},
-              { cause: error }
-            )
-          )
-        );
       }
     );
 
@@ -240,6 +321,14 @@ function requestOnce(
       () => request.destroy(new CrawlError("TIMEOUT", "Request deadline exceeded")),
       deadlineMs
     );
+    const cleanup = (): void => {
+      clearConnectTimer();
+      clearTimeout(deadlineTimer);
+      if (options.signal && abortHandler) {
+        options.signal.removeEventListener("abort", abortHandler);
+        abortHandler = undefined;
+      }
+    };
 
     request.on("socket", socket =>
       socket.once("connect", clearConnectTimer)
@@ -248,8 +337,7 @@ function requestOnce(
       request.destroy(new CrawlError("TIMEOUT", "Request timed out"))
     );
     request.on("error", error => {
-      clearConnectTimer();
-      clearTimeout(deadlineTimer);
+      cleanup();
       if (!settled) {
         settled = true;
         reject(
@@ -261,20 +349,14 @@ function requestOnce(
         );
       }
     });
-    request.on("close", () => {
-      clearConnectTimer();
-      clearTimeout(deadlineTimer);
-    });
+    request.on("close", cleanup);
 
     if (options.signal) {
       if (options.signal.aborted) {
         request.destroy(new CrawlError("CANCELLED", "Request cancelled"));
       } else {
-        options.signal.addEventListener(
-          "abort",
-          () => request.destroy(new CrawlError("CANCELLED", "Request cancelled")),
-          { once: true }
-        );
+        abortHandler = () => request.destroy(new CrawlError("CANCELLED", "Request cancelled"));
+        options.signal.addEventListener("abort", abortHandler, { once: true });
       }
     }
     request.end();

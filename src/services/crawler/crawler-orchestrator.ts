@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { fetchAndExtractText } from "./web-crawler";
+import { FREE_CRAWLER_MAX_REDIRECTS, MAX_REDIRECT_CHAIN_DURATION_MS, type CrawlerRedirectPolicy } from "./redirect-policy";
 import { extractSeedLinks } from "./link-discovery";
 import { DocumentIngestionService } from "../ingestion/document-ingestion";
 import { TenantContextManager } from "../../core/database/tenant-context";
@@ -38,7 +39,11 @@ export class CrawlerOrchestrator {
     seedUrls: string[],
     organizationId: string,
     userId: string = "system_crawler",
-    requestId: string = randomUUID()
+    requestId: string = randomUUID(),
+    redirectPolicy: CrawlerRedirectPolicy = {
+      maxRedirects: FREE_CRAWLER_MAX_REDIRECTS,
+      maxRedirectDurationMs: MAX_REDIRECT_CHAIN_DURATION_MS
+    }
   ): Promise<CrawlerResult> {
     const targetUrlsSet = new Set<string>();
     const details: CrawlerResult["details"] = [];
@@ -50,7 +55,7 @@ export class CrawlerOrchestrator {
     // Phase 1: Link Discovery
     for (const seedUrl of seedUrls) {
       try {
-        const discovered = await extractSeedLinks(seedUrl);
+        const discovered = await extractSeedLinks(seedUrl, 5, redirectPolicy);
         for (const url of discovered) {
           targetUrlsSet.add(url);
         }
@@ -72,7 +77,7 @@ export class CrawlerOrchestrator {
     for (const targetUrl of targetUrls) {
       try {
         // 1. Fetch and Extract Text
-        const cleanText = await fetchAndExtractText(targetUrl);
+        const cleanText = await fetchAndExtractText(targetUrl, redirectPolicy);
         const textLength = cleanText.length;
 
         // 2. Enforce Minimum Text Length

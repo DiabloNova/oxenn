@@ -13,6 +13,20 @@ describe("testSecurity", () => {
     expect(isBlockedIp(ip).blocked).toEqual(true);
   }
   expect(isBlockedIp("2606:4700::1111").blocked).toEqual(false);
+  for (const ip of [
+    "2001:1::1",
+    "2001:1::2",
+    "2001:1::3",
+    "2001:3::1",
+    "2001:4:112::1",
+    "2001:20::1",
+    "2001:30::1"
+  ]) {
+    expect(isBlockedIp(ip).blocked, ip).toEqual(false);
+  }
+  for (const ip of ["2001::1", "2001:2::1", "2001:10::1"]) {
+    expect(isBlockedIp(ip).blocked, ip).toEqual(true);
+  }
   expect(isBlockedIp("::ffff:8.8.8.8").blocked).toEqual(false);
   expect(isBlockedIp("::").rule).toEqual("unspecified");
   expect(isBlockedIp("::1").rule).toEqual("loopback");

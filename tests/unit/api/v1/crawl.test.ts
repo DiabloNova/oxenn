@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getSessionMock, submitMock, runWithTenantContextMock } = vi.hoisted(() => ({
+const { getSessionMock, submitMock, runWithTenantContextMock, getEffectiveSubscriptionMock } = vi.hoisted(() => ({
   getSessionMock: vi.fn(),
   submitMock: vi.fn(),
   runWithTenantContextMock: vi.fn(),
+  getEffectiveSubscriptionMock: vi.fn(),
 }));
 
 vi.mock("@/services/auth/session", () => ({ getSession: getSessionMock }));
@@ -12,6 +13,9 @@ vi.mock("@/features/acquisition/application/orchestrator", () => ({
   CrawlOrchestrator: class {
     submit = submitMock;
   },
+}));
+vi.mock("@/features/billing/services/subscription-service", () => ({
+  subscriptionService: { getEffectiveSubscription: getEffectiveSubscriptionMock },
 }));
 vi.mock("@/core/database/tenant-context", () => ({
   TenantContextManager: { runWithTenantContext: runWithTenantContextMock },
@@ -23,6 +27,7 @@ describe("Crawl API policy bounds", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getSessionMock.mockResolvedValue({ user: { id: "user-test", workspaceId: "tenant-test" } });
+    getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "free" } });
     runWithTenantContextMock.mockImplementation((...args: unknown[]) => {
       const callback = args[args.length - 1];
       return (callback as () => unknown)();
@@ -69,10 +74,36 @@ describe("Crawl API policy bounds", () => {
     const policy = {
       allowedSchemes: ["s".repeat(16), ...Array.from({ length: 7 }, () => "https")],
       allowedContentTypes: Array.from({ length: 64 }, () => "t".repeat(128)),
+      maxRedirects: 10,
     };
     const response = await post(policy);
     expect(response.status).toBe(202);
     expect(runWithTenantContextMock).toHaveBeenCalledWith("tenant-test", "user-test", expect.any(String), expect.any(Function));
-    expect(submitMock).toHaveBeenCalledWith("tenant-test", "https://example.com", policy, 0, expect.any(String), undefined, undefined, false);
+    expect(submitMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "https://example.com",
+      { ...policy, maxRedirects: 5 },
+      0,
+      expect.any(String),
+      undefined,
+      undefined,
+      false
+    );
+  });
+
+  it("grants paid workspaces no redirect hop-count cap while retaining server-side policy", async () => {
+    getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "professional" } });
+    const response = await post({ maxRedirects: 0 });
+    expect(response.status).toBe(202);
+    expect(submitMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "https://example.com",
+      { maxRedirects: null },
+      0,
+      expect.any(String),
+      undefined,
+      undefined,
+      false
+    );
   });
 });

@@ -7,7 +7,7 @@ export interface CrawlPolicy {
   maxDepth: number;
   maxDurationMs: number;
   maxResponseBytes: number;
-  maxRedirects: number;
+  maxRedirects: number | null;
   maxConcurrency: number;
   requestTimeoutMs: number;
   connectTimeoutMs: number;
@@ -65,7 +65,6 @@ const integerFields = new Set<keyof CrawlPolicy>([
   "maxDepth",
   "maxDurationMs",
   "maxResponseBytes",
-  "maxRedirects",
   "maxConcurrency",
   "requestTimeoutMs",
   "connectTimeoutMs",
@@ -88,6 +87,18 @@ export function validateCrawlPolicy(
   | { ok: true; policy: CrawlPolicy }
   | { ok: false; error: CrawlError; violations: PolicyViolation[] } {
   const violations: PolicyViolation[] = [];
+  if (
+    policy.maxRedirects !== null &&
+    (!Number.isInteger(policy.maxRedirects) ||
+      policy.maxRedirects < 0 ||
+      policy.maxRedirects > CRAWL_POLICY_CEILINGS.maxRedirects)
+  ) {
+    violations.push({
+      field: "maxRedirects",
+      reason: `must be null or an integer between 0 and ${CRAWL_POLICY_CEILINGS.maxRedirects}`,
+      value: policy.maxRedirects
+    });
+  }
   for (const field of integerFields) {
     const value = policy[field];
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {

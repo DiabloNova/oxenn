@@ -1,9 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { runCrawlerCampaignMock, authorizeApiRequestMock } = vi.hoisted(() => ({
+const { runCrawlerCampaignMock, authorizeApiRequestMock, runWithTenantContextMock, getEffectiveSubscriptionMock } = vi.hoisted(() => ({
   runCrawlerCampaignMock: vi.fn(),
   authorizeApiRequestMock: vi.fn(),
+  runWithTenantContextMock: vi.fn(),
+  getEffectiveSubscriptionMock: vi.fn(),
+}));
+
+vi.mock("@/core/database/tenant-context", () => ({
+  TenantContextManager: { runWithTenantContext: runWithTenantContextMock },
+}));
+vi.mock("@/features/billing/services/subscription-service", () => ({
+  subscriptionService: { getEffectiveSubscription: getEffectiveSubscriptionMock },
 }));
 
 vi.mock("@/services/auth/authorization", () => ({
@@ -25,6 +34,11 @@ describe("Legacy crawler start request bounds", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authorizeApiRequestMock.mockResolvedValue({ tenantId: "tenant-test", userId: "user-test" });
+    runWithTenantContextMock.mockImplementation((...args: unknown[]) => {
+      const callback = args[args.length - 1];
+      return (callback as () => unknown)();
+    });
+    getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "free" } });
     runCrawlerCampaignMock.mockResolvedValue({ success: true, campaignId: "campaign-test" });
   });
 
@@ -48,7 +62,20 @@ describe("Legacy crawler start request bounds", () => {
     const seedUrls = [maxLengthUrl, ...Array.from({ length: 49 }, () => "https://example.com")];
     const response = await post(seedUrls);
     expect(response.status).toBe(200);
-    expect(runCrawlerCampaignMock).toHaveBeenCalledWith(seedUrls, "tenant-test", "user-test", expect.any(String));
+    expect(runCrawlerCampaignMock).toHaveBeenCalledWith(seedUrls, "tenant-test", "user-test", expect.any(String), { maxRedirects: 5, maxRedirectDurationMs: 60_000 });
+  });
+
+  it("uses the paid redirect policy for a purchased workspace", async () => {
+    getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "business" } });
+    const response = await post(["https://example.com"]);
+    expect(response.status).toBe(200);
+    expect(runCrawlerCampaignMock).toHaveBeenCalledWith(
+      ["https://example.com"],
+      "tenant-test",
+      "user-test",
+      expect.any(String),
+      { maxRedirects: null, maxRedirectDurationMs: 60_000 }
+    );
   });
 
   it("rejects a seed URL longer than 2048 characters before starting a campaign", async () => {

@@ -3,6 +3,9 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { CrawlerOrchestrator } from "@/services/crawler/crawler-orchestrator";
 import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
+import { TenantContextManager } from "@/core/database/tenant-context";
+import { subscriptionService } from "@/features/billing/services/subscription-service";
+import { getCrawlerRedirectPolicy } from "@/services/crawler/redirect-policy";
 
 // Request body validation schema
 const requestSchema = z.object({
@@ -41,12 +44,22 @@ export async function POST(req: NextRequest) {
     const { seedUrls } = parsed.data;
 
     // 4. Initialize the Crawler Orchestrator and run the campaign
+    const redirectPolicy = await TenantContextManager.runWithTenantContext(
+      tenantId,
+      userId,
+      requestId,
+      async () => {
+        const subscription = await subscriptionService.getEffectiveSubscription();
+        return getCrawlerRedirectPolicy(subscription.effectivePlan.id);
+      }
+    );
     const orchestrator = new CrawlerOrchestrator();
     const result = await orchestrator.runCrawlerCampaign(
       seedUrls,
       tenantId,
       userId,
-      requestId
+      requestId,
+      redirectPolicy
     );
 
     // 5. Return success result with status 200 OK

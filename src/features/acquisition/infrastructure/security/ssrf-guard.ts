@@ -1,6 +1,7 @@
 import { isIP } from "node:net";
 import { promises as dns } from "node:dns";
 import { CrawlError } from "../../domain/errors";
+import { isPublicIpv6Address } from "@/services/crawler/safe-http-fetch";
 
 export type HostValidationResult =
   | { ok: true; ips: string[] }
@@ -152,9 +153,12 @@ export function isBlockedIp(ip: string): { blocked: boolean; rule?: string } {
     [parseV6("64:ff9b::") as bigint, 96, "nat64"]
   ];
   const match = rules.find(([prefix, bits]) => inV6(value, prefix, bits));
-  return match
-    ? { blocked: true, rule: match[2] }
-    : { blocked: false };
+  if (match) {
+    return { blocked: true, rule: match[2] };
+  }
+  return isPublicIpv6Address(ip)
+    ? { blocked: false }
+    : { blocked: true, rule: "non-public-ipv6" };
 }
 
 function blockedHostname(host: string): string | undefined {

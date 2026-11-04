@@ -7,6 +7,7 @@ import {
   type IncomingHttpHeaders,
 } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { MAX_REDIRECT_CHAIN_DURATION_MS } from "@/core/network/crawler-redirect-policy";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
@@ -27,7 +28,8 @@ export interface SafeHttpResponse {
 export interface SafeHttpFetchOptions {
   timeoutMs?: number;
   maxBytes?: number;
-  maxRedirects?: number;
+  maxRedirects?: number | null;
+  maxRedirectDurationMs?: number;
 }
 
 interface ResolvedAddress {
@@ -59,6 +61,18 @@ const BLOCKED_IPV4_CIDRS: ReadonlyArray<readonly [string, number]> = [
   ["203.0.113.0", 24],
   ["224.0.0.0", 4],
   ["240.0.0.0", 4],
+];
+
+// These more-specific IANA allocations are globally reachable despite the
+// conservative 2001::/23 parent-range deny rule below.
+const ALLOWED_GLOBAL_IPV6_SPECIAL_CIDRS: ReadonlyArray<readonly [string, number]> = [
+  ["2001:1::1", 128],
+  ["2001:1::2", 128],
+  ["2001:1::3", 128],
+  ["2001:3::", 32],
+  ["2001:4:112::", 48],
+  ["2001:20::", 28],
+  ["2001:30::", 28]
 ];
 
 const BLOCKED_IPV6_CIDRS: ReadonlyArray<readonly [string, number]> = [
@@ -142,15 +156,32 @@ function isPublicIpv4(address: string): boolean {
 }
 
 /**
- * Conservative global-unicast check. Non-global IPv6 ranges, transition
- * mechanisms and special-purpose ranges are rejected for outbound crawling.
+ * Allows global-unicast IPv6 and the IANA special-purpose subranges marked
+ * globally reachable; non-global, reserved, and unsafe transition ranges fail closed.
  */
-function isPublicIpv6(address: string): boolean {
+export function isPublicIpv6Address(address: string): boolean {
   const value = ipv6ToBigInt(address);
   if (value === null) return false;
 
+  // IPv4-mapped IPv6 is accepted only when the embedded IPv4 is public.
+  const mappedPrefix = 0x00000000000000000000ffff00000000n;
+  if ((value >> 32n) === (mappedPrefix >> 32n)) {
+    const embedded = value & 0xffffffffn;
+    const ipv4 = [24n, 16n, 8n, 0n]
+      .map(shift => Number((embedded >> shift) & 0xffn))
+      .join(".");
+    return isPublicIpv4(ipv4);
+  }
+
   const globalUnicastBase = 0x20000000000000000000000000000000n;
   if (!inCidr(value, globalUnicastBase, 3, 128)) return false;
+
+  if (ALLOWED_GLOBAL_IPV6_SPECIAL_CIDRS.some(([network, prefix]) => {
+    const networkValue = ipv6ToBigInt(network);
+    return networkValue !== null && inCidr(value, networkValue, prefix, 128);
+  })) {
+    return true;
+  }
 
   return !BLOCKED_IPV6_CIDRS.some(([network, prefix]) => {
     const networkValue = ipv6ToBigInt(network);
@@ -162,7 +193,7 @@ function isPublicIpv6(address: string): boolean {
 export function isPublicIpAddress(address: string): boolean {
   const family = isIP(address);
   if (family === 4) return isPublicIpv4(address);
-  if (family === 6) return isPublicIpv6(address);
+  if (family === 6) return isPublicIpv6Address(address);
   return false;
 }
 
@@ -310,6 +341,15 @@ function requestOnce(
         return;
       }
 
+      const declaredLength = headerValue(response.headers, "content-length");
+      if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength) > maxBytes) {
+        const error = new Error("Crawler response exceeded the configured size limit.");
+        clearHardTimeout();
+        requestRef.current?.destroy(error);
+        reject(error);
+        return;
+      }
+
       const chunks: Buffer[] = [];
       let receivedBytes = 0;
 
@@ -383,7 +423,14 @@ export async function fetchPublicUrl(
 ): Promise<SafeHttpResponse> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
-  const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
+  const maxRedirects = options.maxRedirects === undefined
+    ? DEFAULT_MAX_REDIRECTS
+    : options.maxRedirects;
+  const maxRedirectDurationMs = options.maxRedirectDurationMs ?? MAX_REDIRECT_CHAIN_DURATION_MS;
+  if (!Number.isSafeInteger(maxRedirectDurationMs) || maxRedirectDurationMs <= 0) {
+    throw new Error("Crawler redirect time budget must be a positive safe integer.");
+  }
+  let redirectChainStartedAt: number | null = null;
   const visited = new Set<string>();
   let currentUrl = parsePublicHttpUrl(input);
 
@@ -394,12 +441,31 @@ export async function fetchPublicUrl(
     }
     visited.add(normalizedUrl);
 
-    const address = await resolvePublicAddress(currentUrl, timeoutMs);
-    const response = await requestOnce(currentUrl, address, timeoutMs, maxBytes);
+    const redirectRemaining = redirectChainStartedAt === null
+      ? timeoutMs
+      : maxRedirectDurationMs - (Date.now() - redirectChainStartedAt);
+    const hopTimeoutMs = Math.min(timeoutMs, redirectRemaining);
+    if (hopTimeoutMs <= 0) {
+      throw new Error("Crawler redirect chain exceeded its time budget.");
+    }
+    const address = await resolvePublicAddress(currentUrl, hopTimeoutMs);
+    const remainingAfterDns = redirectChainStartedAt === null
+      ? timeoutMs
+      : maxRedirectDurationMs - (Date.now() - redirectChainStartedAt);
+    const requestTimeoutMs = Math.min(timeoutMs, remainingAfterDns);
+    if (requestTimeoutMs <= 0) {
+      throw new Error("Crawler redirect chain exceeded its time budget.");
+    }
+    const response = await requestOnce(currentUrl, address, requestTimeoutMs, maxBytes);
 
     if (response.redirectLocation) {
-      if (redirects >= maxRedirects) {
+      if (maxRedirects !== null && redirects >= maxRedirects) {
         throw new Error("Crawler exceeded the maximum redirect count.");
+      }
+      if (redirectChainStartedAt === null) {
+        redirectChainStartedAt = Date.now();
+      } else if (Date.now() - redirectChainStartedAt >= maxRedirectDurationMs) {
+        throw new Error("Crawler redirect chain exceeded its time budget.");
       }
       currentUrl = parsePublicHttpUrl(new URL(response.redirectLocation, currentUrl).toString());
       continue;
