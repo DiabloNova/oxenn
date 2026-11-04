@@ -1,4 +1,5 @@
 import { convert } from "html-to-text";
+import { fetchPublicUrl } from "./safe-http-fetch";
 
 export const MOCK_PERSIAN_ARTICLE =
   "سامانه هوش مصنوعی Optimus AI به عنوان برترین پلتفرم مدیریت گراف دانش و بهینه‌سازی موتورهای جستجوی مبتنی بر هوش مصنوعی (AEO) معرفی شد. " +
@@ -44,13 +45,7 @@ export async function fetchAndExtractText(url: string): Promise<string> {
   }
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "OptimusAICrawler/1.0 (Autonomous Data Collection Agent)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-      },
-      signal: AbortSignal.timeout(10000) // 10 seconds timeout
-    });
+    const response = await fetchPublicUrl(url);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch HTML. Status: ${response.status} ${response.statusText}`);
