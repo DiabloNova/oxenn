@@ -1,6 +1,6 @@
 # Oxenn MVP — Phase 1: Security and Tenant Isolation
 
-**Status:** In progress  
+**Status:** In progress — focused verification passed; broader security review remains open  
 **Branch:** `mvp/phase-1-security-tenant-isolation`  
 **Base:** `mvp/phase-0-scope-baseline`  
 **Started:** 2026-11-04
@@ -51,7 +51,7 @@ The crawler consumers now use this helper instead of native `fetch`:
 - `tests/unit/services/auth/authorize-api-request.test.ts`: rejects spoofed identity headers without a server session and verifies that the returned identity comes from the validated session.
 - `tests/unit/services/crawler/safe-http-fetch.test.ts`: covers private/reserved IPv4 and IPv6, unsafe URL forms, and mixed public/private DNS answers.
 
-These tests are **added but not yet executed** in a local checkout or CI run.
+These tests are **executed locally and passing**. The full unit suite was also run after updating route tests to mock the trusted session helper rather than relying on caller-supplied identity headers.
 
 ## 3. Remaining Phase 1 work
 
@@ -73,3 +73,26 @@ Not verified by this branch operation:
 - End-to-end security behavior in a deployed environment.
 
 No database migration, database query, secret change, production operation, or deployment was performed for this phase.
+
+
+## 5. Local verification — 2026-11-04
+
+The branch was cloned into an isolated, disposable Sprite environment. Dependencies were installed with the repository-pinned pnpm version (10.30.3) using the frozen lockfile. No production credentials or database connection were configured.
+
+| Check | Result |
+|---|---|
+| TypeScript `tsc --noEmit` | PASS |
+| Focused auth + SSRF unit tests | PASS — 18 tests |
+| Full `pnpm test:unit` | PASS — 53 files passed, 275 tests passed, 1 file skipped, 1 todo |
+| Focused ESLint on changed runtime/test files | PASS — 0 errors, 4 warnings |
+
+The full unit suite initially exposed 5 failures in two API test files because those tests still relied on `x-tenant-id` / `x-user-id` headers. The tests were updated to mock the server-side authorization helper; the crawler test now verifies the session-derived user ID is passed to the orchestrator. The full unit suite was rerun and passed.
+
+The four remaining ESLint warnings are in existing heuristic variables and authorization helper code; there are no lint errors in the changed files. The repository's full lint baseline allows up to 218 warnings.
+
+### Remaining verification
+
+- [ ] Run the complete GitHub Actions workflow on this branch; no workflow run is claimed here.
+- [ ] Add route-level tests for all four protected endpoints and redirect/timeout/response-size integration tests for the safe fetcher.
+- [ ] Complete the wider API route inventory and service-to-service authentication design.
+- [ ] Validate the behavior against a real isolated PostgreSQL test environment and verify effective RLS behavior; no live database was accessed during this run.
