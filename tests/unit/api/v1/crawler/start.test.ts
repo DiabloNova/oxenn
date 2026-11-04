@@ -1,7 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { runCrawlerCampaignMock } = vi.hoisted(() => ({ runCrawlerCampaignMock: vi.fn() }));
+const { runCrawlerCampaignMock, authorizeApiRequestMock } = vi.hoisted(() => ({
+  runCrawlerCampaignMock: vi.fn(),
+  authorizeApiRequestMock: vi.fn(),
+}));
+
+vi.mock("@/services/auth/authorization", () => ({
+  AuthorizationError: class AuthorizationError extends Error {
+    constructor(public statusCode: number, message: string) { super(message); }
+  },
+  authorizeApiRequest: authorizeApiRequestMock,
+}));
 
 vi.mock("@/services/crawler/crawler-orchestrator", () => ({
   CrawlerOrchestrator: class {
@@ -14,13 +24,14 @@ import { POST } from "@/app/api/v1/crawler/start/route";
 describe("Legacy crawler start request bounds", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authorizeApiRequestMock.mockResolvedValue({ tenantId: "tenant-test", userId: "user-test" });
     runCrawlerCampaignMock.mockResolvedValue({ success: true, campaignId: "campaign-test" });
   });
 
   async function post(seedUrls: string[]) {
     return POST(new NextRequest("http://localhost/api/v1/crawler/start", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-tenant-id": "tenant-test" },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ seedUrls }),
     }));
   }
@@ -37,7 +48,7 @@ describe("Legacy crawler start request bounds", () => {
     const seedUrls = [maxLengthUrl, ...Array.from({ length: 49 }, () => "https://example.com")];
     const response = await post(seedUrls);
     expect(response.status).toBe(200);
-    expect(runCrawlerCampaignMock).toHaveBeenCalledWith(seedUrls, "tenant-test", "system_crawler", expect.any(String));
+    expect(runCrawlerCampaignMock).toHaveBeenCalledWith(seedUrls, "tenant-test", "user-test", expect.any(String));
   });
 
   it("rejects a seed URL longer than 2048 characters before starting a campaign", async () => {
