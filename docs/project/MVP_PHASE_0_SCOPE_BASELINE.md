@@ -136,7 +136,7 @@ Therefore:
 - [x] Inspect current `.github/workflows/ci.yml` and capture its exact required checks.
 - [x] Produce an initial UI → Server Action → Service/Repository → provider/data trace for both MVP journeys.
 - [x] Produce an environment-variable inventory with purpose and required/optional classification; no secret values included.
-- [ ] Confirm migration coverage and canonical ownership for the MVP entities without modifying the database.
+- [x] Confirm schema/snapshot/migration coverage and canonical schema ownership for the MVP entities without modifying the database (see section 13).
 - [ ] Review the Phase 0 findings and acceptance criteria before opening Phase 1 implementation work.
 
 ## 8. Phase 0 exit criteria
@@ -265,7 +265,7 @@ Variable names and purposes below are taken from `.env.example` and `scripts/env
 
 ## 12. Schema inventory observations
 
-A direct scan of the exported `pgTable` declarations in `database/schema/index.ts` found 68 table declarations. Among the MVP-relevant declarations are:
+A direct scan of the exported `pgTable` declarations in `database/schema/index.ts` found 68 declarations. That file also imports `organizations` from `database/schema/organization-table.ts` and re-exports `api_keys` from `database/schema/api-keys.ts`. The effective Drizzle schema therefore contains **70 tables** in total. Among the MVP-relevant declarations are:
 
 - `brands`
 - `websites`
@@ -281,6 +281,59 @@ A direct scan of the exported `pgTable` declarations in `database/schema/index.t
 - `crawl_cache`
 - `crawl_snapshots`
 
-This is only a declaration inventory. It does not establish that the corresponding migrations have been applied to staging or production.
+This is a declaration inventory only; it does not establish that migrations have been applied to staging or production.
 
-**Count discrepancy:** `docs/architecture/README.md` describes 57 modeled tables, while the direct declaration scan above found 68 exported `pgTable` declarations in `database/schema/index.ts`. The repository context also refers to 51 RLS-protected tables in the CI isolation suite. These counts may refer to different table subsets or snapshots; they must not be conflated. Reconcile their definitions and generated migration coverage before Phase 0 is closed.
+**Count reconciliation:** the 68 declarations in `database/schema/index.ts`, plus the separately declared `organizations` and `api_keys` tables, produce 70 schema tables. The latest checked-in Drizzle snapshot also contains 70 tables. The architecture README previously stated 57; that stale count is corrected on this branch. The 51 RLS-protected tables are a subset of the 70 and are not a conflicting total.
+
+The source-of-truth schema is composed from `database/schema/index.ts` and its two table modules above. The ordered migration history is `database/drizzle/meta/_journal.json` plus the SQL files named by that journal.
+
+
+## 13. Static migration coverage reconciliation — 2026-11-04
+
+This check was performed against the checked-in files on `mvp/phase-0-scope-baseline`. It is a repository-level static reconciliation; it did not connect to or modify any database.
+
+### 13.1 Canonical schema and migration ownership
+
+- Drizzle Kit is configured by `drizzle.config.ts` with schema `database/schema/index.ts` and migration output `database/drizzle`.
+- The effective schema is composed of 70 table declarations: 68 in `database/schema/index.ts`, plus `organizations` in `database/schema/organization-table.ts` and `api_keys` in `database/schema/api-keys.ts`.
+- The latest journal entry is `0013_remove_api_keys_prefix_index`; its corresponding snapshot is `database/drizzle/meta/0013_snapshot.json`.
+- The ordered journal contains 14 entries, and all 14 referenced SQL migration files exist.
+- The effective schema names and latest snapshot names match exactly: **70 / 70**, with no schema-only or snapshot-only table.
+- Across the journal, the migration SQL creates 70 unique tables. That set matches the latest snapshot exactly: no snapshot table lacks a CREATE TABLE in the migration history, and no migration-created table is absent from the snapshot.
+
+### 13.2 MVP entity-to-migration map
+
+| MVP journey | Tables | Creation migration |
+|---|---|---|
+| Technical SEO | `websites`, `pages`, `diagnostic_findings`, `diagnostic_finding_relationships`, `technical_audits`, `crawl_jobs`, `crawl_results`, `crawl_cache` | `0000_reflective_loa` |
+| Technical SEO | `crawl_snapshots` | `0003_warm_shadow_king` |
+| AI Visibility | `brands`, `prompts`, `prompt_definitions`, `prompt_executions`, `ai_visibility_audits`, `audit_prompts`, `ai_observations` | `0000_reflective_loa` |
+
+Every table in this MVP map exists in the latest Drizzle snapshot and has tenant-isolation policies recorded there. This establishes schema/migration coverage; it does **not** mean the current application actions use every listed table as their live persistence path. Repository ownership and end-to-end data flow remain implementation work for later phases.
+
+### 13.3 RLS coverage reconciliation
+
+The latest snapshot contains **51 policy-bearing tables**. The generated runtime list in `src/core/database/tenant-tables.generated.ts` also contains 51 entries and matches the snapshot policy-table set exactly (no missing or extra entries).
+
+Migration `0005_force_rls.sql` contains both `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` for all 51 of those tables. The two statement sets match the snapshot policy-table set exactly. All 16 tables in the MVP entity map above are among those policy-bearing tables.
+
+The current CI workflow includes three related checks:
+- `pnpm tsx scripts/database/verify-tenant-tables.ts`
+- `pnpm db:verify-rls-migrations`
+- `pnpm exec drizzle-kit check --config=drizzle.config.ts`
+
+These checks are defined in the workflow, but they were **not executed locally during this hosted repository review**, and no CI result for these documentation commits is claimed here.
+
+### 13.4 Result and remaining boundary
+
+**Repository-level migration coverage: PASS.** No missing MVP table creation, missing snapshot entry, or RLS-list mismatch was found in the checked-in schema, snapshot, generated runtime list, or migration SQL.
+
+The 57-table statement previously in `docs/architecture/README.md` was stale and is updated to 70 on this branch; the text now distinguishes the 51 policy-bearing subset.
+
+Still **NOT VERIFIED**:
+- Whether these migrations have been applied to any particular staging or production database.
+- Whether the live database's `__drizzle_migrations` state matches the checked-in journal.
+- Whether production roles, grants, connection settings, and effective RLS behavior are correct.
+- Whether the CI workflow has passed on a PR containing these changes.
+
+No migration was run, no database was queried, and no application runtime behavior was changed by this reconciliation.
