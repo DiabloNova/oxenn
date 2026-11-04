@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { isPublicIpAddress, parsePublicHttpUrl } from "@/services/crawler/safe-http-fetch";
+import { describe, expect, it, vi } from "vitest";
+import { lookup } from "node:dns/promises";
+import { fetchPublicUrl, isPublicIpAddress, parsePublicHttpUrl } from "@/services/crawler/safe-http-fetch";
+
+vi.mock("node:dns/promises", () => ({
+  lookup: vi.fn(),
+}));
 
 describe("crawler outbound URL policy", () => {
   it("allows globally routable IPv4 addresses", () => {
@@ -32,6 +37,16 @@ describe("crawler outbound URL policy", () => {
     expect(isPublicIpAddress("fe80::1")).toBe(false);
     expect(isPublicIpAddress("2001:db8::1")).toBe(false);
     expect(isPublicIpAddress("::ffff:127.0.0.1")).toBe(false);
+  });
+
+  it("rejects a hostname when any DNS answer is non-public", async () => {
+    vi.mocked(lookup).mockResolvedValue([
+      { address: "93.184.216.34", family: 4 },
+      { address: "10.0.0.8", family: 4 },
+    ]);
+
+    await expect(fetchPublicUrl("https://example.com/"))
+      .rejects.toThrow("non-public DNS address");
   });
 
   it("normalizes valid public HTTP URLs and removes fragments", () => {
