@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
 import { firecrawlApp } from "@/lib/firecrawl";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
@@ -77,31 +78,9 @@ export interface CompetitiveAnalysisResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Enforce Tenant Isolation Context Headers
-    const userId = req.headers.get("x-user-id") || "usr-1001";
-    const tenantId = req.headers.get("x-tenant-id");
-
-    if (!tenantId || tenantId.trim() === "") {
-      return NextResponse.json(
-        { error: "Bad Request", message: "Missing x-tenant-id header context" },
-        { status: 400 }
-      );
-    }
-
-    // 2. Parse and Validate Request Body
-    const body = await req.json();
-    const parsed = competitiveRequestSchema.safeParse(body);
-
-    if (!parsed.success) {
-      const errorMsg = parsed.error.issues[0]?.message || "درخواست نامعتبر است.";
-      return NextResponse.json(
-        { error: "Bad Request", message: errorMsg },
-        { status: 400 }
-      );
-    }
-
-    const { userUrl, competitorUrls, analysisDepth } = parsed.data;
+    const { userId, tenantId } = await authorizeApiRequest(req);
     const requestId = req.headers.get("x-request-id") || `req-competitive-${Date.now()}`;
+    const body = await req.json();
 
     // 3. Execute inside transactional secure Tenant Context
     const resultPayload = await TenantContextManager.runWithTenantContext(
@@ -439,6 +418,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(resultPayload);
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 401 ? "Unauthorized" : "Forbidden", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[Competitive Analysis API Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای داخلی سرور رخ داده است.";
     return NextResponse.json(
