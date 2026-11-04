@@ -80,7 +80,14 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, tenantId } = await authorizeApiRequest(req);
     const requestId = req.headers.get("x-request-id") || `req-competitive-${Date.now()}`;
-    const body = await req.json();
+    const parsedBody = competitiveRequestSchema.safeParse(await req.json());
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: "Invalid request", details: parsedBody.error.flatten() },
+        { status: 400 }
+      );
+    }
+    const { userUrl, competitorUrls, analysisDepth } = parsedBody.data;
 
     // 3. Execute inside transactional secure Tenant Context
     const resultPayload = await TenantContextManager.runWithTenantContext(
