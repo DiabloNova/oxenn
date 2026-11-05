@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { firecrawlApp } from "@/lib/firecrawl";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
 import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 import { subscriptionService } from "@/features/billing/services/subscription-service";
-import { fetchPublicUrl } from "@/services/crawler/safe-http-fetch";
+import { crawlPublicSite } from "@/services/crawler/safe-site-crawler";
 
 // Validator schema
 const requestSchema = z.object({
@@ -71,79 +70,17 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      let crawlResults: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }>;
       let safeUrl: string;
       try {
-        safeUrl = (await fetchPublicUrl(url, { timeoutMs: 10_000, maxBytes: 2 * 1024 * 1024 })).url;
-      } catch {
+        crawlResults = await crawlPublicSite(url, { maxPages: depth });
+        safeUrl = crawlResults[0].url;
+      } catch (crawlError) {
+        console.warn("[Premium SEO Audit API] Safe crawl rejected or failed:", crawlError);
         return NextResponse.json(
           { error: "Bad Request", message: "آدرس باید عمومی و قابل دسترسی باشد." },
           { status: 400 }
         );
-      }
-
-      const apiKey = process.env.FIRECRAWL_API_KEY || "";
-      const isMockMode = !apiKey || apiKey === "" || apiKey.includes("your-api-key") || apiKey.startsWith("fc-your-");
-
-      let crawlResults: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }> = [];
-
-      // 3. Firecrawl entire site crawl simulation/execution
-      if (isMockMode) {
-        console.log(`[Premium SEO Audit API] Mock/Simulation mode for crawling URL: ${safeUrl}`);
-        // Simulate a crawl of a few pages
-        crawlResults = [
-          {
-            url: `${safeUrl}/`,
-            markdown: "# Welcome to Optimus AI\nWe provide advanced semantic search and AI optimization. Digikala and Snapp are our competitors.",
-            metadata: { title: "صفحه اصلی - خانه خلاق هوش مصنوعی", description: "پلتفرم پیشرفته تحلیل هوشمند سئو معنایی" }
-          },
-          {
-            url: `${safeUrl}/blog`,
-            markdown: "# مقالات و بینش‌ها\nچگونه ساختار گراف دانش را در وب‌سایت بهبود دهیم؟ لینک‌سازی داخلی نقش حیاتی دارد.",
-            metadata: { title: "وبلاگ - مقالات آموزشی سئو معنایی", description: "آموزش گام به گام بهینه‌سازی معنایی" }
-          },
-          {
-            url: `${safeUrl}/about`,
-            markdown: "# درباره ما\nتیم متخصص سئو فنی و گراف دانش.",
-            metadata: { title: "درباره ما - پلتفرم هوشمند", description: "" } // Missing description to trigger issue
-          }
-        ];
-      } else {
-        try {
-          // Attempt actual crawl with firecrawl
-          // Since crawlUrl initiates a crawl and returns a crawl job status or document list:
-          // Under firecrawl-js SDK v4+, crawlUrl returns job details. Let's use scrapeUrl or safely handle mock if needed.
-          // Note: To avoid long-running timeouts (>30s) or job waiting in serverless functions, we simulate or run in parallel.
-          // If firecrawlApp.crawlUrl is used, let's call it and await results.
-          const crawlResponse = await firecrawlApp.crawlUrl(safeUrl, {
-            limit: depth,
-            scrapeOptions: {
-              formats: ["markdown"]
-            }
-          });
-
-          if (crawlResponse && 'success' in crawlResponse && crawlResponse.success && 'data' in crawlResponse) {
-            crawlResults = (crawlResponse as unknown as { data: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }> }).data || [];
-          } else {
-            // Fallback to simulation if crawl API response is incomplete or pending
-            crawlResults = [
-              {
-                url: `${safeUrl}/`,
-                markdown: "# Home Page\nSemantic graph is important.",
-                metadata: { title: "صفحه اصلی" }
-              }
-            ];
-          }
-        } catch (crawlErr: unknown) {
-          console.error("[Firecrawl Crawl Error]:", crawlErr);
-          // Graceful fallback to rich mock data to avoid breaking the paid premium user experience
-          crawlResults = [
-            {
-              url: `${safeUrl}/`,
-              markdown: "# Home Page\nSemantic graph is important.",
-              metadata: { title: "صفحه اصلی" }
-            }
-          ];
-        }
       }
 
       const pagesAnalyzed = Math.min(crawlResults.length || 1, depth);

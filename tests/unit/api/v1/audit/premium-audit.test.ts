@@ -6,7 +6,6 @@ const {
   runWithTenantContextMock,
   checkEntitlementMock,
   fetchPublicUrlMock,
-  crawlUrlMock,
   generateTextMock,
   queryMock
 } = vi.hoisted(() => ({
@@ -14,7 +13,6 @@ const {
   runWithTenantContextMock: vi.fn(),
   checkEntitlementMock: vi.fn(),
   fetchPublicUrlMock: vi.fn(),
-  crawlUrlMock: vi.fn(),
   generateTextMock: vi.fn(),
   queryMock: vi.fn()
 }));
@@ -31,12 +29,12 @@ vi.mock("@/core/database/tenant-context", () => ({
 vi.mock("@/features/billing/services/subscription-service", () => ({
   subscriptionService: { checkEntitlement: checkEntitlementMock }
 }));
-vi.mock("@/services/crawler/safe-http-fetch", () => ({
-  fetchPublicUrl: fetchPublicUrlMock
-}));
-vi.mock("@/lib/firecrawl", () => ({
-  firecrawlApp: { crawlUrl: crawlUrlMock }
-}));
+vi.mock("@/services/crawler/safe-http-fetch", async () => {
+  const actual = await vi.importActual<typeof import("@/services/crawler/safe-http-fetch")>(
+    "@/services/crawler/safe-http-fetch"
+  );
+  return { ...actual, fetchPublicUrl: fetchPublicUrlMock };
+});
 vi.mock("@/services/ai/llm-client", () => ({
   getLLMClient: () => ({ generateText: generateTextMock })
 }));
@@ -57,7 +55,6 @@ function makeRequest(body: unknown): NextRequest {
 describe("premium audit API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.FIRECRAWL_API_KEY = "fc-test-key";
     authorizeApiRequestMock.mockResolvedValue({
       tenantId: "tenant-test",
       userId: "user-test"
@@ -73,23 +70,10 @@ describe("premium audit API", () => {
       status: 200,
       statusText: "OK",
       headers: { get: () => null },
-      text: async () => ""
+      text: async () => url === "https://example.com/"
+        ? `<html><head><title>Home</title><meta name="description" content="Homepage description"></head><body>${"A ".repeat(400)}<a href="/blog">Blog</a><a href="http://127.0.0.1/admin">Private</a><a href="https://attacker.example/">External</a></body></html>`
+        : `<html><head><title>Blog</title><meta name="description" content="Blog description"></head><body>${"B ".repeat(400)}</body></html>`
     }));
-    crawlUrlMock.mockResolvedValue({
-      success: true,
-      data: [
-        {
-          url: "https://example.com/",
-          markdown: "A".repeat(700),
-          metadata: { description: "Homepage description" }
-        },
-        {
-          url: "https://example.com/blog",
-          markdown: "B".repeat(700),
-          metadata: { description: "Blog description" }
-        }
-      ]
-    });
     generateTextMock.mockResolvedValue(JSON.stringify({
       gapAnalysis: "شکاف محتوایی در خوشه‌های موضوعی",
       recommendations: [{
@@ -117,13 +101,16 @@ describe("premium audit API", () => {
       contentQuality: expect.any(Number),
       technicalHealth: expect.any(Number)
     }));
-    expect(fetchPublicUrlMock).toHaveBeenCalledWith(
-      "https://example.com",
-      expect.objectContaining({ maxBytes: 2 * 1024 * 1024 })
+    expect(fetchPublicUrlMock).toHaveBeenCalledTimes(2);
+    expect(fetchPublicUrlMock).toHaveBeenNthCalledWith(
+      1,
+      "https://example.com/",
+      expect.objectContaining({ maxBytes: 2 * 1024 * 1024, maxRedirects: 5 })
     );
-    expect(crawlUrlMock).toHaveBeenCalledWith(
-      "https://example.com",
-      expect.any(Object)
+    expect(fetchPublicUrlMock).toHaveBeenNthCalledWith(
+      2,
+      "https://example.com/blog",
+      expect.objectContaining({ maxBytes: 2 * 1024 * 1024, maxRedirects: 5 })
     );
     expect(generateTextMock).toHaveBeenCalledTimes(1);
   });
@@ -133,10 +120,9 @@ describe("premium audit API", () => {
 
     expect(response.status).toBe(400);
     expect(fetchPublicUrlMock).not.toHaveBeenCalled();
-    expect(crawlUrlMock).not.toHaveBeenCalled();
   });
 
-  it("denies free workspaces before DNS validation, Firecrawl or LLM work", async () => {
+  it("denies free workspaces before DNS validation, crawling or LLM work", async () => {
     checkEntitlementMock.mockResolvedValue(false);
 
     const response = await POST(makeRequest({
@@ -149,7 +135,6 @@ describe("premium audit API", () => {
     expect(body.error).toBe("Forbidden");
     expect(checkEntitlementMock).toHaveBeenCalledWith("canRunPremiumAudit");
     expect(fetchPublicUrlMock).not.toHaveBeenCalled();
-    expect(crawlUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 
@@ -162,7 +147,6 @@ describe("premium audit API", () => {
     }));
 
     expect(response.status).toBe(400);
-    expect(crawlUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 });
