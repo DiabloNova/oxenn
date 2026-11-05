@@ -47,15 +47,17 @@ describe("getSession infrastructure error handling", () => {
     expect(queryMock).toHaveBeenCalledTimes(1);
   });
 
-  it("propagates a database outage instead of misreporting it as an unauthenticated session", async () => {
+  it("propagates a sanitized error for a database outage", async () => {
     queryMock.mockRejectedValue(new Error("database unavailable"));
 
-    await expect(getSession()).rejects.toThrow("database unavailable");
+    await expect(getSession()).rejects.toThrow("Unable to retrieve session");
+    await expect(getSession()).rejects.not.toThrow("database unavailable");
   });
 
-  it("propagates a missing database client as an infrastructure failure", async () => {
+  it("propagates a sanitized error when the database client is missing", async () => {
     getDbClientMock.mockReturnValue(null);
 
-    await expect(getSession()).rejects.toThrow("Failed to get DB client in system context");
+    await expect(getSession()).rejects.toThrow("Unable to retrieve session");
+    await expect(getSession()).rejects.not.toThrow("Failed to get DB client");
   });
 });
