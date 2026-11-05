@@ -136,9 +136,6 @@ export function isBlockedIp(ip: string): { blocked: boolean; rule?: string } {
       return { blocked: false };
     }
   }
-  if (!inV6(value, parseV6("2000::") as bigint, 3)) {
-    return { blocked: true, rule: "non-global-unicast" };
-  }
   const globallyReachableSpecial: Array<[bigint, number]> = [
     [parseV6("2001:1::1") as bigint, 128],
     [parseV6("2001:1::2") as bigint, 128],
@@ -165,6 +162,9 @@ export function isBlockedIp(ip: string): { blocked: boolean; rule?: string } {
   ];
   const match = rules.find(([prefix, bits]) => inV6(value, prefix, bits));
   if (match) return { blocked: true, rule: match[2] };
+  if (!inV6(value, parseV6("2000::") as bigint, 3)) {
+    return { blocked: true, rule: "non-global-unicast" };
+  }
   if (inV6(value, parseV6("2001::") as bigint, 23) && !isAllowedSpecial) {
     return { blocked: true, rule: "special-purpose" };
   }
