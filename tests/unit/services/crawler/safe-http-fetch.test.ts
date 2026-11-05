@@ -11,7 +11,7 @@ vi.mock("node:dns/promises", () => ({ lookup: lookupMock }));
 vi.mock("node:http", () => ({ request: httpRequestMock }));
 vi.mock("node:https", () => ({ request: httpsRequestMock }));
 
-import { fetchPublicUrl, parsePublicHttpUrl } from "@/services/crawler/safe-http-fetch";
+import { fetchPublicUrl, parsePublicHttpUrl, validatePublicUrl } from "@/services/crawler/safe-http-fetch";
 import { isPublicIpAddress } from "@/core/network/ip-address-policy";
 
 interface ResponseSpec {
@@ -122,6 +122,21 @@ describe("crawler outbound URL policy", () => {
       }),
       expect.any(Function)
     );
+  });
+
+  it("validates public URLs through DNS without opening an HTTP request", async () => {
+    await expect(validatePublicUrl("https://example.com/path#section", { deadlineAt: Date.now() + 1_000 }))
+      .resolves.toBe("https://example.com/path");
+    expect(lookupMock).toHaveBeenCalledWith("example.com", { all: true, verbatim: true });
+    expect(httpRequestMock).not.toHaveBeenCalled();
+    expect(httpsRequestMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects DNS validation when its shared deadline has expired", async () => {
+    await expect(validatePublicUrl("https://example.com", { deadlineAt: Date.now() - 1 }))
+      .rejects.toThrow("shared time budget");
+    expect(lookupMock).not.toHaveBeenCalled();
+    expect(httpRequestMock).not.toHaveBeenCalled();
   });
 
   it("rejects a hostname when any DNS answer is non-public", async () => {
