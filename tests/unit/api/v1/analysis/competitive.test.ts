@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 const {
   authorizeApiRequestMock,
   runWithTenantContextMock,
-  fetchPublicUrlMock,
+  validatePublicUrlMock,
   scrapeUrlMock,
   generateTextMock,
   queryMock,
@@ -14,7 +14,7 @@ const {
 } = vi.hoisted(() => ({
   authorizeApiRequestMock: vi.fn(),
   runWithTenantContextMock: vi.fn(),
-  fetchPublicUrlMock: vi.fn(),
+  validatePublicUrlMock: vi.fn(),
   scrapeUrlMock: vi.fn(),
   generateTextMock: vi.fn(),
   queryMock: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock("@/core/database/tenant-context", () => ({
   TenantContextManager: { runWithTenantContext: runWithTenantContextMock }
 }));
 vi.mock("@/services/crawler/safe-http-fetch", () => ({
-  fetchPublicUrl: fetchPublicUrlMock
+  validatePublicUrl: validatePublicUrlMock
 }));
 vi.mock("@/lib/firecrawl", () => ({
   firecrawlApp: { scrapeUrl: scrapeUrlMock }
@@ -96,14 +96,9 @@ describe("competitive analysis API", () => {
       async (_tenantId: string, _userId: string, _requestId: string, callback: () => Promise<unknown>) =>
         callback()
     );
-    fetchPublicUrlMock.mockImplementation(async (url: string) => ({
-      url: url === "https://origin.example" ? "https://validated.example" : url,
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      headers: { get: () => null },
-      text: async () => ""
-    }));
+    validatePublicUrlMock.mockImplementation(async (url: string) =>
+      url === "https://origin.example" ? "https://validated.example" : url
+    );
     scrapeUrlMock.mockResolvedValue({ markdown: "# Competitor analysis content" });
     generateTextMock.mockResolvedValue(JSON.stringify({
       competitiveAdvantages: [{
@@ -154,7 +149,10 @@ describe("competitive analysis API", () => {
     expect(body.competitiveAdvantages[0].advantage).toContain("ساختار محتوایی");
     expect(body.gapAnalysis[0].recommendedAction).toContain("بهینه‌سازی");
     expect(body.strategicOpportunities[0].actionPlan).toContain("برنامه");
-    expect(fetchPublicUrlMock).toHaveBeenCalledTimes(2);
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(2);
+    const deadlineAt = validatePublicUrlMock.mock.calls[0][1].deadlineAt;
+    expect(validatePublicUrlMock.mock.calls[1][1].deadlineAt).toBe(deadlineAt);
+    expect(deadlineAt).toBeGreaterThan(Date.now());
     expect(scrapeUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).toHaveBeenCalledTimes(1);
   });
@@ -166,7 +164,7 @@ describe("competitive analysis API", () => {
     }));
 
     expect(response.status).toBe(400);
-    expect(fetchPublicUrlMock).not.toHaveBeenCalled();
+    expect(validatePublicUrlMock).not.toHaveBeenCalled();
     expect(scrapeUrlMock).not.toHaveBeenCalled();
   });
 
@@ -180,11 +178,11 @@ describe("competitive analysis API", () => {
 
     expect(response.status).toBe(400);
     expect((await response.json()).message).toContain("valid JSON");
-    expect(fetchPublicUrlMock).not.toHaveBeenCalled();
+    expect(validatePublicUrlMock).not.toHaveBeenCalled();
   });
 
   it("rejects an unsafe primary URL before validating competitors or invoking Firecrawl", async () => {
-    fetchPublicUrlMock.mockRejectedValueOnce(new Error("non-public DNS address"));
+    validatePublicUrlMock.mockRejectedValueOnce(new Error("non-public DNS address"));
 
     const response = await POST(makeRequest({
       userUrl: "http://127.0.0.1",
@@ -192,13 +190,13 @@ describe("competitive analysis API", () => {
     }));
 
     expect(response.status).toBe(400);
-    expect(fetchPublicUrlMock).toHaveBeenCalledTimes(1);
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(1);
     expect(scrapeUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 
   it("rejects an unsafe competitor URL before invoking Firecrawl", async () => {
-    fetchPublicUrlMock
+    validatePublicUrlMock
       .mockResolvedValueOnce({
         url: "https://example.com",
         ok: true,
@@ -215,7 +213,11 @@ describe("competitive analysis API", () => {
     }));
 
     expect(response.status).toBe(400);
-    expect(fetchPublicUrlMock).toHaveBeenCalledTimes(2);
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(2);
+    const deadlineAt = validatePublicUrlMock.mock.calls[0][1].deadlineAt;
+    expect(validatePublicUrlMock.mock.calls[1][1].deadlineAt).toBe(deadlineAt);
+    expect(deadlineAt).toBeGreaterThan(Date.now());
+    expect(validatePublicUrlMock).not.toHaveBeenCalled();
     expect(scrapeUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });
