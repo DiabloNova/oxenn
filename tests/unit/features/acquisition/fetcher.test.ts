@@ -111,83 +111,96 @@ describe("safe crawler fetcher", () => {
     });
     const localHostValidator = async () => ({ ok: true as const, ips: ["127.0.0.1"] });
 
-    const response = await safeFetch(`http://pinned.example:${port}/`, {
-      policy,
-      hostValidator: localHostValidator
-    });
-    expect(remote).toEqual("127.0.0.1");
-    expect(response.body.toString()).toEqual("ok");
-    expect("set-cookie" in response.headers).toEqual(false);
+    try {
+      const response = await safeFetch(`http://pinned.example:${port}/`, {
+        policy,
+        hostValidator: localHostValidator
+      });
+      expect(remote).toEqual("127.0.0.1");
+      expect(response.body.toString()).toEqual("ok");
+      expect("set-cookie" in response.headers).toEqual(false);
 
-    await expect(safeFetch(`http://pinned.example:${port}/gzip`, {
-      policy,
-      hostValidator: localHostValidator
-    })).rejects.toMatchObject({ code: "CONTENT_TYPE_UNSUPPORTED" });
+      await expect(safeFetch(`http://pinned.example:${port}/gzip`, {
+        policy,
+        hostValidator: localHostValidator
+      })).rejects.toMatchObject({ code: "CONTENT_TYPE_UNSUPPORTED" });
 
-    await expect(safeFetch(`http://pinned.example:${port}/large`, {
-      policy: { ...policy, maxResponseBytes: 5 },
-      hostValidator: localHostValidator
-    })).rejects.toMatchObject({ code: "RESPONSE_TOO_LARGE" });
+      await expect(safeFetch(`http://pinned.example:${port}/large`, {
+        policy: { ...policy, maxResponseBytes: 5 },
+        hostValidator: localHostValidator
+      })).rejects.toMatchObject({ code: "RESPONSE_TOO_LARGE" });
 
-    await expect(safeFetch(`http://pinned.example:${port}/large-declared`, {
-      policy: { ...policy, maxResponseBytes: 5 },
-      hostValidator: localHostValidator
-    })).rejects.toMatchObject({ code: "RESPONSE_TOO_LARGE" });
+      await expect(safeFetch(`http://pinned.example:${port}/large-declared`, {
+        policy: { ...policy, maxResponseBytes: 5 },
+        hostValidator: localHostValidator
+      })).rejects.toMatchObject({ code: "RESPONSE_TOO_LARGE" });
 
-    await expect(safeFetch(`http://pinned.example:${port}/redirect`, {
-      policy: { ...policy, maxRedirects: 0 },
-      hostValidator: localHostValidator
-    })).rejects.toMatchObject({ code: "REDIRECT_LIMIT" });
+      await expect(safeFetch(`http://pinned.example:${port}/redirect`, {
+        policy: { ...policy, maxRedirects: 0 },
+        hostValidator: localHostValidator
+      })).rejects.toMatchObject({ code: "REDIRECT_LIMIT" });
 
-    const freeChainStart = requestedPaths.length;
-    await expect(safeFetch(`http://pinned.example:${port}/chain/0`, {
-      policy: { ...policy, maxRedirects: 5 },
-      hostValidator: localHostValidator
-    })).rejects.toMatchObject({ code: "REDIRECT_LIMIT" });
-    expect(requestedPaths.slice(freeChainStart)).toHaveLength(6);
+      const freeChainStart = requestedPaths.length;
+      await expect(safeFetch(`http://pinned.example:${port}/chain/0`, {
+        policy: { ...policy, maxRedirects: 5 },
+        hostValidator: localHostValidator
+      })).rejects.toMatchObject({ code: "REDIRECT_LIMIT" });
+      expect(requestedPaths.slice(freeChainStart)).toHaveLength(6);
 
-    const paidChain = await safeFetch(`http://pinned.example:${port}/chain/0`, {
-      policy: { ...policy, maxRedirects: null },
-      hostValidator: localHostValidator
-    });
-    expect(paidChain.body.toString()).toEqual("paid-ok");
-    expect(paidChain.redirects).toEqual(7);
+      const paidChain = await safeFetch(`http://pinned.example:${port}/chain/0`, {
+        policy: { ...policy, maxRedirects: null },
+        hostValidator: localHostValidator
+      });
+      expect(paidChain.body.toString()).toEqual("paid-ok");
+      expect(paidChain.redirects).toEqual(7);
 
-    await expect(safeFetch(`http://pinned.example:${port}/loop-a`, {
-      policy,
-      hostValidator: localHostValidator
-    })).rejects.toMatchObject({ code: "REDIRECT_LIMIT" });
+      await expect(safeFetch(`http://pinned.example:${port}/loop-a`, {
+        policy,
+        hostValidator: localHostValidator
+      })).rejects.toMatchObject({ code: "REDIRECT_LIMIT" });
 
-    const requestedHosts: string[] = [];
-    await expect(safeFetch(`http://pinned.example:${port}/private-redirect`, {
-      policy,
-      hostValidator: async host => {
-        requestedHosts.push(host);
-        return host === "private.example"
-          ? { ok: false, rule: "private-test", error: new CrawlError("SSRF_BLOCKED", "private redirect rejected") }
-          : { ok: true, ips: ["127.0.0.1"] };
-      }
-    })).rejects.toMatchObject({ code: "SSRF_BLOCKED" });
-    expect(requestedHosts).toEqual(["pinned.example", "private.example"]);
+      const requestedHosts: string[] = [];
+      await expect(safeFetch(`http://pinned.example:${port}/private-redirect`, {
+        policy,
+        hostValidator: async host => {
+          requestedHosts.push(host);
+          return host === "private.example"
+            ? { ok: false, rule: "private-test", error: new CrawlError("SSRF_BLOCKED", "private redirect rejected") }
+            : { ok: true, ips: ["127.0.0.1"] };
+        }
+      })).rejects.toMatchObject({ code: "SSRF_BLOCKED" });
+      expect(requestedHosts).toEqual(["pinned.example", "private.example"]);
 
-    await expect(safeFetch(`http://pinned.example:${port}/hang`, {
-      policy: { ...policy, requestTimeoutMs: 50, connectTimeoutMs: 50, maxDurationMs: 250 },
-      hostValidator: localHostValidator
-    })).rejects.toMatchObject({ code: "TIMEOUT" });
+      await expect(safeFetch(`http://pinned.example:${port}/hang`, {
+        policy: { ...policy, requestTimeoutMs: 50, connectTimeoutMs: 50, maxDurationMs: 250 },
+        hostValidator: localHostValidator
+      })).rejects.toMatchObject({ code: "TIMEOUT" });
 
-    await new Promise<void>(resolve => server.close(() => resolve()));
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
   }, 10_000);
 
-  it("times out DNS validation before opening an HTTP request", async () => {
+  it("aborts DNS validation when its timeout expires", async () => {
     vi.useFakeTimers();
-    const pending = safeFetch("http://dns-hang.oxenn.testdomain/", {
-      policy: resolveCrawlPolicy({}),
-      hostValidator: async () => new Promise(() => undefined)
-    });
-    const expectation = expect(pending).rejects.toMatchObject({ code: "TIMEOUT" });
-    await vi.advanceTimersByTimeAsync(10_001);
-    await expectation;
-    vi.useRealTimers();
+    let validationAborted = false;
+    try {
+      const pending = safeFetch("http://dns-hang.oxenn.testdomain/", {
+        policy: resolveCrawlPolicy({}),
+        resolver: async (_host, signal) => new Promise<Array<{ address: string; family: number }>>((_, reject) => {
+          signal?.addEventListener("abort", () => {
+            validationAborted = true;
+            reject(new Error("resolver aborted"));
+          }, { once: true });
+        })
+      });
+      const expectation = expect(pending).rejects.toMatchObject({ code: "TIMEOUT" });
+      await vi.advanceTimersByTimeAsync(10_001);
+      await expectation;
+      expect(validationAborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("creates a pinned lookup for all and single-address Node callbacks", async () => {

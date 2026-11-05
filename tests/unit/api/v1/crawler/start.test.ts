@@ -71,12 +71,19 @@ describe("Legacy crawler start request bounds", () => {
     getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "business" } });
     const response = await post(["https://example.com"]);
     expect(response.status).toBe(200);
+    expect(runWithTenantContextMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "user-test",
+      expect.any(String),
+      expect.any(Function)
+    );
+    expect(getEffectiveSubscriptionMock).toHaveBeenCalledTimes(1);
     expect(runCrawlerCampaignMock).toHaveBeenCalledWith(
       ["https://example.com"],
       "tenant-test",
       "user-test",
       expect.any(String),
-      { maxRedirects: null, maxRedirectDurationMs: 60_000 }
+      { maxRedirects: 10, maxRedirectDurationMs: 60_000 }
     );
   });
 

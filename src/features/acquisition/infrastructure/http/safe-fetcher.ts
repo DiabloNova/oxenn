@@ -31,16 +31,23 @@ export interface SafeFetcherOptions {
   policy: CrawlPolicy;
   signal?: AbortSignal;
   resolver?: Resolver;
-  hostValidator?: (host: string) => Promise<HostValidationResult>;
+  hostValidator?: (
+    host: string,
+    signal?: AbortSignal
+  ) => Promise<HostValidationResult>;
 }
 
 function withTimeout<T>(
   operation: Promise<T>,
   timeoutMs: number,
-  error: CrawlError
+  error: CrawlError,
+  onTimeout?: () => void
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(error), timeoutMs);
+    const timer = setTimeout(() => {
+      onTimeout?.();
+      reject(error);
+    }, timeoutMs);
     operation.then(
       value => {
         clearTimeout(timer);
@@ -110,13 +117,29 @@ export async function safeFetch(
     if (hopBudget <= 0) {
       throw new CrawlError("TIMEOUT", "Crawl or redirect chain exceeded its time budget");
     }
-    const validation = await withTimeout(
-      options.hostValidator
-        ? options.hostValidator(current.value.asciiHost)
-        : resolveAndValidateHost(current.value.asciiHost, options.resolver),
-      Math.min(DNS_TIMEOUT_MS, hopBudget),
-      new CrawlError("TIMEOUT", "DNS lookup timed out")
-    );
+    if (options.signal?.aborted) {
+      throw new CrawlError("CANCELLED", "Request cancelled");
+    }
+    const validationController = new AbortController();
+    const abortValidation = () => validationController.abort(options.signal?.reason);
+    options.signal?.addEventListener("abort", abortValidation, { once: true });
+    let validation: HostValidationResult;
+    try {
+      validation = await withTimeout(
+        options.hostValidator
+          ? options.hostValidator(current.value.asciiHost, validationController.signal)
+          : resolveAndValidateHost(
+              current.value.asciiHost,
+              options.resolver,
+              validationController.signal
+            ),
+        Math.min(DNS_TIMEOUT_MS, hopBudget),
+        new CrawlError("TIMEOUT", "DNS lookup timed out"),
+        () => validationController.abort()
+      );
+    } finally {
+      options.signal?.removeEventListener("abort", abortValidation);
+    }
     if (!validation.ok) {
       throw validation.error;
     }

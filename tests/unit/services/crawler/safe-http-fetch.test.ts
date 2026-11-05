@@ -11,11 +11,8 @@ vi.mock("node:dns/promises", () => ({ lookup: lookupMock }));
 vi.mock("node:http", () => ({ request: httpRequestMock }));
 vi.mock("node:https", () => ({ request: httpsRequestMock }));
 
-import {
-  fetchPublicUrl,
-  isPublicIpAddress,
-  parsePublicHttpUrl
-} from "@/services/crawler/safe-http-fetch";
+import { fetchPublicUrl, parsePublicHttpUrl } from "@/services/crawler/safe-http-fetch";
+import { isPublicIpAddress } from "@/core/network/ip-address-policy";
 
 interface ResponseSpec {
   status?: number;
@@ -103,12 +100,28 @@ describe("crawler outbound URL policy", () => {
     ]) {
       expect(isPublicIpAddress(address), address).toBe(true);
     }
-    for (const address of ["2001::1", "2001:2::1", "2001:10::1"]) {
+    for (const address of ["2001::1", "2001:2::1", "2001:10::1", "3ffe::1", "3fff::1"]) {
       expect(isPublicIpAddress(address), address).toBe(false);
     }
     for (const address of ["::1", "fc00::1", "fe80::1", "2001:db8::1", "::ffff:127.0.0.1"]) {
       expect(isPublicIpAddress(address), address).toBe(false);
     }
+  });
+
+  it("uses the resolved public IP for HTTPS while preserving the original host for TLS SNI", async () => {
+    routes.set("/secure", { status: 200, chunks: ["secure"] });
+    const response = await fetchPublicUrl("https://example.com/secure");
+    expect(await response.text()).toBe("secure");
+    expect(lookupMock).toHaveBeenCalledWith("example.com", { all: true, verbatim: true });
+    expect(httpsRequestMock).toHaveBeenCalledTimes(1);
+    expect(httpsRequestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hostname: "93.184.216.34",
+        servername: "example.com",
+        headers: expect.objectContaining({ host: "example.com" })
+      }),
+      expect.any(Function)
+    );
   });
 
   it("rejects a hostname when any DNS answer is non-public", async () => {
@@ -144,21 +157,33 @@ describe("crawler outbound URL policy", () => {
     expect(httpRequestMock).toHaveBeenCalledTimes(2);
 
     httpRequestMock.mockClear();
-    for (let hop = 0; hop < 7; hop++) {
+    for (let hop = 0; hop < 8; hop++) {
       routes.set(`/chain/${hop}`, { status: 302, headers: { location: `/chain/${hop + 1}` } });
     }
-    routes.set("/chain/7", { status: 200, chunks: ["paid-ok"] });
+    routes.set("/chain/8", { status: 200, chunks: ["paid-ok"] });
     await expect(fetchPublicUrl("http://example.com/chain/0", { maxRedirects: 5 }))
       .rejects.toThrow("maximum redirect count");
     expect(httpRequestMock).toHaveBeenCalledTimes(6);
 
     httpRequestMock.mockClear();
-    const paid = await fetchPublicUrl("http://example.com/chain/0", { maxRedirects: null });
+    const paid = await fetchPublicUrl("http://example.com/chain/0", { maxRedirects: 10 });
     expect(await paid.text()).toBe("paid-ok");
-    expect(httpRequestMock).toHaveBeenCalledTimes(8);
+    expect(httpRequestMock).toHaveBeenCalledTimes(9);
+
+    httpRequestMock.mockClear();
+    for (let hop = 0; hop < 11; hop++) {
+      routes.set(`/long-chain/${hop}`, {
+        status: 302,
+        headers: { location: `/long-chain/${hop + 1}` }
+      });
+    }
+    routes.set("/long-chain/11", { status: 200, chunks: ["too-many"] });
+    await expect(fetchPublicUrl("http://example.com/long-chain/0", { maxRedirects: 10 }))
+      .rejects.toThrow("maximum redirect count");
+    expect(httpRequestMock).toHaveBeenCalledTimes(11);
   });
 
-  it("applies a wall-clock budget to paid redirect chains without a hop-count cap", async () => {
+  it("enforces the wall-clock budget when the caller disables the hop-count cap", async () => {
     routes.set("/time-budget", { status: 302, headers: { location: "/time-budget-next" } });
     routes.set("/time-budget-next", { status: 200, chunks: ["ok"] });
     let call = 0;
