@@ -86,8 +86,8 @@ describe("technical optimization API", () => {
 
     expect(response.status).toBe(200);
     expect(body.technicalScore).toBeLessThan(80);
-    expect(body.criticalIssues.some((issue: { issue: string }) => issue.includes("HTTPS"))).toBe(true);
-    expect(body.criticalIssues.some((issue: { issue: string }) => issue.includes("alt"))).toBe(true);
+    expect(body.criticalIssues.some((issue: { issue: string }) => issue.issue.includes("HTTPS"))).toBe(true);
+    expect(body.criticalIssues.some((issue: { issue: string }) => issue.issue.includes("alt"))).toBe(true);
     expect(body.criticalIssues.some((issue: { category: string }) => issue.category === "دسترسی‌پذیری")).toBe(true);
   });
 

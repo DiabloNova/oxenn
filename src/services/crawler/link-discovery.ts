@@ -9,7 +9,8 @@ import { fetchPublicUrl, type SafeHttpFetchOptions } from "./safe-http-fetch";
 export async function extractSeedLinks(
   seedUrl: string,
   maxLinks: number = 5,
-  fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {}
+  fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {},
+  fetcher: typeof fetchPublicUrl = fetchPublicUrl
 ): Promise<string[]> {
   const useMock =
     process.env.USE_MOCK_CRAWLER === "true" ||
@@ -34,7 +35,7 @@ export async function extractSeedLinks(
     const seedParsed = new URL(seedUrl);
     const seedHostname = seedParsed.hostname.toLowerCase();
 
-    const response = await fetchPublicUrl(seedUrl, fetchOptions);
+    const response = await fetcher(seedUrl, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch seed URL. Status: ${response.status} ${response.statusText}`);
@@ -83,8 +84,9 @@ export class LinkDiscoveryService {
   public async extractSeedLinks(
     url: string,
     maxLinks: number = 5,
-    fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {}
+    fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {},
+    fetcher: typeof fetchPublicUrl = fetchPublicUrl
   ): Promise<string[]> {
-    return extractSeedLinks(url, maxLinks, fetchOptions);
+    return extractSeedLinks(url, maxLinks, fetchOptions, fetcher);
   }
 }

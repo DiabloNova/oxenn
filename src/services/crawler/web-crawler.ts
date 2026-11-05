@@ -37,7 +37,8 @@ export function normalizePersianText(text: string): string {
  */
 export async function fetchAndExtractText(
   url: string,
-  fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {}
+  fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {},
+  fetcher: typeof fetchPublicUrl = fetchPublicUrl
 ): Promise<string> {
   const useMock =
     process.env.USE_MOCK_CRAWLER === "true" ||
@@ -48,7 +49,7 @@ export async function fetchAndExtractText(
   }
 
   try {
-    const response = await fetchPublicUrl(url, fetchOptions);
+    const response = await fetcher(url, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch HTML. Status: ${response.status} ${response.statusText}`);
@@ -82,8 +83,9 @@ export class WebCrawlerService {
    */
   public async fetchAndExtractText(
     url: string,
-    fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {}
+    fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {},
+    fetcher: typeof fetchPublicUrl = fetchPublicUrl
   ): Promise<string> {
-    return fetchAndExtractText(url, fetchOptions);
+    return fetchAndExtractText(url, fetchOptions, fetcher);
   }
 }
