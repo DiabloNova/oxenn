@@ -32,7 +32,7 @@ All database definitions and generated migration scripts are version-controlled 
 ```
 database/
   schema/
-    index.ts             # Unified canonical Drizzle ORM pgTable schema definitions (57 tables)
+    index.ts             # Unified canonical Drizzle ORM schema entry point (70 tables, including imported organizations and API keys)
     organization.ts      # Legacy TableDefinition metadata file (retained for reference)
     ...                  # Domain schema metadata files
   drizzle/
