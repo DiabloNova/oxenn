@@ -118,7 +118,7 @@ function markdownLinks(markdown) {
   const tick = String.fromCharCode(96);
   const fences = new RegExp("(^|\\n)[ \\t]{0,3}(" + tick + "{3,}|~{3,})[^\\n]*\\n[\\s\\S]*?\\n[ \\t]{0,3}\\2[ \\t]*(?=\\n|$)", "g");
   const inlineCode = new RegExp(tick + "+[^\\n]*?" + tick + "+", "g");
-  const content = markdown.replace(/<!--[\\s\\S]*?-->/g, "").replace(fences, "$1").replace(inlineCode, " ");
+  const content = markdown.replace(/<!--[\s\S]*?-->/g, "").replace(fences, "$1").replace(inlineCode, " ");
   const links = [];
   const pattern = /!?\[[^\]]*\]\(\s*(<[^>]+>|[^)\s]+)(?:\s+["'][^"']*["'])?\s*\)/g;
   for (const match of content.matchAll(pattern)) {
