@@ -157,6 +157,26 @@ describe("competitive analysis API", () => {
     expect(generateTextMock).toHaveBeenCalledTimes(1);
   });
 
+  it("validates all six URLs under one shared aggregate deadline", async () => {
+    const response = await POST(makeRequest({
+      userUrl: "https://origin.example",
+      competitorUrls: [
+        "https://competitor-1.example",
+        "https://competitor-2.example",
+        "https://competitor-3.example",
+        "https://competitor-4.example",
+        "https://competitor-5.example"
+      ]
+    }));
+
+    expect(response.status).toBe(200);
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(6);
+    const deadlines = validatePublicUrlMock.mock.calls.map(([, options]) => options.deadlineAt);
+    expect(new Set(deadlines).size).toBe(1);
+    expect(deadlines[0]).toBeGreaterThan(Date.now());
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
+  });
+
   it("rejects an empty competitorUrls array with HTTP 400", async () => {
     const response = await POST(makeRequest({
       userUrl: "https://example.com",
