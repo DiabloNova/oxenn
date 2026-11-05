@@ -138,6 +138,35 @@ async function resolvePublicAddress(url: URL, timeoutMs: number): Promise<Resolv
   };
 }
 
+export interface SafePublicUrlValidationOptions {
+  /** Absolute Unix timestamp in milliseconds shared by the caller's URL batch. */
+  deadlineAt: number;
+}
+
+/**
+ * Validates a public HTTP(S) URL without issuing an HTTP request or reading a body.
+ * Callers can share one absolute deadline across a batch to bound aggregate DNS work.
+ */
+export async function validatePublicUrl(
+  input: string,
+  options: SafePublicUrlValidationOptions
+): Promise<string> {
+  if (!Number.isSafeInteger(options.deadlineAt)) {
+    throw new Error("Crawler URL validation deadline must be a safe integer.");
+  }
+  const url = parsePublicHttpUrl(input);
+  const remainingMs = options.deadlineAt - Date.now();
+  if (remainingMs <= 0) {
+    throw new Error("Crawler URL validation exceeded its shared time budget.");
+  }
+
+  await resolvePublicAddress(url, remainingMs);
+  if (Date.now() >= options.deadlineAt) {
+    throw new Error("Crawler URL validation exceeded its shared time budget.");
+  }
+  return url.toString();
+}
+
 function headerValue(headers: IncomingHttpHeaders, name: string): string | null {
   const value = headers[name.toLowerCase()];
   if (Array.isArray(value)) return value.join(", ");
