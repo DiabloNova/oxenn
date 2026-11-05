@@ -106,7 +106,8 @@ export async function getSession(): Promise<Session | null> {
     });
 
     if (!sessionData) return null;
-    // Defense in depth: never accept a session that has been revoked or superseded.
+    // Fail closed if a session was revoked or superseded, even if a query/mock
+    // unexpectedly returns such a row.
     if (sessionData.revokedAt || sessionData.replacedBy) return null;
     if (!sessionData.role) return null; // No active membership for the workspace
 

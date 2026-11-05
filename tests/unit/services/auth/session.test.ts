@@ -48,18 +48,17 @@ describe("getSession infrastructure error handling", () => {
   });
 
   it.each([
-    ["revoked", { revokedAt: new Date() }],
-    ["replaced", { replacedBy: "replacement-session-id" }]
+    ["revoked", { revokedAt: new Date("2026-01-01T00:00:00.000Z"), replacedBy: null }],
+    ["replaced", { revokedAt: null, replacedBy: "replacement-session-id" }]
   ])("rejects a %s session to prevent stolen-cookie replay", async (_state, state) => {
     queryMock.mockResolvedValue({
       rows: [{
-        id: "session-id",
-        userId: "user-id",
-        workspaceId: "workspace-id",
-        expiresAt: new Date(Date.now() + 60_000),
-        revokedAt: null,
-        replacedBy: null,
-        role: "member",
+        userId: "user-1",
+        workspaceId: "workspace-1",
+        expiresAt: new Date("2027-01-01T00:00:00.000Z"),
+        email: "user@example.com",
+        name: "Test User",
+        role: "owner",
         ...state
       }]
     });
