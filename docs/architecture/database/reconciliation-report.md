@@ -34,66 +34,84 @@ A comprehensive reconciliation was performed across:
 ## 3. Row-Level Security (RLS) & Tenant Isolation Audit
 
 ### RLS Enabled Tables (51 Tables)
-All 51 tenant-scoped tables feature `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and policy expressions checking `app.current_tenant_id`:
-- `organizations`
-- `brands`
-- `entities`
-- `entity_relationships`
-- `prompts`
-- `prompt_definitions`
-- `prompt_schedules`
-- `prompt_executions`
-- `position_observations`
-- `ai_observations`
-- `brand_mentions`
-- `citations`
-- `citation_sources`
-- `citation_occurrences`
-- `visibility_scores`
-- `recommendations`
-- `brand_associations`
-- `recommendation_observations`
-- `tenant_quotas`
-- `tenant_subscriptions`
-- `document_embeddings`
-- `kg_entities`
-- `kg_relationships`
-- `premium_audits`
-- `technical_audits`
-- `competitive_analyses`
-- `websites`
-- `pages`
-- `keywords`
-- `topics`
-- `competitors`
-- `historical_metrics`
-- `diagnostic_findings`
-- `diagnostic_finding_relationships`
+
+The following 51 tables are the exact `TENANT_SCOPED_TABLES` inventory generated from the latest Drizzle snapshot (`database/drizzle/meta/0013_snapshot.json`). Each has at least one tenant-isolation RLS policy in that snapshot. The migration verifier checks that `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` are active for every policy-bearing table. These are schema/migration inventory findings, not proof of any particular deployed database's state.
+
 - `aeo_analyses`
-- `faq_opportunities`
-- `kg_alignments`
-- `competitor_changes`
+- `ai_observations`
+- `ai_visibility_audits`
+- `api_keys`
+- `audit_prompts`
+- `brand_associations`
+- `brand_mentions`
+- `brands`
+- `citation_occurrences`
+- `citation_sources`
+- `citations`
+- `competitive_analyses`
 - `competitive_seo_findings`
+- `competitor_changes`
+- `competitors`
+- `crawl_cache`
 - `crawl_jobs`
 - `crawl_results`
-- `crawl_cache`
+- `crawl_snapshots`
+- `credit_transactions`
+- `diagnostic_finding_relationships`
+- `diagnostic_findings`
+- `document_embeddings`
+- `entities`
+- `entity_relationships`
+- `faq_opportunities`
+- `historical_metrics`
+- `keywords`
+- `kg_alignments`
+- `kg_entities`
+- `kg_relationships`
+- `monitoring_alerts`
+- `monitoring_configs`
+- `organization_invitations`
+- `organization_members`
+- `organizations`
+- `pages`
+- `position_observations`
+- `premium_audits`
+- `prompt_definitions`
+- `prompt_executions`
+- `prompt_schedules`
+- `prompts`
+- `recommendation_observations`
+- `recommendations`
+- `technical_audits`
+- `tenant_quotas`
+- `tenant_subscriptions`
+- `topics`
+- `visibility_scores`
+- `websites`
 
-### Non-RLS Tables (Global/System Context - 16 Tables)
-1. `roles` (System RBAC)
-2. `permissions` (System RBAC)
-3. `admin_users` (Platform Admins)
+### Tables Without RLS Policies (19 Tables - Global/System Context)
+
+The following 19 canonical tables have no policies in the latest Drizzle snapshot and are therefore outside `TENANT_SCOPED_TABLES`:
+
+1. `admin_users` (Platform Admins)
+2. `ai_engines` (AI Engine Master Catalog)
+3. `ai_provider_configs` (LLM Provider Gateways)
 4. `audit_records` (System Audit Logging)
-5. `feature_flags` (Global Feature Toggles)
-6. `system_configurations` (Global Engine Settings)
-7. `ai_provider_configs` (LLM Provider Gateways)
-8. `ai_engines` (AI Engine Master Catalog)
-9. `pages_keywords` (Join Table)
-10. `pages_topics` (Join Table)
-11. `pages_entities` (Join Table)
-12. `keywords_topics` (Join Table)
-13. `topics_entities` (Join Table)
-14. `ai_visibility_audits` (Aggregated Audit Master)
-15. `audit_prompts` (Audit Prompt Map)
+5. `auth_rate_limits` (Authentication Rate Limiting)
+6. `email_verification_tokens` (Authentication)
+7. `feature_flags` (Global Feature Toggles)
+8. `keywords_topics` (Join Table)
+9. `pages_entities` (Join Table)
+10. `pages_keywords` (Join Table)
+11. `pages_topics` (Join Table)
+12. `password_reset_tokens` (Authentication)
+13. `permissions` (System RBAC)
+14. `roles` (System RBAC)
+15. `sessions` (Authentication)
+16. `system_configurations` (Global Engine Settings)
+17. `topics_entities` (Join Table)
+18. `user_credentials` (Authentication)
+19. `users` (Identity)
 
 ---
 
