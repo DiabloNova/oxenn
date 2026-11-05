@@ -40,11 +40,31 @@ describe("getSession infrastructure error handling", () => {
     expect(queryMock).not.toHaveBeenCalled();
   });
 
-  it("returns null when the session is absent or revoked", async () => {
+  it("returns null when the session is absent", async () => {
     queryMock.mockResolvedValue({ rows: [] });
 
     await expect(getSession()).resolves.toBeNull();
     expect(queryMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["revoked", { revokedAt: new Date() }],
+    ["replaced", { replacedBy: "replacement-session-id" }]
+  ])("rejects a %s session to prevent stolen-cookie replay", async (_state, state) => {
+    queryMock.mockResolvedValue({
+      rows: [{
+        id: "session-id",
+        userId: "user-id",
+        workspaceId: "workspace-id",
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+        replacedBy: null,
+        role: "member",
+        ...state
+      }]
+    });
+
+    await expect(getSession()).resolves.toBeNull();
   });
 
   it("propagates a sanitized error for a database outage", async () => {
