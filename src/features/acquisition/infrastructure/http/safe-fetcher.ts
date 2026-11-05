@@ -137,6 +137,11 @@ export async function safeFetch(
         new CrawlError("TIMEOUT", "DNS lookup timed out"),
         () => validationController.abort()
       );
+    } catch (error) {
+      if (options.signal?.aborted) {
+        throw new CrawlError("CANCELLED", "Request cancelled");
+      }
+      throw error;
     } finally {
       options.signal?.removeEventListener("abort", abortValidation);
     }

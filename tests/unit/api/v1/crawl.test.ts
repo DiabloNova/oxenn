@@ -66,6 +66,7 @@ describe("Crawl API policy bounds", () => {
     ["an allowed scheme longer than 16 characters", { allowedSchemes: ["s".repeat(17)] }],
     ["more than 64 allowed content types", { allowedContentTypes: Array.from({ length: 65 }, () => "text/html") }],
     ["an allowed content type longer than 128 characters", { allowedContentTypes: ["t".repeat(129)] }],
+    ["a negative redirect count", { maxRedirects: -1 }],
   ])("rejects %s before submitting a crawl", async (_label, policy) => {
     const response = await post(policy);
     expect(response.status).toBe(400);
@@ -93,9 +94,25 @@ describe("Crawl API policy bounds", () => {
     );
   });
 
-  it("applies the finite paid redirect cap while retaining server-side policy", async () => {
+  it("preserves a lower caller redirect limit under the paid plan ceiling", async () => {
     getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "professional" } });
     const response = await post({ maxRedirects: 0 });
+    expect(response.status).toBe(202);
+    expect(submitMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "https://example.com",
+      { maxRedirects: 0 },
+      0,
+      expect.any(String),
+      undefined,
+      undefined,
+      false
+    );
+  });
+
+  it("caps caller redirect requests at the paid plan maximum", async () => {
+    getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "professional" } });
+    const response = await post({ maxRedirects: 15 });
     expect(response.status).toBe(202);
     expect(submitMock).toHaveBeenCalledWith(
       "tenant-test",

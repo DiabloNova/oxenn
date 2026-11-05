@@ -203,6 +203,25 @@ describe("safe crawler fetcher", () => {
     }
   });
 
+  it("maps caller cancellation during DNS validation to CANCELLED", async () => {
+    const controller = new AbortController();
+    let validationAborted = false;
+    const pending = safeFetch("http://cancel-dns.oxenn.testdomain/", {
+      policy: resolveCrawlPolicy({}),
+      signal: controller.signal,
+      resolver: async (_host, signal) => new Promise<Array<{ address: string; family: number }>>((_, reject) => {
+        signal?.addEventListener("abort", () => {
+          validationAborted = true;
+          reject(new Error("resolver aborted"));
+        }, { once: true });
+      })
+    });
+
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: "CANCELLED" });
+    expect(validationAborted).toBe(true);
+  });
+
   it("creates a pinned lookup for all and single-address Node callbacks", async () => {
     const lookup = createPinnedLookup(["127.0.0.1", "::1"]);
     await new Promise<void>((resolve, reject) =>

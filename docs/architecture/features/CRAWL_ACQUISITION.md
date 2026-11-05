@@ -28,12 +28,12 @@ that failed local validation is never handed to any provider.
 
 Redirect entitlement is resolved from the effective tenant subscription on
 the server, never from caller-supplied policy: Free workspaces follow at most
-5 redirects per fetch; paid workspaces have no hop-count cap. Both tiers retain
+5 redirects per fetch; paid workspaces may follow at most 10 redirects per fetch. Both tiers retain
 a hard 60-second redirect-chain budget, a 10-second DNS deadline, policy-bounded
 connect/request deadlines (10/30 seconds by default), loop detection, and a
 5 MiB default response-size cap (25 MiB hard ceiling). Redirect bodies are
-closed without being downloaded, so a long paid redirect chain cannot become
-unbounded work.
+closed without being downloaded, so paid redirect work remains bounded by both
+its ten-hop allowance and the shared wall-clock budget.
 
 The new `/api/v1/crawl` route requires a validated server session and derives
 tenant identity from that session. It does not accept `x-tenant-id` or

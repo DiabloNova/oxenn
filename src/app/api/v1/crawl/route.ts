@@ -17,7 +17,7 @@ const requestSchema = z.object({
       maxDepth: z.number().int().optional(),
       maxDurationMs: z.number().int().optional(),
       maxResponseBytes: z.number().int().optional(),
-      maxRedirects: z.number().int().optional(),
+      maxRedirects: z.number().int().min(0).optional(),
       maxConcurrency: z.number().int().optional(),
       requestTimeoutMs: z.number().int().optional(),
       connectTimeoutMs: z.number().int().optional(),
@@ -107,8 +107,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           body.data.requestedUrl,
           {
             ...(body.data.policy ?? {}),
-            // Redirect entitlements are server-derived; client policy cannot raise them.
-            maxRedirects: redirectPolicy.maxRedirects
+            // The plan limit is a ceiling; a caller may request fewer redirects.
+            maxRedirects: Math.min(
+              body.data.policy?.maxRedirects ?? redirectPolicy.maxRedirects,
+              redirectPolicy.maxRedirects
+            )
           },
           body.data.priority ?? 0,
           requestId,
