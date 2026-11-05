@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
-import { firecrawlApp } from "@/lib/firecrawl";
 import { fetchPublicUrl } from "@/services/crawler/safe-http-fetch";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
@@ -130,25 +129,7 @@ export async function POST(req: NextRequest) {
       userId,
       requestId,
       async () => {
-        // Simple heuristic crawl logic to show real data-driven parsing if API keys exist
-        const apiKey = process.env.FIRECRAWL_API_KEY || "";
-        const isMockMode = !apiKey || apiKey === "" || apiKey.includes("your-api-key") || apiKey.startsWith("fc-your-");
-
-        let _userPageCountHeuristic = 120;
-        const _userFreshnessHeuristic = 85;
-
-        if (!isMockMode) {
-          try {
-            const userScrape = await firecrawlApp.scrapeUrl(safeUserUrl, { formats: ["markdown"] });
-            if (userScrape && 'markdown' in userScrape) {
-              const md = userScrape.markdown || "";
-              _userPageCountHeuristic = Math.min(250, md.split("\n").length / 10 + 20);
-            }
-          } catch (e) {
-            console.warn("[Competitive API] User crawl failed, using simulated data.", e);
-          }
-        }
-
+        // User-controlled URLs are fetched only by the SSRF-safe client above.
         // Helper to extract a friendly competitor brand name from URL
         const extractBrandName = (urlStr: string) => {
           try {

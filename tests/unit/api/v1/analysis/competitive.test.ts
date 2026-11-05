@@ -132,7 +132,7 @@ describe("competitive analysis API", () => {
     saveCompetitorMock.mockImplementation(async (entry: { id: string }) => ({ id: entry.id }));
   });
 
-  it("preserves the Firecrawl-backed competitive report and Persian response contract", async () => {
+  it("preserves the competitive report without bypassing the SSRF-safe fetch", async () => {
     const response = await POST(makeRequest({
       userUrl: "https://origin.example",
       competitorUrls: ["https://competitor.example"],
@@ -155,8 +155,7 @@ describe("competitive analysis API", () => {
     expect(body.gapAnalysis[0].recommendedAction).toContain("بهینه‌سازی");
     expect(body.strategicOpportunities[0].actionPlan).toContain("برنامه");
     expect(fetchPublicUrlMock).toHaveBeenCalledTimes(2);
-    expect(fetchPublicUrlMock.mock.invocationCallOrder[0]).toBeLessThan(scrapeUrlMock.mock.invocationCallOrder[0]);
-    expect(scrapeUrlMock).toHaveBeenCalledWith("https://validated.example", expect.any(Object));
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).toHaveBeenCalledTimes(1);
   });
 
