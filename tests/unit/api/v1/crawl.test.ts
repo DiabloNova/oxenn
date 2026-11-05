@@ -93,14 +93,14 @@ describe("Crawl API policy bounds", () => {
     );
   });
 
-  it("grants paid workspaces no redirect hop-count cap while retaining server-side policy", async () => {
+  it("applies the finite paid redirect cap while retaining server-side policy", async () => {
     getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "professional" } });
     const response = await post({ maxRedirects: 0 });
     expect(response.status).toBe(202);
     expect(submitMock).toHaveBeenCalledWith(
       "tenant-test",
       "https://example.com",
-      { maxRedirects: null },
+      { maxRedirects: 10 },
       0,
       expect.any(String),
       undefined,

@@ -2,6 +2,7 @@ import { isIP } from "node:net";
 import { Resolver as DnsResolver } from "node:dns/promises";
 import { CrawlError } from "../../domain/errors";
 import { isBlockedIp, isIpLiteral } from "@/core/network/ip-address-policy";
+export { isBlockedIp };
 
 export type HostValidationResult =
   | { ok: true; ips: string[] }
