@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
-import { fetchPublicUrl } from "@/services/crawler/safe-http-fetch";
+import { validatePublicUrl } from "@/services/crawler/safe-http-fetch";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
@@ -19,6 +19,8 @@ import { CompetitiveRadarService } from "@/features/ai-intelligence/services";
 import { CompetitiveRadarSnapshot, CompetitiveInsight } from "@/features/ai-intelligence/domain/types";
 
 // Validate request schema
+const URL_VALIDATION_BUDGET_MS = 8_000;
+
 const competitiveRequestSchema = z.object({
   userUrl: z.string().url("لطفاً آدرس وب‌سایت خود را به صورت صحیح وارد کنید."),
   competitorUrls: z.array(z.string().url("لطفاً آدرس‌های معتبر برای رقبا وارد کنید.")).min(1, "حداقل وارد کردن یک رقیب الزامی است.").max(5, "حداکثر ۵ رقیب قابل تحلیل است."),
@@ -105,17 +107,15 @@ export async function POST(req: NextRequest) {
     let safeUserUrl: string;
     const safeCompetitorUrls: string[] = [];
     try {
-      safeUserUrl = (await fetchPublicUrl(userUrl, {
-        timeoutMs: 10_000,
-        maxBytes: 2 * 1024 * 1024
-      })).url;
-      for (const competitorUrl of competitorUrls) {
-        const validated = await fetchPublicUrl(competitorUrl, {
-          timeoutMs: 10_000,
-          maxBytes: 2 * 1024 * 1024
-        });
-        safeCompetitorUrls.push(validated.url);
-      }
+      // Validate destinations only: this route does not crawl these URLs. A single
+      // deadline bounds the complete batch instead of granting every URL its own
+      // independent timeout. DNS checks run concurrently and never download bodies.
+      const deadlineAt = Date.now() + URL_VALIDATION_BUDGET_MS;
+      const validatedUrls = await Promise.all(
+        [userUrl, ...competitorUrls].map((url) => validatePublicUrl(url, { deadlineAt }))
+      );
+      safeUserUrl = validatedUrls[0];
+      safeCompetitorUrls.push(...validatedUrls.slice(1));
     } catch {
       return NextResponse.json(
         { error: "Invalid request", message: "همه آدرس‌ها باید عمومی و قابل دسترسی باشند." },
