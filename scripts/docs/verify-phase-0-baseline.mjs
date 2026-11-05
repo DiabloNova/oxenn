@@ -261,17 +261,18 @@ function main() {
     ["ordered journal contains " + migrationCount + " entries, and all " + migrationCount + " referenced SQL migration files exist", "migration journal/file count"],
     ["migration SQL creates " + migrationTableCount + " unique tables", "migration-created table count"],
     ["latest snapshot contains **" + rlsCount + " policy-bearing tables**", "snapshot RLS count"],
+    ["for all " + rlsCount + " of those tables", "RLS migration count"],
+  ];
+  for (const [claim, label] of claims) {
+    assert.ok(baseline.includes(claim), "Stale or missing Phase 0 baseline claim: " + label);
+  }
+
   const runtimeClaim = baseline.split(/\r?\n/).find((line) => line.includes("generated runtime list"));
   assert.ok(runtimeClaim, "Phase 0 baseline is missing the generated runtime list claim");
   assert.ok(
     runtimeClaim.includes("also contains " + runtimeTables.length + " entries"),
     "Phase 0 baseline has a stale generated runtime tenant-table count",
   );
-    ["for all " + rlsCount + " of those tables", "RLS migration count"],
-  ];
-  for (const [claim, label] of claims) {
-    assert.ok(baseline.includes(claim), "Stale or missing Phase 0 baseline claim: " + label);
-  }
 
   const projectIndexLinks = checkLinks(indexPath);
   const baselineLinks = checkLinks(baselinePath);
