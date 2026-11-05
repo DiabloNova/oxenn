@@ -93,6 +93,13 @@ describe("premium audit API", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(authorizeApiRequestMock).toHaveBeenCalledTimes(1);
+    expect(runWithTenantContextMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "user-test",
+      "req-premium-audit",
+      expect.any(Function)
+    );
     expect(body.score).toBeGreaterThanOrEqual(50);
     expect(body.score).toBeLessThanOrEqual(100);
     expect(["A", "B", "C", "D", "F"]).toContain(body.grade);
