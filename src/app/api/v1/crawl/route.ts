@@ -108,10 +108,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           {
             ...(body.data.policy ?? {}),
             // The plan limit is a ceiling; a caller may request fewer redirects.
-            maxRedirects: Math.min(
-              body.data.policy?.maxRedirects ?? redirectPolicy.maxRedirects,
-              redirectPolicy.maxRedirects
-            )
+            maxRedirects: redirectPolicy.maxRedirects === null
+              ? body.data.policy?.maxRedirects ?? null
+              : Math.min(
+                  body.data.policy?.maxRedirects ?? redirectPolicy.maxRedirects,
+                  redirectPolicy.maxRedirects
+                )
           },
           body.data.priority ?? 0,
           requestId,
