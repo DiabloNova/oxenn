@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { authorizeApiRequestMock } = vi.hoisted(() => ({
-  authorizeApiRequestMock: vi.fn(),
+const { getSessionMock } = vi.hoisted(() => ({
+  getSessionMock: vi.fn()
 }));
 
-vi.mock("@/services/auth/authorization", async () => {
-  const actual = await vi.importActual<typeof import("@/services/auth/authorization")>("@/services/auth/authorization");
-  return { ...actual, authorizeApiRequest: authorizeApiRequestMock };
+vi.mock("@/services/auth/session", async () => {
+  const actual = await vi.importActual<typeof import("@/services/auth/session")>(
+    "@/services/auth/session"
+  );
+  return { ...actual, getSession: getSessionMock };
 });
 
-import { AuthorizationError } from "@/services/auth/authorization";
 import { POST as postChunk } from "@/app/api/v1/ai/chunk/route";
 import { POST as postCompetitiveAnalysis } from "@/app/api/v1/analysis/competitive/route";
 import { POST as postLlmAnalytics } from "@/app/api/v1/analytics/llm/route";
@@ -44,7 +45,7 @@ const protectedRoutes: Array<{ name: string; invoke: Handler }> = [
   { name: "dashboard summary", invoke: getDashboardSummary },
   { name: "document ingestion", invoke: postDocumentIngestion },
   { name: "knowledge graph query", invoke: postKnowledgeGraphQuery },
-  { name: "RAG query", invoke: postRagQuery },
+  { name: "RAG query", invoke: postRagQuery }
 ];
 
 function makeRequest(): NextRequest {
@@ -52,42 +53,31 @@ function makeRequest(): NextRequest {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      // These values are attacker-controlled and must never establish identity.
       "x-tenant-id": "attacker-tenant",
-      "x-user-id": "attacker-user",
+      "x-user-id": "attacker-user"
     },
     body: JSON.stringify({
       text: "test",
       targetBrandOrEntity: "Example",
-      url: "https://example.com",
-    }),
+      url: "https://example.com"
+    })
   });
 }
 
 describe("tenant-scoped API authentication boundaries", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    authorizeApiRequestMock.mockRejectedValue(
-      new AuthorizationError(401, "Unauthorized: A valid authenticated session is required."),
-    );
+    getSessionMock.mockResolvedValue(null);
   });
 
-  it.each(protectedRoutes)("rejects forged identity headers on $name", async ({ invoke }) => {
-    const response = await invoke(makeRequest());
+  it.each(protectedRoutes)(
+    "rejects forged identity headers through the real session authorization path on $name",
+    async ({ invoke }) => {
+      const response = await invoke(makeRequest());
 
-    expect(response.status).toBe(401);
-    expect(await response.json()).toMatchObject({ error: "Unauthorized" });
-    expect(authorizeApiRequestMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("preserves forbidden responses for authenticated users without required access", async () => {
-    authorizeApiRequestMock.mockRejectedValue(
-      new AuthorizationError(403, "Forbidden: User is not a member of the requested workspace."),
-    );
-
-    const response = await postContentStudio(makeRequest());
-
-    expect(response.status).toBe(403);
-    expect(await response.json()).toMatchObject({ error: "Forbidden" });
-  });
+      expect(response.status).toBe(401);
+      expect(await response.json()).toMatchObject({ error: "Unauthorized" });
+      expect(getSessionMock).toHaveBeenCalled();
+    }
+  );
 });

@@ -5,6 +5,7 @@ export const PLANS: Record<string, PlanDefinition> = {
     id: "free",
     name: "Free",
     entitlements: {
+      canRunPremiumAudit: false,
       canAddUsers: false,
       canUseCustomPrompts: false,
       canExportReports: false,
@@ -29,6 +30,7 @@ export const PLANS: Record<string, PlanDefinition> = {
     id: "professional",
     name: "Professional",
     entitlements: {
+      canRunPremiumAudit: true,
       canAddUsers: true,
       canUseCustomPrompts: true,
       canExportReports: true,
@@ -53,6 +55,7 @@ export const PLANS: Record<string, PlanDefinition> = {
     id: "business",
     name: "Business",
     entitlements: {
+      canRunPremiumAudit: true,
       canAddUsers: true,
       canUseCustomPrompts: true,
       canExportReports: true,
@@ -77,6 +80,7 @@ export const PLANS: Record<string, PlanDefinition> = {
     id: "enterprise",
     name: "Enterprise",
     entitlements: {
+      canRunPremiumAudit: true,
       canAddUsers: true,
       canUseCustomPrompts: true,
       canExportReports: true,

@@ -191,6 +191,15 @@ function requestOnce(
         return;
       }
 
+      const contentEncoding = headerValue(response.headers, "content-encoding")?.trim().toLowerCase();
+      if (contentEncoding && contentEncoding !== "identity") {
+        const error = new Error("Crawler does not support encoded responses: " + contentEncoding);
+        clearHardTimeout();
+        requestRef.current?.destroy(error);
+        reject(error);
+        return;
+      }
+
       const declaredLength = headerValue(response.headers, "content-length");
       if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength) > maxBytes) {
         const error = new Error("Crawler response exceeded the configured size limit.");

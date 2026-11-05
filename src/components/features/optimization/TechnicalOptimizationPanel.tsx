@@ -116,9 +116,16 @@ export const TechnicalOptimizationPanel: React.FC = () => {
         body: JSON.stringify({ url, pagesToAnalyze }),
       });
 
+      if (response.status === 401) {
+        throw new Error(
+          isRtl
+            ? "نشست شما منقضی شده است. لطفاً دوباره وارد حساب شوید."
+            : "Your session has expired. Please sign in again."
+        );
+      }
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.message || "خطایی در انجام پایش فنی وب‌سایت رخ داد.");
+        throw new Error(errJson.message || (isRtl ? "خطایی در انجام پایش فنی وب‌سایت رخ داد." : "Technical analysis failed."));
       }
 
       const resData = await response.json();

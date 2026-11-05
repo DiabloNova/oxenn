@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
 import { firecrawlApp } from "@/lib/firecrawl";
+import { fetchPublicUrl } from "@/services/crawler/safe-http-fetch";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
@@ -80,14 +81,48 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, tenantId } = await authorizeApiRequest(req);
     const requestId = req.headers.get("x-request-id") || `req-competitive-${Date.now()}`;
-    const parsedBody = competitiveRequestSchema.safeParse(await req.json());
+    let requestBody: unknown;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request", message: "Request body must contain valid JSON." },
+        { status: 400 }
+      );
+    }
+    const parsedBody = competitiveRequestSchema.safeParse(requestBody);
     if (!parsedBody.success) {
       return NextResponse.json(
-        { error: "Invalid request", details: parsedBody.error.flatten() },
+        {
+          error: "Invalid request",
+          message: parsedBody.error.issues[0]?.message || "درخواست نامعتبر است.",
+          details: parsedBody.error.flatten()
+        },
         { status: 400 }
       );
     }
     const { userUrl, competitorUrls, analysisDepth } = parsedBody.data;
+
+    let safeUserUrl: string;
+    const safeCompetitorUrls: string[] = [];
+    try {
+      safeUserUrl = (await fetchPublicUrl(userUrl, {
+        timeoutMs: 10_000,
+        maxBytes: 2 * 1024 * 1024
+      })).url;
+      for (const competitorUrl of competitorUrls) {
+        const validated = await fetchPublicUrl(competitorUrl, {
+          timeoutMs: 10_000,
+          maxBytes: 2 * 1024 * 1024
+        });
+        safeCompetitorUrls.push(validated.url);
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request", message: "همه آدرس‌ها باید عمومی و قابل دسترسی باشند." },
+        { status: 400 }
+      );
+    }
 
     // 3. Execute inside transactional secure Tenant Context
     const resultPayload = await TenantContextManager.runWithTenantContext(
@@ -104,7 +139,7 @@ export async function POST(req: NextRequest) {
 
         if (!isMockMode) {
           try {
-            const userScrape = await firecrawlApp.scrapeUrl(userUrl, { formats: ["markdown"] });
+            const userScrape = await firecrawlApp.scrapeUrl(safeUserUrl, { formats: ["markdown"] });
             if (userScrape && 'markdown' in userScrape) {
               const md = userScrape.markdown || "";
               _userPageCountHeuristic = Math.min(250, md.split("\n").length / 10 + 20);
@@ -131,10 +166,10 @@ export async function POST(req: NextRequest) {
           }
         };
 
-        const userBrand = extractBrandName(userUrl);
+        const userBrand = extractBrandName(safeUserUrl);
 
         // Generate data-driven pairwise competitor comparisons
-        const competitorComparison: CompetitiveAnalysisResponse["competitorComparison"] = competitorUrls.map((compUrl) => {
+        const competitorComparison: CompetitiveAnalysisResponse["competitorComparison"] = safeCompetitorUrls.map((compUrl) => {
           const compName = extractBrandName(compUrl);
 
           // Seed random generators with URL hash to ensure consistency for same competitors
@@ -178,9 +213,9 @@ export async function POST(req: NextRequest) {
         const avgIndustryScore = Math.round(
           competitorComparison.reduce((acc, c) => acc + c.overallScore, 0) / totalCompetitors
         );
-        const overallScore = Math.round(
+        const overallScore = Math.min(100, Math.round(
           competitorComparison.reduce((acc, c) => acc + c.headToHead.seo.user, 0) / totalCompetitors + 5
-        );
+        ));
 
         let marketPosition: CompetitiveAnalysisResponse["marketPosition"] = "follower";
         if (overallScore >= 85) marketPosition = "leader";
@@ -200,8 +235,8 @@ export async function POST(req: NextRequest) {
           You are a Senior AI Product Engineer and Competitive Intelligence Specialist.
           We are analyzing the competitive posture of our brand/website against competitors.
 
-          User Site URL: ${userUrl} (Brand Name: ${userBrand})
-          Competitor Site URLs: ${competitorUrls.join(", ")}
+          User Site URL: ${safeUserUrl} (Brand Name: ${userBrand})
+          Competitor Site URLs: ${safeCompetitorUrls.join(", ")}
           Analysis Depth: ${analysisDepth}
 
           Provide a competitive analysis that:
@@ -315,7 +350,7 @@ export async function POST(req: NextRequest) {
 
           const compRepo = new CompetitorRepository();
           const competitorIds: string[] = [];
-          for (const compUrl of competitorUrls) {
+          for (const compUrl of safeCompetitorUrls) {
             try {
               const hostname = new URL(compUrl).hostname.replace("www.", "");
               const competitor = await compRepo.findByDomain(tenantId, hostname);
@@ -405,8 +440,8 @@ export async function POST(req: NextRequest) {
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [
               tenantId,
-              userUrl,
-              competitorUrls,
+              safeUserUrl,
+              safeCompetitorUrls,
               overallScore,
               marketPosition,
               JSON.stringify(competitorComparison),

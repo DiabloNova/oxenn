@@ -2,6 +2,7 @@ export type SubscriptionPlanId = "free" | "professional" | "business" | "enterpr
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "expired";
 
 export interface FeatureEntitlements {
+  canRunPremiumAudit: boolean;
   canAddUsers: boolean;
   canUseCustomPrompts: boolean;
   canExportReports: boolean;

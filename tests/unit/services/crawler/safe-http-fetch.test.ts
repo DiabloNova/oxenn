@@ -212,6 +212,17 @@ describe("crawler outbound URL policy", () => {
       .rejects.toThrow("response exceeded the configured size limit");
   });
 
+  it("rejects compressed response bodies instead of decoding raw bytes as UTF-8", async () => {
+    routes.set("/gzip", {
+      status: 200,
+      headers: { "content-encoding": "gzip" },
+      chunks: [Buffer.from([0x1f, 0x8b, 0x08, 0x00])]
+    });
+
+    await expect(fetchPublicUrl("http://example.com/gzip"))
+      .rejects.toThrow("does not support encoded responses");
+  });
+
   it("times out DNS and HTTP requests before continuing", async () => {
     vi.useFakeTimers();
     lookupMock.mockReturnValue(new Promise(() => undefined));

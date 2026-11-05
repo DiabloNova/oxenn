@@ -13,10 +13,10 @@ A comprehensive reconciliation was performed across:
 3. Codebase repository/service usage patterns (`src/`, `tests/`)
 
 ### Table Count & Verification
-- **Total Unique Tables across Codebase:** 57 tables.
+- **Total Unique Tables across Codebase:** 70 tables.
 - **Tables previously missing from SQL migrations (21 tables):** `organizations`, `admin_users`, `roles`, `permissions`, `audit_records`, `feature_flags`, `system_configurations`, `tenant_quotas`, `tenant_subscriptions`, `ai_provider_configs`, `brands`, `entities`, `entity_relationships`, `citations`, `ai_observations`, `brand_mentions`, `visibility_scores`, `recommendations`, `premium_audits`, `ai_engines`, `prompts`.
 - **Tables present in SQL migrations but missing from custom TS definitions (5 tables):** `technical_audits`, `competitive_analyses`, `crawl_jobs`, `crawl_results`, `crawl_cache`.
-- **Final Canonical Schema:** All 57 tables are defined in the unified Drizzle ORM schema at `database/schema/index.ts`.
+- **Final Canonical Schema:** All 70 tables are defined in the unified Drizzle ORM schema at `database/schema/index.ts`.
 
 ---
 
@@ -33,8 +33,8 @@ A comprehensive reconciliation was performed across:
 
 ## 3. Row-Level Security (RLS) & Tenant Isolation Audit
 
-### RLS Enabled Tables (37 Tables)
-All 37 tenant-scoped tables feature `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and policy expressions checking `app.current_tenant_id`:
+### RLS Enabled Tables (51 Tables)
+All 51 tenant-scoped tables feature `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and policy expressions checking `app.current_tenant_id`:
 - `organizations`
 - `brands`
 - `entities`

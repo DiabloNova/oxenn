@@ -9,7 +9,80 @@
 
 Close the highest-priority security gaps found in the repository audit before the MVP user journeys are exposed beyond trusted development environments. Phase 1 prioritizes server-derived identity for API routes and safe outbound crawler networking.
 
-This document records code changes and local verification on this branch. Passing local tests do not establish production security or prove effective RLS behavior in a live database.
+This document records code changes and verification boundaries for this branch. Passing tests do not establish production security or prove effective RLS behavior in a live database.
+
+## 1.1 Scope decision
+
+The Phase 1 scope is a security prerequisite for the two MVP journeys defined
+in Phase 0: Technical SEO Audit and AI Visibility Audit. It does not expand the
+MVP to make every dashboard tool production-ready. The work in this PR is
+limited to server-derived tenant identity, SSRF-safe outbound fetching,
+subscription authorization for premium audit work, executable regression
+coverage, and accurate release documentation.
+
+## 1.2 Verified repository baseline
+
+The canonical Drizzle schema contains 70 tables and the reconciled tenant RLS
+subset contains 51 policy-bearing tables. The 70/51 figures are repository
+inventory counts, not proof of any particular database's deployed migration
+state. The architecture, security, and database reconciliation documents now
+use the same totals.
+
+The current workflow's relevant checks are typecheck, lint, build, unit/UI
+tests, schema alignment, RLS migration coverage, migration-chain validation,
+generated-file drift verification, and the PostgreSQL isolation suite. CI
+results are revision-specific; the latest PR head must be checked before
+claiming current verification.
+
+## 1.3 Conflicts and their disposition
+
+- Earlier route classification described competitive analysis, LLM analytics,
+  crawler start, and technical optimization as already protected. That was
+  inaccurate: their baseline handlers trusted fallback or caller-provided
+  identity. They are now listed as routes migrated by Phase 1.
+- Three standalone feature scripts were outside the configured Vitest
+  discovery roots. They are now represented by unit-project suites that keep
+  the functional success/scoring/validation assertions and test the session
+  boundary.
+- Premium audit previously required authentication but did not enforce a
+  server-side plan entitlement. It now checks the explicit
+  canRunPremiumAudit entitlement before provider work; Free is denied and paid
+  plans are allowed.
+- The crawler's paid redirect policy is finite (10 redirects), not unlimited.
+  The safe transport rejects response encodings other than identity because it
+  does not decompress compressed bodies within the byte limit.
+
+## 1.4 Operational unknowns
+
+The PR and CI cannot prove deployed PostgreSQL connectivity, production RLS
+behavior, live Firecrawl reachability/credentials, DNS behavior from the
+deployed runtime, production subscription records, or deployed session-cookie
+configuration. Those require separately authorized staging/production
+verification and must remain NOT VERIFIED until observed directly.
+
+## 1.5 Phase 0 exit criteria and release gate
+
+Phase 0 is recorded as In Progress in MVP_PHASE_0_SCOPE_BASELINE.md. Phase 1
+implementation does not retroactively mark Phase 0 complete. Repository scope,
+schema/migration inventory, and CI checks are documented; production
+connectivity, deployed provider behavior, and production RLS remain unknown.
+The Phase 0 exit review therefore remains incomplete for release purposes.
+
+**Public beta remains BLOCKED** until all of the following are verified on the
+candidate release revision:
+
+1. Unit and UI regression suites pass, including authentication, route
+   validation, DNS/redirect, timeout, response-size, and content-encoding
+   negative paths.
+2. The PostgreSQL isolation suite passes, and an authorized isolated
+   environment verifies effective RLS and migration state.
+3. Staging verifies session creation/revocation, entitlement decisions,
+   provider credentials, and safe outbound behavior from the deployed runtime.
+4. Remaining security review threads are either fixed and verified or have a
+   documented, accepted reason for being out of scope.
+5. The release owner explicitly reviews and accepts the Phase 0/Phase 1 gate.
+
+No statement in this document is an assertion that public beta is approved.
 
 ## 2. Implemented on this branch
 
@@ -32,8 +105,17 @@ identity headers/default IDs to authorizeApiRequest:
 - src/app/api/v1/audit/premium/route.ts
 - src/app/api/v1/content/studio/route.ts
 
-Previously protected endpoints were also checked: competitive analysis, LLM
-analytics, crawler campaign start, technical optimization, crawl jobs,
+The following endpoints were also migrated during this phase from caller-
+supplied identity headers or fallback identifiers to the server-session
+authorization helper; they were not previously protected by the current
+baseline implementation:
+
+- competitive analysis
+- LLM analytics
+- crawler campaign start
+- technical optimization
+
+Other already session-protected endpoints were also rechecked: crawl jobs,
 dashboard summary, document ingestion, knowledge graph, and RAG. The shared
 authorizationErrorResponse helper preserves 401/403 responses instead of
 allowing authorization failures to surface as generic 500 responses.
@@ -64,7 +146,7 @@ The helper:
 - Allows HTTP/HTTPS only; rejects embedded credentials, reserved hostnames, non-public literal IPs, and non-standard ports.
 - Resolves DNS and rejects the hostname if any returned A/AAAA address is non-public.
 - Connects to the selected resolved IP directly, preserving the original Host header and TLS server name, to reduce DNS-rebinding exposure.
-- Revalidates every redirect target and rejects redirect loops. Free workspaces are limited to 5 redirects; paid workspaces have no redirect-hop count cap.
+- Revalidates every redirect target and rejects redirect loops. Free workspaces are limited to 5 redirects; paid workspaces are limited to 10 redirects per request.
 - Both tiers retain a hard 60-second redirect-chain budget, and redirect response bodies are closed without being downloaded. The legacy fetcher uses 10-second DNS/request deadlines and a 2 MiB body cap; Acquisition uses a 10-second DNS deadline, policy-bounded connect/request deadlines (10/30 seconds by default), and a 5 MiB default response cap (25 MiB hard policy ceiling).
 - The effective plan is resolved from the tenant subscription on the server. A client-supplied policy cannot raise the free-tier limit or remove the paid-tier time/resource budgets.
 - IPv6 validation permits the specifically globally reachable special-purpose allocations while retaining blocks for reserved, transition, documentation, and non-global ranges.
@@ -88,15 +170,28 @@ The crawler consumers now use this helper instead of native `fetch`:
   into tenant context are session-derived even when forged headers are sent.
 - tests/unit/services/crawler/safe-http-fetch.test.ts: covers public/reserved
   IPv4 and IPv6, unsafe URL forms, mixed DNS answers, private redirects,
-  redirect loops, free/paid hop policy, response-size limits, and DNS/request
-  timeouts.
+  redirect loops, free/paid hop policy, response-size limits, DNS/request
+  timeouts, TLS SNI/IP pinning, and rejection of unsupported content encodings.
+- tests/unit/services/auth/session.test.ts: verifies absent sessions remain
+  unauthenticated while database/system-context failures propagate as server
+  failures.
+- tests/unit/api/v1/session-derived-identity.test.ts and
+  tenant-auth-boundaries.test.ts: exercise the real session authorization path
+  and verify forged tenant/user headers cannot override Session identity.
+- tests/unit/api/v1/audit/premium-audit.test.ts,
+  tests/unit/api/v1/analysis/competitive.test.ts, and
+  tests/unit/api/v1/optimization/technical.test.ts: restore the feature
+  functional contracts in the discovered Vitest unit project.
 - tests/unit/features/acquisition/fetcher.test.ts: covers per-hop SSRF checks,
   redirect loops, free/paid hop policy, streamed and declared response-size
   limits, and DNS/request timeout behavior.
 
-Legacy direct-route feature harnesses for competitive analysis, technical
-optimization, premium audit, and content studio now test rejection of spoofed
-identity headers rather than assuming those headers authenticate the caller.
+The former standalone feature scripts for premium audit, competitive
+analysis, and technical optimization were moved into the Vitest unit project.
+Their authenticated functional scenarios are retained, while authentication
+boundary cases use the real server-session authorization path. The offline
+crawler harness injects a fixture implementing the same safe-fetch response
+contract; it no longer relies on global fetch interception.
 
 ## 3. Remaining Phase 1 work
 
@@ -129,7 +224,11 @@ operation, or deployment was performed for this phase.
 
 ## 5. Local verification — 2026-11-04
 
-The branch was cloned into an isolated, disposable Sprite environment. Dependencies were installed with the repository-pinned pnpm version (10.30.3) using the frozen lockfile. No production credentials or database connection were configured.
+The verification table below records an earlier isolated pre-review run
+using the repository-pinned pnpm version (10.30.3) and frozen lockfile. It is
+historical evidence for that earlier revision only; the current PR head must
+pass its own CI checks before this phase can be marked verified. No production
+credentials or database connection were configured for that historical run.
 
 | Check | Result |
 |---|---|

@@ -74,52 +74,48 @@ export async function createSession(user: User): Promise<void> {
  * Parses and verifies the session token from the cookie, checking against the database.
  */
 export async function getSession(): Promise<Session | null> {
-  try {
-    const cookieStore = await cookiesFn();
-    const cookie = cookieStore.get(COOKIE_NAME);
-    if (!cookie || !cookie.value) {
-      return null;
-    }
-
-    const rawToken = cookie.value;
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-
-    const sessionData = await TenantContextManager.runWithSystemContext(null, "sys-auth-check", async () => {
-      const client = TenantContextManager.getDbClient();
-      if (!client) {
-        throw new Error("Failed to get DB client in system context");
-      }
-      const { rows } = await client.query(`
-        SELECT s.id, s.user_id as "userId", s.workspace_id as "workspaceId", s.expires_at as "expiresAt", s.revoked_at as "revokedAt", s.replaced_by as "replacedBy",
-               u.email, u.name,
-               m.role
-        FROM sessions s
-        JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
-        JOIN organizations o ON o.id = s.workspace_id AND o.deleted_at IS NULL
-        LEFT JOIN organization_members m ON s.workspace_id = m.organization_id AND s.user_id = m.user_id
-        WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
-      `, [tokenHash]);
-
-      return rows[0];
-    });
-
-    if (!sessionData) return null;
-    if (!sessionData.role) return null; // No active membership for the workspace
-
-    return {
-      user: {
-        id: sessionData.userId,
-        name: sessionData.name,
-        email: sessionData.email,
-        role: sessionData.role,
-        workspaceId: sessionData.workspaceId,
-      },
-      expiresAt: sessionData.expiresAt.toISOString(),
-      status: "authenticated",
-    };
-  } catch (err) {
+  const cookieStore = await cookiesFn();
+  const cookie = cookieStore.get(COOKIE_NAME);
+  if (!cookie || !cookie.value) {
     return null;
   }
+
+  const rawToken = cookie.value;
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+  const sessionData = await TenantContextManager.runWithSystemContext(null, "sys-auth-check", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) {
+      throw new Error("Failed to get DB client in system context");
+    }
+    const { rows } = await client.query(`
+      SELECT s.id, s.user_id as "userId", s.workspace_id as "workspaceId", s.expires_at as "expiresAt", s.revoked_at as "revokedAt", s.replaced_by as "replacedBy",
+             u.email, u.name,
+             m.role
+      FROM sessions s
+      JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+      JOIN organizations o ON o.id = s.workspace_id AND o.deleted_at IS NULL
+      LEFT JOIN organization_members m ON s.workspace_id = m.organization_id AND s.user_id = m.user_id
+      WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
+    `, [tokenHash]);
+
+    return rows[0];
+  });
+
+  if (!sessionData) return null;
+  if (!sessionData.role) return null; // No active membership for the workspace
+
+  return {
+    user: {
+      id: sessionData.userId,
+      name: sessionData.name,
+      email: sessionData.email,
+      role: sessionData.role,
+      workspaceId: sessionData.workspaceId,
+    },
+    expiresAt: sessionData.expiresAt.toISOString(),
+    status: "authenticated",
+  };
 }
 
 /**

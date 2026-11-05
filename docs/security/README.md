@@ -16,7 +16,7 @@ The `AuthProvider` stores user session credentials client-side for UI mocking pu
 *Status: Implemented*
 
 ### Multi-Tenant Isolation & Row-Level Security (RLS)
-The canonical schema defined in `database/schema/index.ts` models 57 tables with explicit `pgPolicy` Row-Level Security (RLS) definitions on 37 tenant-scoped tables. Tenant scoping enforces transaction-local `SET LOCAL app.current_tenant_id = $1` inside active transactions, guaranteeing leased PostgreSQL clients are released securely. Fallbacks explicitly fail closed when database connections or queries fail.
+The canonical schema defined in `database/schema/index.ts` models 70 tables with explicit `pgPolicy` Row-Level Security (RLS) definitions on 51 tenant-scoped tables. Tenant scoping enforces transaction-local `SET LOCAL app.current_tenant_id = $1` inside active transactions, guaranteeing leased PostgreSQL clients are released securely. Fallbacks explicitly fail closed when database connections or queries fail.
 *Status: Implemented*
 
 ### Cache Security

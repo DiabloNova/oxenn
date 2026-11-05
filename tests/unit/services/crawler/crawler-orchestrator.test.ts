@@ -43,23 +43,27 @@ describe("CrawlerOrchestrator redirect policy propagation", () => {
     };
     const orchestrator = new CrawlerOrchestrator(ingestion as never);
     const paidPolicy = { maxRedirects: 10, maxRedirectDurationMs: 60_000 };
+    const fetcher = vi.fn();
 
     await orchestrator.runCrawlerCampaign(
       ["https://seed.example"],
       "tenant-test",
       "user-test",
       "request-test",
-      paidPolicy
+      paidPolicy,
+      fetcher
     );
 
     expect(extractSeedLinksMock).toHaveBeenCalledWith(
       "https://seed.example",
       5,
-      paidPolicy
+      paidPolicy,
+      fetcher
     );
     expect(fetchAndExtractTextMock).toHaveBeenCalledWith(
       "https://page.example/article",
-      paidPolicy
+      paidPolicy,
+      fetcher
     );
   });
 });
