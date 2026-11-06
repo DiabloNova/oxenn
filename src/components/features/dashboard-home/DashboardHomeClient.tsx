@@ -84,7 +84,7 @@ export default function DashboardHomeClient(_props: DashboardHomeClientProps) {
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
             {isFa ? "فضای کاری: کسب‌وکار من" : "Workspace: My Business"}
           </div>
-          <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary-600)] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:opacity-90">
+          <div className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary-600)] px-4 py-2.5 text-xs font-bold text-white shadow-sm">
             <Sparkles size={15} />
             {isFa ? "شروع ارزیابی محصول" : "Start product assessment"}
           </button>
@@ -154,7 +154,7 @@ export default function DashboardHomeClient(_props: DashboardHomeClientProps) {
             <div className="mb-3 flex items-center gap-2 text-[var(--color-primary-600)]"><MessageCircle size={17} /><span className="text-xs font-black">{isFa ? "همراه هوشمند" : "AI companion"}</span></div>
             <p className="text-sm font-bold text-[var(--text-primary)]">{isFa ? "برای بررسی مسیر بهبود آماده‌اید؟" : "Ready to explore an improvement path?"}</p>
             <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">{isFa ? "درباره محصول، یافته‌ها یا اولویت‌های خود گفتگو کنید." : "Discuss your product, findings or priorities."}</p>
-            <button type="button" className="mt-4 inline-flex items-center gap-2 text-xs font-black text-[var(--color-primary-600)]">
+            <div className="mt-4 inline-flex items-center gap-2 text-xs font-black text-[var(--color-primary-600)]">
               {isFa ? "گفتگو را آغاز کنید" : "Start a conversation"} <Arrow size={14} />
             </button>
           </div>
