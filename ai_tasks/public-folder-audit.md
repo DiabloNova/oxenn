@@ -14,9 +14,9 @@ The recursive Git tree is complete (truncated=false). The public/ subtree contai
 | Asset group | Files | Approx. size | Notes |
 |---|---:|---:|---|
 | public/fonts/ | 10 | 1,337,132 bytes | 6 Peyda TTF + 4 Yekan Bakh WOFF2 |
-| public/logos/ | 5 | 5,? bytes | 5 AI-provider SVG marks |
-| Root raster images | 5 | 1,148,? bytes | PNG/JPG icons, brand image and placeholders |
-| Root SVG assets | 8 | 11,? bytes | icons, starter graphics and placeholders |
+| public/logos/ | 5 | 4,923 bytes | 5 AI-provider SVG marks |
+| Root raster images | 7 | 1,154,296 bytes | PNG/JPG icons, brand image and placeholders |
+| Root SVG assets | 8 | 11,079 bytes | icons, starter graphics and placeholders |
 | PDF | 1 | 866 bytes | one-page sample report |
 | **Total** | **31** | **2,508,296 bytes (2.392 MiB)** | |
 
