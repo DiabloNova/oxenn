@@ -6,6 +6,14 @@ import { PostgresClient } from "@/features/admin/infrastructure/persistence/post
 import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 import { subscriptionService } from "@/features/billing/services/subscription-service";
 import { crawlPublicSite } from "@/services/crawler/safe-site-crawler";
+import { getCrawlerRedirectPolicy } from "@/services/crawler/redirect-policy";
+import {
+  CrawlerFetchError,
+  CrawlerLimitError,
+  CrawlerResponseTooLargeError,
+  CrawlerUnsupportedEncodingError,
+  CrawlerUrlPolicyError,
+} from "@/services/crawler/safe-http-fetch";
 
 // Validator schema
 const requestSchema = z.object({
@@ -62,24 +70,47 @@ export async function POST(req: NextRequest) {
 
     // Run within Tenant Context
     return await TenantContextManager.runWithTenantContext(tenantId, userId, "req-premium-audit", async () => {
-      const canRunPremiumAudit = await subscriptionService.checkEntitlement("canRunPremiumAudit");
-      if (!canRunPremiumAudit) {
+      const subscription = await subscriptionService.getEffectiveSubscription();
+      if (!subscription.effectivePlan.entitlements.canRunPremiumAudit) {
         return NextResponse.json(
           { error: "Forbidden", message: "این قابلیت به اشتراک پولی نیاز دارد." },
           { status: 403 }
         );
       }
+      const redirectPolicy = getCrawlerRedirectPolicy(subscription.effectivePlan.id);
 
       let crawlResults: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }>;
       let safeUrl: string;
       try {
-        crawlResults = await crawlPublicSite(url, { maxPages: depth });
+        crawlResults = await crawlPublicSite(url, { maxPages: depth, ...redirectPolicy });
         safeUrl = crawlResults[0].url;
       } catch (crawlError) {
-        console.warn("[Premium SEO Audit API] Safe crawl rejected or failed:", crawlError);
+        console.warn("[Premium SEO Audit API] Safe crawl failed:", crawlError);
+        if (crawlError instanceof CrawlerUrlPolicyError) {
+          return NextResponse.json(
+            { error: "Bad Request", message: "آدرس باید یک مقصد عمومی و مجاز باشد." },
+            { status: 400 }
+          );
+        }
+        if (
+          crawlError instanceof CrawlerLimitError ||
+          crawlError instanceof CrawlerResponseTooLargeError ||
+          crawlError instanceof CrawlerUnsupportedEncodingError
+        ) {
+          return NextResponse.json(
+            { error: "Unprocessable Entity", message: "پاسخ وب‌سایت از محدودیت‌های پشتیبانی‌شدهٔ خزش فراتر است." },
+            { status: 422 }
+          );
+        }
+        if (crawlError instanceof CrawlerFetchError) {
+          return NextResponse.json(
+            { error: "Bad Gateway", message: "وب‌سایت مقصد موقتاً در دسترس نیست؛ لطفاً دوباره تلاش کنید." },
+            { status: 502 }
+          );
+        }
         return NextResponse.json(
-          { error: "Bad Request", message: "آدرس باید عمومی و قابل دسترسی باشد." },
-          { status: 400 }
+          { error: "Bad Gateway", message: "خزش امن وب‌سایت مقصد ناموفق بود." },
+          { status: 502 }
         );
       }
 

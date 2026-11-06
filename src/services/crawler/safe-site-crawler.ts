@@ -1,7 +1,12 @@
 import * as cheerio from "cheerio";
 import { convert } from "html-to-text";
 import { MAX_REDIRECT_CHAIN_DURATION_MS } from "@/core/network/crawler-redirect-policy";
-import { fetchPublicUrl, parsePublicHttpUrl, type SafeHttpFetchOptions } from "./safe-http-fetch";
+import {
+  CrawlerFetchError,
+  fetchPublicUrl,
+  parsePublicHttpUrl,
+  type SafeHttpFetchOptions,
+} from "./safe-http-fetch";
 
 export interface SafeCrawledPage {
   url: string;
@@ -14,6 +19,8 @@ export interface SafeSiteCrawlOptions {
   timeoutMs?: number;
   pageTimeoutMs?: number;
   maxTotalBytes?: number;
+  maxRedirects?: number | null;
+  maxRedirectDurationMs?: number;
   fetcher?: typeof fetchPublicUrl;
 }
 
@@ -60,8 +67,11 @@ export async function crawlPublicSite(
     const fetchOptions: SafeHttpFetchOptions = {
       timeoutMs: Math.min(pageTimeoutMs, remainingMs),
       maxBytes: Math.min(MAX_PAGE_BYTES, remainingBytes),
-      maxRedirects: 5,
-      maxRedirectDurationMs: Math.min(MAX_REDIRECT_CHAIN_DURATION_MS, remainingMs),
+      maxRedirects: options.maxRedirects === undefined ? 5 : options.maxRedirects,
+      maxRedirectDurationMs: Math.min(
+        options.maxRedirectDurationMs ?? MAX_REDIRECT_CHAIN_DURATION_MS,
+        remainingMs
+      ),
     };
 
     let response: Awaited<ReturnType<typeof fetchPublicUrl>>;
@@ -69,7 +79,7 @@ export async function crawlPublicSite(
       response = await fetcher(pageUrl, fetchOptions);
       if (!response.ok) {
         if (pages.length === 0) {
-          throw new Error(`Failed to fetch the requested website (${response.status}).`);
+          throw new CrawlerFetchError(`Failed to fetch the requested website (${response.status}).`);
         }
         continue;
       }

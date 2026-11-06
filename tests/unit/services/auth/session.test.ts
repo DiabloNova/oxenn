@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { User } from "@/types/auth";
 
 const { runWithSystemContextMock, getDbClientMock, queryMock } = vi.hoisted(() => ({
   runWithSystemContextMock: vi.fn(),
@@ -13,10 +14,26 @@ vi.mock("@/core/database/tenant-context", () => ({
   }
 }));
 
-import { getSession, setCookiesMock } from "@/services/auth/session";
+import {
+  createSession,
+  getSession,
+  invalidateSession,
+  setCookiesMock
+} from "@/services/auth/session";
 
-describe("getSession infrastructure error handling", () => {
-  const cookieStore = { get: vi.fn() };
+describe("server session lifecycle and error handling", () => {
+  const cookieStore = {
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn()
+  };
+  const user: User = {
+    id: "user-1",
+    name: "Test User",
+    email: "user@example.com",
+    role: "owner",
+    workspaceId: "workspace-1"
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,6 +48,78 @@ describe("getSession infrastructure error handling", () => {
     );
     getDbClientMock.mockReturnValue({ query: queryMock });
     queryMock.mockResolvedValue({ rows: [] });
+  });
+
+  it("parses a valid database-backed session into the authenticated session shape", async () => {
+    const expiresAt = new Date("2027-01-01T00:00:00.000Z");
+    queryMock.mockResolvedValue({
+      rows: [{
+        id: "session-1",
+        userId: user.id,
+        workspaceId: user.workspaceId,
+        expiresAt,
+        revokedAt: null,
+        replacedBy: null,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      }]
+    });
+
+    await expect(getSession()).resolves.toEqual({
+      user,
+      expiresAt: expiresAt.toISOString(),
+      status: "authenticated"
+    });
+    expect(runWithSystemContextMock).toHaveBeenCalledWith(
+      null,
+      "sys-auth-check",
+      expect.any(Function)
+    );
+  });
+
+  it("creates opaque sessions with secure cookie attributes and stores only a token hash", async () => {
+    await createSession(user);
+
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    expect(queryMock.mock.calls[0][0]).toContain("INSERT INTO sessions");
+    const tokenHash = queryMock.mock.calls[0][1][1] as string;
+    expect(tokenHash).toMatch(/^[a-f0-9]{64}$/);
+
+    const [sessionName, rawToken, sessionOptions] = cookieStore.set.mock.calls[0];
+    expect(sessionName).toBe("oxenn_session");
+    expect(rawToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(tokenHash).not.toBe(rawToken);
+    expect(sessionOptions).toEqual(expect.objectContaining({
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      expires: expect.any(Date)
+    }));
+    expect(cookieStore.set).toHaveBeenCalledWith(
+      "tenant_id",
+      user.workspaceId,
+      expect.objectContaining({ httpOnly: true, sameSite: "strict", path: "/" })
+    );
+    expect(cookieStore.set).toHaveBeenCalledWith(
+      "user_id",
+      user.id,
+      expect.objectContaining({ httpOnly: true, sameSite: "strict", path: "/" })
+    );
+  });
+
+  it("revokes the current database session and deletes all session cookies on invalidation", async () => {
+    await invalidateSession();
+
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    expect(queryMock.mock.calls[0][0]).toContain("UPDATE sessions");
+    expect(queryMock.mock.calls[0][0]).toContain("revoked_at = NOW()");
+    expect(queryMock.mock.calls[0][1][0]).toMatch(/^[a-f0-9]{64}$/);
+    expect(cookieStore.delete).toHaveBeenCalledTimes(3);
+    expect(cookieStore.delete).toHaveBeenCalledWith("oxenn_session");
+    expect(cookieStore.delete).toHaveBeenCalledWith("tenant_id");
+    expect(cookieStore.delete).toHaveBeenCalledWith("user_id");
   });
 
   it("returns null when no session cookie exists", async () => {

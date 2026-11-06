@@ -32,9 +32,12 @@ vi.mock("@/services/auth/authorization", async () => {
 vi.mock("@/core/database/tenant-context", () => ({
   TenantContextManager: { runWithTenantContext: runWithTenantContextMock }
 }));
-vi.mock("@/services/crawler/safe-http-fetch", () => ({
-  validatePublicUrl: validatePublicUrlMock
-}));
+vi.mock("@/services/crawler/safe-http-fetch", async () => {
+  const actual = await vi.importActual<typeof import("@/services/crawler/safe-http-fetch")>(
+    "@/services/crawler/safe-http-fetch"
+  );
+  return { ...actual, validatePublicUrl: validatePublicUrlMock };
+});
 vi.mock("@/lib/firecrawl", () => ({
   firecrawlApp: { scrapeUrl: scrapeUrlMock }
 }));
@@ -75,6 +78,10 @@ vi.mock("@/features/ai-intelligence/services", () => ({
 }));
 
 import { POST } from "@/app/api/v1/analysis/competitive/route";
+import {
+  CrawlerFetchError,
+  CrawlerUrlPolicyError,
+} from "@/services/crawler/safe-http-fetch";
 
 function makeRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/v1/analysis/competitive", {
@@ -149,6 +156,16 @@ describe("competitive analysis API", () => {
     expect(body.competitiveAdvantages[0].advantage).toContain("ساختار محتوایی");
     expect(body.gapAnalysis[0].recommendedAction).toContain("بهینه‌سازی");
     expect(body.strategicOpportunities[0].actionPlan).toContain("برنامه");
+    expect(runWithTenantContextMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "user-test",
+      expect.any(String),
+      expect.any(Function)
+    );
+    expect(saveCompetitorMock).toHaveBeenCalledWith(expect.objectContaining({
+      organizationId: "tenant-test",
+      domain: "competitor.example"
+    }));
     expect(validatePublicUrlMock).toHaveBeenCalledTimes(2);
     const deadlineAt = validatePublicUrlMock.mock.calls[0][1].deadlineAt;
     expect(validatePublicUrlMock.mock.calls[1][1].deadlineAt).toBe(deadlineAt);
@@ -202,7 +219,7 @@ describe("competitive analysis API", () => {
   });
 
   it("rejects an unsafe primary URL without starting analysis work", async () => {
-    validatePublicUrlMock.mockRejectedValueOnce(new Error("non-public DNS address"));
+    validatePublicUrlMock.mockRejectedValueOnce(new CrawlerUrlPolicyError("non-public DNS address"));
 
     const response = await POST(makeRequest({
       userUrl: "http://127.0.0.1",
@@ -218,10 +235,24 @@ describe("competitive analysis API", () => {
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 
+  it("returns HTTP 502 when public DNS validation is temporarily unavailable", async () => {
+    validatePublicUrlMock.mockRejectedValueOnce(new CrawlerFetchError("Crawler DNS lookup timed out."));
+
+    const response = await POST(makeRequest({
+      userUrl: "https://example.com",
+      competitorUrls: ["https://competitor.example"]
+    }));
+
+    expect(response.status).toBe(502);
+    expect((await response.json()).error).toBe("Upstream unavailable");
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
+    expect(generateTextMock).not.toHaveBeenCalled();
+  });
+
   it("rejects an unsafe competitor URL before invoking Firecrawl", async () => {
     validatePublicUrlMock
       .mockResolvedValueOnce("https://example.com")
-      .mockRejectedValueOnce(new Error("non-public DNS address"));
+      .mockRejectedValueOnce(new CrawlerUrlPolicyError("non-public DNS address"));
 
     const response = await POST(makeRequest({
       userUrl: "https://example.com",

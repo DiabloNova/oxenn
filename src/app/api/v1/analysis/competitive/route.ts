@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
-import { validatePublicUrl } from "@/services/crawler/safe-http-fetch";
+import {
+  CrawlerUrlPolicyError,
+  validatePublicUrl,
+} from "@/services/crawler/safe-http-fetch";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
@@ -116,10 +119,17 @@ export async function POST(req: NextRequest) {
       );
       safeUserUrl = validatedUrls[0];
       safeCompetitorUrls.push(...validatedUrls.slice(1));
-    } catch {
+    } catch (validationError) {
+      console.warn("[Competitive API] Public URL validation failed:", validationError);
+      if (validationError instanceof CrawlerUrlPolicyError) {
+        return NextResponse.json(
+          { error: "Invalid request", message: "همه آدرس‌ها باید مقصدهای عمومی و مجاز باشند." },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
-        { error: "Invalid request", message: "همه آدرس‌ها باید عمومی و قابل دسترسی باشند." },
-        { status: 400 }
+        { error: "Upstream unavailable", message: "حداقل یکی از وب‌سایت‌های مقصد موقتاً قابل دسترسی نیست؛ لطفاً دوباره تلاش کنید." },
+        { status: 502 }
       );
     }
 

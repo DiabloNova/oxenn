@@ -4,14 +4,14 @@ import { NextRequest } from "next/server";
 const {
   authorizeApiRequestMock,
   runWithTenantContextMock,
-  checkEntitlementMock,
+  getEffectiveSubscriptionMock,
   fetchPublicUrlMock,
   generateTextMock,
   queryMock
 } = vi.hoisted(() => ({
   authorizeApiRequestMock: vi.fn(),
   runWithTenantContextMock: vi.fn(),
-  checkEntitlementMock: vi.fn(),
+  getEffectiveSubscriptionMock: vi.fn(),
   fetchPublicUrlMock: vi.fn(),
   generateTextMock: vi.fn(),
   queryMock: vi.fn()
@@ -27,7 +27,7 @@ vi.mock("@/core/database/tenant-context", () => ({
   TenantContextManager: { runWithTenantContext: runWithTenantContextMock }
 }));
 vi.mock("@/features/billing/services/subscription-service", () => ({
-  subscriptionService: { checkEntitlement: checkEntitlementMock }
+  subscriptionService: { getEffectiveSubscription: getEffectiveSubscriptionMock }
 }));
 vi.mock("@/services/crawler/safe-http-fetch", async () => {
   const actual = await vi.importActual<typeof import("@/services/crawler/safe-http-fetch")>(
@@ -43,6 +43,13 @@ vi.mock("@/features/admin/infrastructure/persistence/postgres", () => ({
 }));
 
 import { POST } from "@/app/api/v1/audit/premium/route";
+import {
+  CrawlerFetchError,
+  CrawlerLimitError,
+  CrawlerResponseTooLargeError,
+  CrawlerUnsupportedEncodingError,
+  CrawlerUrlPolicyError,
+} from "@/services/crawler/safe-http-fetch";
 
 function makeRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/v1/audit/premium", {
@@ -63,7 +70,9 @@ describe("premium audit API", () => {
       async (_tenantId: string, _userId: string, _requestId: string, callback: () => Promise<unknown>) =>
         callback()
     );
-    checkEntitlementMock.mockResolvedValue(true);
+    getEffectiveSubscriptionMock.mockResolvedValue({
+      effectivePlan: { id: "professional", entitlements: { canRunPremiumAudit: true } }
+    });
     fetchPublicUrlMock.mockImplementation(async (url: string) => ({
       url,
       ok: true,
@@ -112,12 +121,12 @@ describe("premium audit API", () => {
     expect(fetchPublicUrlMock).toHaveBeenNthCalledWith(
       1,
       "https://example.com/",
-      expect.objectContaining({ maxBytes: 2 * 1024 * 1024, maxRedirects: 5 })
+      expect.objectContaining({ maxBytes: 2 * 1024 * 1024, maxRedirects: 10, maxRedirectDurationMs: expect.any(Number) })
     );
     expect(fetchPublicUrlMock).toHaveBeenNthCalledWith(
       2,
       "https://example.com/blog",
-      expect.objectContaining({ maxBytes: 2 * 1024 * 1024, maxRedirects: 5 })
+      expect.objectContaining({ maxBytes: 2 * 1024 * 1024, maxRedirects: 10, maxRedirectDurationMs: expect.any(Number) })
     );
     expect(generateTextMock).toHaveBeenCalledTimes(1);
   });
@@ -130,7 +139,9 @@ describe("premium audit API", () => {
   });
 
   it("denies free workspaces before DNS validation, crawling or LLM work", async () => {
-    checkEntitlementMock.mockResolvedValue(false);
+    getEffectiveSubscriptionMock.mockResolvedValue({
+      effectivePlan: { id: "free", entitlements: { canRunPremiumAudit: false } }
+    });
 
     const response = await POST(makeRequest({
       url: "https://example.com",
@@ -140,13 +151,13 @@ describe("premium audit API", () => {
 
     expect(response.status).toBe(403);
     expect(body.error).toBe("Forbidden");
-    expect(checkEntitlementMock).toHaveBeenCalledWith("canRunPremiumAudit");
+    expect(getEffectiveSubscriptionMock).toHaveBeenCalledTimes(1);
     expect(fetchPublicUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 
   it("rejects an unsafe public-URL validation result before starting premium work", async () => {
-    fetchPublicUrlMock.mockRejectedValue(new Error("non-public DNS address"));
+    fetchPublicUrlMock.mockRejectedValue(new CrawlerUrlPolicyError("non-public DNS address"));
 
     const response = await POST(makeRequest({
       url: "https://example.com",
@@ -154,6 +165,30 @@ describe("premium audit API", () => {
     }));
 
     expect(response.status).toBe(400);
+    expect(generateTextMock).not.toHaveBeenCalled();
+  });
+
+  it("returns HTTP 502 for temporary crawler reachability failures", async () => {
+    fetchPublicUrlMock.mockRejectedValue(new CrawlerFetchError("Crawler DNS lookup timed out."));
+
+    const response = await POST(makeRequest({ url: "https://example.com", depth: 2 }));
+
+    expect(response.status).toBe(502);
+    expect((await response.json()).error).toBe("Bad Gateway");
+    expect(generateTextMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["oversized", new CrawlerResponseTooLargeError()],
+    ["encoded", new CrawlerUnsupportedEncodingError("Crawler does not support encoded responses: gzip")],
+    ["redirect-limited", new CrawlerLimitError("Crawler exceeded the maximum redirect count.")]
+  ])("returns HTTP 422 for %s site responses", async (_kind, error) => {
+    fetchPublicUrlMock.mockRejectedValue(error);
+
+    const response = await POST(makeRequest({ url: "https://example.com", depth: 2 }));
+
+    expect(response.status).toBe(422);
+    expect((await response.json()).error).toBe("Unprocessable Entity");
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 });

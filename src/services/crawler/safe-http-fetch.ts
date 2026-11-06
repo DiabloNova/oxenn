@@ -16,6 +16,41 @@ const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
 const DEFAULT_MAX_REDIRECTS = 5;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
+export class CrawlerUrlPolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CrawlerUrlPolicyError";
+  }
+}
+
+export class CrawlerFetchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CrawlerFetchError";
+  }
+}
+
+export class CrawlerResponseTooLargeError extends Error {
+  constructor(message = "Crawler response exceeded the configured size limit.") {
+    super(message);
+    this.name = "CrawlerResponseTooLargeError";
+  }
+}
+
+export class CrawlerUnsupportedEncodingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CrawlerUnsupportedEncodingError";
+  }
+}
+
+export class CrawlerLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CrawlerLimitError";
+  }
+}
+
 export interface SafeHttpResponse {
   readonly ok: boolean;
   readonly status: number;
@@ -60,18 +95,18 @@ export function parsePublicHttpUrl(input: string): URL {
   try {
     url = new URL(input);
   } catch {
-    throw new Error("Crawler URL is invalid.");
+    throw new CrawlerUrlPolicyError("Crawler URL is invalid.");
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Crawler URL must use HTTP or HTTPS.");
+    throw new CrawlerUrlPolicyError("Crawler URL must use HTTP or HTTPS.");
   }
   if (url.username || url.password) {
-    throw new Error("Crawler URL must not contain embedded credentials.");
+    throw new CrawlerUrlPolicyError("Crawler URL must not contain embedded credentials.");
   }
 
   const hostname = normalizedHostname(url);
-  if (!hostname) throw new Error("Crawler URL is missing a hostname.");
+  if (!hostname) throw new CrawlerUrlPolicyError("Crawler URL is missing a hostname.");
 
   const blockedSuffixes = [".localhost", ".local", ".internal", ".test", ".invalid", ".example"];
   if (
@@ -79,20 +114,20 @@ export function parsePublicHttpUrl(input: string): URL {
     hostname === "metadata" ||
     blockedSuffixes.some((suffix) => hostname.endsWith(suffix))
   ) {
-    throw new Error("Crawler URL resolves to a reserved hostname.");
+    throw new CrawlerUrlPolicyError("Crawler URL resolves to a reserved hostname.");
   }
 
   const family = isIP(hostname);
   if (family !== 0 && !isPublicIpAddress(hostname)) {
-    throw new Error("Crawler URL must not target a non-public IP address.");
+    throw new CrawlerUrlPolicyError("Crawler URL must not target a non-public IP address.");
   }
   if (family === 0 && !hostname.includes(".")) {
-    throw new Error("Crawler URL must use a fully qualified public hostname.");
+    throw new CrawlerUrlPolicyError("Crawler URL must use a fully qualified public hostname.");
   }
 
   const expectedPort = url.protocol === "https:" ? "443" : "80";
   if (url.port && url.port !== expectedPort) {
-    throw new Error("Crawler URL uses a non-standard port.");
+    throw new CrawlerUrlPolicyError("Crawler URL uses a non-standard port.");
   }
 
   url.hash = "";
@@ -118,17 +153,24 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
 async function resolvePublicAddress(url: URL, timeoutMs: number): Promise<ResolvedAddress> {
   const hostname = normalizedHostname(url);
   const family = isIP(hostname);
+  let addresses: Array<{ address: string; family: number }>;
 
-  const addresses = family === 0
-    ? await withTimeout(
+  if (family === 0) {
+    try {
+      addresses = await withTimeout(
         lookup(hostname, { all: true, verbatim: true }),
         timeoutMs,
         "Crawler DNS lookup timed out."
-      )
-    : [{ address: hostname, family }];
+      );
+    } catch (error) {
+      throw new CrawlerFetchError(error instanceof Error ? error.message : "Crawler DNS lookup failed.");
+    }
+  } else {
+    addresses = [{ address: hostname, family }];
+  }
 
   if (addresses.length === 0 || addresses.some((entry) => !isPublicIpAddress(entry.address))) {
-    throw new Error("Crawler refused a hostname with a non-public DNS address.");
+    throw new CrawlerUrlPolicyError("Crawler refused a hostname with a non-public DNS address.");
   }
 
   const selected = addresses[0];
@@ -157,12 +199,12 @@ export async function validatePublicUrl(
   const url = parsePublicHttpUrl(input);
   const remainingMs = options.deadlineAt - Date.now();
   if (remainingMs <= 0) {
-    throw new Error("Crawler URL validation exceeded its shared time budget.");
+    throw new CrawlerFetchError("Crawler URL validation exceeded its shared time budget.");
   }
 
   await resolvePublicAddress(url, remainingMs);
   if (Date.now() >= options.deadlineAt) {
-    throw new Error("Crawler URL validation exceeded its shared time budget.");
+    throw new CrawlerFetchError("Crawler URL validation exceeded its shared time budget.");
   }
   return url.toString();
 }
@@ -222,7 +264,7 @@ function requestOnce(
 
       const contentEncoding = headerValue(response.headers, "content-encoding")?.trim().toLowerCase();
       if (contentEncoding && contentEncoding !== "identity") {
-        const error = new Error("Crawler does not support encoded responses: " + contentEncoding);
+        const error = new CrawlerUnsupportedEncodingError("Crawler does not support encoded responses: " + contentEncoding);
         clearHardTimeout();
         requestRef.current?.destroy(error);
         reject(error);
@@ -231,7 +273,7 @@ function requestOnce(
 
       const declaredLength = headerValue(response.headers, "content-length");
       if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength) > maxBytes) {
-        const error = new Error("Crawler response exceeded the configured size limit.");
+        const error = new CrawlerResponseTooLargeError();
         clearHardTimeout();
         requestRef.current?.destroy(error);
         reject(error);
@@ -245,7 +287,7 @@ function requestOnce(
         const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
         receivedBytes += buffer.length;
         if (receivedBytes > maxBytes) {
-          const error = new Error("Crawler response exceeded the configured size limit.");
+          const error = new CrawlerResponseTooLargeError();
           clearHardTimeout();
           requestRef.current?.destroy(error);
           reject(error);
@@ -325,7 +367,7 @@ export async function fetchPublicUrl(
   for (let redirects = 0; ; redirects++) {
     const normalizedUrl = currentUrl.toString();
     if (visited.has(normalizedUrl)) {
-      throw new Error("Crawler detected a redirect loop.");
+      throw new CrawlerLimitError("Crawler detected a redirect loop.");
     }
     visited.add(normalizedUrl);
 
@@ -334,7 +376,7 @@ export async function fetchPublicUrl(
       : maxRedirectDurationMs - (Date.now() - redirectChainStartedAt);
     const hopTimeoutMs = Math.min(timeoutMs, redirectRemaining);
     if (hopTimeoutMs <= 0) {
-      throw new Error("Crawler redirect chain exceeded its time budget.");
+      throw new CrawlerLimitError("Crawler redirect chain exceeded its time budget.");
     }
     const address = await resolvePublicAddress(currentUrl, hopTimeoutMs);
     const remainingAfterDns = redirectChainStartedAt === null
@@ -342,18 +384,29 @@ export async function fetchPublicUrl(
       : maxRedirectDurationMs - (Date.now() - redirectChainStartedAt);
     const requestTimeoutMs = Math.min(timeoutMs, remainingAfterDns);
     if (requestTimeoutMs <= 0) {
-      throw new Error("Crawler redirect chain exceeded its time budget.");
+      throw new CrawlerLimitError("Crawler redirect chain exceeded its time budget.");
     }
-    const response = await requestOnce(currentUrl, address, requestTimeoutMs, maxBytes);
+    let response: RawHttpResponse;
+    try {
+      response = await requestOnce(currentUrl, address, requestTimeoutMs, maxBytes);
+    } catch (error) {
+      if (
+        error instanceof CrawlerResponseTooLargeError ||
+        error instanceof CrawlerUnsupportedEncodingError
+      ) {
+        throw error;
+      }
+      throw new CrawlerFetchError(error instanceof Error ? error.message : "Crawler request failed.");
+    }
 
     if (response.redirectLocation) {
       if (maxRedirects !== null && redirects >= maxRedirects) {
-        throw new Error("Crawler exceeded the maximum redirect count.");
+        throw new CrawlerLimitError("Crawler exceeded the maximum redirect count.");
       }
       if (redirectChainStartedAt === null) {
         redirectChainStartedAt = Date.now();
       } else if (Date.now() - redirectChainStartedAt >= maxRedirectDurationMs) {
-        throw new Error("Crawler redirect chain exceeded its time budget.");
+        throw new CrawlerLimitError("Crawler redirect chain exceeded its time budget.");
       }
       currentUrl = parsePublicHttpUrl(new URL(response.redirectLocation, currentUrl).toString());
       continue;
