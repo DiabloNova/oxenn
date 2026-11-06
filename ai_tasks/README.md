@@ -8,6 +8,7 @@ This workspace contains the staged repository-baseline audit and its resulting e
 - [GitHub workflows audit](./github-folder-audit.md) — review of the complete `.github/` folder and current CI evidence.
 - [Database folder audit](./database-folder-audit.md) — inventory and static review of schemas, active and archived migrations, Drizzle snapshots, RLS policies, bootstrap, and seed files.
 - [Documentation folder audit](./docs-folder-audit.md) — review of the documentation hierarchy, Baseline Plan, Roadmap, database/security contracts, product/API claims, and historical records.
+- [Font folder audit](./font-folder-audit.md) — full inventory of root font assets, current application font-loader references, provenance/licensing evidence, and unused/placeholder asset findings.
 
 ## Work areas
 
