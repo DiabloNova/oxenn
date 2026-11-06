@@ -7,7 +7,6 @@ import {
   Activity,
   ArrowUpLeft,
   ArrowUpRight,
-  BadgeCheck,
   BarChart3,
   Boxes,
   BrainCircuit,
@@ -117,8 +116,8 @@ export default function DashboardHomeClient(_props: DashboardHomeClientProps) {
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                { labelFa: "حوزه‌های محصول", labelEn: "Product domains", value: "۰۹", icon: Boxes },
-                { labelFa: "چرخه‌های کاری", labelEn: "Operating stages", value: "۰۵", icon: GitBranch },
+                { labelFa: "حوزه‌های محصول", labelEn: "Product domains", valueFa: "۰۹", valueEn: "09", icon: Boxes },
+                { labelFa: "چرخه‌های کاری", labelEn: "Operating stages", valueFa: "۰۵", valueEn: "05", icon: GitBranch },
                 { labelFa: "تمرکز اصلی", labelEn: "Primary focus", valueFa: "محصول", valueEn: "Product", icon: Target },
                 { labelFa: "رویکرد", labelEn: "Approach", valueFa: "پیوسته", valueEn: "Continuous", icon: Activity },
               ].map((item) => {
@@ -129,7 +128,7 @@ export default function DashboardHomeClient(_props: DashboardHomeClientProps) {
                       <span className="text-[10px] font-semibold text-[var(--text-muted)]">{isFa ? item.labelFa : item.labelEn}</span>
                       <Icon size={14} className="text-[var(--color-primary-600)]" />
                     </div>
-                    <div className="text-base font-black text-[var(--text-primary)]">{isFa ? (item.valueFa || item.value) : (item.valueEn || item.value)}</div>
+                    <div className="text-base font-black text-[var(--text-primary)]">{isFa ? item.valueFa : item.valueEn}</div>
                   </div>
                 );
               })}
