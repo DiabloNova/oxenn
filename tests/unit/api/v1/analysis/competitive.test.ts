@@ -201,7 +201,7 @@ describe("competitive analysis API", () => {
     expect(validatePublicUrlMock).not.toHaveBeenCalled();
   });
 
-  it("rejects an unsafe primary URL before validating competitors or invoking Firecrawl", async () => {
+  it("rejects an unsafe primary URL without starting analysis work", async () => {
     validatePublicUrlMock.mockRejectedValueOnce(new Error("non-public DNS address"));
 
     const response = await POST(makeRequest({
@@ -210,21 +210,17 @@ describe("competitive analysis API", () => {
     }));
 
     expect(response.status).toBe(400);
-    expect(validatePublicUrlMock).toHaveBeenCalledTimes(1);
+    // The bounded URL batch starts concurrently, even when one URL fails.
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(2);
+    const deadlineAt = validatePublicUrlMock.mock.calls[0][1].deadlineAt;
+    expect(validatePublicUrlMock.mock.calls[1][1].deadlineAt).toBe(deadlineAt);
     expect(scrapeUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 
   it("rejects an unsafe competitor URL before invoking Firecrawl", async () => {
     validatePublicUrlMock
-      .mockResolvedValueOnce({
-        url: "https://example.com",
-        ok: true,
-        status: 200,
-        statusText: "OK",
-        headers: { get: () => null },
-        text: async () => ""
-      })
+      .mockResolvedValueOnce("https://example.com")
       .mockRejectedValueOnce(new Error("non-public DNS address"));
 
     const response = await POST(makeRequest({
@@ -234,10 +230,18 @@ describe("competitive analysis API", () => {
 
     expect(response.status).toBe(400);
     expect(validatePublicUrlMock).toHaveBeenCalledTimes(2);
+    expect(validatePublicUrlMock).toHaveBeenNthCalledWith(
+      1,
+      "https://example.com",
+      expect.objectContaining({ deadlineAt: expect.any(Number) })
+    );
+    expect(validatePublicUrlMock).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1",
+      expect.objectContaining({ deadlineAt: validatePublicUrlMock.mock.calls[0][1].deadlineAt })
+    );
     const deadlineAt = validatePublicUrlMock.mock.calls[0][1].deadlineAt;
-    expect(validatePublicUrlMock.mock.calls[1][1].deadlineAt).toBe(deadlineAt);
     expect(deadlineAt).toBeGreaterThan(Date.now());
-    expect(validatePublicUrlMock).not.toHaveBeenCalled();
     expect(scrapeUrlMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });

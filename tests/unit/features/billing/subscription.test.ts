@@ -8,4 +8,11 @@ describe("Subscription Architecture tests", () => {
         expect(PLANS["enterprise"].entitlements.maxProjects).toBe("unlimited");
         expect(PLANS["free"].quotas.maxUsers).toBe(1);
     });
+
+    it("pins premium audit entitlement to paid plans only", () => {
+        expect(PLANS.free.entitlements.canRunPremiumAudit).toBe(false);
+        expect(PLANS.professional.entitlements.canRunPremiumAudit).toBe(true);
+        expect(PLANS.business.entitlements.canRunPremiumAudit).toBe(true);
+        expect(PLANS.enterprise.entitlements.canRunPremiumAudit).toBe(true);
+    });
 });
