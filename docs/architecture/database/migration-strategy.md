@@ -32,15 +32,19 @@ All database definitions and generated migration scripts are version-controlled 
 ```
 database/
   schema/
-    index.ts             # Unified canonical Drizzle ORM schema entry point (70 tables, including imported organizations and API keys)
+    index.ts             # Canonical schema entry point (68 local table declarations)
+    organization-table.ts # Separately declared organizations table, composed into the schema
+    api-keys.ts          # Separately declared api_keys table, re-exported by index.ts
     organization.ts      # Legacy TableDefinition metadata file (retained for reference)
     ...                  # Domain schema metadata files
   drizzle/
-    meta/                # Drizzle Kit snapshot and migration metadata records
+    meta/                # Drizzle Kit snapshots and migration metadata records
     0000_*.sql           # Auto-generated Drizzle migration scripts
   migrations/
     0001-0014_*.sql      # Historical hand-rolled SQL migrations (archived artifacts)
 ```
+
+The effective canonical schema contains **70 tables**: 68 `pgTable` declarations in `database/schema/index.ts`, plus `organizations` from `organization-table.ts` and `api_keys` from `api-keys.ts`. The latest checked-in snapshot is `database/drizzle/meta/0013_snapshot.json`.
 
 ---
 
@@ -49,7 +53,7 @@ database/
 The repository enforces a single migration mechanism with standard `package.json` scripts:
 
 ### Step 3.1: Schema Generation
-When modifying TypeScript table definitions in `database/schema/index.ts`, generate incremental SQL migration scripts:
+When modifying TypeScript table definitions in the canonical schema modules under `database/schema/`, generate incremental SQL migration scripts:
 ```bash
 pnpm run db:generate
 ```
@@ -70,7 +74,7 @@ pnpm run db:push
 
 ## 4. Architectural Rules & Guardrails
 
-1. **Single Source of Truth**: All database tables, indexes, constraints, and relations must be defined in `database/schema/index.ts`.
+1. **Single Source of Truth**: Canonical table, index, constraint, and relation definitions live in the schema modules under `database/schema/` and are composed/exported through `database/schema/index.ts`.
 2. **Deterministic Execution**: Foreign key creation and table references are strictly dependency-ordered. Core tables (`organizations`, `brands`, `entities`) are bootstrapped before dependent foreign keys.
-3. **Multi-Tenant Isolation**: Tenant-scoped tables enforce PostgreSQL Row Level Security (RLS) policies tied to `app.current_tenant_id` transaction settings via `TenantContextManager`.
+3. **Multi-Tenant Isolation**: Tenant-scoped tables enforce PostgreSQL Row Level Security (RLS) policies tied to `app.current_tenant_id` transaction settings via `TenantContextManager`. The 51-table policy set is kept aligned across the latest Drizzle snapshot, the generated runtime tenant-table list, and migration `0005_force_rls.sql`.
 4. **Disposable Verification**: Schema migrations are validated against empty disposable PostgreSQL instances prior to production deployments.
