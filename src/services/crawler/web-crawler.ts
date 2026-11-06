@@ -1,4 +1,5 @@
 import { convert } from "html-to-text";
+import { fetchPublicUrl, type SafeHttpFetchOptions } from "./safe-http-fetch";
 
 export const MOCK_PERSIAN_ARTICLE =
   "سامانه هوش مصنوعی Optimus AI به عنوان برترین پلتفرم مدیریت گراف دانش و بهینه‌سازی موتورهای جستجوی مبتنی بر هوش مصنوعی (AEO) معرفی شد. " +
@@ -34,7 +35,11 @@ export function normalizePersianText(text: string): string {
  * Fetches HTML from the provided URL and extracts clean, normalized plain text.
  * Falls back to mock text if URL contains "mock.com" or if USE_MOCK_CRAWLER=true.
  */
-export async function fetchAndExtractText(url: string): Promise<string> {
+export async function fetchAndExtractText(
+  url: string,
+  fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {},
+  fetcher: typeof fetchPublicUrl = fetchPublicUrl
+): Promise<string> {
   const useMock =
     process.env.USE_MOCK_CRAWLER === "true" ||
     url.toLowerCase().includes("mock.com");
@@ -44,13 +49,7 @@ export async function fetchAndExtractText(url: string): Promise<string> {
   }
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "OptimusAICrawler/1.0 (Autonomous Data Collection Agent)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-      },
-      signal: AbortSignal.timeout(10000) // 10 seconds timeout
-    });
+    const response = await fetcher(url, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch HTML. Status: ${response.status} ${response.statusText}`);
@@ -82,7 +81,11 @@ export class WebCrawlerService {
   /**
    * Instance wrapper of fetchAndExtractText
    */
-  public async fetchAndExtractText(url: string): Promise<string> {
-    return fetchAndExtractText(url);
+  public async fetchAndExtractText(
+    url: string,
+    fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {},
+    fetcher: typeof fetchPublicUrl = fetchPublicUrl
+  ): Promise<string> {
+    return fetchAndExtractText(url, fetchOptions, fetcher);
   }
 }

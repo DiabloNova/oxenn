@@ -3,6 +3,7 @@ import { z } from "zod";
 import { firecrawlApp } from "@/lib/firecrawl";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
+import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 
 const requestSchema = z.object({
   url: z.string().url("لطفاً یک آدرس وب‌سایت معتبر وارد کنید").optional().or(z.literal("")),
@@ -31,18 +32,10 @@ export interface ContentStudioResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate Tenant Context
-    const tenantId = req.headers.get("x-tenant-id");
-    const userId = req.headers.get("x-user-id") || "usr-studio-default";
+    // Derive the active user and tenant from the validated server session.
+    const { tenantId, userId } = await authorizeApiRequest(req);
 
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "شناسه مستأجر ارسال نشده است. این ویژگی نیاز به اشتراک فعال دارد." },
-        { status: 401 }
-      );
-    }
-
-    // 2. Parse Request Parameters
+    // Parse request parameters.
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
 
@@ -180,6 +173,8 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("[Content Studio Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای ناشناخته در استودیو محتوا رخ داد.";
     return NextResponse.json(

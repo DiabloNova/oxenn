@@ -6,7 +6,6 @@ import { GlassCard } from "@/components/GlassCard";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/components/AuthProvider";
 import {
   Zap, AlertTriangle, ShieldAlert, CheckCircle,
   Award, RefreshCw, Layers, Layout,
@@ -62,7 +61,6 @@ interface TechnicalAuditData {
 
 export const TechnicalOptimizationPanel: React.FC = () => {
   const { language } = useTheme();
-  const { session } = useAuth();
   const isRtl = language === "fa";
 
   const [url, setUrl] = useState("");
@@ -110,20 +108,24 @@ export const TechnicalOptimizationPanel: React.FC = () => {
     setExpanded(null);
 
     try {
-      const workspaceId = session.user?.workspaceId || "ws-tehran";
       const response = await fetch("/api/v1/optimization/technical", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-id": workspaceId,
-          "x-user-id": session.user?.id || "usr-1001"
         },
         body: JSON.stringify({ url, pagesToAnalyze }),
       });
 
+      if (response.status === 401) {
+        throw new Error(
+          isRtl
+            ? "نشست شما منقضی شده است. لطفاً دوباره وارد حساب شوید."
+            : "Your session has expired. Please sign in again."
+        );
+      }
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.message || "خطایی در انجام پایش فنی وب‌سایت رخ داد.");
+        throw new Error(errJson.message || (isRtl ? "خطایی در انجام پایش فنی وب‌سایت رخ داد." : "Technical analysis failed."));
       }
 
       const resData = await response.json();

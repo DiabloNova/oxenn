@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
 import { getLLMClient } from "@/services/ai/llm-client";
+import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 
 const auditSchema = z.object({
   targetBrandOrEntity: z.string().min(1, "Target brand or entity name must be provided"),
@@ -10,18 +11,10 @@ const auditSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Enforce Tenant Isolation Headers
-    const userId = req.headers.get("x-user-id") || "usr-1001";
-    const tenantId = req.headers.get("x-tenant-id");
+    // Resolve tenant and user only from the validated server session.
+    const { userId, tenantId } = await authorizeApiRequest(req);
 
-    if (!tenantId || tenantId.trim() === "") {
-      return NextResponse.json(
-        { error: "Bad Request", message: "Missing x-tenant-id header context" },
-        { status: 400 }
-      );
-    }
-
-    // 2. Parse and Validate Request Body
+    // Parse and validate request body.
     const body = await req.json();
     const parsed = auditSchema.safeParse(body);
 
@@ -175,6 +168,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(resultPayload);
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("[API AEO Audit Insight Route Error]:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

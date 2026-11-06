@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { analyzeSentiment } from '@/services/ai/sentiment-analysis';
 import { TenantContextManager } from '@/core/database/tenant-context';
+import { authorizationErrorResponse, authorizeApiRequest } from '@/services/auth/authorization';
 
 // Fast input validation schema
 const requestSchema = z.object({
@@ -10,6 +11,7 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const { tenantId, userId } = await authorizeApiRequest(req);
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
 
@@ -23,13 +25,10 @@ export async function POST(req: NextRequest) {
     const { text } = parsed.data;
 
     // Strict Tenant Context Isolation wrapping
-    // Extract tenant details from header/session mock or active parameters
-    const organizationId = req.headers.get('x-tenant-id') || 'tenant-pipeline-a';
-    const userId = req.headers.get('x-user-id') || 'usr-1001';
     const requestId = req.headers.get('x-request-id') || `req-${Date.now()}`;
 
     const sentimentResult = await TenantContextManager.runWithTenantContext(
-      organizationId,
+      tenantId,
       userId,
       requestId,
       async () => {
@@ -39,6 +38,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ sentiment: sentimentResult });
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('[API Sentiment Route Error]:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

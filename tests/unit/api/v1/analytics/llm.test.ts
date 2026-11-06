@@ -1,9 +1,44 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { POST } from "@/app/api/v1/analytics/llm/route";
 import { NextRequest } from "next/server";
 
+const {
+  authorizeApiRequestMock,
+  runWithTenantContextMock,
+  generateTextMock
+} = vi.hoisted(() => ({
+  authorizeApiRequestMock: vi.fn(),
+  runWithTenantContextMock: vi.fn(),
+  generateTextMock: vi.fn()
+}));
+
+vi.mock("@/services/auth/authorization", async () => {
+  const actual = await vi.importActual<typeof import("@/services/auth/authorization")>("@/services/auth/authorization");
+  return { ...actual, authorizeApiRequest: authorizeApiRequestMock };
+});
+
+vi.mock("@/core/database/tenant-context", () => ({
+  TenantContextManager: { runWithTenantContext: runWithTenantContextMock }
+}));
+vi.mock("@/services/ai/llm-client", () => ({
+  getLLMClient: () => ({ generateText: generateTextMock })
+}));
+
+import { AuthorizationError } from "@/services/auth/authorization";
+
 describe("DIRECT REGRESSION TEST: src/app/api/v1/analytics/llm/route.ts", () => {
-  it("Test 1: Missing x-tenant-id -> 401 Unauthorized (Authorization Boundary)", async () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authorizeApiRequestMock.mockResolvedValue({ tenantId: "tenant-test", userId: "user-test" });
+    runWithTenantContextMock.mockImplementation(
+      async (_tenantId: string, _userId: string, _requestId: string, callback: () => Promise<unknown>) =>
+        callback()
+    );
+    generateTextMock.mockResolvedValue("not-json");
+  });
+
+  it("rejects a request when no authenticated server session exists", async () => {
+    authorizeApiRequestMock.mockRejectedValue(new AuthorizationError(401, "Unauthorized"));
     const req = new NextRequest("http://localhost:3000/api/v1/analytics/llm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -24,11 +59,7 @@ describe("DIRECT REGRESSION TEST: src/app/api/v1/analytics/llm/route.ts", () => 
   it("rejects oversized query arrays before per-item validation or model calls", async () => {
     const req = new NextRequest("http://localhost:3000/api/v1/analytics/llm", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-tenant-id": "00000000-0000-0000-0000-000000000001",
-        "x-user-id": "usr-test-123",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         brandName: "Rasha Gostar",
         competitorNames: ["Digikala"],
@@ -45,6 +76,7 @@ describe("DIRECT REGRESSION TEST: src/app/api/v1/analytics/llm/route.ts", () => 
   });
 
   it("Test 2: Invalid / unparseable LLM output -> Fail Closed HTTP 500 (No Math.random / synthetic fallback)", async () => {
+    generateTextMock.mockResolvedValue("not-json");
     const req = new NextRequest("http://localhost:3000/api/v1/analytics/llm", {
       method: "POST",
       headers: {
@@ -66,5 +98,12 @@ describe("DIRECT REGRESSION TEST: src/app/api/v1/analytics/llm/route.ts", () => 
     expect(body.error).toBe("Internal Server Error");
     expect(body.shareOfVoice).toBeUndefined();
     expect(body.sentimentScore).toBeUndefined();
+    expect(runWithTenantContextMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "user-test",
+      expect.any(String),
+      expect.any(Function)
+    );
+    expect(generateTextMock).toHaveBeenCalledTimes(1);
   });
 });

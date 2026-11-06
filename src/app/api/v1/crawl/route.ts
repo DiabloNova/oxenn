@@ -6,6 +6,8 @@ import { CrawlError } from "@/features/acquisition/domain/errors";
 import { CrawlOrchestrator } from "@/features/acquisition/application/orchestrator";
 import { CrawlJobRepository } from "@/features/acquisition/infrastructure/persistence/postgres";
 import { getSession } from "@/services/auth/session";
+import { subscriptionService } from "@/features/billing/services/subscription-service";
+import { getCrawlerRedirectPolicy } from "@/services/crawler/redirect-policy";
 
 const requestSchema = z.object({
   requestedUrl: z.string().min(1),
@@ -15,7 +17,7 @@ const requestSchema = z.object({
       maxDepth: z.number().int().optional(),
       maxDurationMs: z.number().int().optional(),
       maxResponseBytes: z.number().int().optional(),
-      maxRedirects: z.number().int().optional(),
+      maxRedirects: z.number().int().min(0).optional(),
       maxConcurrency: z.number().int().optional(),
       requestTimeoutMs: z.number().int().optional(),
       connectTimeoutMs: z.number().int().optional(),
@@ -97,17 +99,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       identity.tenantId,
       identity.userId,
       requestId,
-      () =>
-        orchestrator.submit(
+      async () => {
+        const subscription = await subscriptionService.getEffectiveSubscription();
+        const redirectPolicy = getCrawlerRedirectPolicy(subscription.effectivePlan.id);
+        return orchestrator.submit(
           identity.tenantId,
           body.data.requestedUrl,
-          body.data.policy ?? {},
+          {
+            ...(body.data.policy ?? {}),
+            // The plan limit is a ceiling; a caller may request fewer redirects.
+            maxRedirects: redirectPolicy.maxRedirects === null
+              ? body.data.policy?.maxRedirects ?? null
+              : Math.min(
+                  body.data.policy?.maxRedirects ?? redirectPolicy.maxRedirects,
+                  redirectPolicy.maxRedirects
+                )
+          },
           body.data.priority ?? 0,
           requestId,
           body.data.correlationId,
           body.data.traceId,
           body.data.bypassCache ?? false
-        )
+        );
+      }
     );
     return NextResponse.json(
       {

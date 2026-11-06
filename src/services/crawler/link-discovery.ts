@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { fetchPublicUrl, type SafeHttpFetchOptions } from "./safe-http-fetch";
 
 /**
  * Parses the HTML of a seed URL, extracts links, resolves relative paths,
@@ -7,7 +8,9 @@ import * as cheerio from "cheerio";
  */
 export async function extractSeedLinks(
   seedUrl: string,
-  maxLinks: number = 5
+  maxLinks: number = 5,
+  fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {},
+  fetcher: typeof fetchPublicUrl = fetchPublicUrl
 ): Promise<string[]> {
   const useMock =
     process.env.USE_MOCK_CRAWLER === "true" ||
@@ -32,13 +35,7 @@ export async function extractSeedLinks(
     const seedParsed = new URL(seedUrl);
     const seedHostname = seedParsed.hostname.toLowerCase();
 
-    const response = await fetch(seedUrl, {
-      headers: {
-        "User-Agent": "OptimusAICrawler/1.0 (Autonomous Data Collection Agent)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-      },
-      signal: AbortSignal.timeout(10000) // 10 seconds timeout
-    });
+    const response = await fetcher(seedUrl, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch seed URL. Status: ${response.status} ${response.statusText}`);
@@ -84,7 +81,12 @@ export class LinkDiscoveryService {
   /**
    * Instance wrapper of extractSeedLinks
    */
-  public async extractSeedLinks(url: string, maxLinks: number = 5): Promise<string[]> {
-    return extractSeedLinks(url, maxLinks);
+  public async extractSeedLinks(
+    url: string,
+    maxLinks: number = 5,
+    fetchOptions: Pick<SafeHttpFetchOptions, "maxRedirects" | "maxRedirectDurationMs"> = {},
+    fetcher: typeof fetchPublicUrl = fetchPublicUrl
+  ): Promise<string[]> {
+    return extractSeedLinks(url, maxLinks, fetchOptions, fetcher);
   }
 }

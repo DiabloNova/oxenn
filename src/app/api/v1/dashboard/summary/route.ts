@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dashboardHomeService } from "@/services/dashboard-home";
-import { authorizeApiRequest } from "@/services/auth/authorization";
+import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 
 export async function GET(req: NextRequest) {
   try {
     // 1. Authorize API Request, resolving secure server context
-    const context = await authorizeApiRequest(req);
-    if (!context) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "شناسه کاربری نامعتبر است. لطفاً مجدداً وارد شوید." },
-        { status: 401 }
-      );
-    }
+    await authorizeApiRequest(req);
 
     const { searchParams } = new URL(req.url);
     const locale = (searchParams.get("locale") as "en" | "fa") || "fa";
@@ -21,6 +15,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("[Dashboard Summary API Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای ناشناخته در دریافت اطلاعات داشبورد.";
     return NextResponse.json(

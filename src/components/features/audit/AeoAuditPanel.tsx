@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/components/AuthProvider";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -54,7 +53,6 @@ interface RadarData {
 
 export const AeoAuditPanel: React.FC = () => {
   const { language, direction } = useTheme();
-  const { session } = useAuth();
   const isRtl = language === "fa";
 
   const [targetBrand, setTargetBrand] = useState("");
@@ -94,7 +92,8 @@ export const AeoAuditPanel: React.FC = () => {
     categoryStructure: isRtl ? "ساختار" : "Structure",
     categoryReputation: isRtl ? "اعتبار" : "Reputation",
     validationError: isRtl ? "لطفاً نام برند مورد نظر را وارد نمایید." : "Please enter a brand or company name to audit.",
-    apiError: isRtl ? "خطا در بازیابی اطلاعات تحلیل. مطمئن شوید دیتابیس فعال است." : "Failed to retrieve semantic audit payload. Check database connectivity.",
+    apiError: isRtl ? "خطا در بازیابی اطلاعات تحلیل. لطفاً اتصال را بررسی کنید." : "Failed to retrieve semantic audit payload.",
+    sessionExpiredError: isRtl ? "نشست شما منقضی شده است. لطفاً دوباره وارد حساب شوید." : "Your session has expired. Please sign in again.",
     emptyResultTitle: isRtl ? "درگاه آزمایش سئو معنایی" : "Semantic SEO Diagnostic Center",
     emptyResultDesc: isRtl
       ? "برای ارزیابی و استخراج اتوماتیک نقشه بهینه‌سازی، نام برند مورد نظر را جستجو کنید."
@@ -119,18 +118,18 @@ export const AeoAuditPanel: React.FC = () => {
 
     startTransition(async () => {
       try {
-        const workspaceId = session.user?.workspaceId || "ws-tehran";
 
         const res = await fetch("/api/v1/audit/aeo-insight", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-id": workspaceId,
-            "x-user-id": session.user?.id || "usr-1001",
           },
           body: JSON.stringify({ targetBrandOrEntity: trimmed })
         });
 
+        if (res.status === 401) {
+          throw new Error(strings.sessionExpiredError);
+        }
         if (!res.ok) {
           throw new Error(strings.apiError);
         }

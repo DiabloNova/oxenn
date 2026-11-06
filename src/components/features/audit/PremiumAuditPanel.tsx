@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/components/AuthProvider";
 import { PremiumAuditResponse } from "@/app/api/v1/audit/premium/route";
 import {
   Sparkles,
@@ -22,7 +21,6 @@ import {
 
 export const PremiumAuditPanel: React.FC = () => {
   const { language, direction } = useTheme();
-  const { session } = useAuth();
 
   const isRtl = language === "fa";
 
@@ -145,14 +143,11 @@ export const PremiumAuditPanel: React.FC = () => {
 
     startTransition(async () => {
       try {
-        const workspaceId = session?.user?.workspaceId || "ws-tehran";
 
         const response = await fetch("/api/v1/audit/premium", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-id": workspaceId,
-            "x-user-id": session?.user?.id || "usr-premium-default",
           },
           body: JSON.stringify({ url: trimmed, depth }),
         });

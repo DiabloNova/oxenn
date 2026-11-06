@@ -72,6 +72,8 @@ export async function createSession(user: User): Promise<void> {
 
 /**
  * Parses and verifies the session token from the cookie, checking against the database.
+ * Infrastructure failures remain errors (so callers can return 500), but their
+ * underlying details are never exposed to API clients.
  */
 export async function getSession(): Promise<Session | null> {
   try {
@@ -104,6 +106,9 @@ export async function getSession(): Promise<Session | null> {
     });
 
     if (!sessionData) return null;
+    // Fail closed if a session was revoked or superseded, even if a query/mock
+    // unexpectedly returns such a row.
+    if (sessionData.revokedAt || sessionData.replacedBy) return null;
     if (!sessionData.role) return null; // No active membership for the workspace
 
     return {
@@ -117,8 +122,8 @@ export async function getSession(): Promise<Session | null> {
       expiresAt: sessionData.expiresAt.toISOString(),
       status: "authenticated",
     };
-  } catch (err) {
-    return null;
+  } catch {
+    throw new Error("Unable to retrieve session");
   }
 }
 

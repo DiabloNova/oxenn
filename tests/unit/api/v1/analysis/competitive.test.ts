@@ -1,0 +1,279 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
+
+const {
+  authorizeApiRequestMock,
+  runWithTenantContextMock,
+  validatePublicUrlMock,
+  scrapeUrlMock,
+  generateTextMock,
+  queryMock,
+  findBrandMock,
+  findCompetitorMock,
+  saveCompetitorMock
+} = vi.hoisted(() => ({
+  authorizeApiRequestMock: vi.fn(),
+  runWithTenantContextMock: vi.fn(),
+  validatePublicUrlMock: vi.fn(),
+  scrapeUrlMock: vi.fn(),
+  generateTextMock: vi.fn(),
+  queryMock: vi.fn(),
+  findBrandMock: vi.fn(),
+  findCompetitorMock: vi.fn(),
+  saveCompetitorMock: vi.fn()
+}));
+
+vi.mock("@/services/auth/authorization", async () => {
+  const actual = await vi.importActual<typeof import("@/services/auth/authorization")>(
+    "@/services/auth/authorization"
+  );
+  return { ...actual, authorizeApiRequest: authorizeApiRequestMock };
+});
+vi.mock("@/core/database/tenant-context", () => ({
+  TenantContextManager: { runWithTenantContext: runWithTenantContextMock }
+}));
+vi.mock("@/services/crawler/safe-http-fetch", async () => {
+  const actual = await vi.importActual<typeof import("@/services/crawler/safe-http-fetch")>(
+    "@/services/crawler/safe-http-fetch"
+  );
+  return { ...actual, validatePublicUrl: validatePublicUrlMock };
+});
+vi.mock("@/lib/firecrawl", () => ({
+  firecrawlApp: { scrapeUrl: scrapeUrlMock }
+}));
+vi.mock("@/services/ai/llm-client", () => ({
+  getLLMClient: () => ({ generateText: generateTextMock })
+}));
+vi.mock("@/features/admin/infrastructure/persistence/postgres", () => ({
+  PostgresClient: { getInstance: () => ({ query: queryMock }) }
+}));
+vi.mock("@/features/ai-intelligence/repositories", () => {
+  class BrandRepository {
+    findByOrganizationId = findBrandMock;
+  }
+  class CompetitorRepository {
+    findByDomain = findCompetitorMock;
+    save = saveCompetitorMock;
+  }
+  class EmptyRepository {}
+  return {
+    BrandRepository,
+    CompetitorRepository,
+    CompetitiveSeoFindingRepository: EmptyRepository,
+    VisibilityScoreRepository: EmptyRepository,
+    CitationIntelligenceRepository: EmptyRepository,
+    PromptIntelligenceRepository: EmptyRepository,
+    BrandIntelligenceRepository: EmptyRepository,
+    HistoricalMetricRepository: EmptyRepository
+  };
+});
+vi.mock("@/features/ai-intelligence/services", () => ({
+  CompetitiveRadarService: class {
+    generateRadarSnapshot = vi.fn().mockResolvedValue({});
+    benchmark = vi.fn().mockResolvedValue({ benchmarks: [] });
+    generateInsights = vi.fn().mockResolvedValue([]);
+    getCompetitiveScore = vi.fn().mockResolvedValue({});
+    compareHistorical = vi.fn().mockResolvedValue({});
+  }
+}));
+
+import { POST } from "@/app/api/v1/analysis/competitive/route";
+import {
+  CrawlerFetchError,
+  CrawlerUrlPolicyError,
+} from "@/services/crawler/safe-http-fetch";
+
+function makeRequest(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/v1/analysis/competitive", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+}
+
+describe("competitive analysis API", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.FIRECRAWL_API_KEY = "fc-test-key";
+    authorizeApiRequestMock.mockResolvedValue({
+      tenantId: "tenant-test",
+      userId: "user-test"
+    });
+    runWithTenantContextMock.mockImplementation(
+      async (_tenantId: string, _userId: string, _requestId: string, callback: () => Promise<unknown>) =>
+        callback()
+    );
+    validatePublicUrlMock.mockImplementation(async (url: string) =>
+      url === "https://origin.example" ? "https://validated.example" : url
+    );
+    scrapeUrlMock.mockResolvedValue({ markdown: "# Competitor analysis content" });
+    generateTextMock.mockResolvedValue(JSON.stringify({
+      competitiveAdvantages: [{
+        category: "سئو فنی",
+        advantage: "ساختار محتوایی منسجم",
+        impact: "high",
+        howToLeverage: "توسعه صفحات هدف"
+      }],
+      gapAnalysis: [{
+        category: "سرعت",
+        gap: "سرعت پایین‌تر",
+        severity: "warning",
+        recommendedAction: "بهینه‌سازی",
+        estimatedEffort: "medium"
+      }],
+      strategicOpportunities: [{
+        opportunity: "توسعه محتوا",
+        potential: "high",
+        timeToImpact: "۳ ماه",
+        actionPlan: "برنامه محتوایی"
+      }]
+    }));
+    queryMock.mockResolvedValue({ rows: [], rowCount: 1 });
+    findBrandMock.mockResolvedValue({ data: [] });
+    findCompetitorMock.mockResolvedValue(null);
+    saveCompetitorMock.mockImplementation(async (entry: { id: string }) => ({ id: entry.id }));
+  });
+
+  it("preserves the competitive report without bypassing the SSRF-safe fetch", async () => {
+    const response = await POST(makeRequest({
+      userUrl: "https://origin.example",
+      competitorUrls: ["https://competitor.example"],
+      analysisDepth: "standard"
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.overallScore).toBeGreaterThanOrEqual(0);
+    expect(body.overallScore).toBeLessThanOrEqual(100);
+    expect(["leader", "challenger", "follower", "niche"]).toContain(body.marketPosition);
+    expect(body.competitorComparison).toHaveLength(1);
+    expect(body.competitorComparison[0]).toEqual(expect.objectContaining({
+      competitorUrl: "https://competitor.example",
+      competitorName: expect.any(String),
+      overallScore: expect.any(Number),
+      winProbability: expect.any(Number)
+    }));
+    expect(body.competitiveAdvantages[0].advantage).toContain("ساختار محتوایی");
+    expect(body.gapAnalysis[0].recommendedAction).toContain("بهینه‌سازی");
+    expect(body.strategicOpportunities[0].actionPlan).toContain("برنامه");
+    expect(runWithTenantContextMock).toHaveBeenCalledWith(
+      "tenant-test",
+      "user-test",
+      expect.any(String),
+      expect.any(Function)
+    );
+    expect(saveCompetitorMock).toHaveBeenCalledWith(expect.objectContaining({
+      organizationId: "tenant-test",
+      domain: "competitor.example"
+    }));
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(2);
+    const deadlineAt = validatePublicUrlMock.mock.calls[0][1].deadlineAt;
+    expect(validatePublicUrlMock.mock.calls[1][1].deadlineAt).toBe(deadlineAt);
+    expect(deadlineAt).toBeGreaterThan(Date.now());
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
+    expect(generateTextMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("validates all six URLs under one shared aggregate deadline", async () => {
+    const response = await POST(makeRequest({
+      userUrl: "https://origin.example",
+      competitorUrls: [
+        "https://competitor-1.example",
+        "https://competitor-2.example",
+        "https://competitor-3.example",
+        "https://competitor-4.example",
+        "https://competitor-5.example"
+      ]
+    }));
+
+    expect(response.status).toBe(200);
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(6);
+    const deadlines = validatePublicUrlMock.mock.calls.map(([, options]) => options.deadlineAt);
+    expect(new Set(deadlines).size).toBe(1);
+    expect(deadlines[0]).toBeGreaterThan(Date.now());
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty competitorUrls array with HTTP 400", async () => {
+    const response = await POST(makeRequest({
+      userUrl: "https://example.com",
+      competitorUrls: []
+    }));
+
+    expect(response.status).toBe(400);
+    expect(validatePublicUrlMock).not.toHaveBeenCalled();
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
+  });
+
+  it("returns HTTP 400 for malformed JSON", async () => {
+    const request = new NextRequest("http://localhost/api/v1/analysis/competitive", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{"
+    });
+    const response = await POST(request);
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).message).toContain("valid JSON");
+    expect(validatePublicUrlMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unsafe primary URL without starting analysis work", async () => {
+    validatePublicUrlMock.mockRejectedValueOnce(new CrawlerUrlPolicyError("non-public DNS address"));
+
+    const response = await POST(makeRequest({
+      userUrl: "http://127.0.0.1",
+      competitorUrls: ["https://competitor.example"]
+    }));
+
+    expect(response.status).toBe(400);
+    // The bounded URL batch starts concurrently, even when one URL fails.
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(2);
+    const deadlineAt = validatePublicUrlMock.mock.calls[0][1].deadlineAt;
+    expect(validatePublicUrlMock.mock.calls[1][1].deadlineAt).toBe(deadlineAt);
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
+    expect(generateTextMock).not.toHaveBeenCalled();
+  });
+
+  it("returns HTTP 502 when public DNS validation is temporarily unavailable", async () => {
+    validatePublicUrlMock.mockRejectedValueOnce(new CrawlerFetchError("Crawler DNS lookup timed out."));
+
+    const response = await POST(makeRequest({
+      userUrl: "https://example.com",
+      competitorUrls: ["https://competitor.example"]
+    }));
+
+    expect(response.status).toBe(502);
+    expect((await response.json()).error).toBe("Upstream unavailable");
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
+    expect(generateTextMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unsafe competitor URL before invoking Firecrawl", async () => {
+    validatePublicUrlMock
+      .mockResolvedValueOnce("https://example.com")
+      .mockRejectedValueOnce(new CrawlerUrlPolicyError("non-public DNS address"));
+
+    const response = await POST(makeRequest({
+      userUrl: "https://example.com",
+      competitorUrls: ["http://127.0.0.1"]
+    }));
+
+    expect(response.status).toBe(400);
+    expect(validatePublicUrlMock).toHaveBeenCalledTimes(2);
+    expect(validatePublicUrlMock).toHaveBeenNthCalledWith(
+      1,
+      "https://example.com",
+      expect.objectContaining({ deadlineAt: expect.any(Number) })
+    );
+    expect(validatePublicUrlMock).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1",
+      expect.objectContaining({ deadlineAt: validatePublicUrlMock.mock.calls[0][1].deadlineAt })
+    );
+    const deadlineAt = validatePublicUrlMock.mock.calls[0][1].deadlineAt;
+    expect(deadlineAt).toBeGreaterThan(Date.now());
+    expect(scrapeUrlMock).not.toHaveBeenCalled();
+    expect(generateTextMock).not.toHaveBeenCalled();
+  });
+});

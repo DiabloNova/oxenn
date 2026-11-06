@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/components/AuthProvider";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { LlmAnalyticsResponse } from "@/app/api/v1/analytics/llm/route";
 import {
@@ -26,7 +25,6 @@ import {
 
 export const LlmAnalyticsPanel: React.FC = () => {
   const { language } = useTheme();
-  const { session } = useAuth();
   const isRtl = language === "fa";
 
   // Inputs
@@ -167,14 +165,11 @@ export const LlmAnalyticsPanel: React.FC = () => {
 
     startTransition(async () => {
       try {
-        const workspaceId = session?.user?.workspaceId || "ws-tehran";
 
         const response = await fetch("/api/v1/analytics/llm", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-id": workspaceId,
-            "x-user-id": session?.user?.id || "usr-analytics-default",
           },
           body: JSON.stringify({
             brandName,

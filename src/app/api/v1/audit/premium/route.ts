@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { firecrawlApp } from "@/lib/firecrawl";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
+import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
+import { subscriptionService } from "@/features/billing/services/subscription-service";
+import { crawlPublicSite } from "@/services/crawler/safe-site-crawler";
+import { getCrawlerRedirectPolicy } from "@/services/crawler/redirect-policy";
+import {
+  CrawlerFetchError,
+  CrawlerLimitError,
+  CrawlerResponseTooLargeError,
+  CrawlerUnsupportedEncodingError,
+  CrawlerUrlPolicyError,
+} from "@/services/crawler/safe-http-fetch";
 
 // Validator schema
 const requestSchema = z.object({
@@ -41,18 +51,10 @@ export interface PremiumAuditResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate Tenant (Paid feature check)
-    const tenantId = req.headers.get("x-tenant-id");
-    const userId = req.headers.get("x-user-id") || "usr-premium-default";
+    // Authenticate the current server session and derive its active workspace.
+    const { tenantId, userId } = await authorizeApiRequest(req);
 
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "شناسه مستأجر معتبر ارسال نشده است. این ویژگی نیاز به اشتراک فعال دارد." },
-        { status: 401 }
-      );
-    }
-
-    // 2. Parse and Validate Request
+    // Parse and validate request.
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
 
@@ -68,69 +70,48 @@ export async function POST(req: NextRequest) {
 
     // Run within Tenant Context
     return await TenantContextManager.runWithTenantContext(tenantId, userId, "req-premium-audit", async () => {
-      const apiKey = process.env.FIRECRAWL_API_KEY || "";
-      const isMockMode = !apiKey || apiKey === "" || apiKey.includes("your-api-key") || apiKey.startsWith("fc-your-");
+      const subscription = await subscriptionService.getEffectiveSubscription();
+      if (!subscription.effectivePlan.entitlements.canRunPremiumAudit) {
+        return NextResponse.json(
+          { error: "Forbidden", message: "این قابلیت به اشتراک پولی نیاز دارد." },
+          { status: 403 }
+        );
+      }
+      const redirectPolicy = getCrawlerRedirectPolicy(subscription.effectivePlan.id);
 
-      let crawlResults: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }> = [];
-
-      // 3. Firecrawl entire site crawl simulation/execution
-      if (isMockMode) {
-        console.log(`[Premium SEO Audit API] Mock/Simulation mode for crawling URL: ${url}`);
-        // Simulate a crawl of a few pages
-        crawlResults = [
-          {
-            url: `${url}/`,
-            markdown: "# Welcome to Optimus AI\nWe provide advanced semantic search and AI optimization. Digikala and Snapp are our competitors.",
-            metadata: { title: "صفحه اصلی - خانه خلاق هوش مصنوعی", description: "پلتفرم پیشرفته تحلیل هوشمند سئو معنایی" }
-          },
-          {
-            url: `${url}/blog`,
-            markdown: "# مقالات و بینش‌ها\nچگونه ساختار گراف دانش را در وب‌سایت بهبود دهیم؟ لینک‌سازی داخلی نقش حیاتی دارد.",
-            metadata: { title: "وبلاگ - مقالات آموزشی سئو معنایی", description: "آموزش گام به گام بهینه‌سازی معنایی" }
-          },
-          {
-            url: `${url}/about`,
-            markdown: "# درباره ما\nتیم متخصص سئو فنی و گراف دانش.",
-            metadata: { title: "درباره ما - پلتفرم هوشمند", description: "" } // Missing description to trigger issue
-          }
-        ];
-      } else {
-        try {
-          // Attempt actual crawl with firecrawl
-          // Since crawlUrl initiates a crawl and returns a crawl job status or document list:
-          // Under firecrawl-js SDK v4+, crawlUrl returns job details. Let's use scrapeUrl or safely handle mock if needed.
-          // Note: To avoid long-running timeouts (>30s) or job waiting in serverless functions, we simulate or run in parallel.
-          // If firecrawlApp.crawlUrl is used, let's call it and await results.
-          const crawlResponse = await firecrawlApp.crawlUrl(url, {
-            limit: depth,
-            scrapeOptions: {
-              formats: ["markdown"]
-            }
-          });
-
-          if (crawlResponse && 'success' in crawlResponse && crawlResponse.success && 'data' in crawlResponse) {
-            crawlResults = (crawlResponse as unknown as { data: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }> }).data || [];
-          } else {
-            // Fallback to simulation if crawl API response is incomplete or pending
-            crawlResults = [
-              {
-                url: `${url}/`,
-                markdown: "# Home Page\nSemantic graph is important.",
-                metadata: { title: "صفحه اصلی" }
-              }
-            ];
-          }
-        } catch (crawlErr: unknown) {
-          console.error("[Firecrawl Crawl Error]:", crawlErr);
-          // Graceful fallback to rich mock data to avoid breaking the paid premium user experience
-          crawlResults = [
-            {
-              url: `${url}/`,
-              markdown: "# Home Page\nSemantic graph is important.",
-              metadata: { title: "صفحه اصلی" }
-            }
-          ];
+      let crawlResults: Array<{ url: string; markdown?: string; metadata?: { title?: string; description?: string } }>;
+      let safeUrl: string;
+      try {
+        crawlResults = await crawlPublicSite(url, { maxPages: depth, ...redirectPolicy });
+        safeUrl = crawlResults[0].url;
+      } catch (crawlError) {
+        console.warn("[Premium SEO Audit API] Safe crawl failed:", crawlError);
+        if (crawlError instanceof CrawlerUrlPolicyError) {
+          return NextResponse.json(
+            { error: "Bad Request", message: "آدرس باید یک مقصد عمومی و مجاز باشد." },
+            { status: 400 }
+          );
         }
+        if (
+          crawlError instanceof CrawlerLimitError ||
+          crawlError instanceof CrawlerResponseTooLargeError ||
+          crawlError instanceof CrawlerUnsupportedEncodingError
+        ) {
+          return NextResponse.json(
+            { error: "Unprocessable Entity", message: "پاسخ وب‌سایت از محدودیت‌های پشتیبانی‌شدهٔ خزش فراتر است." },
+            { status: 422 }
+          );
+        }
+        if (crawlError instanceof CrawlerFetchError) {
+          return NextResponse.json(
+            { error: "Bad Gateway", message: "وب‌سایت مقصد موقتاً در دسترس نیست؛ لطفاً دوباره تلاش کنید." },
+            { status: 502 }
+          );
+        }
+        return NextResponse.json(
+          { error: "Bad Gateway", message: "خزش امن وب‌سایت مقصد ناموفق بود." },
+          { status: 502 }
+        );
       }
 
       const pagesAnalyzed = Math.min(crawlResults.length || 1, depth);
@@ -141,7 +122,7 @@ export async function POST(req: NextRequest) {
 
       const prompt = `
         You are an expert SEO Specialist.
-        Analyze the following crawled pages markdown data from website "${url}":
+        Analyze the following crawled pages markdown data from website "${safeUrl}":
         ${crawlResults.map(p => `Page: ${p.url}\nMetadata: ${JSON.stringify(p.metadata)}\nContent Snippet: ${p.markdown?.substring(0, 500)}\n---`).join("\n")}
 
         Generate a premium semantic gap analysis and content recommendations in professional fluent Persian.
@@ -193,7 +174,7 @@ export async function POST(req: NextRequest) {
 
       // Technical Health Metrics
       let technicalHealth = 90;
-      const isHttps = url.toLowerCase().startsWith("https://");
+      const isHttps = safeUrl.toLowerCase().startsWith("https://");
       if (!isHttps) {
         technicalHealth -= 30;
       }
@@ -272,7 +253,7 @@ export async function POST(req: NextRequest) {
         await dbClient.query(sql, [
           id,
           tenantId,
-          url,
+          safeUrl,
           score,
           grade,
           pagesAnalyzed,
@@ -307,6 +288,8 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("[Premium SEO Audit Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای ناشناخته در ارزیابی پریمیوم رخ داد.";
     return NextResponse.json(

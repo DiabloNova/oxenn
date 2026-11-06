@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireSession, getSession } from "./session";
 import { UserRole } from "@/types/auth";
 import { TenantContextManager } from "@/core/database/tenant-context";
@@ -70,7 +70,6 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
   }
 
   // Authoritatively fetch role from database instead of trusting session snapshot
-  const roleCheckWorkspace = targetWorkspaceId || session.user.workspaceId;
   const dbRole = await TenantContextManager.runWithSystemContext(session.user!.id, "sys-auth-role-check", async () => {
       const client = TenantContextManager.getDbClient();
       if (!client) {
@@ -119,47 +118,34 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
 }
 
 /**
- * Validates and resolves the authoritative user and tenant identity for API routes.
- * If an active signed server session is present, its identity overrides all client-provided headers.
- * Otherwise, falls closed if neither valid session nor proper headers are present.
+ * Resolves API identity exclusively from the server-validated, database-backed
+ * session cookie. Caller-supplied identity headers are never authentication.
+ *
+ * Integrations that need non-cookie authentication must use a separately
+ * designed, cryptographically verified API credential instead of user headers.
  */
-export async function authorizeApiRequest(req: NextRequest): Promise<{ userId: string; tenantId: string }> {
+export async function authorizeApiRequest(_req: NextRequest): Promise<{ userId: string; tenantId: string }> {
+  void _req;
   const session = await getSession();
 
-  if (session && session.user) {
-    return {
-      userId: session.user!.id,
-      tenantId: session.user.workspaceId
-    };
-  }
-
-  // Fallback to headers for developer API integration, with validation
-  const headerUserId = req.headers.get("x-user-id");
-  const headerTenantId = req.headers.get("x-tenant-id");
-
-  if (!headerUserId || headerUserId.trim() === "" || !headerTenantId || headerTenantId.trim() === "") {
-    throw new AuthorizationError(401, "Unauthorized: Valid session or API headers required.");
-  }
-
-  // To keep developer API integrations secure, we verify the user belongs to the requested header tenant
-  const hasAccess = await TenantContextManager.runWithSystemContext(headerUserId, "sys-auth-api-check", async () => {
-      const client = TenantContextManager.getDbClient();
-      if (!client) {
-          throw new Error("Failed to get DB client in system context");
-      }
-      const { rows } = await client.query(
-          "SELECT 1 FROM organization_members m JOIN organizations o ON m.organization_id = o.id WHERE m.user_id = $1 AND m.organization_id = $2 AND o.deleted_at IS NULL",
-          [headerUserId, headerTenantId]
-      );
-      return rows.length > 0;
-  });
-
-  if (!hasAccess) {
-      throw new AuthorizationError(403, "Forbidden: User is not a member of the requested workspace.");
+  if (!session?.user) {
+    throw new AuthorizationError(401, "Unauthorized: A valid authenticated session is required.");
   }
 
   return {
-    userId: headerUserId,
-    tenantId: headerTenantId
+    userId: session.user.id,
+    tenantId: session.user.workspaceId,
   };
+}
+
+
+/** Convert a known authorization failure into a safe HTTP response. */
+export function authorizationErrorResponse(error: unknown): NextResponse | null {
+  if (!(error instanceof AuthorizationError)) return null;
+
+  const unauthorized = error.statusCode === 401;
+  return NextResponse.json(
+    { error: unauthorized ? "Unauthorized" : "Forbidden", message: error.message },
+    { status: error.statusCode }
+  );
 }

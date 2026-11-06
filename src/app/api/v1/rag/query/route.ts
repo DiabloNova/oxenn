@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { answerQuestion } from "@/services/rag/query-service";
 import { TenantContextManager } from "@/core/database/tenant-context";
-import { authorizeApiRequest } from "@/services/auth/authorization";
+import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 
 // Input validation schema
 const requestSchema = z.object({
@@ -12,19 +12,8 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authoritative API identity resolution (session overrides client headers)
-    let userId: string;
-    let tenantId: string;
-    try {
-      const auth = await authorizeApiRequest(req);
-      userId = auth.userId;
-      tenantId = auth.tenantId;
-    } catch (err: unknown) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: err instanceof Error ? err.message : "Authentication failed" },
-        { status: (err as { statusCode?: number }).statusCode || 401 }
-      );
-    }
+    // Resolve identity from the validated server session; caller headers are ignored.
+    const { userId, tenantId } = await authorizeApiRequest(req);
 
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
@@ -52,6 +41,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(ragResponse);
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("[API RAG Query Route Error]:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

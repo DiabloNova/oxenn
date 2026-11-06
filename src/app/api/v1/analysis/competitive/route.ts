@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { firecrawlApp } from "@/lib/firecrawl";
+import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
+import {
+  CrawlerUrlPolicyError,
+  validatePublicUrl,
+} from "@/services/crawler/safe-http-fetch";
 import { getLLMClient } from "@/services/ai/llm-client";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
@@ -18,6 +22,8 @@ import { CompetitiveRadarService } from "@/features/ai-intelligence/services";
 import { CompetitiveRadarSnapshot, CompetitiveInsight } from "@/features/ai-intelligence/domain/types";
 
 // Validate request schema
+const URL_VALIDATION_BUDGET_MS = 8_000;
+
 const competitiveRequestSchema = z.object({
   userUrl: z.string().url("لطفاً آدرس وب‌سایت خود را به صورت صحیح وارد کنید."),
   competitorUrls: z.array(z.string().url("لطفاً آدرس‌های معتبر برای رقبا وارد کنید.")).min(1, "حداقل وارد کردن یک رقیب الزامی است.").max(5, "حداکثر ۵ رقیب قابل تحلیل است."),
@@ -77,31 +83,55 @@ export interface CompetitiveAnalysisResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Enforce Tenant Isolation Context Headers
-    const userId = req.headers.get("x-user-id") || "usr-1001";
-    const tenantId = req.headers.get("x-tenant-id");
-
-    if (!tenantId || tenantId.trim() === "") {
-      return NextResponse.json(
-        { error: "Bad Request", message: "Missing x-tenant-id header context" },
-        { status: 400 }
-      );
-    }
-
-    // 2. Parse and Validate Request Body
-    const body = await req.json();
-    const parsed = competitiveRequestSchema.safeParse(body);
-
-    if (!parsed.success) {
-      const errorMsg = parsed.error.issues[0]?.message || "درخواست نامعتبر است.";
-      return NextResponse.json(
-        { error: "Bad Request", message: errorMsg },
-        { status: 400 }
-      );
-    }
-
-    const { userUrl, competitorUrls, analysisDepth } = parsed.data;
+    const { userId, tenantId } = await authorizeApiRequest(req);
     const requestId = req.headers.get("x-request-id") || `req-competitive-${Date.now()}`;
+    let requestBody: unknown;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request", message: "Request body must contain valid JSON." },
+        { status: 400 }
+      );
+    }
+    const parsedBody = competitiveRequestSchema.safeParse(requestBody);
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request",
+          message: parsedBody.error.issues[0]?.message || "درخواست نامعتبر است.",
+          details: parsedBody.error.flatten()
+        },
+        { status: 400 }
+      );
+    }
+    const { userUrl, competitorUrls, analysisDepth } = parsedBody.data;
+
+    let safeUserUrl: string;
+    const safeCompetitorUrls: string[] = [];
+    try {
+      // Validate destinations only: this route does not crawl these URLs. A single
+      // deadline bounds the complete batch instead of granting every URL its own
+      // independent timeout. DNS checks run concurrently and never download bodies.
+      const deadlineAt = Date.now() + URL_VALIDATION_BUDGET_MS;
+      const validatedUrls = await Promise.all(
+        [userUrl, ...competitorUrls].map((url) => validatePublicUrl(url, { deadlineAt }))
+      );
+      safeUserUrl = validatedUrls[0];
+      safeCompetitorUrls.push(...validatedUrls.slice(1));
+    } catch (validationError) {
+      console.warn("[Competitive API] Public URL validation failed:", validationError);
+      if (validationError instanceof CrawlerUrlPolicyError) {
+        return NextResponse.json(
+          { error: "Invalid request", message: "همه آدرس‌ها باید مقصدهای عمومی و مجاز باشند." },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json(
+        { error: "Upstream unavailable", message: "حداقل یکی از وب‌سایت‌های مقصد موقتاً قابل دسترسی نیست؛ لطفاً دوباره تلاش کنید." },
+        { status: 502 }
+      );
+    }
 
     // 3. Execute inside transactional secure Tenant Context
     const resultPayload = await TenantContextManager.runWithTenantContext(
@@ -109,25 +139,7 @@ export async function POST(req: NextRequest) {
       userId,
       requestId,
       async () => {
-        // Simple heuristic crawl logic to show real data-driven parsing if API keys exist
-        const apiKey = process.env.FIRECRAWL_API_KEY || "";
-        const isMockMode = !apiKey || apiKey === "" || apiKey.includes("your-api-key") || apiKey.startsWith("fc-your-");
-
-        let _userPageCountHeuristic = 120;
-        const _userFreshnessHeuristic = 85;
-
-        if (!isMockMode) {
-          try {
-            const userScrape = await firecrawlApp.scrapeUrl(userUrl, { formats: ["markdown"] });
-            if (userScrape && 'markdown' in userScrape) {
-              const md = userScrape.markdown || "";
-              _userPageCountHeuristic = Math.min(250, md.split("\n").length / 10 + 20);
-            }
-          } catch (e) {
-            console.warn("[Competitive API] User crawl failed, using simulated data.", e);
-          }
-        }
-
+        // User-controlled URLs are fetched only by the SSRF-safe client above.
         // Helper to extract a friendly competitor brand name from URL
         const extractBrandName = (urlStr: string) => {
           try {
@@ -145,10 +157,10 @@ export async function POST(req: NextRequest) {
           }
         };
 
-        const userBrand = extractBrandName(userUrl);
+        const userBrand = extractBrandName(safeUserUrl);
 
         // Generate data-driven pairwise competitor comparisons
-        const competitorComparison: CompetitiveAnalysisResponse["competitorComparison"] = competitorUrls.map((compUrl) => {
+        const competitorComparison: CompetitiveAnalysisResponse["competitorComparison"] = safeCompetitorUrls.map((compUrl) => {
           const compName = extractBrandName(compUrl);
 
           // Seed random generators with URL hash to ensure consistency for same competitors
@@ -192,9 +204,9 @@ export async function POST(req: NextRequest) {
         const avgIndustryScore = Math.round(
           competitorComparison.reduce((acc, c) => acc + c.overallScore, 0) / totalCompetitors
         );
-        const overallScore = Math.round(
+        const overallScore = Math.min(100, Math.round(
           competitorComparison.reduce((acc, c) => acc + c.headToHead.seo.user, 0) / totalCompetitors + 5
-        );
+        ));
 
         let marketPosition: CompetitiveAnalysisResponse["marketPosition"] = "follower";
         if (overallScore >= 85) marketPosition = "leader";
@@ -214,8 +226,8 @@ export async function POST(req: NextRequest) {
           You are a Senior AI Product Engineer and Competitive Intelligence Specialist.
           We are analyzing the competitive posture of our brand/website against competitors.
 
-          User Site URL: ${userUrl} (Brand Name: ${userBrand})
-          Competitor Site URLs: ${competitorUrls.join(", ")}
+          User Site URL: ${safeUserUrl} (Brand Name: ${userBrand})
+          Competitor Site URLs: ${safeCompetitorUrls.join(", ")}
           Analysis Depth: ${analysisDepth}
 
           Provide a competitive analysis that:
@@ -329,7 +341,7 @@ export async function POST(req: NextRequest) {
 
           const compRepo = new CompetitorRepository();
           const competitorIds: string[] = [];
-          for (const compUrl of competitorUrls) {
+          for (const compUrl of safeCompetitorUrls) {
             try {
               const hostname = new URL(compUrl).hostname.replace("www.", "");
               const competitor = await compRepo.findByDomain(tenantId, hostname);
@@ -419,8 +431,8 @@ export async function POST(req: NextRequest) {
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [
               tenantId,
-              userUrl,
-              competitorUrls,
+              safeUserUrl,
+              safeCompetitorUrls,
               overallScore,
               marketPosition,
               JSON.stringify(competitorComparison),
@@ -439,6 +451,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(resultPayload);
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 401 ? "Unauthorized" : "Forbidden", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[Competitive Analysis API Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای داخلی سرور رخ داده است.";
     return NextResponse.json(

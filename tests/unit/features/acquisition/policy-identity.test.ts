@@ -33,6 +33,7 @@ describe("testPolicyIdentity", () => {
     }
     expect(validateCrawlPolicy({ ...policy, maxDepth: 0 }).ok).toBe(true);
     expect(validateCrawlPolicy({ ...policy, maxRedirects: 0 }).ok).toBe(true);
+    expect(validateCrawlPolicy({ ...policy, maxRedirects: null }).ok).toBe(true);
 
     const url = normalizeUrl("https://example.com");
     expect(url.ok).toBe(true);

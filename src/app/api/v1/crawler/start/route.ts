@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { CrawlerOrchestrator } from "@/services/crawler/crawler-orchestrator";
+import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
+import { TenantContextManager } from "@/core/database/tenant-context";
+import { subscriptionService } from "@/features/billing/services/subscription-service";
+import { getCrawlerRedirectPolicy } from "@/services/crawler/redirect-policy";
 
 // Request body validation schema
 const requestSchema = z.object({
@@ -15,17 +19,7 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate check: Extract tenant ID from request headers
-    const tenantId = req.headers.get("x-tenant-id");
-    if (!tenantId || tenantId.trim() === "") {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Tenant isolation violation: missing valid x-tenant-id header." },
-        { status: 401 }
-      );
-    }
-
-    // 2. Extract optional user ID and request ID from request headers
-    const userId = req.headers.get("x-user-id") || "system_crawler";
+    const { tenantId, userId } = await authorizeApiRequest(req);
     const requestId = req.headers.get("x-request-id") || randomUUID();
 
     // 3. Parse and validate JSON request body
@@ -50,17 +44,33 @@ export async function POST(req: NextRequest) {
     const { seedUrls } = parsed.data;
 
     // 4. Initialize the Crawler Orchestrator and run the campaign
+    const redirectPolicy = await TenantContextManager.runWithTenantContext(
+      tenantId,
+      userId,
+      requestId,
+      async () => {
+        const subscription = await subscriptionService.getEffectiveSubscription();
+        return getCrawlerRedirectPolicy(subscription.effectivePlan.id);
+      }
+    );
     const orchestrator = new CrawlerOrchestrator();
     const result = await orchestrator.runCrawlerCampaign(
       seedUrls,
       tenantId,
       userId,
-      requestId
+      requestId,
+      redirectPolicy
     );
 
     // 5. Return success result with status 200 OK
     return NextResponse.json(result, { status: 200 });
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 401 ? "Unauthorized" : "Forbidden", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[API Crawler Campaign Start Route Error]:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

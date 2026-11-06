@@ -124,9 +124,6 @@ export const KnowledgeGraphExplorer: React.FC = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Pass simulated headers for isolation checks
-          "x-tenant-id": "demo-tenant-id",
-          "x-user-id": "demo-user-id",
         },
         body: JSON.stringify({ entityName: queryEntity }),
       });

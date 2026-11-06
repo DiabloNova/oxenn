@@ -3,6 +3,7 @@ import { z } from "zod";
 import { executeAudit } from "@/lib/audit-engine/builder";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
+import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 
 // 1. Zod Request Schema
 const requestSchema = z.object({
@@ -11,21 +12,10 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // 2. Tenant Context Extraction and Authentication Check
-    const tenantId = req.headers.get("x-tenant-id");
-    const userId = req.headers.get("x-user-id") || "usr-engine-default";
+    // Resolve tenant and user only from the validated server session.
+    const { tenantId, userId } = await authorizeApiRequest(req);
 
-    if (!tenantId) {
-      return NextResponse.json(
-        {
-          error: "Unauthorized",
-          message: "شناسه مستأجر معتبر (x-tenant-id) ارسال نشده است. این ویژگی نیاز به حساب کاربری فعال دارد."
-        },
-        { status: 401 }
-      );
-    }
-
-    // 3. Parse and Validate Body
+    // Parse and validate body.
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
 
@@ -89,6 +79,8 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("[Core Audit Engine API Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای ناشناخته در لایه موتور ارزیابی رخ داد.";
     return NextResponse.json(

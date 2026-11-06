@@ -140,39 +140,26 @@ const MOCK_HTML_PAGES: Record<string, string> = {
   "https://test-site.com/ignored-footer": "Not Found"
 };
 
-// Global Fetch Interceptor Mock
-const originalFetch = globalThis.fetch;
 
-function setupFetchMock() {
-  globalThis.fetch = async (input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
-    const urlString = input.toString();
-
-    if (MOCK_HTML_PAGES[urlString] && MOCK_HTML_PAGES[urlString] !== "Not Found") {
-      return {
-        ok: true,
-        status: 200,
-        statusText: "OK",
-        text: async () => MOCK_HTML_PAGES[urlString],
-        headers: new Headers({ "content-type": "text/html" })
-      } as Response;
-    }
-
-    return {
-      ok: false,
-      status: 404,
-      statusText: "Not Found",
-      text: async () => "Not Found"
-    } as Response;
+const mockSafeFetcher = async (url: string) => {
+  const html = MOCK_HTML_PAGES[url] ?? "Not Found";
+  const ok = html !== "Not Found";
+  return {
+    ok,
+    status: ok ? 200 : 404,
+    statusText: ok ? "OK" : "Not Found",
+    url,
+    headers: {
+      get(name: string) {
+        return name.toLowerCase() === "content-type" ? "text/html" : null;
+      }
+    },
+    text: async () => html
   };
-}
-
-function restoreFetchMock() {
-  globalThis.fetch = originalFetch;
-}
+};
 
 export async function testWebCrawlerSuite() {
   console.log("▶ Running Web Crawler & Data Extraction Service Tests...");
-  setupFetchMock();
   setupPoolMock();
 
   try {
@@ -221,7 +208,7 @@ export async function testWebCrawlerSuite() {
     // 3. Test Link Discovery (Absolute resolution & Domain restrictions)
     // ----------------------------------------------------
     console.log("  * Testing link discovery with absolute resolution and domain filtering...");
-    const discovered = await extractSeedLinks("https://test-site.com/home");
+    const discovered = await extractSeedLinks("https://test-site.com/home", 5, {}, mockSafeFetcher);
 
     const hasRelativeResolved1 = discovered.includes("https://test-site.com/news/1");
     const hasRelativeResolved2 = discovered.includes("https://test-site.com/news/2");
@@ -250,7 +237,9 @@ export async function testWebCrawlerSuite() {
       ["https://test-site.com/home"],
       testTenantId,
       "user-crawler-test",
-      "req-crawler-001"
+      "req-crawler-001",
+      undefined,
+      mockSafeFetcher
     );
 
     if (result.totalUrlsFound === 0) {
@@ -306,7 +295,6 @@ export async function testWebCrawlerSuite() {
 
     console.log("✅ All Web Crawler & Extraction Service Tests Passed Successfully!");
   } finally {
-    restoreFetchMock();
     restorePoolMock();
   }
 }

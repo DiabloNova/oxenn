@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { firecrawlApp } from "@/lib/firecrawl";
 import { TenantContextManager } from "@/core/database/tenant-context";
+import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
 import { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
 
 // Request validator schema
@@ -46,18 +47,9 @@ export interface TechnicalAuditResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Enforce Tenant Isolation Context Headers
-    const userId = req.headers.get("x-user-id") || "usr-1001";
-    const tenantId = req.headers.get("x-tenant-id");
+    const { userId, tenantId } = await authorizeApiRequest(req);
 
-    if (!tenantId || tenantId.trim() === "") {
-      return NextResponse.json(
-        { error: "Bad Request", message: "Missing x-tenant-id header context" },
-        { status: 400 }
-      );
-    }
-
-    // 2. Parse and Validate Request Body
+    // Parse and validate request body
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
 
@@ -302,6 +294,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(resultPayload);
   } catch (error: unknown) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.statusCode === 401 ? "Unauthorized" : "Forbidden", message: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error("[Technical Audit API Route Error]:", error);
     const message = error instanceof Error ? error.message : "خطای داخلی سرور رخ داده است.";
     return NextResponse.json(
