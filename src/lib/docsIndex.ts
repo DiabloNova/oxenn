@@ -410,6 +410,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Phase 3 — Repository and Configuration Hygiene  **Status:** INCOMPLETE — VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c2\``
   },
   {
+    slug: "pr-113-phase-0-baseline-verification",
+    titleEn: "PR #113 — Phase 0 Baseline and Documentation Link Guards",
+    titleFa: "PR #113 — Phase 0 Baseline and Documentation Link Guards",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# PR #113 — Phase 0 Baseline and Documentation Link Guards  **Status:** SUCCESS — verification passed in CI run [#607](https://github.com/DiabloNova/oxenn/actions/runs/42088444363).   **Date:** 2026-11-05   **Branch:** \`mvp/phase-0-scope-baseline\`   **PR:** [#113](https://github.com/DiabloNova/oxenn/pull/113)   **Verified implementation commit:** \`97ba159c2f73536b42e3aad2d7f31c440254a586\`  ## Scope  Implement only the two documentation-quality suggestions raised during PR review:  1. Keep the Ph`
+  },
+  {
     slug: "audit-gate-stage3-regression-tests",
     titleEn: "Stage 3 — Audit Gate Regression Tests and Verification",
     titleFa: "Stage 3 — Audit Gate Regression Tests and Verification",

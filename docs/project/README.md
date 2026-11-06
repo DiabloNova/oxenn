@@ -2,6 +2,9 @@
 
 This section contains historical documents, roadmap planning, execution logs, and audits. These documents are generally point-in-time reflections of task planning and may not represent the current implemented architectural truth.
 
+## Current MVP Execution
+- [MVP Phase 0 — Scope and Baseline](./MVP_PHASE_0_SCOPE_BASELINE.md): current scope decision, verified repository baseline, conflicts, unknowns, and Phase 0 exit criteria.
+
 ## Subdirectories
 - `audit/`: Pre-implementation audits and readiness checks.
 - `roadmap/`: Product evolution and execution roadmaps.
