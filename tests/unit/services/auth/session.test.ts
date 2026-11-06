@@ -31,7 +31,7 @@ describe("server session lifecycle and error handling", () => {
     id: "user-1",
     name: "Test User",
     email: "user@example.com",
-    role: "owner",
+    role: "workspace_admin",
     workspaceId: "workspace-1"
   };
 
@@ -147,7 +147,7 @@ describe("server session lifecycle and error handling", () => {
         expiresAt: new Date("2027-01-01T00:00:00.000Z"),
         email: "user@example.com",
         name: "Test User",
-        role: "owner",
+        role: "workspace_admin",
         ...state
       }]
     });
