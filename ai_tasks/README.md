@@ -6,6 +6,7 @@ This workspace contains the staged repository-baseline audit and its resulting e
 
 - [Root-level files audit](./root-files-audit.md) — review of the 19 repository-root files.
 - [GitHub workflows audit](./github-folder-audit.md) — review of the complete `.github/` folder and current CI evidence.
+- [Database folder audit](./database-folder-audit.md) — inventory and static review of schemas, active and archived migrations, Drizzle snapshots, RLS policies, bootstrap, and seed files.
 
 ## Work areas
 
