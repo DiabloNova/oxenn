@@ -126,7 +126,18 @@ The redesign audit documents say local BoxFace is configured for English titles.
 
 **Recommended disposition:** correct the design documentation to match the approved current typography system, or deliberately approve and implement a distinct English display family in a later typography task. Do not describe BoxFace as active until its import, locale-specific assignment and rendered behavior are verified.
 
-## 6. Audit limits
+## 6. User-directed font sourcing and implementation requirement
+
+The project owner has specified the following direction for the future font integration. This is a recorded requirement, **not an implementation completed by this audit**:
+
+1. **Font source:** obtain/upload the font files for the site from the separate repository named exactly \`oxenn_doxuments\`. Do not treat the existing root \`font/\` copies as the approved upload source until that repository's contents and applicable licenses are verified.
+2. **Standard location:** first move/place the selected font directory in the project's standard, application-served font location. For the current Next.js project, \`public/fonts/\` is the existing static-asset convention and is already used by \`src/config/fonts.ts\`. Confirm the intended directory structure and selected font families before moving files.
+3. **Site usage:** after the font folder has been moved to its standard location, use that folder's font files for the website by updating the central font configuration and relevant typography assignments as a separately approved implementation task.
+4. **Validation gate:** before switching the site to the new assets, verify the source repository identity and exact files, commercial/web-embedding permissions, required attribution/license text, supported weights/styles, Persian/Latin glyph coverage, and successful rendering for both locales. Do not copy every available variant blindly.
+
+No font was downloaded from \`oxenn_doxuments\`, copied, moved, or activated during this audit. No font loader or CSS was changed.
+
+## 7. Audit limits
 
 - The full tracked `font/` tree was inventoried; all 66 files and their Git blobs were counted.
 - Git SHA comparison found no byte-identical duplicates among the 63 root font assets or between those assets and the 10 files under `public/fonts/`.
