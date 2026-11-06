@@ -87,7 +87,7 @@ export default function DashboardHomeClient(_props: DashboardHomeClientProps) {
           <div className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary-600)] px-4 py-2.5 text-xs font-bold text-white shadow-sm">
             <Sparkles size={15} />
             {isFa ? "شروع ارزیابی محصول" : "Start product assessment"}
-          </button>
+          </div>
         </div>
       </header>
 
@@ -156,7 +156,7 @@ export default function DashboardHomeClient(_props: DashboardHomeClientProps) {
             <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">{isFa ? "درباره محصول، یافته‌ها یا اولویت‌های خود گفتگو کنید." : "Discuss your product, findings or priorities."}</p>
             <div className="mt-4 inline-flex items-center gap-2 text-xs font-black text-[var(--color-primary-600)]">
               {isFa ? "گفتگو را آغاز کنید" : "Start a conversation"} <Arrow size={14} />
-            </button>
+            </div>
           </div>
         </aside>
       </section>
