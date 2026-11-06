@@ -2,6 +2,11 @@
 
 This workspace contains the staged repository-baseline audit and its resulting execution plans.
 
+## Audit reports
+
+- [Root-level files audit](./root-files-audit.md) — review of the 19 repository-root files.
+- [GitHub workflows audit](./github-folder-audit.md) — review of the complete `.github/` folder and current CI evidence.
+
 ## Work areas
 
 - [`baseline issues/`](./baseline%20issues/) — evidence-backed findings discovered during the repository audit. Each validated finding will have its own Markdown record with affected files, root cause, recommended remediation, dependencies, and parallelization assessment.
@@ -10,6 +15,6 @@ This workspace contains the staged repository-baseline audit and its resulting e
 
 ## Audit sequence
 
-The audit proceeds in explicit, user-approved phases. The initial phase is limited to the 19 root-level files. No nested repository folder is in scope until that phase is reported and approved.
+The audit proceeds in explicit, user-approved phases. The initial phase is limited to the 19 root-level files. Each nested folder is reviewed separately, and the next folder is not started until the user approves the preceding phase.
 
 Findings must distinguish confirmed defects from risks, assumptions, and items requiring later cross-checks. No application, database, deployment, or pull-request changes are authorized by this audit workspace.
