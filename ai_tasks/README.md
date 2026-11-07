@@ -26,3 +26,15 @@ This workspace contains the staged repository-baseline audit and its resulting e
 The audit proceeds in explicit, user-approved phases. The initial phase is limited to the 19 repository-root files. Each nested folder is reviewed separately, and the next folder is not started until the user approves the preceding phase.
 
 Findings must distinguish confirmed defects from risks, assumptions, and items requiring later cross-checks. No application, database, deployment, or pull-request changes are authorized by this audit workspace. Before any remediation proposal, findings from earlier phases must be reconciled with the approved target architecture so legacy assumptions are not carried into the new design.
+
+
+## Architecture-aligned remediation branch (2026-11)
+
+The branch `docs/architecture-aligned-remediation-2026-11` preserves the prior audit reports and the 64-row architecture findings matrix, and adds:
+
+- The approved working architecture baseline at `docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md`.
+- The source audit reports and matrix copied unchanged from `docs/architecture-issue-matrix-2026-11`.
+- One consolidated remediation specification per matrix problem under `ai_tasks/baseline issues/`.
+- A complete index at `ai_tasks/baseline issues/README.md`, retaining all original finding IDs.
+
+Each remediation record must be revalidated against the current code and operational evidence before implementation. Historical-only findings and product/security policy decisions are explicitly marked. This branch is documentation-only; it does not authorize code, schema, migration, CI, dependency, deployment, or production changes.
