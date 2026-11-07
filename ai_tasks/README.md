@@ -10,6 +10,7 @@ This workspace contains the staged repository-baseline audit and its resulting e
 - [Documentation folder audit](./docs-folder-audit.md) — review of the documentation hierarchy, Baseline Plan, Roadmap, database/security contracts, product/API claims, and historical records.
 - [Font folder audit](./font-folder-audit.md) — full inventory of root font assets, current application font-loader references, provenance/licensing evidence, and unused/placeholder asset findings.
 - [Public folder audit](./public-folder-audit.md) — complete public asset inventory, font/logo/icon consumers, metadata wiring, placeholder assets, and sample PDF/report-export findings.
+- [Scripts folder audit](./scripts-folder-audit.md) — complete inventory and static review of all 20 scripts, including database safety guards, tenant-table generation, privileged CLI tools, crawl worker, and developer utilities.
 
 ## Work areas
 
