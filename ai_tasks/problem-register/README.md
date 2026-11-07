@@ -1,6 +1,6 @@
 # Oxenn Problem Register
 
-<badge label="97 individual records completed" color="success" />
+**97 individual records completed**
 
 **Status:** Individual findings recorded; subject categorization and dependency-based implementation sequence prepared. No code remediation has been started.  
 **Branch:** `docs/architecture-aligned-remediation-2026-11`  
