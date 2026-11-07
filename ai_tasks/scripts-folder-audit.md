@@ -64,14 +64,14 @@ Files reviewed:
 - **Recommended direction:** Use a transaction API with guaranteed rollback and release, close pools in `finally`, and set an exit code after cleanup instead of calling `process.exit` inside the transaction.
 - **Dependencies:** Confirm whether `runWithSystemContext` owns transaction boundaries and whether `getDbClient()` returns a dedicated or pooled connection during the later database-context audit.
 
-### SCR-004 — Crawl-worker suppresses ordinary job execution failures
-- **Severity:** P2 — worker observability and recovery
-- **Confidence:** Confirmed.
-- **File / evidence:** `scripts/crawl-worker.ts:102-139`, especially the empty catch at `:116-136`.
-- **Root cause:** Errors thrown by `CrawlOrchestrator.execute` are swallowed unless the worker is shutting down. On an ordinary execution failure, the worker neither logs the error nor explicitly marks the job failed/retryable in this catch path; it clears the heartbeat and returns.
-- **Impact:** Failures are invisible in worker logs and job recovery is deferred to lease expiry/recovery rather than being explicitly handled. This makes diagnosis and retry timing dependent on the dispatcher lease implementation.
-- **Recommended direction:** Preserve sanitized error context, explicitly coordinate failure/retry state with lease ownership, and distinguish cancellation, transient failure, and terminal failure.
-- **Dependencies:** Verify dispatcher lease recovery, retry policy, and orchestrator error semantics in the later `src/` audit. No worker was started.
+### SCR-004 — Worker catch suppresses diagnostics, while the orchestrator persists ordinary execution failures
+- **Severity:** P3 — worker observability
+- **Confidence:** Confirmed after cross-checking the src/ execution path.
+- **Files / evidence:** scripts/crawl-worker.ts:102-139, especially the empty catch at :116-136; src/features/acquisition/application/orchestrator.ts:230-276 catches ordinary execution failures, marks the job failed through the dispatcher (unless cancellation/abort semantics apply), publishes crawl.failed, then rethrows.
+- **Root cause:** The worker catch keeps its polling loop alive but does not write a worker-side diagnostic or structured log for the rethrown error.
+- **Impact:** The prior version of this finding incorrectly stated that ordinary orchestrator failures were not marked failed and that recovery depended on lease expiry. The source cross-check shows that the normal failure path is persisted and published by the orchestrator. The remaining gap is worker-side diagnostic context for failures that reach this catch; exceptions before the orchestrator's internal try or failures while persisting/publishing failure state still warrant verification.
+- **Recommended direction:** Emit a sanitized structured worker log/metric while preserving the orchestrator as the single owner of job-state transitions. Do not add a duplicate failure transition in the worker.
+- **Dependencies:** Dispatcher SQL function availability is tracked separately in DB-004 / SRC-015. No worker was started.
 
 ### SCR-005 — test-domain.ts launches asynchronous checks concurrently without awaiting the test sequence
 - **Severity:** P2 — test reliability
@@ -108,12 +108,16 @@ Files reviewed:
 1. **Tenant boundary:** Trace the five tenant-owned junction tables from DB-001 through the generated runtime list, tenant-context manager, Drizzle schema, repositories, and raw SQL consumers. The current scripts do not establish that these tables are safe.
 2. **Database push:** Inspect package-script wiring and the actual schema-push behavior before proposing a replacement guard. Do not run `db:push`.
 3. **Privileged CLI commands:** Verify transaction ownership, pool lifecycle, actor attribution, and audit-record requirements for API-key issue/revoke and super-admin grant scripts.
-4. **Crawl worker:** Inspect dispatcher lease/recovery semantics and orchestrator cancellation/error contracts.
+4. **Crawl worker:** Cross-checked against src/features/acquisition/application/orchestrator.ts; ordinary failures are persisted by the orchestrator. SCR-004 is downgraded to a worker-log/observability gap. Dispatcher function availability remains DB-004 / SRC-015.
 5. **Test-domain:** Determine whether it remains an invoked test entry point; if so, assess its fixtures, shared state, and teardown.
 6. **Documentation tooling:** Verify generated docs index output and source visibility policy in the later application-source phase. The generator itself was reviewed statically; generated files were not changed.
 7. **ESM compatibility:** The `db-push-guard.ts` and `verify-tenant-tables.ts` CLI wrappers use `require.main === module`. Confirm the repository's actual TS execution/module mode before treating this as a runtime defect.
 
-## 4. Not executed / limitations
+## 4. Cross-phase correction
+
+The source audit confirmed that CrawlOrchestrator.execute persists ordinary execution failures and publishes crawl.failed before rethrowing. SCR-004 is therefore limited to missing worker-side diagnostics; the earlier claim that ordinary failures were not persisted is withdrawn. See src-folder-audit.md / SRC-015 for the separate dispatcher-function dependency.
+
+## 5. Not executed / limitations
 
 - No script, shell helper, test, build, lint, migration, SQL query, database connection, worker, or deployment command was executed.
 - No file under `scripts/` was changed.
