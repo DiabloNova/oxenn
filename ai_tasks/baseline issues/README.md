@@ -107,6 +107,18 @@ The matrix's consolidated priority is retained in the index, but three grouped r
 | 063 | RF-006 | P3 | PROVISIONAL — REVALIDATE BEFORE IMPLEMENTATION | [063-RF-006.md](./063-RF-006.md) |
 | 064 | DOC-008 | P3 | NEEDS REVALIDATION | [064-DOC-008.md](./064-DOC-008.md) |
 
+## Existing GitHub PR and issue dependencies
+
+These records already exist in GitHub and must be coordinated rather than duplicated:
+
+| GitHub item | Scope | Relationship to this remediation set | Handling |
+|---|---|---|---|
+| [PR #108](https://github.com/DiabloNova/oxenn/pull/108) | Phase 1 auth/tenant boundary | Overlaps the authorization and audit-engine boundaries in Findings 002 and 003. | Still open; based on older base commit `1517034c5820fb2215567ad3dff2bf04da30c800`. Reconcile with current main before touching overlapping files. |
+| [PR #109](https://github.com/DiabloNova/oxenn/pull/109) | Phase 1 RLS state contract | Overlaps Finding 001 and its RLS inventory/reference contract. | Still open; based on the older base commit. Reconcile before changing overlapping verification/RLS-contract files. |
+| [Issue #115](https://github.com/DiabloNova/oxenn/issues/115) | Route every provider-bound crawler URL through SSRF validation | Overlaps Finding 003 and the crawler transport boundary; it was explicitly deferred from PR #114. | Keep its full call-site inventory and provider-side redirect constraints as a distinct acceptance set. Reconcile with PR #108 before implementation. |
+| [Issue #116](https://github.com/DiabloNova/oxenn/issues/116) | Reject revoked workspace membership | Related to Finding 002 but a distinct authorization invariant. | Keep a separate regression test and acceptance criteria; do not collapse it into the privileged SQL allowlist. |
+| [PR #117](https://github.com/DiabloNova/oxenn/pull/117) | Prevent unverified invoice payment success | Implements Finding 044 / SRC-022. | CI and automated review passed; PR remains open and unmerged. |
+
 ## Implementation gate
 
 These files are architecture-aligned remediation proposals, not implementation authorization. Before coding, revalidate each finding against the current branch and current runtime evidence, resolve required product/security policy decisions, finalize dependency order, and obtain the user's approval for the implementation scope. No source code, database, CI, dependency, deployment, or production changes are included in this documentation set.
