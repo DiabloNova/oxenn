@@ -51,7 +51,8 @@ This order covers 64 consolidated prior-audit problems (94 original IDs) and two
 
 **Goal:** make PostgreSQL and versioned migrations the reliable source of truth.
 
-- **004 (SRC-004):** hydrate domain entities from PostgreSQL; keep in-memory repositories only for explicit demo/test mode.
+- **067 (ARCH-003):** reconcile Brand, Website, Page, and DiagnosticFinding domain types, repository SQL, canonical schema, active migrations, and snapshots before mapping any persisted rows.
+- **004 (SRC-004):** after the field crosswalk in 067 is approved, hydrate domain entities from PostgreSQL; keep in-memory repositories only for explicit demo/test mode.
 - **007 (DB-004/SRC-015/DOC-004):** restore the crawl dispatcher contract in an active migration or replace it with supported transactional SQL; test claim, lease recovery, and completion on a fresh database.
 - **017 (DB-002):** add migration preflight and reconciliation for text-to-UUID tenant conversion.
 - **029 (SRC-011):** move network/model work outside long-lived tenant transactions.
