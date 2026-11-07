@@ -34,7 +34,7 @@ The branch `docs/architecture-aligned-remediation-2026-11` preserves the prior a
 
 - The approved working architecture baseline at `docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md`.
 - The source audit reports and matrix copied unchanged from `docs/architecture-issue-matrix-2026-11`.
-- One consolidated remediation specification per matrix problem under `ai_tasks/baseline issues/`, plus two separately identified architecture-driven gaps (ARCH-001 commercial catalog/entitlements and ARCH-002 LangChain runtime adapter).
+- One consolidated remediation specification per matrix problem under `ai_tasks/baseline issues/`, plus three separately identified architecture-driven gaps (ARCH-001 commercial catalog/entitlements, ARCH-002 LangChain runtime adapter, and ARCH-003 repository/schema contract mismatch).
 - A complete index at `ai_tasks/baseline issues/README.md`, retaining all original finding IDs.
 
 Each remediation record must be revalidated against the current code and operational evidence before implementation. Historical-only findings and product/security policy decisions are explicitly marked. This branch is documentation-only; it does not authorize code, schema, migration, CI, dependency, deployment, or production changes.
