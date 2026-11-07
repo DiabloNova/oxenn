@@ -10,8 +10,9 @@
 ## Coverage
 
 - Consolidated findings from the prior repository audit: **64**
-- Additional architecture-driven gaps discovered during reconciliation: **2** (`ARCH-001`, `ARCH-002`)
-- Total remediation specifications: **66**
+- Additional architecture-driven gaps discovered during reconciliation: **3** (`ARCH-001`, `ARCH-002`, `ARCH-003`)
+- Total remediation specifications: **67**
+- Total remediation specifications: **67**
 - Original finding identifiers retained: **94**
 - Each prior-audit record retains all source IDs and related finding references.
 - The two additional architecture gaps are separately labeled and are not counted among the original 94 IDs.
@@ -119,4 +120,5 @@ These two items were discovered by comparing the newly approved architecture wit
 |---|---|---:|---|
 | ARCH-001 | Independent OXENN service catalog, purchases, entitlements, and usage metering are not represented as one durable commercial model. | P1 | [065-ARCH-001.md](./065-ARCH-001.md) |
 | ARCH-002 | The current AI runtime does not yet implement the approved LangChain interim adapter boundary. | P2 | [066-ARCH-002.md](./066-ARCH-002.md) |
+| ARCH-003 | AI-intelligence domain types, repository SQL, and canonical Drizzle schema use incompatible field contracts. | P1 | [067-ARCH-003.md](./067-ARCH-003.md) |
 
