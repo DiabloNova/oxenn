@@ -1,33 +1,47 @@
 # Oxenn Problem Register
 
-**Status:** In progress — source findings are being recorded individually.  
-**Source branch:** `docs/architecture-aligned-remediation-2026-11`  
+<badge label="97 individual records completed" color="success" />
+
+**Status:** Individual findings recorded; subject categorization and dependency-based implementation sequence prepared. No code remediation has been started.  
+**Branch:** `docs/architecture-aligned-remediation-2026-11`  
 **Architecture reference:** [OXENN_PRODUCT_ARCHITECTURE.md](../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)
 
-## Recording rules
+## Register structure
 
-- One file represents exactly one original audit finding. No cross-folder consolidation is performed in this register.
-- Each record contains the source finding ID, full problem statement, evidence, affected paths, impact, and a recommended solution aligned with the current Oxenn architecture.
-- Where two findings share a root cause, both remain separate records and cross-reference one another; a shared fix does not merge their identities.
-- The original audit reports remain the evidence source and are preserved.
-- The records are numbered in source-audit sequence: root files, database, docs, fonts, GitHub workflows, public assets, scripts, src, tests, verification, then architecture-reconciliation gaps.
-- Categories, priority ranking, dependency order, parallelization plan, and implementation roadmap are deliberately deferred until every individual record is complete.
-- This register is documentation only. It does not authorize source-code, database, CI, dependency, deployment, PR, or production changes.
+- [Individual findings](./findings/): one file per finding, with problem statement, evidence, affected paths, impact, recommended solution, architecture alignment, verification criteria, and related findings.
+- [Subject categories](./categories/README.md): eight primary categories. Each finding has exactly one primary category; cross-references do not merge findings.
+- [Dependency-based implementation sequence](./IMPLEMENTATION_SEQUENCE.md): proposed code-remediation order with prerequisites and safety gates. This is not the full product Roadmap and does not authorize code changes.
 
-## Individual records
+## Coverage
 
-| Sequence | Finding ID | Record |
-|---:|---|---|
-| 001–009 | RF-001–RF-009 | Root-level findings |
-| 010–014 | DB-001–DB-005 | Database findings |
-| 015–023 | DOC-001–DOC-009 | Documentation findings |
-| 024–027 | FNT-001–FNT-004 | Font findings |
-| 028–033 | GHA-001–GHA-006 | GitHub Actions findings |
-| 034–039 | PUB-001–PUB-006 | Public asset findings |
-| 040–046 | SCR-001–SCR-007 | Scripts findings |
-| 047–072 | SRC-001–SRC-026 | Source-code findings |
-| 073–081 | TST-001–TST-009 | Test-suite findings |
-| 082–094 | VER-001–VER-013 | Verification findings |
-| 095–097 | ARCH-001–ARCH-003 | Architecture-reconciliation gaps |
+| Source | Findings | Record range |
+|---|---:|---:|
+| Root-level audit | 9 | 001–009 |
+| Database audit | 5 | 010–014 |
+| Documentation audit | 9 | 015–023 |
+| Font audit | 4 | 024–027 |
+| GitHub Actions audit | 6 | 028–033 |
+| Public assets audit | 6 | 034–039 |
+| Scripts audit | 7 | 040–046 |
+| Source-code audit | 26 | 047–072 |
+| Tests audit | 9 | 073–081 |
+| Verification audit | 13 | 082–094 |
+| Architecture reconciliation | 3 | 095–097 |
+| **Total** | **97** | **001–097** |
 
-The table above defines record numbering only; it is not a category or execution order.
+The 94 original audit identifiers are preserved individually. Three additional architecture gaps (ARCH-001, ARCH-002, ARCH-003) are also recorded separately. No source finding was merged into another record.
+
+## Recording and execution rules
+
+1. Original audit reports remain preserved as evidence.
+2. Shared root causes are cross-referenced, not consolidated into a single finding.
+3. The recommended solution in each record is aligned with the current Oxenn architecture; unresolved product/security decisions are explicitly identified.
+4. The category files describe subject matter, not priority.
+5. The implementation sequence expresses dependencies and safe code order; it is not a full Roadmap or implementation authorization.
+6. Every finding must be revalidated against the then-current main branch before code changes begin.
+7. No source code, database schema, migration, CI workflow, dependency, deployment, PR, or production change is authorized by these documents.
+8. Historical verification probes marked do-not-run must remain unused.
+
+## Next gate
+
+The documentation set is ready for review. Implementation may begin only after the user approves the relevant scope and the Wave 0 revalidation/safety gate in the implementation sequence is completed.
