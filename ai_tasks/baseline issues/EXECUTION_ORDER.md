@@ -43,7 +43,7 @@ This order covers 64 consolidated prior-audit problems (94 original IDs) and two
 - **018 (SCR-002):** make database mutation tooling fail closed unless target identity and disposable status are verified.
 - **044 (SRC-022):** remove false client-only payment-success claims or activation. Do not integrate a payment provider until one is selected and approved.
 
-**Dependencies:** 001 establishes the ownership inventory used by tenant guards and tests. 003 and 006 should share the hardened fetch boundary but retain separate acceptance criteria.
+**Dependencies:** 001 establishes the ownership inventory used by tenant guards and tests. Open PR #109 overlaps the RLS-state contract; PR #108 overlaps the audit-engine route and authorization boundary. Do not modify those files until both PRs are reconciled with current main. Open issue [#115](https://github.com/DiabloNova/oxenn/issues/115) overlaps the broader SSRF call-site inventory for Finding 003; open issue [#116](https://github.com/DiabloNova/oxenn/issues/116) covers revoked workspace-membership authorization and must remain distinct from the privileged SQL allowlist in Finding 002. Coordinate both issues rather than duplicating fixes. Finding 003 and 006 should share the hardened fetch boundary but retain separate acceptance criteria.
 
 **Exit gate:** two-tenant RLS/privilege tests pass on disposable PostgreSQL; user-controlled fetches obey DNS/redirect/body/deadline limits; ambiguous DB targets are rejected; unverified payment is never represented as successful.
 
