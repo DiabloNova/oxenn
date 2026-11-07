@@ -8,9 +8,12 @@
 
 ## Coverage
 
-- Consolidated problem records: **64**
+- Consolidated findings from the prior repository audit: **64**
+- Additional architecture-driven gaps discovered during reconciliation: **2** (`ARCH-001`, `ARCH-002`)
+- Total remediation specifications: **66**
 - Original finding identifiers retained: **94**
-- Each consolidated record retains all source IDs and related finding references.
+- Each prior-audit record retains all source IDs and related finding references.
+- The two additional architecture gaps are separately labeled and are not counted among the original 94 IDs.
 - The original audit reports and source matrix are preserved unchanged.
 - A status of NEEDS_REVALIDATION, HISTORICAL_ONLY, or POLICY/SCOPE DECISION is intentional; it is not silently treated as a confirmed defect or as a completed fix.
 
@@ -105,3 +108,14 @@ The matrix's consolidated priority is retained in the index, but three grouped r
 ## Implementation gate
 
 These files are architecture-aligned remediation proposals, not implementation authorization. Before coding, revalidate each finding against the current branch and current runtime evidence, resolve required product/security policy decisions, finalize dependency order, and obtain the user's approval for the implementation scope. No source code, database, CI, dependency, deployment, or production changes are included in this documentation set.
+
+
+## Additional architecture-driven gaps
+
+These two items were discovered by comparing the newly approved architecture with the previously inspected codebase. They are not part of the original 94 audit identifiers, so they are recorded separately rather than altering the historical matrix.
+
+| New ID | Problem | Priority | Remediation specification |
+|---|---|---:|---|
+| ARCH-001 | Independent OXENN service catalog, purchases, entitlements, and usage metering are not represented as one durable commercial model. | P1 | [065-ARCH-001.md](./065-ARCH-001.md) |
+| ARCH-002 | The current AI runtime does not yet implement the approved LangChain interim adapter boundary. | P2 | [066-ARCH-002.md](./066-ARCH-002.md) |
+
