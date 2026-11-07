@@ -42,6 +42,14 @@ The 94 original audit identifiers are preserved individually. Three additional a
 7. No source code, database schema, migration, CI workflow, dependency, deployment, PR, or production change is authorized by these documents.
 8. Historical verification probes marked do-not-run must remain unused.
 
+
+## AI execution instructions and live progress
+
+- [AI Remediation Agent Prompt](./AI_REMEDIATION_AGENT_PROMPT.md) — English operating instructions for an AI agent: revalidation, dependency order, architecture invariants, implementation method, verification, parallel-work boundaries, stop conditions, and definition of done.
+- [Remediation Progress & Execution Log](./REMEDIATION_PROGRESS.md) — the live 97-finding ledger and dated execution history. Update it throughout the work so the current state, evidence, blockers, and next permitted action remain visible.
+
+The progress tracker is initialized at **not started**. It does not imply authorization to modify code. Explicit approval and the mandatory Wave 0 gate remain required.
+
 ## Next gate
 
 The documentation set is ready for review. Implementation may begin only after the user approves the relevant scope and the Wave 0 revalidation/safety gate in the implementation sequence is completed.
