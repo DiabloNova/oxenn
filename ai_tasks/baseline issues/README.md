@@ -1,7 +1,7 @@
 # Architecture-Aligned Baseline Remediation Index
 
 **Repository baseline:** `main@7bd2b6ba04e18abbcaf772fac63f29c465a45a42`  
-**Architecture baseline:** [OXENN Product Architecture](../../../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)  
+**Architecture baseline:** [OXENN Product Architecture](../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)  
 **Source findings matrix:** [Architecture Findings Matrix](../new_architecture/architecture-findings-matrix.md)  
 **Source audit reports:** parent `ai_tasks/` folder  
 **Status:** Remediation specifications prepared; implementation has not started.
