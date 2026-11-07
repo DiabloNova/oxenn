@@ -14,6 +14,16 @@
 - The original audit reports and source matrix are preserved unchanged.
 - A status of NEEDS_REVALIDATION, HISTORICAL_ONLY, or POLICY/SCOPE DECISION is intentional; it is not silently treated as a confirmed defect or as a completed fix.
 
+## Priority reconciliation notes
+
+The matrix's consolidated priority is retained in the index, but three grouped records have source-audit priority differences that must not be lost:
+
+| Record | Consolidated matrix | Original source audit | Required handling |
+|---|---:|---:|---|
+| 039 — Digital Twin scope | P3 | RF-007 / DOC-006 / SRC-024: P2 | Preserve P2 as the source severity; treat as an architecture/product-scope gap, not an immediate MVP runtime defect. |
+| 040 — Font assets/licensing | P3 | FNT-002 / FNT-004: P2; FNT-001: P3 | Separate licensing/typography risks from asset hygiene; resolve licensing before commercial distribution. |
+| 044 — Payment success UX | P3 | SRC-022: P1 | Treat P1 as provisional until a fresh review resolves the discrepancy; never downgrade silently. |
+
 ## Disposition rules
 
 - **PROVISIONAL — REVALIDATE:** static evidence from the audited baseline; recheck the current target branch before implementation.
