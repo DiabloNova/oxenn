@@ -4,6 +4,7 @@
 **Architecture baseline:** [OXENN Product Architecture](../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)  
 **Source findings matrix:** [Architecture Findings Matrix](../new_architecture/architecture-findings-matrix.md)  
 **Source audit reports:** parent `ai_tasks/` folder  
+**Execution order:** [EXECUTION_ORDER.md](./EXECUTION_ORDER.md)  
 **Status:** Remediation specifications prepared; implementation has not started.
 
 ## Coverage
