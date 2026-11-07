@@ -13,6 +13,7 @@ This workspace contains the staged repository-baseline audit and its resulting e
 - [Scripts folder audit](./scripts-folder-audit.md) — complete inventory and static review of all 20 scripts, including database safety guards, tenant-table generation, privileged CLI tools, crawl worker, and developer utilities.
 - [Source folder audit](./src-folder-audit.md) — static review of the complete src/ tree, including auth, tenant context/RLS enforcement, repositories, AI/RAG, crawling, APIs, product actions, billing, scheduling and user-facing flows.
 - [Tests folder audit](./tests-folder-audit.md) — complete static review of all 112 test files, Vitest discovery boundaries, tenant-isolation and privileged-access assurance, and coverage alignment with the target architecture.
+- [Verification folder audit](./verification-folder-audit.md) — review of all 54 historical verification artifacts, RLS and privileged-path evidence, runner provenance, unsafe probes, and alignment with the current target architecture.
 
 ## Work areas
 
