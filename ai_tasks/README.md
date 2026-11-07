@@ -17,7 +17,7 @@ This workspace contains the staged repository-baseline audit and its resulting e
 
 ## Work areas
 
-- [baseline issues/](./baseline%20issues/) — evidence-backed findings discovered during the repository audit. Each validated finding will have its own Markdown record with affected files, root cause, recommended remediation, dependencies, and parallelization assessment.
+- [baseline issues/](./baseline%20issues/) — earlier consolidated remediation specifications retained for traceability; these are not the one-file-per-finding register.
 - [roadmap/](./roadmap/) — ordered implementation stages, authored against the verified post-baseline state and gated on completion of all accepted baseline findings.
 - [new_architecture/](./new_architecture/) — architecture observations and proposed target-state decisions. No architecture change is authorized by documenting an observation.
 
@@ -38,3 +38,14 @@ The branch `docs/architecture-aligned-remediation-2026-11` preserves the prior a
 - A complete index at `ai_tasks/baseline issues/README.md`, retaining all original finding IDs.
 
 Each remediation record must be revalidated against the current code and operational evidence before implementation. Historical-only findings and product/security policy decisions are explicitly marked. This branch is documentation-only; it does not authorize code, schema, migration, CI, dependency, deployment, or production changes.
+
+
+## Individual problem register
+
+The authoritative one-file-per-finding register is now available at [problem-register/](./problem-register/).
+
+- [97 individual finding files](./problem-register/findings/) — the 94 original audit identifiers plus ARCH-001 through ARCH-003. Every finding has its own numbered file containing the problem, evidence, affected paths, impact, recommended architecture-aligned solution, verification criteria, and related findings.
+- [Eight subject categories](./problem-register/categories/README.md) — every finding has exactly one primary category; related findings remain separate.
+- [Dependency-based implementation sequence](./problem-register/IMPLEMENTATION_SEQUENCE.md) — code-remediation order and safety prerequisites. This is not the full Roadmap and does not authorize code changes.
+
+The earlier 64-record consolidated set under `baseline issues/` is preserved as historical reconciliation material. Where it groups several original IDs, the new register restores each original ID as an independent record. The 97-file register is the canonical reference for any future remediation discussion.
