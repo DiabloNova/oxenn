@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import InvoicePaymentPage from "@/app/[locale]/invoice/page";
 
@@ -30,13 +30,16 @@ afterEach(() => {
 
 describe("InvoicePaymentPage payment safety", () => {
   it("does not collect payment details or claim success when no verified provider is connected", async () => {
-    render(
-      <Suspense fallback={<div>Loading invoice preview...</div>}>
-        <InvoicePaymentPage params={Promise.resolve({ locale: "en" })} />
-      </Suspense>
-    );
+    await act(async () => {
+      render(
+        <Suspense fallback={<div>Loading invoice preview...</div>}>
+          <InvoicePaymentPage params={Promise.resolve({ locale: "en" })} />
+        </Suspense>
+      );
+      await Promise.resolve();
+    });
 
-    expect(await screen.findByRole("heading", { name: "Payment Is Not Available Yet" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Payment Is Not Available Yet" })).toBeInTheDocument();
     expect(screen.getByText(/No verified payment provider is connected to this page/)).toBeInTheDocument();
     expect(screen.getByText("NOT PAYABLE")).toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
@@ -47,13 +50,16 @@ describe("InvoicePaymentPage payment safety", () => {
   });
 
   it("shows the same non-payable state in Persian", async () => {
-    render(
-      <Suspense fallback={<div>در حال بارگذاری...</div>}>
-        <InvoicePaymentPage params={Promise.resolve({ locale: "fa" })} />
-      </Suspense>
-    );
+    await act(async () => {
+      render(
+        <Suspense fallback={<div>در حال بارگذاری...</div>}>
+          <InvoicePaymentPage params={Promise.resolve({ locale: "fa" })} />
+        </Suspense>
+      );
+      await Promise.resolve();
+    });
 
-    expect(await screen.findByRole("heading", { name: "پرداخت در حال حاضر در دسترس نیست" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "پرداخت در حال حاضر در دسترس نیست" })).toBeInTheDocument();
     expect(screen.getByText(/هیچ پرداختی انجام یا ثبت نمی‌شود/)).toBeInTheDocument();
     expect(screen.getByText("غیرقابل پرداخت")).toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
