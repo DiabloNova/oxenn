@@ -24,7 +24,7 @@ This order covers 64 consolidated prior-audit problems (94 original IDs) and two
 
 **Goal:** confirm the live repository baseline and establish a safe verification environment.
 
-- Confirm current `main`, open PRs, branch protections, and file overlap.
+- Confirm current `main`, open PRs, branch protections, and file overlap. At this review, PR #108 (`phase-1/auth-tenant-boundary`) and PR #109 (`phase-1/rls-state-contract`) remain open and are based on the older commit `1517034c5820fb2215567ad3dff2bf04da30c800`, not current main `7bd2b6ba04e18abbcaf772fac63f29c465a45a42`. Reconcile/rebase/close them with their owners before changing overlapping auth, audit-engine, or RLS-contract files.
 - Confirm whether the audited baseline still matches current main.
 - Verify disposable PostgreSQL identity, runtime roles, active migration chain, and safe test commands.
 - Inventory test discovery and provider credentials.
