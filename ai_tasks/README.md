@@ -1,22 +1,51 @@
-# Problem Categories
+# Oxenn Baseline Preparation Workspace
 
-All 97 individual findings have been assigned one primary subject category. A finding remains in its own numbered file under [findings/](../findings/); categorization does not merge, rename, or delete any finding. Related findings may be cross-referenced in multiple records, but each has exactly one primary category below.
+This workspace contains the staged repository-baseline audit and its resulting execution plans.
 
-The categories describe the subject matter only. They do not establish priority, dependency order, or implementation sequence. Those are separate decisions.
+## Audit reports
 
-1. [Security, tenant isolation, and authorization](./01-security-tenant-boundaries.md) — 26 findings
-2. [Persistence, database schema, and data contracts](./02-persistence-schema-contracts.md) — 9 findings
-3. [AI providers, evidence integrity, and assessment correctness](./03-ai-evidence-provider-integrity.md) — 10 findings
-4. [Commercial catalog, service entitlements, quotas, and payments](./04-commercial-catalog-entitlements.md) — 4 findings
-5. [Crawl, invitations, scheduling, and background execution](./05-workflows-crawl-background-execution.md) — 6 findings
-6. [Frontend, localization, assets, typography, and product scope](./06-frontend-localization-assets-product-scope.md) — 14 findings
-7. [CI, test coverage, and developer tooling](./07-ci-testing-developer-tooling.md) — 17 findings
-8. [Documentation, verification provenance, and project governance](./08-documentation-provenance-governance.md) — 11 findings
+- [Root-level files audit](./root-files-audit.md) — review of the 19 repository-root files.
+- [GitHub workflows audit](./github-folder-audit.md) — review of the complete .github/ folder and current CI evidence.
+- [Database folder audit](./database-folder-audit.md) — inventory and static review of schemas, active and archived migrations, Drizzle snapshots, RLS policies, bootstrap, and seed files.
+- [Documentation folder audit](./docs-folder-audit.md) — review of the documentation hierarchy, Baseline Plan, Roadmap, database/security contracts, product/API claims, and historical records.
+- [Font folder audit](./font-folder-audit.md) — full inventory of root font assets, current application font-loader references, provenance/licensing evidence, and unused/placeholder asset findings.
+- [Public folder audit](./public-folder-audit.md) — complete public asset inventory, font/logo/icon consumers, metadata wiring, placeholder assets, and sample PDF/report-export findings.
+- [Scripts folder audit](./scripts-folder-audit.md) — complete inventory and static review of all 20 scripts, including database safety guards, tenant-table generation, privileged CLI tools, crawl worker, and developer utilities.
+- [Source folder audit](./src-folder-audit.md) — static review of the complete src/ tree, including auth, tenant context/RLS enforcement, repositories, AI/RAG, crawling, APIs, product actions, billing, scheduling and user-facing flows.
+- [Tests folder audit](./tests-folder-audit.md) — complete static review of all 112 test files, Vitest discovery boundaries, tenant-isolation and privileged-access assurance, and coverage alignment with the target architecture.
+- [Verification folder audit](./verification-folder-audit.md) — review of all 54 historical verification artifacts, RLS and privileged-path evidence, runner provenance, unsafe probes, and alignment with the current target architecture.
 
-## Coverage rule
+## Work areas
 
-- Total original audit findings: 94.
-- Additional architecture-reconciliation findings: 3.
-- Total individual records: 97.
-- Every finding ID must appear exactly once as a primary member of these categories.
-- Cross-references inside individual records are secondary relationships, not duplicate primary assignments.
+- [baseline issues/](./baseline%20issues/) — earlier consolidated remediation specifications retained for traceability; these are not the one-file-per-finding register.
+- [roadmap/](./roadmap/) — ordered implementation stages, authored against the verified post-baseline state and gated on completion of all accepted baseline findings.
+- [new_architecture/](./new_architecture/) — architecture observations and proposed target-state decisions. No architecture change is authorized by documenting an observation.
+
+## Audit sequence
+
+The audit proceeds in explicit, user-approved phases. The initial phase is limited to the 19 repository-root files. Each nested folder is reviewed separately, and the next folder is not started until the user approves the preceding phase.
+
+Findings must distinguish confirmed defects from risks, assumptions, and items requiring later cross-checks. No application, database, deployment, or pull-request changes are authorized by this audit workspace. Before any remediation proposal, findings from earlier phases must be reconciled with the approved target architecture so legacy assumptions are not carried into the new design.
+
+
+## Architecture-aligned remediation branch (2026-11)
+
+The branch `docs/architecture-aligned-remediation-2026-11` preserves the prior audit reports and the 64-row architecture findings matrix, and adds:
+
+- The approved working architecture baseline at `docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md`.
+- The source audit reports and matrix copied unchanged from `docs/architecture-issue-matrix-2026-11`.
+- One consolidated remediation specification per matrix problem under `ai_tasks/baseline issues/`, plus three separately identified architecture-driven gaps (ARCH-001 commercial catalog/entitlements, ARCH-002 LangChain runtime adapter, and ARCH-003 repository/schema contract mismatch).
+- A complete index at `ai_tasks/baseline issues/README.md`, retaining all original finding IDs.
+
+Each remediation record must be revalidated against the current code and operational evidence before implementation. Historical-only findings and product/security policy decisions are explicitly marked. This branch is documentation-only; it does not authorize code, schema, migration, CI, dependency, deployment, or production changes.
+
+
+## Individual problem register
+
+The authoritative one-file-per-finding register is now available at [problem-register/](./problem-register/).
+
+- [97 individual finding files](./problem-register/findings/) — the 94 original audit identifiers plus ARCH-001 through ARCH-003. Every finding has its own numbered file containing the problem, evidence, affected paths, impact, recommended architecture-aligned solution, verification criteria, and related findings.
+- [Eight subject categories](./problem-register/categories/README.md) — every finding has exactly one primary category; related findings remain separate.
+- [Dependency-based implementation sequence](./problem-register/IMPLEMENTATION_SEQUENCE.md) — code-remediation order and safety prerequisites. This is not the full Roadmap and does not authorize code changes.
+
+The earlier 64-record consolidated set under `baseline issues/` is preserved as historical reconciliation material. Where it groups several original IDs, the new register restores each original ID as an independent record. The 97-file register is the canonical reference for any future remediation discussion.

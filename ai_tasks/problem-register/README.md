@@ -1,22 +1,55 @@
-# Problem Categories
+# Oxenn Problem Register
 
-All 97 individual findings have been assigned one primary subject category. A finding remains in its own numbered file under [findings/](../findings/); categorization does not merge, rename, or delete any finding. Related findings may be cross-referenced in multiple records, but each has exactly one primary category below.
+**97 individual records completed**
 
-The categories describe the subject matter only. They do not establish priority, dependency order, or implementation sequence. Those are separate decisions.
+**Status:** Individual findings recorded; subject categorization and dependency-based implementation sequence prepared. No code remediation has been started.  
+**Branch:** `docs/architecture-aligned-remediation-2026-11`  
+**Architecture reference:** [OXENN_PRODUCT_ARCHITECTURE.md](../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)
 
-1. [Security, tenant isolation, and authorization](./01-security-tenant-boundaries.md) — 26 findings
-2. [Persistence, database schema, and data contracts](./02-persistence-schema-contracts.md) — 9 findings
-3. [AI providers, evidence integrity, and assessment correctness](./03-ai-evidence-provider-integrity.md) — 10 findings
-4. [Commercial catalog, service entitlements, quotas, and payments](./04-commercial-catalog-entitlements.md) — 4 findings
-5. [Crawl, invitations, scheduling, and background execution](./05-workflows-crawl-background-execution.md) — 6 findings
-6. [Frontend, localization, assets, typography, and product scope](./06-frontend-localization-assets-product-scope.md) — 14 findings
-7. [CI, test coverage, and developer tooling](./07-ci-testing-developer-tooling.md) — 17 findings
-8. [Documentation, verification provenance, and project governance](./08-documentation-provenance-governance.md) — 11 findings
+## Register structure
 
-## Coverage rule
+- [Individual findings](./findings/): one file per finding, with problem statement, evidence, affected paths, impact, recommended solution, architecture alignment, verification criteria, and related findings.
+- [Subject categories](./categories/README.md): eight primary categories. Each finding has exactly one primary category; cross-references do not merge findings.
+- [Dependency-based implementation sequence](./IMPLEMENTATION_SEQUENCE.md): proposed code-remediation order with prerequisites and safety gates. This is not the full product Roadmap and does not authorize code changes.
 
-- Total original audit findings: 94.
-- Additional architecture-reconciliation findings: 3.
-- Total individual records: 97.
-- Every finding ID must appear exactly once as a primary member of these categories.
-- Cross-references inside individual records are secondary relationships, not duplicate primary assignments.
+## Coverage
+
+| Source | Findings | Record range |
+|---|---:|---:|
+| Root-level audit | 9 | 001–009 |
+| Database audit | 5 | 010–014 |
+| Documentation audit | 9 | 015–023 |
+| Font audit | 4 | 024–027 |
+| GitHub Actions audit | 6 | 028–033 |
+| Public assets audit | 6 | 034–039 |
+| Scripts audit | 7 | 040–046 |
+| Source-code audit | 26 | 047–072 |
+| Tests audit | 9 | 073–081 |
+| Verification audit | 13 | 082–094 |
+| Architecture reconciliation | 3 | 095–097 |
+| **Total** | **97** | **001–097** |
+
+The 94 original audit identifiers are preserved individually. Three additional architecture gaps (ARCH-001, ARCH-002, ARCH-003) are also recorded separately. No source finding was merged into another record.
+
+## Recording and execution rules
+
+1. Original audit reports remain preserved as evidence.
+2. Shared root causes are cross-referenced, not consolidated into a single finding.
+3. The recommended solution in each record is aligned with the current Oxenn architecture; unresolved product/security decisions are explicitly identified.
+4. The category files describe subject matter, not priority.
+5. The implementation sequence expresses dependencies and safe code order; it is not a full Roadmap or implementation authorization.
+6. Every finding must be revalidated against the then-current main branch before code changes begin.
+7. No source code, database schema, migration, CI workflow, dependency, deployment, PR, or production change is authorized by these documents.
+8. Historical verification probes marked do-not-run must remain unused.
+
+
+## AI execution instructions and live progress
+
+- [AI Remediation Agent Prompt](./AI_REMEDIATION_AGENT_PROMPT.md) — English operating instructions for an AI agent: revalidation, dependency order, architecture invariants, implementation method, verification, parallel-work boundaries, stop conditions, and definition of done.
+- [Remediation Progress & Execution Log](./REMEDIATION_PROGRESS.md) — the live 97-finding ledger and dated execution history. Update it throughout the work so the current state, evidence, blockers, and next permitted action remain visible.
+
+The progress tracker is initialized at **not started**. It does not imply authorization to modify code. Explicit approval and the mandatory Wave 0 gate remain required.
+
+## Next gate
+
+The documentation set is ready for review. Implementation may begin only after the user approves the relevant scope and the Wave 0 revalidation/safety gate in the implementation sequence is completed.
