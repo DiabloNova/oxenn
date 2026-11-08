@@ -31,15 +31,15 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Caching & AI Cost Governance Architecture",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Caching & AI Cost Governance Architecture  This document specifies the technical design, contracts, and security boundaries implemented for application-level caching, request deduplication, and AI cost/budget governance on the **seorchable** platform.  ---  ## 1. Caching Layer Architecture  The platform employs a provider-independent caching hierarchy that isolates business layers from future backend storage adapters (such as Redis or Upstash).  \`\`\` Application / Domain Services           │   `
+    snippet: `# Caching & AI Cost Governance Architecture  This document specifies the technical design, contracts, and security boundaries implemented for application-level caching, request deduplication, and AI cost/budget governance on the **seorchable** platform.  ---  ## 1. Caching Layer Architecture  The platform employs a provider-independent caching hierarchy that isolates business layers from future backend storage adapters (such as Redis or Upstash).  \`\`\` Application / Domain Services           â   `
   },
   {
     slug: "DASHBOARD_SHELL_ARCHITECTURE",
-    titleEn: "Seorchable — Dashboard Shell Architecture & Specification",
-    titleFa: "Seorchable — Dashboard Shell Architecture & Specification",
+    titleEn: "Seorchable â Dashboard Shell Architecture & Specification",
+    titleFa: "Seorchable â Dashboard Shell Architecture & Specification",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Seorchable — Dashboard Shell Architecture & Specification  This document details the production-grade architectural design of the unified authenticated Dashboard Shell implemented in **Task 3.0**. The shell serves as the layout foundation for all authenticated sub-modules, establishing strict client-server component boundaries, unified configuration-driven navigation, multi-tenant workspace context integration, and comprehensive LTR/RTL bidirectional layout controls.  ---  ## 1. Directory Stru`
+    snippet: `# Seorchable â Dashboard Shell Architecture & Specification  This document details the production-grade architectural design of the unified authenticated Dashboard Shell implemented in **Task 3.0**. The shell serves as the layout foundation for all authenticated sub-modules, establishing strict client-server component boundaries, unified configuration-driven navigation, multi-tenant workspace context integration, and comprehensive LTR/RTL bidirectional layout controls.  ---  ## 1. Directory Stru`
   },
   {
     slug: "OBSERVABILITY_AND_GOVERNANCE",
@@ -51,11 +51,11 @@ export const DOCS_INDEX: DocMeta[] = [
   },
   {
     slug: "OXENN_PRODUCT_ARCHITECTURE",
-    titleEn: "OXENN Product Architecture — Architecture-Aligned Remediation Baseline",
-    titleFa: "OXENN Product Architecture — Architecture-Aligned Remediation Baseline",
+    titleEn: "OXENN Product Architecture â Architecture-Aligned Remediation Baseline",
+    titleFa: "OXENN Product Architecture â Architecture-Aligned Remediation Baseline",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# OXENN Product Architecture — Architecture-Aligned Remediation Baseline  **Product:** OXENN   **Product identity:** Seorchable   **Status:** Approved working architecture baseline for repository remediation   **Revision date:** 2026-11-07   **Source architecture:** \`DiabloNova/oxenn_documents/product_architecture.md\` (main)   **Repository baseline:** \`DiabloNova/oxenn\` main at \`7bd2b6ba04e18abbcaf772fac63f29c465a45a42\`   **Scope:** Product, commercial, application, intelligence, data, execution`
+    snippet: `# OXENN Product Architecture â Architecture-Aligned Remediation Baseline  **Product:** OXENN   **Product identity:** Seorchable   **Status:** Approved working architecture baseline for repository remediation   **Revision date:** 2026-11-07   **Source architecture:** \`DiabloNova/oxenn_documents/product_architecture.md\` (main)   **Repository baseline:** \`DiabloNova/oxenn\` main at \`7bd2b6ba04e18abbcaf772fac63f29c465a45a42\`   **Scope:** Product, commercial, application, intelligence, data, execution`
   },
   {
     slug: "architecture",
@@ -67,11 +67,11 @@ export const DOCS_INDEX: DocMeta[] = [
   },
   {
     slug: "SITEMAP_AND_ROUTE_SPECIFICATION",
-    titleEn: "Seorchable — Sitemap, Route Architecture & Legacy Redirect Specification",
-    titleFa: "Seorchable — Sitemap, Route Architecture & Legacy Redirect Specification",
+    titleEn: "Seorchable â Sitemap, Route Architecture & Legacy Redirect Specification",
+    titleFa: "Seorchable â Sitemap, Route Architecture & Legacy Redirect Specification",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Seorchable — Sitemap, Route Architecture & Legacy Redirect Specification  **Execution Phase:** Phase 1 — Target Product Architecture **Task ID:** 1.1 **Execution Agent:** Jules **Document Version:** 1.0.0 **Date:** August 2026 **Status:** Authoritative Specification (Read-Only Planning Blueprint)  ---  ## 1. Executive Summary  This document establishes the canonical sitemap, route architecture, and redirect policy for the **Seorchable** SaaS platform. It acts as the single source of truth for `
+    snippet: `# Seorchable â Sitemap, Route Architecture & Legacy Redirect Specification  **Execution Phase:** Phase 1 â Target Product Architecture **Task ID:** 1.1 **Execution Agent:** Jules **Document Version:** 1.0.0 **Date:** August 2026 **Status:** Authoritative Specification (Read-Only Planning Blueprint)  ---  ## 1. Executive Summary  This document establishes the canonical sitemap, route architecture, and redirect policy for the **Seorchable** SaaS platform. It acts as the single source of truth for `
   },
   {
     slug: "architecture",
@@ -87,7 +87,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Relational Database Migration Strategy",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Relational Database Migration Strategy  This specification details the canonical schema modeling, migration execution, and deployment strategy for the AI Visibility Intelligence relational schema.  ---  ## 1. Migration Tech Stack  We utilize **Drizzle ORM** paired with **Drizzle Kit** for schema modeling, SQL generation, schema diffing, and programmatic migration execution.  \`\`\`  [Canonical Drizzle Schema] (database/schema/index.ts)          │          ▼  (pnpm run db:generate / drizzle-kit ge`
+    snippet: `# Relational Database Migration Strategy  This specification details the canonical schema modeling, migration execution, and deployment strategy for the AI Visibility Intelligence relational schema.  ---  ## 1. Migration Tech Stack  We utilize **Drizzle ORM** paired with **Drizzle Kit** for schema modeling, SQL generation, schema diffing, and programmatic migration execution.  \`\`\`  [Canonical Drizzle Schema] (database/schema/index.ts)          â          â¼  (pnpm run db:generate / drizzle-kit ge`
   },
   {
     slug: "reconciliation-report",
@@ -111,7 +111,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Admin Module Architectural Blueprint",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Admin Module Architectural Blueprint  This document details the software architecture of the **Enterprise Administrative Bounded Context** of the AI Visibility Intelligence Platform SaaS.  ## Bounded Context & Isolation Invariant  The Admin module is designed as a completely independent bounded context under \`src/features/admin/\`. It maintains 100% decoupling from customer-facing tenant workspaces, except through explicitly published domain interfaces and shared schemas.  \`\`\` ┌────────────────`
+    snippet: `# Admin Module Architectural Blueprint  This document details the software architecture of the **Enterprise Administrative Bounded Context** of the AI Visibility Intelligence Platform SaaS.  ## Bounded Context & Isolation Invariant  The Admin module is designed as a completely independent bounded context under \`src/features/admin/\`. It maintains 100% decoupling from customer-facing tenant workspaces, except through explicitly published domain interfaces and shared schemas.  \`\`\` âââââââââââââââââ`
   },
   {
     slug: "AI_CITATION_INTELLIGENCE_ARCHITECTURE",
@@ -127,7 +127,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "AI processing Pipeline Architecture",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# AI processing Pipeline Architecture  This document describes the design and abstract contracts created to coordinate multi-model scraping, sanitization, and metric calculation.  ---  ## 1. Pipeline Stages  Ingesting and evaluating Generative engine search results operates in six decoupled abstract stages:  \`\`\`   [Stage 1: IAIEngineAdapter]             │ Dispatches queries to ChatGPT / Claude / Gemini / Perplexity             ▼   [Stage 2: IPromptExecutionPipeline]             │ Schedules cron `
+    snippet: `# AI processing Pipeline Architecture  This document describes the design and abstract contracts created to coordinate multi-model scraping, sanitization, and metric calculation.  ---  ## 1. Pipeline Stages  Ingesting and evaluating Generative engine search results operates in six decoupled abstract stages:  \`\`\`   [Stage 1: IAIEngineAdapter]             â Dispatches queries to ChatGPT / Claude / Gemini / Perplexity             â¼   [Stage 2: IPromptExecutionPipeline]             â Schedules cron `
   },
   {
     slug: "AI_PROMPT_INTELLIGENCE_ARCHITECTURE",
@@ -159,7 +159,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Clean & Multi-Tenant Architecture Specification",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Clean & Multi-Tenant Architecture Specification  This document details the modular layout and patterns implemented under **Phase 7C.1** to support infinite horizontal scaling and future-proof enterprise security.  ---  ## 1. Enterprise Layered Architecture  The module is structured into distinct, decoupled boundaries following the Clean Architecture pattern:  \`\`\`   ┌────────────────────────────────────────────────────────┐   │                   Application / UI Layer               │   │       `
+    snippet: `# Clean & Multi-Tenant Architecture Specification  This document details the modular layout and patterns implemented under **Phase 7C.1** to support infinite horizontal scaling and future-proof enterprise security.  ---  ## 1. Enterprise Layered Architecture  The module is structured into distinct, decoupled boundaries following the Clean Architecture pattern:  \`\`\`   ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ   â                   Application / UI Layer               â   â       `
   },
   {
     slug: "AUDIT_DESIGN",
@@ -191,7 +191,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Data Flow & Pipelines",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Data Flow & Pipelines  This document maps the sequential lifecycles and pipelines of the AI Visibility Intelligence Engine.  ---  ## 1. AI Observation Ingestion Lifecycle  This pipeline details how incoming LLM query captures flow into calculated analytics and triggers autonomous recovery actions.  \`\`\`  [AI Agent Engine]         │ Executes Search Query         ▼  [Raw JSON Payload]         │         ▼  [ObservationService.processObservation()]         │         ├─► 1. Save Raw Observation     `
+    snippet: `# Data Flow & Pipelines  This document maps the sequential lifecycles and pipelines of the AI Visibility Intelligence Engine.  ---  ## 1. AI Observation Ingestion Lifecycle  This pipeline details how incoming LLM query captures flow into calculated analytics and triggers autonomous recovery actions.  \`\`\`  [AI Agent Engine]         â Executes Search Query         â¼  [Raw JSON Payload]         â         â¼  [ObservationService.processObservation()]         â         âââº 1. Save Raw Observation     `
   },
   {
     slug: "DEPENDENCY_INJECTION",
@@ -207,7 +207,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Domain Model Design Specification",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Domain Model Design Specification  This document details the Domain-Driven Design (DDD) model established for the **AI Visibility Intelligence Engine (Phase 7C.1)**.  ---  ## 1. Domain Architectural Paradigms  This domain operates on strict **Domain-Driven Design (DDD)** principles to separate technical details (database, controllers, API) from the underlying core business rules of Answer Engine Optimization (AEO) and Generative Engine Optimization (GEO).  \`\`\`    ┌─────────────────────────────`
+    snippet: `# Domain Model Design Specification  This document details the Domain-Driven Design (DDD) model established for the **AI Visibility Intelligence Engine (Phase 7C.1)**.  ---  ## 1. Domain Architectural Paradigms  This domain operates on strict **Domain-Driven Design (DDD)** principles to separate technical details (database, controllers, API) from the underlying core business rules of Answer Engine Optimization (AEO) and Generative Engine Optimization (GEO).  \`\`\`    ââââââââââââââââââââââââââââââ`
   },
   {
     slug: "EVENT_ARCHITECTURE",
@@ -239,7 +239,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Infrastructure and Services Architecture",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Infrastructure and Services Architecture  This document describes the **SaaS Platform Operations Infrastructure Architecture**, connecting domain entities to PostgreSQL repositories, in-memory caching, and event-driven backbones.  ## Architectural Layout  \`\`\`                         ┌──────────────────────────────────┐                         │       CQRS Handlers / API        │                         └────────────────┬─────────────────┘                                          │             `
+    snippet: `# Infrastructure and Services Architecture  This document describes the **SaaS Platform Operations Infrastructure Architecture**, connecting domain entities to PostgreSQL repositories, in-memory caching, and event-driven backbones.  ## Architectural Layout  \`\`\`                         ââââââââââââââââââââââââââââââââââââ                         â       CQRS Handlers / API        â                         ââââââââââââââââââ¬ââââââââââââââââââ                                          â             `
   },
   {
     slug: "KNOWLEDGE_GRAPH_DESIGN",
@@ -303,7 +303,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Database Reference Matrix",
     category: "database",
     categoryFa: "Database",
-    snippet: `# Database Reference Matrix ## Table: \`admin_users\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`aeo_analyses\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`ai_engines\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`ai_observations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`ai_provider_configs\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`ai_visibility_audits\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`api_keys\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`audit_prompts\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`audit_records\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`auth_rate_limits\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`brand_associations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`brand_mentions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`brands\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`citation_occurrences\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`citation_sources\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`citations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`competitive_analyses\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`competitive_seo_findings\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`competitor_changes\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`competitors\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`crawl_cache\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`crawl_jobs\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`crawl_results\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`crawl_snapshots\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`credit_transactions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`diagnostic_finding_relationships\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`diagnostic_findings\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`document_embeddings\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`email_verification_tokens\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`entities\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`entity_relationships\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`faq_opportunities\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`feature_flags\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`historical_metrics\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`keywords\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`keywords_topics\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`kg_alignments\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`kg_entities\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`kg_relationships\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`monitoring_alerts\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`monitoring_configs\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`organization_invitations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`organization_members\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`organizations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`pages\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`pages_entities\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`pages_keywords\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`pages_topics\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`password_reset_tokens\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`permissions\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`position_observations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`premium_audits\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`prompt_definitions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`prompt_executions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`prompt_schedules\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`prompts\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`recommendation_observations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`recommendations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`roles\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`sessions\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`system_configurations\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`technical_audits\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`tenant_quotas\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`tenant_subscriptions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`topics\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Table: \`topics_entities\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`user_credentials\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`users\` - **Scope:** Global - **RLS Policies Defined:** ❌ - **Status:** \`WIRED\` ## Table: \`visibility_scores\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`websites\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** ✅ - **Status:** \`WIRED\` ## Summary - Total Tables: 70 - WIRED Tables: 59 - ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 11`
+    snippet: `# Database Reference Matrix ## Table: \`admin_users\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`aeo_analyses\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`ai_engines\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`ai_observations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`ai_provider_configs\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`ai_visibility_audits\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`api_keys\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`audit_prompts\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`audit_records\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`auth_rate_limits\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`brand_associations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`brand_mentions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`brands\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`citation_occurrences\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`citation_sources\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`citations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`competitive_analyses\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`competitive_seo_findings\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`competitor_changes\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`competitors\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`crawl_cache\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`crawl_jobs\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`crawl_results\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`crawl_snapshots\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`credit_transactions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`diagnostic_finding_relationships\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`diagnostic_findings\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`document_embeddings\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`email_verification_tokens\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`entities\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`entity_relationships\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`faq_opportunities\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`feature_flags\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`historical_metrics\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`keywords\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`keywords_topics\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`kg_alignments\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`kg_entities\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`kg_relationships\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`monitoring_alerts\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`monitoring_configs\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`organization_invitations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`organization_members\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`organizations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`pages\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`pages_entities\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`pages_keywords\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`pages_topics\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`password_reset_tokens\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`permissions\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`position_observations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`premium_audits\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`prompt_definitions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`prompt_executions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`prompt_schedules\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`prompts\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`recommendation_observations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`recommendations\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`roles\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`sessions\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`system_configurations\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`technical_audits\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`tenant_quotas\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`tenant_subscriptions\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`topics\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`topics_entities\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`user_credentials\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`users\` - **Scope:** Global - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Table: \`visibility_scores\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`ORPHAN-TABLE\` (LEGACY-CANDIDATE) ## Table: \`websites\` - **Scope:** Tenant-Scoped - **RLS Policies Defined:** â - **Status:** \`WIRED\` ## Summary - Total Tables: 70 - WIRED Tables: 59 - ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 11`
   },
   {
     slug: "product",
@@ -315,27 +315,27 @@ export const DOCS_INDEX: DocMeta[] = [
   },
   {
     slug: "PHASE-01-PRODUCT-DESIGN-AUDIT",
-    titleEn: "Phase 01 — Product and Design Audit",
-    titleFa: "Phase 01 — Product and Design Audit",
+    titleEn: "Phase 01 â Product and Design Audit",
+    titleFa: "Phase 01 â Product and Design Audit",
     category: "redesign",
     categoryFa: "redesign",
-    snippet: `# Phase 01 — Product and Design Audit  **Project:** Oxenn / اوژن   **Repository:** https://github.com/DiabloNova/oxenn   **Baseline branch:** \`main\`   **Execution branch:** \`redesign/oxenn-world-class-experience\`   **Audit date:** 2026-10-29   **Status:** Repository/source inspection completed for the first audit pass. Route-by-route reconciliation and executable baseline checks remain open.  ## 1. Scope and method  This audit checks the existing repository entry points, shared styles, locale/theme/navigation`
+    snippet: `# Phase 01 â Product and Design Audit  **Project:** Oxenn / Ø§ÙÚÙ   **Repository:** https://github.com/DiabloNova/oxenn   **Baseline branch:** \`main\`   **Execution branch:** \`redesign/oxenn-world-class-experience\`   **Audit date:** 2026-10-29   **Status:** Repository/source inspection completed for the first audit pass. Route-by-route reconciliation and executable baseline checks remain open.  ## 1. Scope and method  This audit checks the existing repository entry points, shared styles, locale/theme/navigation`
   },
   {
     slug: "PHASE-01-STYLEGUIDE-AND-CODEBASE-AUDIT",
-    titleEn: "Phase 01 — Existing Product & Design-System Audit",
-    titleFa: "Phase 01 — Existing Product & Design-System Audit",
+    titleEn: "Phase 01 â Existing Product & Design-System Audit",
+    titleFa: "Phase 01 â Existing Product & Design-System Audit",
     category: "redesign",
     categoryFa: "redesign",
-    snippet: `# Phase 01 — Existing Product & Design-System Audit  **Product:** Oxenn / Seorchable   **Repository:** DiabloNova/oxenn   **Branch:** \`redesign/oxenn-world-class-experience\`   **Audit scope:** Existing homepage, shared navigation, theme/locale provider, typography configuration, tokens, marketing components, and the supplied Product UI Styleguide image.   **Status:** Source inspection completed for the files listed below. No production UI code was changed in this phase.  ## 1. Design brief groun`
+    snippet: `# Phase 01 â Existing Product & Design-System Audit  **Product:** Oxenn / Seorchable   **Repository:** DiabloNova/oxenn   **Branch:** \`redesign/oxenn-world-class-experience\`   **Audit scope:** Existing homepage, shared navigation, theme/locale provider, typography configuration, tokens, marketing components, and the supplied Product UI Styleguide image.   **Status:** Source inspection completed for the files listed below. No production UI code was changed in this phase.  ## 1. Design brief groun`
   },
   {
     slug: "PHASE-02-CREATIVE-DIRECTION",
-    titleEn: "Phase 02 — Creative Concept and Design Direction",
-    titleFa: "Phase 02 — Creative Concept and Design Direction",
+    titleEn: "Phase 02 â Creative Concept and Design Direction",
+    titleFa: "Phase 02 â Creative Concept and Design Direction",
     category: "redesign",
     categoryFa: "redesign",
-    snippet: `# Phase 02 — Creative Concept and Design Direction  **Concept name:** Signal Atlas — Oxenn's Living Digital Twin   **Design thesis:** Turn fragmented search and AI visibility signals into a clear model of where a brand stands, what is missing, and what to do next.   **Reference concept:** The generated Oxenn homepage image shared in the project conversation (1536 × 1024). It is an art-direction reference, not a production screenshot or proof of shipped functionality.  ## 1. Brand principles  1. `
+    snippet: `# Phase 02 â Creative Concept and Design Direction  **Concept name:** Signal Atlas â Oxenn's Living Digital Twin   **Design thesis:** Turn fragmented search and AI visibility signals into a clear model of where a brand stands, what is missing, and what to do next.   **Reference concept:** The generated Oxenn homepage image shared in the project conversation (1536 Ã 1024). It is an art-direction reference, not a production screenshot or proof of shipped functionality.  ## 1. Brand principles  1. `
   },
   {
     slug: "RBAC_MODEL",
@@ -360,6 +360,14 @@ export const DOCS_INDEX: DocMeta[] = [
     category: "security",
     categoryFa: "Security",
     snippet: `# Security Architecture Model  This document outlines the security, tenant authorization, Role-Based Access Control (RBAC), and compliance guidelines implemented for the AI Intelligence Engine.  ---  ## 1. Zero-Trust Tenant Isolation  The platform enforces zero-trust tenant isolation through multiple decoupled security shields:  1. **Repository Guard Rails**: Finders require explicit \`organizationId\` parameter filtering. 2. **Domain Layer Assertions**: Tenant contexts are verified inside domain `
+  },
+  {
+    slug: "environment-configuration",
+    titleEn: "Secure Environment Configuration",
+    titleFa: "Secure Environment Configuration",
+    category: "security",
+    categoryFa: "Security",
+    snippet: `# Secure Environment Configuration  ## Environment classification  Set \`APP_ENVIRONMENT\` explicitly to one of \`development\`, \`test\`, \`staging\`, or \`production\`. If \`NODE_ENV=production\`, the validator treats the process as production regardless of a conflicting \`APP_ENVIRONMENT\` value; a deployment cannot downgrade production checks by setting \`APP_ENVIRONMENT=development\`.  The checked-in \`.env.example\` is a local-development convenience only. Its loopback PostgreSQL credentials and session pla`
   },
   {
     slug: "privileged-paths",
@@ -387,51 +395,51 @@ export const DOCS_INDEX: DocMeta[] = [
   },
   {
     slug: "phase-2-code-security",
-    titleEn: "Phase 2 — Code Security (H1, M8)",
-    titleFa: "Phase 2 — Code Security (H1, M8)",
+    titleEn: "Phase 2 â Code Security (H1, M8)",
+    titleFa: "Phase 2 â Code Security (H1, M8)",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Phase 2 — Code Security (H1, M8)  **Status: INCOMPLETE — VERIFICATION PENDING**   **Date:** 2026-10-19   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Oxenn Audit Report and Remediation Plan](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [PATCH-LlmAnalyticsPanel-XSS.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/PATCH-LlmAnalyticsPanel-XSS.md)   **Branch:** \`fix/audit-remediation-p2\`   **Pull req`
+    snippet: `# Phase 2 â Code Security (H1, M8)  **Status: INCOMPLETE â VERIFICATION PENDING**   **Date:** 2026-10-19   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Oxenn Audit Report and Remediation Plan](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [PATCH-LlmAnalyticsPanel-XSS.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/PATCH-LlmAnalyticsPanel-XSS.md)   **Branch:** \`fix/audit-remediation-p2\`   **Pull req`
   },
   {
     slug: "pr-98-language-routing-navigation-flash",
-    titleEn: "PR #98 — Language routing and workspace navigation flash",
-    titleFa: "PR #98 — Language routing and workspace navigation flash",
+    titleEn: "PR #98 â Language routing and workspace navigation flash",
+    titleFa: "PR #98 â Language routing and workspace navigation flash",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# PR #98 — Language routing and workspace navigation flash  **Status:** IMPLEMENTED — automated checks passed on source commit \`ebe2e470a8a2f78c7e85df3da5216826799fd0db\`; manual visual verification of the protected Vercel preview remains unavailable.  **Scope:** \`fix/language-toggle-route-sync\` (PR #98). This task covers the floating-navigation flash during route transitions, all navigation initiators associated with that dock, and the contract for unprefixed application paths.  ## Invariant  A `
+    snippet: `# PR #98 â Language routing and workspace navigation flash  **Status:** IMPLEMENTED â automated checks passed on source commit \`ebe2e470a8a2f78c7e85df3da5216826799fd0db\`; manual visual verification of the protected Vercel preview remains unavailable.  **Scope:** \`fix/language-toggle-route-sync\` (PR #98). This task covers the floating-navigation flash during route transitions, all navigation initiators associated with that dock, and the contract for unprefixed application paths.  ## Invariant  A `
   },
   {
     slug: "site-map-information-architecture-audit",
-    titleEn: "Site Map and Product Information Architecture Audit — Oxenn / Seorchable",
-    titleFa: "ممیزی معماری اطلاعات و نقشه سایت Oxenn / Seorchable",
+    titleEn: "Site Map and Product Information Architecture Audit â Oxenn / Seorchable",
+    titleFa: "ÙÙÛØ²Û ÙØ¹ÙØ§Ø±Û Ø§Ø·ÙØ§Ø¹Ø§Øª Ù ÙÙØ´Ù Ø³Ø§ÛØª Oxenn / Seorchable",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# ممیزی معماری اطلاعات و نقشه سایت Oxenn / Seorchable  - تاریخ بررسی: ۲۰۲۶-۱۰-۲۹ - شاخه ممیزی: \`docs/site-map-and-product-information-architecture\` - شاخه مبنا: \`main\` - commit مبنا: \`0a85219c90ccba91d0f796dc6cdd344d84b6e003\` - نوع اقدام: بررسی و مستندسازی فقط؛ هیچ صفحه، مسیر برنامه یا رفتار اجرایی در این شاخه تغییر نکرده است.  ## 1. تصمیم‌های معماری که باید رعایت شوند  1. «راهکارها و خدمات» فقط سطح معرفی، توضیح ارزش، مخاطب هدف، موارد استفاده، وضعیت عرضه و CTA است. کار واقعی با ابزارها در داشبور`
+    snippet: `# ÙÙÛØ²Û ÙØ¹ÙØ§Ø±Û Ø§Ø·ÙØ§Ø¹Ø§Øª Ù ÙÙØ´Ù Ø³Ø§ÛØª Oxenn / Seorchable  - ØªØ§Ø±ÛØ® Ø¨Ø±Ø±Ø³Û: Û²Û°Û²Û¶-Û±Û°-Û²Û¹ - Ø´Ø§Ø®Ù ÙÙÛØ²Û: \`docs/site-map-and-product-information-architecture\` - Ø´Ø§Ø®Ù ÙØ¨ÙØ§: \`main\` - commit ÙØ¨ÙØ§: \`0a85219c90ccba91d0f796dc6cdd344d84b6e003\` - ÙÙØ¹ Ø§ÙØ¯Ø§Ù: Ø¨Ø±Ø±Ø³Û Ù ÙØ³ØªÙØ¯Ø³Ø§Ø²Û ÙÙØ·Ø ÙÛÚ ØµÙØ­ÙØ ÙØ³ÛØ± Ø¨Ø±ÙØ§ÙÙ ÛØ§ Ø±ÙØªØ§Ø± Ø§Ø¬Ø±Ø§ÛÛ Ø¯Ø± Ø§ÛÙ Ø´Ø§Ø®Ù ØªØºÛÛØ± ÙÚ©Ø±Ø¯Ù Ø§Ø³Øª.  ## 1. ØªØµÙÛÙâÙØ§Û ÙØ¹ÙØ§Ø±Û Ú©Ù Ø¨Ø§ÛØ¯ Ø±Ø¹Ø§ÛØª Ø´ÙÙØ¯  1. Â«Ø±Ø§ÙÚ©Ø§Ø±ÙØ§ Ù Ø®Ø¯ÙØ§ØªÂ» ÙÙØ· Ø³Ø·Ø­ ÙØ¹Ø±ÙÛØ ØªÙØ¶ÛØ­ Ø§Ø±Ø²Ø´Ø ÙØ®Ø§Ø·Ø¨ ÙØ¯ÙØ ÙÙØ§Ø±Ø¯ Ø§Ø³ØªÙØ§Ø¯ÙØ ÙØ¶Ø¹ÛØª Ø¹Ø±Ø¶Ù Ù CTA Ø§Ø³Øª. Ú©Ø§Ø± ÙØ§ÙØ¹Û Ø¨Ø§ Ø§Ø¨Ø²Ø§Ø±ÙØ§ Ø¯Ø± Ø¯Ø§Ø´Ø¨ÙØ±`
   },
   {
     slug: "phase-3-repository-configuration-hygiene",
-    titleEn: "Phase 3 — Repository and Configuration Hygiene",
-    titleFa: "Phase 3 — Repository and Configuration Hygiene",
+    titleEn: "Phase 3 â Repository and Configuration Hygiene",
+    titleFa: "Phase 3 â Repository and Configuration Hygiene",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Phase 3 — Repository and Configuration Hygiene  **Status:** INCOMPLETE — VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c2\``
+    snippet: `# Phase 3 â Repository and Configuration Hygiene  **Status:** INCOMPLETE â VERIFICATION PENDING   **Date:** 2026-10-21   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Audit.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [README-FIXES.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/README-FIXES.md)   **Branch:** \`fix/audit-remediation-p3\`   **Base commit:** \`641b1fcb18a62e520a463b546240239b952836c2\``
   },
   {
     slug: "pr-113-phase-0-baseline-verification",
-    titleEn: "PR #113 — Phase 0 Baseline and Documentation Link Guards",
-    titleFa: "PR #113 — Phase 0 Baseline and Documentation Link Guards",
+    titleEn: "PR #113 â Phase 0 Baseline and Documentation Link Guards",
+    titleFa: "PR #113 â Phase 0 Baseline and Documentation Link Guards",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# PR #113 — Phase 0 Baseline and Documentation Link Guards  **Status:** SUCCESS — verification passed in CI run [#607](https://github.com/DiabloNova/oxenn/actions/runs/42088444363).   **Date:** 2026-11-05   **Branch:** \`mvp/phase-0-scope-baseline\`   **PR:** [#113](https://github.com/DiabloNova/oxenn/pull/113)   **Verified implementation commit:** \`97ba159c2f73536b42e3aad2d7f31c440254a586\`  ## Scope  Implement only the two documentation-quality suggestions raised during PR review:  1. Keep the Ph`
+    snippet: `# PR #113 â Phase 0 Baseline and Documentation Link Guards  **Status:** SUCCESS â verification passed in CI run [#607](https://github.com/DiabloNova/oxenn/actions/runs/42088444363).   **Date:** 2026-11-05   **Branch:** \`mvp/phase-0-scope-baseline\`   **PR:** [#113](https://github.com/DiabloNova/oxenn/pull/113)   **Verified implementation commit:** \`97ba159c2f73536b42e3aad2d7f31c440254a586\`  ## Scope  Implement only the two documentation-quality suggestions raised during PR review:  1. Keep the Ph`
   },
   {
     slug: "audit-gate-stage3-regression-tests",
-    titleEn: "Stage 3 — Audit Gate Regression Tests and Verification",
-    titleFa: "Stage 3 — Audit Gate Regression Tests and Verification",
+    titleEn: "Stage 3 â Audit Gate Regression Tests and Verification",
+    titleFa: "Stage 3 â Audit Gate Regression Tests and Verification",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Stage 3 — Audit Gate Regression Tests and Verification  **Status:** SUCCESS (Stage 3 verification passed)   **Date:** 2026-10-19   **PR:** [#86](https://github.com/DiabloNova/oxenn/pull/86)   **Branch:** \`fix/audit-remediation-p1-v1.1\`   **Verified implementation commit:** \`0e439e087922245f29476acc946374c6fe6aef0a\`  ## Invariant  The dependency audit gate must never interpret missing, empty, malformed, or ambiguous severity/patch metadata as safe evidence. Critical/high findings may be risk-ac`
+    snippet: `# Stage 3 â Audit Gate Regression Tests and Verification  **Status:** SUCCESS (Stage 3 verification passed)   **Date:** 2026-10-19   **PR:** [#86](https://github.com/DiabloNova/oxenn/pull/86)   **Branch:** \`fix/audit-remediation-p1-v1.1\`   **Verified implementation commit:** \`0e439e087922245f29476acc946374c6fe6aef0a\`  ## Invariant  The dependency audit gate must never interpret missing, empty, malformed, or ambiguous severity/patch metadata as safe evidence. Critical/high findings may be risk-ac`
   },
   {
     slug: "zod-firecrawl-remediation",
@@ -447,7 +455,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Conductor PR #57 review fixes",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# Conductor PR #57 review fixes  - **Status:** SUCCESS (documentation correction; controller review and writeback pending). - **Invariant:** retries require reconciliation; authority and confidentiality stay explicit;   evidence fits the medium; physical safety is context-specific; dependency arithmetic includes   relationship and lag; whole-project startup and applicable commercial gates remain intact. - **Implementation:** issues 1–20 applied separately, in order, to the eight guidance files u`
+    snippet: `# Conductor PR #57 review fixes  - **Status:** SUCCESS (documentation correction; controller review and writeback pending). - **Invariant:** retries require reconciliation; authority and confidentiality stay explicit;   evidence fits the medium; physical safety is context-specific; dependency arithmetic includes   relationship and lag; whole-project startup and applicable commercial gates remain intact. - **Implementation:** issues 1â20 applied separately, in order, to the eight guidance files u`
   },
   {
     slug: "user-guides",
