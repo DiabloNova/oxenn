@@ -50,6 +50,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Observability & Cost Governance Architecture Reference  This document defines the architectural specification, environment configurations, and security/isolation properties established for request-scoped context propagation, trace sampling, decoupled latency metrics, and AI cost warning thresholds on the **seorchable** platform.  ---  ## 1. Request Context & Async Context Propagation  For advanced request-scoped context tracing without manually prop-drilling identifiers through business servic`
   },
   {
+    slug: "OXENN_PRODUCT_ARCHITECTURE",
+    titleEn: "OXENN Product Architecture — Architecture-Aligned Remediation Baseline",
+    titleFa: "OXENN Product Architecture — Architecture-Aligned Remediation Baseline",
+    category: "architecture",
+    categoryFa: "Architecture",
+    snippet: `# OXENN Product Architecture — Architecture-Aligned Remediation Baseline  **Product:** OXENN   **Product identity:** Seorchable   **Status:** Approved working architecture baseline for repository remediation   **Revision date:** 2026-11-07   **Source architecture:** \`DiabloNova/oxenn_documents/product_architecture.md\` (main)   **Repository baseline:** \`DiabloNova/oxenn\` main at \`7bd2b6ba04e18abbcaf772fac63f29c465a45a42\`   **Scope:** Product, commercial, application, intelligence, data, execution`
+  },
+  {
     slug: "architecture",
     titleEn: "Architecture Documentation",
     titleFa: "Architecture Documentation",

@@ -159,11 +159,13 @@ The agent MUST NOT begin implementation merely because it has found a file that 
 
 ## 4. Mandatory Read-Only Documentation Review Rule
 
-Before planning any task, the agent MUST inspect the relevant reports, logs, audits, implementation plans, findings, and other documentation **only** under the `docs/` directory and use the *relevant Markdown (`*.md`) files* as the basis for the task's plan.
+Before planning any task, the agent MUST inspect the relevant reports, logs, audits, implementation plans, findings, and other documentation under the `docs/` directory and use the *relevant Markdown (`*.md`) files* as the basis for the task's plan.
 
-*Relevant Markdown files*  in this rule are any `*.md` files under `docs/` whose subject is directly relevant to the current task.
+*Relevant Markdown files* in the default rule are any `*.md` files under `docs/` whose subject is directly relevant to the current task.
 
-If the task prompt explicitly instructs the agent to read specific files or documents under `docs/`, the prompt's explicit instruction OVERRIDES this rule, and the agent MUST follow the prompt's instruction exactly.
+**Scoped remediation-workspace exception:** When a task is explicitly governed by `ai_tasks/problem-register/AI_REMEDIATION_AGENT_PROMPT.md`, the agent MUST also read the authoritative remediation documents listed by that prompt, the applicable individual finding records under `ai_tasks/problem-register/findings/`, and the exact original audit/baseline records those findings reference. These `ai_tasks/` files are authoritative task-scoped remediation inputs; this exception does not make the entire `ai_tasks/` tree a general documentation source for unrelated tasks. The architecture baseline under `docs/architecture/` remains the target-architecture authority.
+
+If the task prompt explicitly instructs the agent to read specific files or documents under `docs/`, the prompt's explicit instruction OVERRIDES this rule, and the agent MUST follow the prompt's instruction exactly. For remediation tasks governed by the prompt above, apply the scoped exception in addition to the relevant `docs/` review.
 
 ---
 
