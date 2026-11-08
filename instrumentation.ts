@@ -1,12 +1,11 @@
-import { validateEnv } from "./scripts/env-check";
-
 /**
  * Enforce deployment environment safety before a Node.js server runtime handles requests.
- * This hook also runs in Vercel's Next.js server runtime, where package start scripts are bypassed.
+ * Dynamically import the Node-only validator so Edge instrumentation does not bundle fs/path.
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  const { validateEnv } = await import("./scripts/env-check");
   const result = validateEnv("start");
   if (!result.valid) {
     const details = [
