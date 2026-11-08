@@ -47,7 +47,11 @@ describe("Defect 1: System Mode Bypass Verification Test Suite", () => {
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
     const mockClient = {
-      query: vi.fn().mockResolvedValue({ rows: [{ prefix: "ox_live_123" }], rowCount: 1 }),
+      query: vi.fn().mockImplementation(async (sql: string) =>
+        sql.includes("SELECT rolsuper FROM pg_roles")
+          ? { rows: [{ rolsuper: false }], rowCount: 1 }
+          : { rows: [{ prefix: "ox_live_123" }], rowCount: 1 },
+      ),
       release: vi.fn(),
     };
     vi.spyOn(pgClient.getPool(), "connect").mockImplementation(async () => mockClient as unknown as import("pg").PoolClient);

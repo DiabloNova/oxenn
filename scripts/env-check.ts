@@ -87,6 +87,7 @@ const KNOWN_PLACEHOLDER_SECRETS = [
   "replace-me",
   "placeholder",
   "example-secret",
+  "local-development-only-not-for-deployment",
 ];
 const SUPERUSER_ROLE_NAMES = new Set([
   "postgres",
@@ -301,7 +302,7 @@ export function validateEnv(modeArg?: string) {
   };
 }
 
-if (typeof require !== "undefined" && require.main === module) {
+if (require.main === module) {
   // Keep the existing simple env-file loader isolated from dotenv tooling changes.
   loadEnvFile(path.resolve(process.cwd(), ".env.local"));
   loadEnvFile(path.resolve(process.cwd(), ".env"));
