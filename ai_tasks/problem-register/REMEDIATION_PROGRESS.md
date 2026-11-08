@@ -16,7 +16,7 @@
 |---|---:|
 | Individual finding records | 97 |
 | Finding records copied into the isolated execution branch | 97 |
-| Findings revalidated against current `main` | 4 |
+| Findings revalidated against current `main` | 13 |
 | Findings approved for implementation | 0 |
 | Findings with implementation started | 0 |
 | Findings with verified implementation complete | 0 |
@@ -69,15 +69,15 @@ The wave column is a proposed dependency placement, not proof that the finding h
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
-| [RF-001](./findings/001-RF-001.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
-| [RF-002](./findings/002-RF-002.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
-| [RF-003](./findings/003-RF-003.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
-| [RF-004](./findings/004-RF-004.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
-| [RF-005](./findings/005-RF-005.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
-| [RF-006](./findings/006-RF-006.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
-| [RF-007](./findings/007-RF-007.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
-| [RF-008](./findings/008-RF-008.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
-| [RF-009](./findings/009-RF-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
+| [RF-001](./findings/001-RF-001.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed — present on pinned main | 7bd2b6ba | update_recon.sh calls missing root helpers; no fail-fast before report replacement |
+| [RF-002](./findings/002-RF-002.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed — present on pinned main | 7bd2b6ba | verify_aeo_content.py process/credential/readiness/error handling review |
+| [RF-003](./findings/003-RF-003.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed — DB test project empty and passWithNoTests | 7bd2b6ba | vitest.config.ts; no files under tests/db |
+| [RF-004](./findings/004-RF-004.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Partially mitigated — package db:push guarded | 7bd2b6ba | drizzle.config.ts fallback; guard protects package script; no CI bypass found |
+| [RF-005](./findings/005-RF-005.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed — placeholder accepted by env-check | 7bd2b6ba | .env.example + env-check; local-only comments mitigate but do not enforce |
+| [RF-006](./findings/006-RF-006.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed — CSP header absent | 7bd2b6ba | next.config.ts; HSTS preload domain suitability unverified |
+| [RF-007](./findings/007-RF-007.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed — current-main product docs lack target model | 7bd2b6ba | SPEC.md/README compared with target architecture not in main |
+| [RF-008](./findings/008-RF-008.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed — duplicate and malformed headings | 7bd2b6ba | AGENTS.md lines 511, 534, 1252 |
+| [RF-009](./findings/009-RF-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed — production sender remains nonfunctional | 7bd2b6ba | email adapter + invitation action; non-empty provider suppresses token fallback |
 | [DB-001](./findings/010-DB-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [DB-002](./findings/011-DB-002.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DB-003](./findings/012-DB-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
@@ -214,6 +214,23 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - GitHub code-search responses for `Firecrawl`, `scrapeUrl`, and `fetch` were marked incomplete with zero results; they were not used as proof of completeness. The inventory above is based on the complete main tree, all 18 API v1 routes, and the bounded crawler/audit/provider source set.
 - No tests executed; no code, database, migration, CI, dependency, deployment, PR, or Issue changes.
 - Next: continue the remaining finding groups and update the tracker after the next coherent batch.
+
+
+### Wave 0 batch 2 — root files and operating/configuration controls — 2026-11-08
+
+- Baseline: `main` `7bd2b6ba04e18abbcaf772fac63f29c465a45a42`.
+- Revalidated findings: `RF-001` through `RF-009` (9/97 in this batch; 13/97 total). Per-finding evidence, exact main blob SHAs and line ranges are appended to each record.
+- `RF-001`: root helper paths referenced by `update_recon.sh` are absent; similarly named helpers exist under `scripts/dev-tools/`, but the script calls neither path. It does not fail closed before replacing the report.
+- `RF-002`: visual verification script kills any listener on port 3000, uses a fixed sleep and embedded credentials, writes to a machine-specific path, and catches errors without a non-zero exit. It was not run.
+- `RF-003`: `tests/db/` has no files, while the Vitest DB project and root config both allow no-test success. No test command was run.
+- `RF-004`: Drizzle config retains a local superuser fallback, but package `db:push` executes a fail-closed guard first. Guard tests cover production markers, explicit authorization/disposable flags and database emptiness. The two inspected workflows use `drizzle-kit check`, not `drizzle-kit push`; no in-repository unguarded push workflow was found. Direct raw CLI invocation could bypass the package-script guard, so disposition is partially mitigated, not a proven in-repository destructive path.
+- `RF-005`: `.env.example` marks local DB credentials as development-only, but `env-check` accepts any PostgreSQL URL format and a 16-character `SESSION_SECRET`; the documented placeholder is longer than that and is not rejected. Existing env-check tests cover mode selection only.
+- `RF-006`: Next response headers still omit CSP; HSTS includes subdomains/preload, but actual domain eligibility is unverified.
+- `RF-007`: `SPEC.md` and README in main do not define the digital-twin target-state lifecycle. The target architecture does, but only on the separate source-register branch and not in main.
+- `RF-008`: AGENTS.md retains duplicate section 15 and malformed section 16 heading.
+- `RF-009`: ProductionEmailSender still throws on send. With non-empty EMAIL_PROVIDER, invitation action selects it, logs asynchronous send failure, and returns success without raw token; the fallback only occurs when sender construction throws. Existing tests do not test production send failure.
+- No scripts, tests, database commands, or migrations were executed. No code/config/CI/dependency/deployment/PR/Issue changes.
+- Next: proceed to DB and schema findings, continuing to record each batch before moving on.
 
 ## 6. Wave-level gates
 
