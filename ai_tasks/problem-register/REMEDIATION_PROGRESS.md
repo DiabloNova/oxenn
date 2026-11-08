@@ -37,6 +37,8 @@ Use exactly one primary status per finding:
 - **Approved** — user has explicitly approved implementation scope.
 - **In progress** — code changes are underway within approved scope.
 - **Blocked** — a dependency, external decision, safety gate, or failing prerequisite prevents progress.
+
+Historical-only execution restrictions (for example, `DO NOT RUN`) are safety annotations, not lifecycle statuses. Record the primary status as `Blocked` when a historical artifact is review-only, and preserve the explicit prohibition in the planned-stage label and the finding record. A status change never authorizes execution of a historical script.
 - **Implemented — verification pending** — code is changed but required tests/review/evidence are incomplete.
 - **Verified complete** — acceptance criteria pass on a recorded commit and evidence is linked.
 - **Deferred / out of scope** — user-approved deferral or explicit scope decision is recorded.
@@ -129,7 +131,7 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [SRC-013](./findings/059-SRC-013.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-014](./findings/060-SRC-014.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-015](./findings/061-SRC-015.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
-| [SRC-016](./findings/062-SRC-016.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
+| [SRC-016](./findings/062-SRC-016.md) | Wave 2 (persistence/expiry) + Wave 4 (localized UI/email workflow) | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-017](./findings/063-SRC-017.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-018](./findings/064-SRC-018.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-019](./findings/065-SRC-019.md) | Wave 4 — Commercial entitlements and real workflow execution | Not started — pending Wave 0 revalidation | — | — |
@@ -153,8 +155,8 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [VER-002](./findings/083-VER-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [VER-003](./findings/084-VER-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
 | [VER-004](./findings/085-VER-004.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
-| [VER-005](./findings/086-VER-005.md) | Wave 0 — Historical-only safety review (DO NOT RUN) | DO NOT RUN — historical script; review only | — | — |
-| [VER-006](./findings/087-VER-006.md) | Wave 0 — Historical-only safety review (DO NOT RUN) | DO NOT RUN — historical script; review only | — | — |
+| [VER-005](./findings/086-VER-005.md) | Wave 0 — Historical-only safety review (DO NOT RUN) | Blocked | — | — |
+| [VER-006](./findings/087-VER-006.md) | Wave 0 — Historical-only safety review (DO NOT RUN) | Blocked | — | — |
 | [VER-007](./findings/088-VER-007.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
 | [VER-008](./findings/089-VER-008.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
 | [VER-009](./findings/090-VER-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
