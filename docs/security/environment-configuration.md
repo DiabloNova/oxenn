@@ -26,7 +26,8 @@ A database administrator may need to provision trusted extensions such as pgvect
 
 ## Preflight checks
 
-- `pnpm run env:check start` validates runtime configuration before `next start`.
+- `instrumentation.ts` validates the Node.js runtime environment before the Next.js server accepts requests, including hosted Next.js runtimes that do not execute the package `start` script.
+- `pnpm run env:check start` validates runtime configuration directly.
 - `pnpm run env:check migrate` validates migration configuration before `pnpm db:migrate`.
 - `pnpm start` runs the runtime preflight automatically and exits non-zero when configuration is unsafe.
 - The environment validator permits the documented local loopback/superuser examples only when `APP_ENVIRONMENT=development`.

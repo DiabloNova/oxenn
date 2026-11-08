@@ -80,7 +80,6 @@ const DEPLOYMENT_ENVIRONMENTS: readonly DeploymentEnvironment[] = [
 ];
 const KNOWN_PLACEHOLDER_SECRETS = [
   "change-this-to-a-secure-32-character-secret-in-production",
-  "local-development-only-not-for-deployment",
   "change-me",
   "changeme",
   "your-secret",
@@ -302,7 +301,7 @@ export function validateEnv(modeArg?: string) {
   };
 }
 
-if (require.main === module) {
+if (typeof require !== "undefined" && require.main === module) {
   // Keep the existing simple env-file loader isolated from dotenv tooling changes.
   loadEnvFile(path.resolve(process.cwd(), ".env.local"));
   loadEnvFile(path.resolve(process.cwd(), ".env"));
