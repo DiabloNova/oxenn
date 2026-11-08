@@ -148,6 +148,14 @@ Start only after the OXENN-owned runtime interface, provider modes, provenance, 
 - [ARCH-002](./findings/096-ARCH-002.md)
 
 
+## Historical / Non-executable Findings
+
+The following two records remain part of the 97-finding inventory and their primary category membership, but are intentionally excluded from implementation Waves 1–7. They are historical safety warnings, not executable remediation assignments. Their exclusion does not change the mandatory Wave 0 requirement to revalidate all 97 findings; it explicitly prohibits executing or reusing the historical verification artifacts.
+
+- [VER-005](./findings/086-VER-005.md) — **Blocked** · `HISTORICAL_ONLY / DO NOT RUN`. The historical `probe-system-context.ts` can fall back to a local PostgreSQL superuser target, print the database URL, and mutate application state without reliable cleanup. Do not execute or reuse it; any future verification requires a newly designed harness that positively verifies a disposable database target.
+- [VER-006](./findings/087-VER-006.md) — **Blocked** · `HISTORICAL_ONLY / DO NOT RUN`. The historical `run_rls_matrix.js` hardcodes database targeting and role credentials without positively verifying target identity. Do not execute or reuse it; any future verification requires a maintained runner that proves the target is disposable before connecting.
+
+
 ## Dependency rules
 
 1. ARCH-003 precedes SRC-004 and any brand/page/diagnostic persistence rewrite.
