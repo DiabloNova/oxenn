@@ -16,7 +16,7 @@
 |---|---:|
 | Individual finding records | 97 |
 | Finding records copied into the isolated execution branch | 97 |
-| Findings revalidated against current `main` | 0 |
+| Findings revalidated against current `main` | 4 |
 | Findings approved for implementation | 0 |
 | Findings with implementation started | 0 |
 | Findings with verified implementation complete | 0 |
@@ -115,7 +115,7 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [SCR-005](./findings/044-SCR-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
 | [SCR-006](./findings/045-SCR-006.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
 | [SCR-007](./findings/046-SCR-007.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Not started — pending Wave 0 revalidation | — | — |
-| [SRC-001](./findings/047-SRC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
+| [SRC-001](./findings/047-SRC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed — present on pinned main | 7bd2b6ba | Legacy audit crawler + robots/sitemap fetch; SRC-001 revalidation section |
 | [SRC-002](./findings/048-SRC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-003](./findings/049-SRC-003.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-004](./findings/050-SRC-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
@@ -123,11 +123,11 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [SRC-006](./findings/052-SRC-006.md) | Wave 3 — AI provider behavior and evidence integrity | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-007](./findings/053-SRC-007.md) | Wave 3 — AI provider behavior and evidence integrity | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-008](./findings/054-SRC-008.md) | Wave 3 — AI provider behavior and evidence integrity | Not started — pending Wave 0 revalidation | — | — |
-| [SRC-009](./findings/055-SRC-009.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
+| [SRC-009](./findings/055-SRC-009.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed — present on pinned main | 7bd2b6ba | Acquisition policy/provider/route; SRC-009 revalidation section |
 | [SRC-010](./findings/056-SRC-010.md) | Wave 4 — Commercial entitlements and real workflow execution | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-011](./findings/057-SRC-011.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-012](./findings/058-SRC-012.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
-| [SRC-013](./findings/059-SRC-013.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
+| [SRC-013](./findings/059-SRC-013.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed — present on pinned main | 7bd2b6ba | Free audit route/provider path; SRC-013 revalidation section |
 | [SRC-014](./findings/060-SRC-014.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-015](./findings/061-SRC-015.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-016](./findings/062-SRC-016.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
@@ -136,7 +136,7 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [SRC-019](./findings/065-SRC-019.md) | Wave 4 — Commercial entitlements and real workflow execution | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-020](./findings/066-SRC-020.md) | Wave 3 — AI provider behavior and evidence integrity | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-021](./findings/067-SRC-021.md) | Wave 4 — Commercial entitlements and real workflow execution | Not started — pending Wave 0 revalidation | — | — |
-| [SRC-022](./findings/068-SRC-022.md) | Wave 4 — Commercial entitlements and real workflow execution | Not started — pending Wave 0 revalidation | — | — |
+| [SRC-022](./findings/068-SRC-022.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed — present on pinned main; PR #117 unmerged | 7bd2b6ba | Invoice page + PR #117 diff/checks; SRC-022 revalidation section |
 | [SRC-023](./findings/069-SRC-023.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-024](./findings/070-SRC-024.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
 | [SRC-025](./findings/071-SRC-025.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
@@ -197,6 +197,23 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Code changes: none. Database changes/migrations: none. CI/workflow changes: none. Dependency changes: none. Deployments: none. PR/Issue mutations: none. Tests/commands: none executed.
 - Safety: `VER-005` and `VER-006` remain historical-only and DO NOT RUN. No production or disposable database was contacted.
 - Next action: complete SSRF call-site inventory and continue finding-by-finding revalidation against the pinned `main` SHA, updating this tracker after each coherent batch.
+
+
+### Wave 0 batch 1 — security/crawler boundary and PR #117 overlap — 2026-11-08
+
+- Baseline: `main` `7bd2b6ba04e18abbcaf772fac63f29c465a45a42`.
+- Revalidated findings: `SRC-001`, `SRC-009`, `SRC-013`, `SRC-022` (4/97 total). All four remain confirmed on the pinned main baseline. Per-finding evidence, file blob SHAs, line ranges, and inspected tests are appended to their individual finding records.
+- SSRF inventory: all 18 `src/app/api/v1` route handlers were enumerated. Relevant URL ingress paths identified: `/audit/engine`, `/audit/free`, `/audit/premium`, `/content/studio`, `/optimization/technical`, `/crawl`, and `/crawler/start`. `/analysis/competitive` performs DNS validation only and documents that it does not crawl these URLs.
+- Direct Firecrawl bypasses confirmed in `/audit/free`, `/content/studio`, and `/optimization/technical`: URL syntax validation only, followed by `firecrawlApp.scrapeUrl`; no local DNS-pinned validation before provider invocation.
+- Legacy audit engine remains on native `fetch`: main crawler uses static `isSafeUrl` checks without DNS pinning; auxiliary robots/sitemap requests use default redirect-following fetch and do not revalidate redirect hops.
+- Hardened paths observed: premium audit uses `crawlPublicSite`/`fetchPublicUrl`; `/crawler/start` delegates to the safe crawler; `/crawl` validates the seed host before provider selection and the internal provider uses DNS-validated safeFetch. The acquisition Firecrawl provider receives a prevalidated seed, but its remote `crawlUrl` adapter does not show provider-side redirect/domain restrictions; local DNS pinning cannot be claimed for the provider's own network.
+- `SRC-009` remains valid: HTTP provider accepts discovered links from any HTTP(S) host; bytes are accumulated but no total-job byte cap is enforced; `/api/v1/crawl` exposes several policy fields and clamps redirects to plan limits but not all other resource fields to plan-specific entitlements.
+- `SRC-013` remains valid: `/api/v1/audit/free` has no session/API-key authorization or rate limiter and invokes Firecrawl when configured.
+- Issue #116: current `getSession()` LEFT JOINs `organization_members` and returns null when `m.role` is absent; `authorizeApiRequest()` rejects the resulting missing session. The membership schema has no soft-revocation/deletion column. Existing tests do not directly simulate an otherwise valid session row with a missing membership row; implementation appears fail-closed for deletion, but the direct regression test remains unverified. Issue #116 remains open; no issue mutation.
+- PR #117 / `SRC-022`: current main invoice page still simulates payment success with a local timeout. PR #117 is open/unmerged, based on pinned main, and changes only the invoice page plus a new test. Its five non-neutral checks passed and one AI-review check is neutral; GitHub mergeable state is `unstable`. No PR mutation.
+- GitHub code-search responses for `Firecrawl`, `scrapeUrl`, and `fetch` were marked incomplete with zero results; they were not used as proof of completeness. The inventory above is based on the complete main tree, all 18 API v1 routes, and the bounded crawler/audit/provider source set.
+- No tests executed; no code, database, migration, CI, dependency, deployment, PR, or Issue changes.
+- Next: continue the remaining finding groups and update the tracker after the next coherent batch.
 
 ## 6. Wave-level gates
 
