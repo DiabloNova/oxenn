@@ -94,6 +94,14 @@ describe("validateEnv security rules", () => {
     expect(result.invalid).toContainEqual(expect.objectContaining({ name: "SESSION_SECRET" }));
   });
 
+  it("rejects the local example secret when reused in production", () => {
+    setProductionBase();
+    vi.stubEnv("SESSION_SECRET", "local-development-only-not-for-deployment");
+    expect(validateEnv("start").invalid).toContainEqual(
+      expect.objectContaining({ name: "SESSION_SECRET" }),
+    );
+  });
+
   it("rejects short and low-entropy production session secrets", () => {
     setProductionBase();
     vi.stubEnv("SESSION_SECRET", "x".repeat(40));

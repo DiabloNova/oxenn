@@ -80,6 +80,7 @@ const DEPLOYMENT_ENVIRONMENTS: readonly DeploymentEnvironment[] = [
 ];
 const KNOWN_PLACEHOLDER_SECRETS = [
   "change-this-to-a-secure-32-character-secret-in-production",
+  "local-development-only-not-for-deployment",
   "change-me",
   "changeme",
   "your-secret",
@@ -311,7 +312,7 @@ if (require.main === module) {
     targetMode = resolveMode(process.argv[2]);
   } catch (error) {
     console.error(
-      `\n❌ [env-check] ${error instanceof Error ? error.message : "Invalid environment mode."}\n`,
+      `\nâ [env-check] ${error instanceof Error ? error.message : "Invalid environment mode."}\n`,
     );
     process.exit(1);
   }
@@ -323,7 +324,7 @@ if (require.main === module) {
   );
 
   if (!result.valid) {
-    console.error(`\n❌ [env-check] Environment validation failed for mode '${result.mode}':`);
+    console.error(`\nâ [env-check] Environment validation failed for mode '${result.mode}':`);
     if (result.missing.length > 0) {
       console.error(`   Missing required variables: ${result.missing.join(", ")}`);
     }
@@ -337,6 +338,6 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  console.log(`✅ [env-check] Environment check passed for mode '${result.mode}'.`);
+  console.log(`â [env-check] Environment check passed for mode '${result.mode}'.`);
   process.exit(0);
 }
