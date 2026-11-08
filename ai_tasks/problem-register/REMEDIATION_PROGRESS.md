@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** WAVE 0 IN PROGRESS — 56 findings have item-level dispositions on main; 40 findings (021–060) still need explicit per-item status mapping; VER-013 remains time-bounded and pending exact release-candidate review. Wave 1 is NOT READY.
+**Current overall status:** WAVE 0 IN PROGRESS — 93 findings have item-level dispositions on main; 4 findings remain in revalidation (028, 032, 033, and VER-013); Wave 1 is NOT READY.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -15,8 +15,8 @@
 | Metric | Current value |
 |---|---:|
 | Individual finding records | 97 |
-| Findings revalidated against current `main` with item-level disposition | 56 |
-| Findings with revalidation in progress / incomplete per-item mapping | 41 |
+| Findings revalidated against current `main` with item-level disposition | 93 |
+| Findings with revalidation in progress / incomplete per-item mapping | 4 |
 | Findings approved for implementation | 0 |
 | Findings with implementation started | 0 |
 | Findings with verified implementation complete | 0 |
@@ -98,12 +98,12 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [FNT-002](./findings/025-FNT-002.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
 | [FNT-003](./findings/026-FNT-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
 | [FNT-004](./findings/027-FNT-004.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
-| [GHA-001](./findings/028-GHA-001.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Needs current-run verification — historical Node 20 warning only | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
+| [GHA-001](./findings/028-GHA-001.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Revalidation in progress — historical Node 20 warning only | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
 | [GHA-002](./findings/029-GHA-002.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
 | [GHA-003](./findings/030-GHA-003.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
 | [GHA-004](./findings/031-GHA-004.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Needs decision — workflow lifecycle/ownership is undocumented | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
-| [GHA-005](./findings/032-GHA-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Needs current-run verification — historical Vite config-loader warning only | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
-| [GHA-006](./findings/033-GHA-006.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Needs current-run verification — historical Node deprecation warnings lack dependency attribution | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
+| [GHA-005](./findings/032-GHA-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Revalidation in progress — historical Vite config-loader warning only | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
+| [GHA-006](./findings/033-GHA-006.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Revalidation in progress — historical Node deprecation warnings lack dependency attribution | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
 | [PUB-001](./findings/034-PUB-001.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
 | [PUB-002](./findings/035-PUB-002.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
 | [PUB-003](./findings/036-PUB-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | `c964878b2c8ea5d7bcabdfaf3370184c870c86db` | [Wave 0 log](#wave-0-revalidation-2026-11-08) |
