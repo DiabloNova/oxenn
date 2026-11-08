@@ -1,0 +1,32 @@
+# Security, tenant isolation, and authorization
+
+Problems affecting organization isolation, privileged access, safe network/database boundaries, identity assurance, and security verification. This is a subject classification, not an execution order.
+
+## Findings (26)
+
+- [RF-005](../findings/005-RF-005.md)
+- [RF-006](../findings/006-RF-006.md)
+- [DB-001](../findings/010-DB-001.md)
+- [DB-002](../findings/011-DB-002.md)
+- [DOC-001](../findings/015-DOC-001.md)
+- [DOC-002](../findings/016-DOC-002.md)
+- [DOC-007](../findings/021-DOC-007.md)
+- [DOC-008](../findings/022-DOC-008.md)
+- [SCR-001](../findings/040-SCR-001.md)
+- [SCR-002](../findings/041-SCR-002.md)
+- [SRC-001](../findings/047-SRC-001.md)
+- [SRC-002](../findings/048-SRC-002.md)
+- [SRC-003](../findings/049-SRC-003.md)
+- [SRC-009](../findings/055-SRC-009.md)
+- [SRC-012](../findings/058-SRC-012.md)
+- [SRC-013](../findings/059-SRC-013.md)
+- [SRC-017](../findings/063-SRC-017.md)
+- [SRC-018](../findings/064-SRC-018.md)
+- [SRC-023](../findings/069-SRC-023.md)
+- [TST-002](../findings/074-TST-002.md)
+- [TST-003](../findings/075-TST-003.md)
+- [TST-004](../findings/076-TST-004.md)
+- [VER-002](../findings/083-VER-002.md)
+- [VER-004](../findings/085-VER-004.md)
+- [VER-005](../findings/086-VER-005.md)
+- [VER-006](../findings/087-VER-006.md)
