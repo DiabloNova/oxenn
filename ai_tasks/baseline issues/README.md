@@ -12,10 +12,9 @@
 - Consolidated findings from the prior repository audit: **64**
 - Additional architecture-driven gaps discovered during reconciliation: **3** (`ARCH-001`, `ARCH-002`, `ARCH-003`)
 - Total remediation specifications: **67**
-- Total remediation specifications: **67**
 - Original finding identifiers retained: **94**
 - Each prior-audit record retains all source IDs and related finding references.
-- The two additional architecture gaps are separately labeled and are not counted among the original 94 IDs.
+- The three additional architecture gaps are separately labeled and are not counted among the original 94 IDs.
 - The original audit reports and source matrix are preserved unchanged.
 - A status of NEEDS_REVALIDATION, HISTORICAL_ONLY, or POLICY/SCOPE DECISION is intentional; it is not silently treated as a confirmed defect or as a completed fix.
 
@@ -126,7 +125,7 @@ These files are architecture-aligned remediation proposals, not implementation a
 
 ## Additional architecture-driven gaps
 
-These two items were discovered by comparing the newly approved architecture with the previously inspected codebase. They are not part of the original 94 audit identifiers, so they are recorded separately rather than altering the historical matrix.
+These three items were discovered by comparing the newly approved architecture with the previously inspected codebase. They are not part of the original 94 audit identifiers, so they are recorded separately rather than altering the historical matrix.
 
 | New ID | Problem | Priority | Remediation specification |
 |---|---|---:|---|

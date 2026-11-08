@@ -5,7 +5,7 @@
 **Audited baseline:** `main@7bd2b6ba04e18abbcaf772fac63f29c465a45a42`  
 **Status:** Proposed dependency order. Implementation has not started.
 
-This order covers 64 consolidated prior-audit problems (94 original IDs) and two new architecture-driven gaps (ARCH-001 and ARCH-002). Every finding must be revalidated against the current implementation immediately before work begins.
+This order covers 64 consolidated prior-audit problems (94 original IDs) and three new architecture-driven gaps (ARCH-001, ARCH-002, and ARCH-003). Every finding must be revalidated against the current implementation immediately before work begins.
 
 ## Global execution rules
 
