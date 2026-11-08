@@ -35,11 +35,13 @@ export async function runMigrations(databaseUrl?: string) {
   });
 
   try {
-    const roleCheck = await pool.query<{ rolsuper: boolean }>(
-      "SELECT rolsuper FROM pg_roles WHERE rolname = current_user",
-    );
-    if (roleCheck.rows.length !== 1 || roleCheck.rows[0].rolsuper !== false) {
-      throw new Error("Migration database role must exist and must not be a PostgreSQL superuser.");
+    if (isNonDevelopment) {
+      const roleCheck = await pool.query<{ rolsuper: boolean }>(
+        "SELECT rolsuper FROM pg_roles WHERE rolname = current_user",
+      );
+      if (roleCheck.rows.length !== 1 || roleCheck.rows[0].rolsuper !== false) {
+        throw new Error("Migration database role must exist and must not be a PostgreSQL superuser.");
+      }
     }
 
     const db = drizzle(pool);

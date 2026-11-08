@@ -20,7 +20,7 @@ Provision three distinct PostgreSQL login roles for hosted environments:
 - `AUTHENTICATOR_DATABASE_URL`: separate authenticator/system-context role; only the cross-tenant lookup and session operations required by the documented privileged paths.
 - `MIGRATION_DATABASE_URL`: migration role; schema-change privileges required for the migration set, but not PostgreSQL superuser privileges.
 
-The runtime and authenticator pools verify the connected PostgreSQL role's `rolsuper` flag before leasing a client. The migration runner performs the same check before applying migrations. The environment validator also rejects known superuser role names, loopback database hosts, missing role URLs, and duplicate role identities in non-development environments.
+In staging and production, the runtime and authenticator pools verify the connected PostgreSQL role's `rolsuper` flag before leasing a client. The migration runner performs the same check before applying migrations. Local development may use the documented local superuser only while explicitly classified as development. The environment validator also rejects known superuser role names, loopback database hosts, missing role URLs, and duplicate role identities in non-development environments.
 
 A database administrator may need to provision trusted extensions such as pgvector as a separate one-time infrastructure bootstrap operation. Do not grant PostgreSQL superuser access to the application's runtime or authenticator login to work around extension provisioning.
 

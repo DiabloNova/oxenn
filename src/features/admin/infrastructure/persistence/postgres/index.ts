@@ -54,7 +54,7 @@ export class PostgresClient {
       connectionTimeoutMillis: 2000
     });
 
-    const deploymentEnvironment = process.env.NODE_ENV === "production" ? "production" : (process.env.APP_ENVIRONMENT || "development");
+    const deploymentEnvironment = process.env.APP_ENVIRONMENT || (process.env.NODE_ENV === "production" ? "production" : "development");
     const authenticatorConnectionString = process.env.AUTHENTICATOR_DATABASE_URL;
     if (deploymentEnvironment !== "development" && !authenticatorConnectionString) {
       throw new Error("AUTHENTICATOR_DATABASE_URL is required outside development; runtime fallback is disabled.");
@@ -82,6 +82,11 @@ export class PostgresClient {
    * Safe system connection leasing from Authenticator Pool
    */
   private async assertLeastPrivilegeRole(client: PoolClient, poolName: string): Promise<void> {
+    const deploymentEnvironment = process.env.NODE_ENV === "production"
+      ? "production"
+      : (process.env.APP_ENVIRONMENT || "development");
+    if (deploymentEnvironment === "development") return;
+
     const result = await client.query<{ rolsuper: boolean }>(
       "SELECT rolsuper FROM pg_roles WHERE rolname = current_user",
     );
