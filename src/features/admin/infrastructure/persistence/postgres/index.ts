@@ -1,5 +1,5 @@
 /**
- * Phase 7C.5 â Enterprise PostgreSQL Persistence Adapter Layer
+ * Phase 7C.5 Ã¢ÂÂ Enterprise PostgreSQL Persistence Adapter Layer
  * Implements real SQL queries, connection leasing, transactions, optimistic concurrency, and soft delete.
  */
 
@@ -54,7 +54,7 @@ export class PostgresClient {
       connectionTimeoutMillis: 2000
     });
 
-    const deploymentEnvironment = process.env.APP_ENVIRONMENT || (process.env.NODE_ENV === "production" ? "production" : "development");
+    const deploymentEnvironment = process.env.NODE_ENV === "production" ? "production" : (process.env.APP_ENVIRONMENT || "development");
     const authenticatorConnectionString = process.env.AUTHENTICATOR_DATABASE_URL;
     if (deploymentEnvironment !== "development" && !authenticatorConnectionString) {
       throw new Error("AUTHENTICATOR_DATABASE_URL is required outside development; runtime fallback is disabled.");
