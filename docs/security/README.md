@@ -19,14 +19,11 @@ The `AuthProvider` stores user session credentials client-side for UI mocking pu
 The canonical Drizzle schema models 70 tables across the system. Of these, 51 tenant-scoped tables carry explicit `pgPolicy` Row-Level Security (RLS) definitions. The checked-in `database/drizzle/0005_force_rls.sql` migration enables and forces RLS for the same 51-table set, matching both the latest Drizzle snapshot and the generated runtime tenant-table list. Tenant scoping enforces transaction-local `SET LOCAL app.current_tenant_id = $1` inside active transactions, guaranteeing leased PostgreSQL clients are released securely. Fallbacks explicitly fail closed when database connections or queries fail.
 *Status: Implemented*
 
-### Cache Security
-The cache layer is secured against client-side tenantId spoofing by validating that any requested key's tenant ID strictly matches the server-verified active session user's workspace ID, throwing a security violation on mismatch.
-*Status: Implemented*
-
-### Server Actions Validation
-The server-side authentication system prevents client-side identity fabrication or signing oracle vulnerabilities by resolving user objects, roles, and workspace IDs strictly on the server inside `loginAction` and `registerAction`, accepting only simple inputs from the client.
+### Environment and Database Credential Boundaries
+Staging and production configuration rejects placeholder/weak session secrets, loopback PostgreSQL defaults, known superuser role names, missing authenticator/migration role URLs, and duplicate runtime/authenticator/migration role identities. Runtime and authenticator pool leases, and migration execution, verify that the connected database role is not a PostgreSQL superuser. Local PostgreSQL examples remain available only under an explicit development environment.
 *Status: Implemented*
 
 ## Detailed Security Specifications
 - [Security Model Overview](./SECURITY_MODEL.md)
 - [RBAC Model Specification](./RBAC_MODEL.md)
+- [Secure Environment Configuration](./environment-configuration.md)
