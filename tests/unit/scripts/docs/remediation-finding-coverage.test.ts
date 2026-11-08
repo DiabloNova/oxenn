@@ -1,16 +1,56 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
-import path from "node:path";
 
-const root = process.cwd();
-const findingsDirectory = path.join(root, "ai_tasks/problem-register/findings");
-const categoriesDirectory = path.join(root, "ai_tasks/problem-register/categories");
 const expectedFindingCount = 97;
 const expectedHistoricalFindings = ["086-VER-005.md", "087-VER-006.md"];
 
-function readRepositoryFile(relativePath: string): string {
-  return fs.readFileSync(path.join(root, relativePath), "utf8");
-}
+const categoryDocuments = [
+  {
+    file: "01-security-tenant-boundaries.md",
+    content: fs.readFileSync("ai_tasks/problem-register/categories/01-security-tenant-boundaries.md", "utf8"),
+  },
+  {
+    file: "02-persistence-schema-contracts.md",
+    content: fs.readFileSync("ai_tasks/problem-register/categories/02-persistence-schema-contracts.md", "utf8"),
+  },
+  {
+    file: "03-ai-evidence-provider-integrity.md",
+    content: fs.readFileSync("ai_tasks/problem-register/categories/03-ai-evidence-provider-integrity.md", "utf8"),
+  },
+  {
+    file: "04-commercial-catalog-entitlements.md",
+    content: fs.readFileSync("ai_tasks/problem-register/categories/04-commercial-catalog-entitlements.md", "utf8"),
+  },
+  {
+    file: "05-workflows-crawl-background-execution.md",
+    content: fs.readFileSync("ai_tasks/problem-register/categories/05-workflows-crawl-background-execution.md", "utf8"),
+  },
+  {
+    file: "06-frontend-localization-assets-product-scope.md",
+    content: fs.readFileSync("ai_tasks/problem-register/categories/06-frontend-localization-assets-product-scope.md", "utf8"),
+  },
+  {
+    file: "07-ci-testing-developer-tooling.md",
+    content: fs.readFileSync("ai_tasks/problem-register/categories/07-ci-testing-developer-tooling.md", "utf8"),
+  },
+  {
+    file: "08-documentation-provenance-governance.md",
+    content: fs.readFileSync("ai_tasks/problem-register/categories/08-documentation-provenance-governance.md", "utf8"),
+  },
+];
+
+const historicalFindings = [
+  {
+    id: "VER-005",
+    filename: "086-VER-005.md",
+    content: fs.readFileSync("ai_tasks/problem-register/findings/086-VER-005.md", "utf8"),
+  },
+  {
+    id: "VER-006",
+    filename: "087-VER-006.md",
+    content: fs.readFileSync("ai_tasks/problem-register/findings/087-VER-006.md", "utf8"),
+  },
+];
 
 function assertExactlyOnce(actual: string[], expected: string[]): void {
   expect(actual).toHaveLength(expected.length);
@@ -19,7 +59,7 @@ function assertExactlyOnce(actual: string[], expected: string[]): void {
 }
 
 function findingFiles(): string[] {
-  const entries = fs.readdirSync(findingsDirectory, { withFileTypes: true });
+  const entries = fs.readdirSync("ai_tasks/problem-register/findings", { withFileTypes: true });
   const invalidEntries = entries
     .filter((entry) => !entry.isFile() || !/^\d{3}-[A-Z0-9-]+\.md$/.test(entry.name))
     .map((entry) => entry.name);
@@ -43,11 +83,11 @@ describe("remediation finding coverage contract", () => {
   it("assigns every finding to exactly one primary category and keeps declared counts aligned", () => {
     const files = findingFiles();
     const categoryEntries = fs
-      .readdirSync(categoriesDirectory, { withFileTypes: true })
+      .readdirSync("ai_tasks/problem-register/categories", { withFileTypes: true })
       .filter((entry) => entry.isFile() && /^\d{2}-.+\.md$/.test(entry.name))
       .map((entry) => entry.name)
       .sort();
-    const categoryIndex = readRepositoryFile("ai_tasks/problem-register/categories/README.md");
+    const categoryIndex = fs.readFileSync("ai_tasks/problem-register/categories/README.md", "utf8");
     const indexEntries = Array.from(
       categoryIndex.matchAll(/^\d+\.\s+\[[^\]]+\]\(\.\/([^)]+)\)\s+—\s+(\d+)\s+findings\s*$/gm),
       (match) => ({ file: match[1], count: Number(match[2]) }),
@@ -57,18 +97,18 @@ describe("remediation finding coverage contract", () => {
     expect(indexEntries.map((entry) => entry.file).sort()).toEqual(categoryEntries);
     expect(indexEntries).toHaveLength(categoryEntries.length);
     expect(categoryIndex).toContain("Total individual records: 97.");
+    expect(categoryDocuments.map((document) => document.file).sort()).toEqual(categoryEntries);
 
     const categoryAssignments: string[] = [];
-    for (const categoryFile of categoryEntries) {
-      const content = readRepositoryFile(`ai_tasks/problem-register/categories/${categoryFile}`);
-      const declaredCount = content.match(/^## Findings \((\d+)\)$/m);
+    for (const document of categoryDocuments) {
+      const declaredCount = document.content.match(/^## Findings \((\d+)\)$/m);
       expect(declaredCount).toBeTruthy();
 
       const links = Array.from(
-        content.matchAll(/\[[^\]]+\]\(\.\.\/findings\/([^\s)]+)\)/g),
+        document.content.matchAll(/\[[^\]]+\]\(\.\.\/findings\/([^\s)]+)\)/g),
         (match) => match[1],
       );
-      const indexCount = indexEntries.find((entry) => entry.file === categoryFile)?.count;
+      const indexCount = indexEntries.find((entry) => entry.file === document.file)?.count;
       expect(Number(declaredCount?.[1])).toBe(links.length);
       expect(indexCount).toBe(links.length);
       categoryAssignments.push(...links);
@@ -79,7 +119,7 @@ describe("remediation finding coverage contract", () => {
 
   it("places every finding exactly once in an implementation wave or the historical exception section", () => {
     const files = findingFiles();
-    const sequence = readRepositoryFile("ai_tasks/problem-register/IMPLEMENTATION_SEQUENCE.md");
+    const sequence = fs.readFileSync("ai_tasks/problem-register/IMPLEMENTATION_SEQUENCE.md", "utf8");
     const waveHeadings: string[] = [];
     const waveAssignments: Array<{ file: string; line: string }> = [];
     const historicalAssignments: Array<{ file: string; line: string }> = [];
@@ -127,20 +167,16 @@ describe("remediation finding coverage contract", () => {
   });
 
   it("preserves the Blocked status and DO NOT RUN safety annotation for VER-005 and VER-006", () => {
-    const progress = readRepositoryFile("ai_tasks/problem-register/REMEDIATION_PROGRESS.md");
+    const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
 
-    for (const [findingId, filename] of [
-      ["VER-005", expectedHistoricalFindings[0]],
-      ["VER-006", expectedHistoricalFindings[1]],
-    ]) {
-      const rows = progress.split(/\r?\n/).filter((line) => line.includes(`[${findingId}]`));
+    for (const finding of historicalFindings) {
+      const rows = progress.split(/\r?\n/).filter((line) => line.includes(`[${finding.id}]`));
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatch(/\|\s*Blocked\s*\|/);
       expect(rows[0]).toContain("DO NOT RUN");
-
-      const finding = fs.readFileSync(path.join(findingsDirectory, filename), "utf8");
-      expect(finding).toContain("HISTORICAL_ONLY / DO NOT RUN");
-      expect(finding).toMatch(/Do not (?:execute|run)/i);
+      expect(finding.filename).toBe(expectedHistoricalFindings[finding.id === "VER-005" ? 0 : 1]);
+      expect(finding.content).toContain("HISTORICAL_ONLY / DO NOT RUN");
+      expect(finding.content).toMatch(/Do not (?:execute|run)/i);
     }
   });
 });
