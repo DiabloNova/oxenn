@@ -4,9 +4,29 @@ import { Pool } from "pg";
 import * as path from "path";
 
 export async function runMigrations(databaseUrl?: string) {
-  const connectionString = databaseUrl || process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
+  const deploymentEnvironment = process.env.NODE_ENV === "production"
+    ? "production"
+    : (process.env.APP_ENVIRONMENT || "development");
+  const isNonDevelopment = deploymentEnvironment !== "development";
+  const migrationUrl = databaseUrl || process.env.MIGRATION_DATABASE_URL;
+  if (isNonDevelopment && !migrationUrl) {
+    throw new Error("MIGRATION_DATABASE_URL is required outside development; runtime credentials cannot be reused for migrations.");
+  }
+  const connectionString = migrationUrl || process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("MIGRATION_DATABASE_URL or DATABASE_URL environment variable is required to run migrations.");
+  }
+
+  if (isNonDevelopment) {
+    const migrationRole = new URL(connectionString).username;
+    const runtimeUrl = process.env.DATABASE_URL;
+    const runtimeRole = runtimeUrl ? new URL(runtimeUrl).username : "";
+    if (!migrationRole || decodeURIComponent(migrationRole).toLowerCase() === "postgres") {
+      throw new Error("Migrations require a dedicated non-superuser PostgreSQL role.");
+    }
+    if (runtimeRole && decodeURIComponent(migrationRole).toLowerCase() === decodeURIComponent(runtimeRole).toLowerCase()) {
+      throw new Error("MIGRATION_DATABASE_URL must use a separate role from DATABASE_URL.");
+    }
   }
 
   const pool = new Pool({
@@ -15,6 +35,13 @@ export async function runMigrations(databaseUrl?: string) {
   });
 
   try {
+    const roleCheck = await pool.query<{ rolsuper: boolean }>(
+      "SELECT rolsuper FROM pg_roles WHERE rolname = current_user",
+    );
+    if (roleCheck.rows.length !== 1 || roleCheck.rows[0].rolsuper !== false) {
+      throw new Error("Migration database role must exist and must not be a PostgreSQL superuser.");
+    }
+
     const db = drizzle(pool);
     const migrationsFolder = path.resolve(process.cwd(), "database/drizzle");
     console.log(`[Migration Runner] Executing Drizzle migrations from: ${migrationsFolder}`);
