@@ -145,7 +145,7 @@ function updateFindingStatus(content, status, details) {
   if (matches.length !== 1) return { content, changed: false, valid: false };
   const index = matches[0];
   const previous = lines[index];
-  if (isMainVerifiedStatus(previous) && status !== "Verified complete") {
+  if (isMainVerifiedStatus(previous)) {
     return { content, changed: false, valid: true, protected: true };
   }
   if ((/Integrated — verification failed/i.test(previous) || /Closed without merge/i.test(previous)) &&
@@ -510,26 +510,44 @@ async function persistRecords(github, owner, repo, records, core) {
       const stagedFindingChanges = [];
       delete record.transition_rejected;
       record.resulting_statuses = {};
-      if (record.finding_ids && record.finding_ids.length > 0) {
-        paths = await findFindingPaths(github, owner, repo, baseSha, record.finding_ids);
+      const findingIds = record.finding_ids || [];
+      const candidateIds = record.candidate_finding_ids || [];
+      const lookupIds = record.event_type === "pull_request.closed"
+        ? Array.from(new Set([...findingIds, ...candidateIds]))
+        : findingIds;
+      if (lookupIds.length > 0) {
+        const resolvedPaths = await findFindingPaths(github, owner, repo, baseSha, lookupIds);
+        if (Object.keys(resolvedPaths).length === 0) continue;
+        for (const findingId of findingIds) {
+          if (resolvedPaths[findingId]) paths[findingId] = resolvedPaths[findingId];
+        }
+        record.recognized_candidate_finding_ids = candidateIds.filter((id) => Boolean(resolvedPaths[id]));
         record.canonical_finding_paths = paths;
-        record.canonical_mapping_complete = record.finding_ids.every((id) =>
+        record.canonical_mapping_complete = findingIds.length > 0 && findingIds.every((id) =>
           Boolean(paths[id]) &&
           ledgerHasFinding(progress, id) &&
           (record.file_finding_ids || []).filter((file) => file && file.finding_id === id && file.path === paths[id]).length === 1
         );
-        if (record.canonical_mapping_complete && record.mapping_complete !== false) {
+        if (record.canonical_mapping_complete && record.mapping_complete === true) {
           status = statusForRecord(record);
         }
+      } else {
+        record.canonical_finding_paths = {};
+        record.canonical_mapping_complete = false;
+        if (record.event_type === "pull_request.closed") continue;
       }
 
-      // An unmerged PR is retained as event evidence only; author-controlled metadata never changes a finding.
+      // An unmerged PR is retained as event evidence only, and only when an ID resolves to a real finding file.
       const mayChangeDisposition = Boolean(
         status && status !== "Closed without merge" &&
         ((record.event_type === "pull_request.closed" && record.pull_request && record.pull_request.merged) || record.is_post_merge_main_ci)
       );
       if (mayChangeDisposition) {
         const evidence = evidenceFor(record);
+        const mergeSha = record.pull_request && record.pull_request.merge_commit_sha;
+        const commitLink = status === "Verified complete" && mergeSha && record.workflow_run && record.workflow_run.head_sha === mergeSha
+          ? "[" + mergeSha.slice(0, 8) + "](https://github.com/" + owner + "/" + repo + "/commit/" + mergeSha + ")"
+          : null;
         const findingFiles = {};
         let allFindingRecordsValid = true;
         for (const findingId of record.finding_ids) {
@@ -542,7 +560,7 @@ async function persistRecords(github, owner, repo, records, core) {
           findingFiles[findingId] = { path, content: file.content };
         }
         for (const findingId of record.finding_ids) {
-          const ledgerRow = updateLedgerRow(stagedProgress, findingId, status, evidence, null);
+          const ledgerRow = updateLedgerRow(stagedProgress, findingId, status, evidence, commitLink);
           if (ledgerRow.previousStatus == null || ledgerRow.resultingStatus !== status ||
               (isMainVerifiedStatus(ledgerRow.previousStatus) && status !== "Verified complete")) {
             allFindingRecordsValid = false;
@@ -551,16 +569,6 @@ async function persistRecords(github, owner, repo, records, core) {
           stagedProgress = ledgerRow.content;
         }
         if (allFindingRecordsValid) {
-          const mergeSha = record.pull_request && record.pull_request.merge_commit_sha;
-          const commitLink = status === "Verified complete" && mergeSha && record.workflow_run && record.workflow_run.head_sha === mergeSha
-            ? "[" + mergeSha.slice(0, 8) + "](https://github.com/" + owner + "/" + repo + "/commit/" + mergeSha + ")"
-            : null;
-          // Reapply the verified-commit link without changing any other ledger evidence.
-          if (commitLink) {
-            for (const findingId of record.finding_ids) {
-              stagedProgress = updateLedgerRow(stagedProgress, findingId, status, evidence, commitLink).content;
-            }
-          }
           for (const findingId of record.finding_ids) {
             const item = findingFiles[findingId];
             const updated = updateFindingStatus(item.content, status, statusDetailsForFinding(status, record));

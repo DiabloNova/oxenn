@@ -3,7 +3,7 @@
 GitHub lifecycle and CI evidence is stored as append-only, monthly JSON Lines files in this directory.
 
 The recorder listens to:
-- Pull requests closed against main: records whether the PR merged or closed without merging.
+- Pull requests closed against main: records whether a relevant PR merged or closed without merging; unrelated closures whose candidate IDs do not resolve to a canonical finding file are no-ops.
 - Completed runs of the repository CI workflow: retains post-merge runs associated with the exact merge commit on main. Only `success` advances a finding to Verified complete; `failure`, `timed_out`, and `action_required` produce verification-failed status. `cancelled`, `skipped`, and `neutral` outcomes are evidence-only. Pre-merge and unrelated CI completions are no-ops and do not create commits on main.
 
 Each event contains a deterministic event ID, UTC timestamp, repository, PR/CI references, candidate and authoritative finding IDs, changed file paths, and direct finding-file associations where available. Monthly sharding keeps individual files bounded. Re-delivered events are ignored by event ID.

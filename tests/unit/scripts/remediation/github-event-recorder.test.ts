@@ -251,6 +251,14 @@ describe("GitHub remediation event recorder", () => {
     expect(delayed.content).toBe(previous);
   });
 
+  it("preserves the original details of a Finding already verified on main", () => {
+    const previous = "- Status: **Verified complete** (PR #123; exact main merge CI passed).";
+    const result = recorder.updateFindingStatus(previous, "Verified complete", "PR #125; later successful CI event");
+    expect(result.changed).toBe(false);
+    expect(result.content).toBe(previous);
+    expect(result.protected).toBe(true);
+  });
+
   it("does not downgrade a persisted verified Finding status with event details", () => {
     const original = "# Finding\n- Status: **Verified complete** (merged to main; post-merge CI passed).\n";
     const result = recorder.updateFindingStatus(original, "Integrated — verification pending", "late close event");
@@ -272,9 +280,9 @@ describe("GitHub remediation event recorder", () => {
     expect(second.content).toBe(first.content);
   });
 
-  function makeFakeGitHub(options: { progress?: string; finding?: string; event?: string; updateRef?: (call: number) => Promise<void>; getContentFailure?: number } = {}) {
+  function makeFakeGitHub(options: { progress?: string; finding?: string; findingAfterFirstConflict?: string; event?: string; updateRef?: (call: number) => Promise<void>; getContentFailure?: number } = {}) {
     const progress = options.progress ?? "| [DOC-001](./findings/015-DOC-001.md) | Wave 1 | **Integrated — verification pending** | — | [Prior](https://example.test/prior) |\n";
-    const finding = options.finding ?? "# DOC-001\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n";
+    let finding = options.finding ?? "# DOC-001\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n";
     const event = options.event;
     const blobs: string[] = [];
     const forceFlags: boolean[] = [];
@@ -289,7 +297,15 @@ describe("GitHub remediation event recorder", () => {
         createBlob: async ({ content }: { content: string }) => { blobs.push(content); return { data: { sha: "blob-" + blobs.length } }; },
         createTree: async () => ({ data: { sha: "tree-new" } }),
         createCommit: async () => ({ data: { sha: "commit-new" } }),
-        updateRef: async ({ force }: { force: boolean }) => { updateCalls += 1; forceFlags.push(force); if (options.updateRef) await options.updateRef(updateCalls); },
+        updateRef: async ({ force }: { force: boolean }) => {
+          updateCalls += 1;
+          forceFlags.push(force);
+          if (updateCalls === 1 && options.findingAfterFirstConflict) {
+            finding = options.findingAfterFirstConflict;
+            throw Object.assign(new Error("non-fast-forward"), { status: 422 });
+          }
+          if (options.updateRef) await options.updateRef(updateCalls);
+        },
       },
       repos: {
         getContent: async ({ path }: { path: string }) => {
@@ -353,15 +369,58 @@ describe("GitHub remediation event recorder", () => {
     expect(fake.blobs[0]).toContain(record.event_id);
   });
 
-  it("records a verified merge commit on both the ledger and finding and clears stale rejection state", async () => {
+  it("does not commit an unrelated closed PR whose candidate ID has no canonical finding file", async () => {
     const fake = makeFakeGitHub();
-    const record: Record<string, unknown> = { ...mergedRecord, transition_rejected: true };
+    const record: Record<string, unknown> = {
+      event_id: "pull_request.closed:101:2026-11-09T15:00:00Z:unmerged",
+      event_type: "pull_request.closed",
+      occurred_at: "2026-11-09T15:00:00Z",
+      finding_ids: [],
+      candidate_finding_ids: ["FIX-101"],
+      file_finding_ids: [],
+      mapping_complete: true,
+      pull_request: { number: 101, merged: false },
+      changed_files: [],
+    };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(fake.blobs).toHaveLength(0);
+    expect(fake.updateCalls).toBe(0);
+  });
+
+  it("retains an unmerged PR as evidence only when its candidate resolves to a real finding file", async () => {
+    const fake = makeFakeGitHub();
+    const record: Record<string, unknown> = {
+      event_id: "pull_request.closed:125:2026-11-09T15:00:00Z:unmerged",
+      event_type: "pull_request.closed",
+      occurred_at: "2026-11-09T15:00:00Z",
+      finding_ids: [],
+      candidate_finding_ids: ["DOC-001"],
+      file_finding_ids: [],
+      mapping_complete: true,
+      pull_request: { number: 125, merged: false },
+      changed_files: [],
+    };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(record.recognized_candidate_finding_ids).toEqual(["DOC-001"]);
+    expect(record.resulting_statuses).toEqual({});
+    expect(fake.blobs).toHaveLength(1);
+    expect(fake.updateCalls).toBe(1);
+  });
+
+  it("clears rejection state when a non-force retry reprocesses an event successfully", async () => {
+    const invalidFinding = "# DOC-001\n- Finding ID: DOC-001\n- Evidence only; no status line yet.\n";
+    const validFinding = "# DOC-001\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n";
+    const staleProgress = "| [DOC-001](./findings/015-DOC-001.md) | Wave 1 | **Integrated — verification pending** | [oldsha1](https://example.test/commit/oldsha1) | [Prior](https://example.test/prior) |\n";
+    const fake = makeFakeGitHub({ progress: staleProgress, finding: invalidFinding, findingAfterFirstConflict: validFinding });
+    const record: Record<string, unknown> = { ...mergedRecord };
     await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
     expect(record.transition_rejected).toBeUndefined();
+    expect(record.resulting_statuses).toEqual({ "DOC-001": "Verified complete" });
     expect(fake.blobs.some((blob) => blob.includes("| [abcdef12](https://github.com/DiabloNova/oxenn/commit/abcdef1234567890) |"))).toBe(true);
+    expect(fake.blobs.some((blob) => blob.includes("https://example.test/commit/oldsha1"))).toBe(false);
     expect(fake.blobs.some((blob) => blob.includes("- Status: **Verified complete**"))).toBe(true);
-    expect(fake.updateCalls).toBe(1);
-    expect(fake.forceFlags).toEqual([false]);
+    expect(fake.updateCalls).toBe(2);
+    expect(fake.forceFlags).toEqual([false, false]);
   });
 
   it("retains an unmerged PR closure as event evidence without changing finding dispositions", async () => {
