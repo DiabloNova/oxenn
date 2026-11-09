@@ -533,10 +533,10 @@ async function runTest() {
       await client.query("RESET ROLE");
     }
 
-    // The regular-table checks above intentionally delete both tenants'
-    // fixtures. Recreate both sets of junction parents with their original IDs
-    // so the cross-tenant reference assertions target existing parent records.
-    // Replica mode is limited to fixture restoration, then immediately disabled.
+    // The regular-table checks above delete Tenant A's fixture parents.
+    // Tenant B's parent rows remain: the preceding tenant-A DELETE assertions
+    // verify they are not removable. Restore only A so cross-tenant references
+    // can target existing B parent records without duplicating their IDs.
     await client.query("SET session_replication_role = 'replica'");
     const junctionParentTables = new Set(
       TENANT_JUNCTION_TABLES.flatMap(({ leftTable, rightTable }) => [leftTable, rightTable]),
@@ -556,14 +556,9 @@ async function runTest() {
         return "$" + (index + 1);
       }).join(", ");
       const valuesA = [rowsMapA[tableName], ...requiredCols.map((column) => getDefaultValue(column, true, tableName))];
-      const valuesB = [rowsMapB[tableName], ...requiredCols.map((column) => getDefaultValue(column, false, tableName))];
       await client.query(
         "INSERT INTO " + tableName + " (" + colNames.join(", ") + ") VALUES (" + placeholders + ")",
         valuesA,
-      );
-      await client.query(
-        "INSERT INTO " + tableName + " (" + colNames.join(", ") + ") VALUES (" + placeholders + ")",
-        valuesB,
       );
     }
     // Deleting each parent fixture cascades to its junction rows. Recreate
