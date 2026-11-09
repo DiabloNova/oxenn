@@ -50,20 +50,28 @@ The remaining architectural issue is the contract between ownership and security
 
 ### DOC-002 — Database security specifications describe incompatible or obsolete RLS coverage
 
-**Priority: P2 — security architecture documentation inconsistency.**  
+**Priority: P2 — security architecture documentation consistency.**  
 **Confidence: High for the document mismatches; runtime behavior is not inferred.**  
-**Related finding: DB-001.**
+**Related finding: DB-001 and DOC-001.**
 
-The database/security documentation does not currently express one consistent contract:
+Revalidation against `main` at `4e54e8b2acee85c9728fd3da9f0e596f08b08bad` (2026-11-09) confirms that the original documentation mismatches existed, while the repository's canonical RLS governance has since been corrected by the DB-001 remediation and DOC-001 work. The current generated Reference Matrix records 70 tables: 56 Tenant-Owned and 14 Global. All 56 Tenant-Owned tables have complete declared SELECT/INSERT/UPDATE/DELETE tenant policy coverage and ENABLE/FORCE coverage in the checked-in migration journal. The Matrix deliberately continues to label runtime enforcement as not verified by static generation.
 
-- [Tenant Context Specification](../docs/architecture/database/tenant-context-spec.md) says exactly 12 tables are strictly isolated by RLS. The current Drizzle snapshot contains 70 tables, including 56 tenant-owned tables with declared RLS policies; the 12-table list is obsolete.
-- [Database Reconciliation Report](../docs/architecture/database/reconciliation-report.md) is a historical report that uses an older 51/19 split and classifies all 19 tables without policies as Global/System Context. That historical grouping includes junction tables whose tenant ownership and RLS coverage have since been corrected in the canonical schema and migrations 0014 / 0015; it must not be treated as the current state.
-- [Security README](../docs/security/README.md), [Architecture README](../docs/architecture/README.md), [MVP Phase 0](../docs/project/MVP_PHASE_0_SCOPE_BASELINE.md) and [MVP Phase 1](../docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md) state that the 51-policy set matches the tenant-scoped table set and is fully covered.
-- [Feature Architecture](../docs/architecture/features/ARCHITECTURE.md) contains an illustrative policy using `app.current_organization_id`, whereas the canonical policies and current database contract use `app.current_tenant_id`.
+The remaining documentation corrections are:
 
-The current snapshot contains 56 tenant-owned tables and all 56 declare tenant RLS policies; the active migration journal statically enables and forces RLS for those 56 tables. This does not prove that the migrations have been applied to production or that runtime enforcement has been independently verified there. The five junction tables that were the original DB-001 counterexample now have four tenant policies each and are included in migrations 0014 / 0015.
+- [Tenant Context Specification](../docs/architecture/database/tenant-context-spec.md) contained an obsolete hand-maintained list of 12 tables. It is an execution/session-context specification and must defer current inventory to the generated Matrix.
+- [Database Reconciliation Report](../docs/architecture/database/reconciliation-report.md) retains its 2024 51/19 inventory. That report is historical evidence and must be visibly labelled as superseded, not rewritten as a current count.
+- [Security README](../docs/security/README.md) and [Architecture README](../docs/architecture/README.md) contained stale hard-coded 51-table statements and must link to the canonical contract and generated Matrix instead.
+- [MVP Phase 1](../docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md) records a 2026-11-04 70/51 repository baseline. Preserve it as a dated Phase 1 snapshot and explicitly distinguish it from current inventory. [MVP Phase 0](../docs/project/MVP_PHASE_0_SCOPE_BASELINE.md) already records the corrected 56-table coverage reconciliation and is not a stale 51-table document.
+- [Feature Architecture](../docs/architecture/features/ARCHITECTURE.md) used `app.current_organization_id`; current policy declarations use `app.current_tenant_id`. Its example also named an unverified role and a non-canonical SQL path.
 
-**Required disposition:** publish one current RLS contract with distinct counts for (a) tenant-owned tables, (b) tables with policies declared, (c) tables enabled/forced in the migration chain and (d) tables verified against a disposable live PostgreSQL instance. Mark the 12-table and 2024/19-table descriptions as superseded historical material, and update examples to use the canonical tenant setting. Do not claim production RLS state from repository documentation alone.
+DB-001's five organization-owned junction tables now have canonical tenant policies and ENABLE/FORCE plus tenant-consistent composite-FK migrations (`0014_db_001_join_table_rls.sql` and `0015_db_001_composite_tenant_fks.sql`). The current CI isolation suite has passed against its disposable PostgreSQL service. This is repository/CI evidence only; no production or staging database state is asserted.
+
+**Required disposition (implemented on `investigation/016-doc-002`):** keep `docs/database/canonical-data-contract.md` as the normative ownership and verification contract and `docs/database/reference-matrix.md` as the generated current per-table view. Keep `tenant-context-spec.md` focused on transaction-scoped session context. Label dated historical inventories conspicuously and preserve their original numbers. Fix the active examples and navigation. Add a narrow documentation consistency checker and regression tests that inspect only an explicit active-document allowlist and explicitly validate historical labels; do not use a repository-wide grep that rejects legitimate historical evidence.
+
+**Verification boundary:** static checks establish repository declarations and checked-in migration history. The CI isolation suite exercises disposable PostgreSQL. Production/staging migration state and runtime enforcement remain unverified until separately observed.
+
+**Implementation outcome — 2026-11-09:** The approved documentation corrections, focused checker and regression tests are implemented on `investigation/016-doc-002`. The generated navigation snippet in `src/lib/docsIndex.ts` was synchronized through the repository's documented build-generation behavior; the database Reference Matrix and generated tenant-table inventory were not changed. Final CI run [#665](https://github.com/DiabloNova/oxenn/actions/runs/42588930161) passed all jobs, including Build, generated Matrix and no-drift verification. The approved implementation is complete on the branch; no PR or merge has been created.
+
 
 ### DOC-003 — The route specification declares a superseded roadmap location as its supreme source of truth
 

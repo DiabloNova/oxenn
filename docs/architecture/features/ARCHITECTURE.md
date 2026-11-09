@@ -38,13 +38,15 @@ To guarantee SaaS boundary safety, we implement a **Silo/Pooled Partitioning Mod
 
 1. **Explicit Organization Partition Key**: Every database schema table and TypeScript domain model contains a mandatory `organizationId` parameter.
 2. **Tenant Filter Scoping**: All query finders inside repository interfaces (`interfaces.ts`) enforce `organizationId` as a leading parameter. It is impossible to invoke a fetch without providing tenant context.
-3. **RLS Policy Compatibility**: The SQL scripts defined inside `database/schema/` are structured to directly leverage PostgreSQL Row-Level Security (RLS) policies:
+3. **RLS Policy Compatibility**: Tenant RLS policies are declared alongside the canonical Drizzle table definitions in `database/schema/`; physical ENABLE/FORCE and policy changes are recorded in the active SQL migration chain under `database/drizzle/`. The canonical transaction-local setting is `app.current_tenant_id`. This illustrative policy follows the same fail-closed setting lookup used by the current contract:
    ```sql
    ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
    CREATE POLICY tenant_brand_isolation_policy ON brands
-     FOR ALL TO authenticated
-     USING (organization_id = CURRENT_SETTING('app.current_organization_id'));
+     FOR ALL
+     USING (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
+     WITH CHECK (organization_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
    ```
+   The policy example is illustrative; the canonical Drizzle declarations and active migration files remain authoritative. See the [Canonical Data Contract](../../database/canonical-data-contract.md) and generated [Database Reference Matrix](../../database/reference-matrix.md).
 
 ---
 

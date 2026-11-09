@@ -48,24 +48,13 @@ PostgreSQL maps session state to RLS policies using the `current_setting(setting
 
 ---
 
-## 3. Secured Tenant-Scoped Tables & Columns
+## 3. Ownership and RLS Coverage
 
-The following 12 tables are strictly isolated via Row Level Security:
+This specification describes transaction-scoped tenant context; it is not a manually maintained table inventory. The canonical ownership rule and separation of ownership, policy declarations, migration coverage, and runtime verification are defined in the [Canonical Data Contract](../../database/canonical-data-contract.md). The generated [Database Reference Matrix](../../database/reference-matrix.md) is the current per-table inventory.
 
-| Table Name | Partition Column | RLS Scope & Policies implemented |
-| :--- | :--- | :--- |
-| `organizations` | `id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `brands` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `entities` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `entity_relationships` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `prompts` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `ai_observations` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `brand_mentions` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `citations` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `visibility_scores` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `recommendations` | `organization_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `tenant_quotas` | `tenant_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
-| `tenant_subscriptions` | `tenant_id` | Explicit `SELECT`, `INSERT`, `UPDATE`, `DELETE` matching `app.current_tenant_id` |
+A table is Tenant-Owned according to the canonical schema ownership markers (`organization_id` or `tenant_id`, rooted at `organizations`) and reviewed exceptions—not according to whether a policy happens to exist. Every Tenant-Owned table must have complete SELECT, INSERT, UPDATE, and DELETE tenant policies. The checked-in migration chain must enable and force RLS. These are distinct static checks. Runtime enforcement is established only by the PostgreSQL isolation suite against its disposable test database; static documentation does not prove production database state.
+
+Do not copy table names or counts into this execution-context specification. Consult the generated Reference Matrix for the current repository inventory.
 
 ---
 

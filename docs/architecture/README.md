@@ -13,7 +13,7 @@ Seorchable is a Next.js application built on a PostgreSQL database utilizing Dri
 ## Core Architectural Domains
 
 ### [Database Architecture](./database/README.md)
-The relational database schema and migration layer is powered by Drizzle ORM and Drizzle Kit. The canonical schema models 70 tables across the system; 51 tenant-scoped tables carry explicit `pgPolicy` Row-Level Security (RLS) definitions.
+The relational database schema and migration layer is powered by Drizzle ORM and Drizzle Kit. The canonical Drizzle schema, ownership verifier, and active migration journal define the repository database contract. Consult the generated [Database Reference Matrix](../database/reference-matrix.md) for current per-table ownership, RLS policy, migration, and runtime-verification metadata, and the [Canonical Data Contract](../database/canonical-data-contract.md) for the governing rules. Do not maintain a separate hard-coded table count here.
 - Tenant scoping enforces transaction-local `SET LOCAL app.current_tenant_id = $1` inside active transactions.
 - Migrations executed programmatically via `src/core/database/migrator.ts`.
 
