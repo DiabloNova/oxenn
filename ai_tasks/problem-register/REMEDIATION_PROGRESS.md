@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — DOC-001 and DOC-002 are verified and merged into `main` with post-merge CI passed; project-wide Wave 0 remains incomplete and the remaining findings are not approved.
+**Current overall status:** PARTIAL — DOC-001 and DOC-002 are verified on `main` after PRs #122 and #123 merged and post-merge CI passed; project-wide Wave 0 remains incomplete.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -41,7 +41,7 @@ Use exactly one primary status per finding:
 Historical-only execution restrictions (for example, `DO NOT RUN`) are safety annotations, not lifecycle statuses. Record the primary status as `Blocked` when a historical artifact is review-only, and preserve the explicit prohibition in the planned-stage label and the finding record. A status change never authorizes execution of a historical script.
 - **Implemented — verification pending** — code is changed but required tests/review/evidence are incomplete.
 - **Verified complete** — acceptance criteria pass on a recorded commit and evidence is linked.
-- **Integrated — verification pending** — the PR is merged to `main`, but successful CI for the exact merge commit has not yet been confirmed.
+- **Integrated — verification pending** — the PR is merged to main, but successful CI for the exact merge commit has not yet been confirmed.
 - **Integrated — verification failed** — the PR is merged, but post-merge CI failed or required verification did not complete successfully.
 - **Closed without merge** — the PR closed without merging; no resolution is claimed.
 - **Deferred / out of scope** — user-approved deferral or explicit scope decision is recorded.
@@ -69,7 +69,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that the finding has been revalidated or approved. DOC-001 has one recorded, branch-only verified disposition; the other 94 findings remain not started and the two historical scripts remain blocked. This individual result does not satisfy the project-wide Wave 0 exit condition.
+The wave column is a proposed dependency placement, not proof that the finding has been revalidated or approved. DOC-001 and DOC-002 have verified dispositions on `main`; DB-001's repository fix is present, while Production/runtime verification remains outstanding. The remaining 92 findings are not started and the two historical scripts remain blocked. These finding-level dispositions do not satisfy the project-wide Wave 0 exit condition.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -88,7 +88,7 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [DB-004](./findings/013-DB-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DB-005](./findings/014-DB-005.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-001](./findings/015-DOC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | **Verified complete** — merged into `main` via PR #122 on 2026-11-09 | [4e54e8b](https://github.com/DiabloNova/oxenn/commit/4e54e8b2acee85c9728fd3da9f0e596f08b08bad) | [Execution log](./REMEDIATION_PROGRESS.md#doc-001-investigation-branch-2026-11-09) · [Merge correction](./REMEDIATION_PROGRESS.md#correction--doc-001-merge-status--2026-11-09) · [PR #122](https://github.com/DiabloNova/oxenn/pull/122) |
-| [DOC-002](./findings/016-DOC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | **Verified complete** — merged to main; post-merge CI passed | [2f5a4d9e](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472) | [Execution log](./REMEDIATION_PROGRESS.md#doc-002-post-merge-reconciliation-2026-11-09) · [PR #123](https://github.com/DiabloNova/oxenn/pull/123) · [merge commit 2f5a4d9e](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472) · [main CI run #42605739033](https://github.com/DiabloNova/oxenn/actions/runs/42605739033) |
+| [DOC-002](./findings/016-DOC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | **Verified complete** — merged to `main`; post-merge CI passed | [2f5a4d9e](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472) | [Execution log](./REMEDIATION_PROGRESS.md#doc-002-post-merge-reconciliation-2026-11-09) · [PR #123](https://github.com/DiabloNova/oxenn/pull/123) · [merge commit 2f5a4d9e](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472) · [main CI run #42605739033](https://github.com/DiabloNova/oxenn/actions/runs/42605739033) |
 | [DOC-003](./findings/017-DOC-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-004](./findings/018-DOC-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-005](./findings/019-DOC-005.md) | Wave 3 — AI provider behavior and evidence integrity | Not started — pending Wave 0 revalidation | — | — |
@@ -328,14 +328,3 @@ At the end of each batch, report:
 At the end of each wave, provide a concise wave summary and wait for the required user approval before proceeding if the scope or next wave has not already been authorized.
 
 The project is complete only when every in-scope finding is either verified complete or has an explicitly approved disposition (deferred, superseded, already fixed, or out of scope), with evidence. The number of changed files or closed issues is not a completion metric.
-
-
-### DOC-002 post-merge reconciliation — 2026-11-09
-
-- Finding: DOC-002.
-- Repository: `DiabloNova/oxenn`.
-- PR [#123](https://github.com/DiabloNova/oxenn/pull/123) was merged into `main` at 2026-11-09 11:02 UTC. The earlier pending/not-started tracker state is superseded by this dated reconciliation; the historical record is retained.
-- Merge commit: [2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472).
-- Post-merge verification: [GitHub Actions CI run #42605739033](https://github.com/DiabloNova/oxenn/actions/runs/42605739033) completed successfully on `main` for the exact merge commit; Build and Test, Unit Tests, and Isolation Suite all passed.
-- Result: DOC-002 is **Verified complete on main**. This finding-level result does not complete Wave 0 or change the status of DOC-007, DOC-008, SCR-001, or any other finding.
-- Reconciliation note: this entry records the confirmed merge and exact-merge-commit CI result; it does not imply that the automated remediation event recorder is already active on `main`.
