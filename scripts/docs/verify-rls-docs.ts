@@ -54,12 +54,37 @@ export function isDirectExecution(argvPath: string | undefined, moduleUrl: strin
   return Boolean(argvPath) && path.resolve(argvPath!) === path.resolve(fileURLToPath(moduleUrl));
 }
 
+/** Read required RLS documents while reporting absent files with stable diagnostics. */
+export function loadRequiredRlsDocuments(repositoryRoot = root): {
+  documents: Record<string, string>;
+  issues: string[];
+} {
+  const required = [...CURRENT_RLS_DOCUMENTS, ...HISTORICAL_RLS_DOCUMENTS, "ai_tasks/docs-folder-audit.md"];
+  const documents: Record<string, string> = {};
+  const issues: string[] = [];
+
+  for (const relativePath of required) {
+    try {
+      documents[relativePath] = fs.readFileSync(resolveRepositoryPath(relativePath, repositoryRoot), "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      issues.push(`Missing required RLS documentation: ${relativePath}`);
+    }
+  }
+
+  return { documents, issues };
+}
+
 export function collectRlsDocumentationIssues(documents: Record<string, string>) {
   const issues: string[] = [];
   const read = (relativePath: string): string => {
     const content = documents[relativePath];
     if (typeof content !== "string") {
       issues.push(`Missing required RLS documentation: ${relativePath}`);
+      return "";
+    }
+    if (content.trim().length === 0) {
+      issues.push(`Required RLS documentation must not be empty: ${relativePath}`);
       return "";
     }
     return content;
@@ -99,7 +124,7 @@ export function collectRlsDocumentationIssues(documents: Record<string, string>)
   }
 
   const phaseOnePath = "docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md";
-  const phaseOne = documents[phaseOnePath] ?? "";
+  const phaseOne = read(phaseOnePath);
   if (!/Historical Phase 1 repository baseline\s*[—-]\s*2026-11-04/i.test(phaseOne)) {
     issues.push(`${phaseOnePath} must label its 70/51 figures as the dated historical Phase 1 baseline`);
   }
@@ -141,11 +166,8 @@ export function verifyRlsDocumentation(documents: Record<string, string>) {
 }
 
 function main() {
-  const required = [...CURRENT_RLS_DOCUMENTS, ...HISTORICAL_RLS_DOCUMENTS, "ai_tasks/docs-folder-audit.md"];
-  const documents = Object.fromEntries(required.map((relativePath) => [
-    relativePath,
-    fs.readFileSync(resolveRepositoryPath(relativePath), "utf8"),
-  ]));
+  const { documents, issues } = loadRequiredRlsDocuments();
+  assert.deepEqual(issues, [], `RLS documentation loading failed:\n- ${issues.join("\n- ")}`);
   const result = verifyRlsDocumentation(documents);
   console.log(`RLS documentation consistency passed (${result.checkedCurrentDocuments} active documents, ${result.checkedHistoricalDocuments} historical documents).`);
 }

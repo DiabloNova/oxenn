@@ -8,6 +8,7 @@ import {
   CURRENT_RLS_DOCUMENTS,
   HISTORICAL_RLS_DOCUMENTS,
   isDirectExecution,
+  loadRequiredRlsDocuments,
   resolveRepositoryPath,
   verifyRlsDocumentation,
 } from "../../../../scripts/docs/verify-rls-docs";
@@ -63,7 +64,7 @@ describe("RLS documentation consistency contract", () => {
     );
   });
 
-  it("rejects stale hard-coded 51-table claims in active READMEs", () => {
+  it("rejects stale hard-coded 51-table claims in the Security README", () => {
     const documents = repositoryDocuments();
     const target = CURRENT_RLS_DOCUMENTS[1];
     documents[target] += "\nThe 51 tenant-owned tables are all protected.\n";
@@ -72,15 +73,34 @@ describe("RLS documentation consistency contract", () => {
     );
   });
 
-  it("requires the Phase 1 counts to remain dated historical evidence", () => {
+  it("rejects stale hard-coded 51-table claims in the Architecture README", () => {
+    const documents = repositoryDocuments();
+    const target = CURRENT_RLS_DOCUMENTS[2];
+    documents[target] += "\nThe 51 tenant-owned tables are all protected.\n";
+    expect(collectRlsDocumentationIssues(documents).join("\n")).toContain(
+      "stale hard-coded 51-table RLS claim",
+    );
+  });
+
+  it("rejects a Phase 1 historical document missing its dated baseline", () => {
     const documents = repositoryDocuments();
     const target = HISTORICAL_RLS_DOCUMENTS[1];
-    documents[target] = documents[target]
-      .replace("Historical Phase 1 repository baseline", "Current Phase 1 repository baseline")
-      .replace(/historical evidence\s+only/i, "current evidence");
-    const issues = collectRlsDocumentationIssues(documents).join("\n");
-    expect(issues).toContain("dated historical Phase 1 baseline");
-    expect(issues).toContain("historical counts are not current inventory");
+    documents[target] = documents[target].replace(
+      "Historical Phase 1 repository baseline",
+      "Current Phase 1 repository baseline",
+    );
+    expect(collectRlsDocumentationIssues(documents).join("\n")).toContain(
+      "dated historical Phase 1 baseline",
+    );
+  });
+
+  it("rejects a Phase 1 historical document missing historical-evidence wording", () => {
+    const documents = repositoryDocuments();
+    const target = HISTORICAL_RLS_DOCUMENTS[1];
+    documents[target] = documents[target].replace(/historical evidence\s+only/i, "current evidence");
+    expect(collectRlsDocumentationIssues(documents).join("\n")).toContain(
+      "historical counts are not current inventory",
+    );
   });
 
   it("requires the DOC-002 audit to record the current 56/14 inventory", () => {
@@ -109,6 +129,31 @@ describe("RLS documentation consistency contract", () => {
     delete documents[CURRENT_RLS_DOCUMENTS[2]];
     expect(collectRlsDocumentationIssues(documents).join("\n")).toContain(
       "Missing required RLS documentation: " + CURRENT_RLS_DOCUMENTS[2],
+    );
+  });
+
+  it("reports a physically missing required documentation file", () => {
+    const repositoryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rls-doc-missing-"));
+    const missingPath = CURRENT_RLS_DOCUMENTS[2];
+    try {
+      for (const relativePath of requiredPaths.filter((item) => item !== missingPath)) {
+        const filePath = path.join(repositoryRoot, relativePath);
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, "placeholder");
+      }
+      const { issues } = loadRequiredRlsDocuments(repositoryRoot);
+      expect(issues).toContain(`Missing required RLS documentation: ${missingPath}`);
+    } finally {
+      fs.rmSync(repositoryRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an empty required document instead of skipping its checks", () => {
+    const documents = repositoryDocuments();
+    const target = CURRENT_RLS_DOCUMENTS[2];
+    documents[target] = "  \n\t";
+    expect(collectRlsDocumentationIssues(documents).join("\n")).toContain(
+      `Required RLS documentation must not be empty: ${target}`,
     );
   });
 
