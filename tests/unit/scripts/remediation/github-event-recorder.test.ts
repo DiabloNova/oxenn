@@ -407,6 +407,28 @@ describe("GitHub remediation event recorder", () => {
     expect(fake.updateCalls).toBe(1);
   });
 
+  it("does not mirror merged PR or post-merge CI events with no finding-ID reference", async () => {
+    for (const event of [
+      { event_type: "pull_request.closed", pull_request: { number: 125, merged: true } },
+      { event_type: "workflow_run.completed", is_post_merge_main_ci: true, pull_request: { number: 125, merged: true, merge_commit_sha: "abcdef1234567890" }, workflow_run: { id: 42, conclusion: "success", head_sha: "abcdef1234567890" } },
+    ]) {
+      const fake = makeFakeGitHub();
+      const record: Record<string, unknown> = {
+        event_id: `${event.event_type}:no-finding-reference`,
+        occurred_at: "2026-11-09T15:00:00Z",
+        finding_ids: [],
+        candidate_finding_ids: [],
+        file_finding_ids: [],
+        mapping_complete: true,
+        changed_files: [],
+        ...event,
+      };
+      await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+      expect(fake.blobs).toHaveLength(0);
+      expect(fake.updateCalls).toBe(0);
+    }
+  });
+
   it("does not retain a merged candidate-only event when its ID has no canonical finding file", async () => {
     const fake = makeFakeGitHub();
     const record: Record<string, unknown> = {
