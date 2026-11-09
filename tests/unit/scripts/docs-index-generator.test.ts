@@ -21,11 +21,11 @@ describe("reference matrix docs search snippet", () => {
 
     const snippet = createReferenceMatrixSnippet(matrix);
 
-    expect(snippet).toContain("Ownership Scope: Tenant-Owned");
-    expect(snippet).toContain("RLS Policies Declared: 4 policy objects");
-    expect(snippet).toContain("Tenant RLS Policy Coverage: Complete");
-    expect(snippet).toContain("Migration Coverage: Complete");
-    expect(snippet).toContain("Runtime Enforcement Verification: Not verified by static generation");
+    expect(snippet).toContain("**Ownership Scope:** Tenant-Owned");
+    expect(snippet).toContain("**RLS Policies Declared:** 4 policy objects");
+    expect(snippet).toContain("**Tenant RLS Policy Coverage:** Complete");
+    expect(snippet).toContain("**Migration Coverage:** Complete");
+    expect(snippet).toContain("**Runtime Enforcement Verification:** Not verified by static generation");
     expect(snippet).not.toContain("### Columns");
     expect(snippet).not.toContain("Ownership rule:");
   });
