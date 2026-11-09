@@ -169,3 +169,13 @@ A finding is **Verified complete** only when:
 A wave is complete only when every in-scope finding is verified complete or has an explicitly approved disposition, all wave exit conditions are met, and the user receives a clear summary.
 
 **Do not start implementation simply because this prompt exists. Explicit user approval and the Wave 0 gate are mandatory.**
+
+## GitHub lifecycle evidence and automated status transitions
+
+- Put every addressed finding ID in the working branch name, PR title, or PR description. For a PR covering multiple findings, include the individual finding-record paths among the changed files so file-level attribution is explicit. Do not rely on an inferred relationship between unrelated changed files and a finding.
+- The Remediation Event Recorder stores completed PR/CI events in monthly append-only JSONL files and records exact changed paths, commit SHAs, PR references, and CI outcomes.
+- A successful CI run on a feature branch is pre-merge evidence only. It must never be described as Verified complete.
+- A merged PR is Integrated — verification pending until CI succeeds on main for the exact merge commit. Only then may the ledger and finding record be marked Verified complete.
+- A closed PR that was not merged is Closed without merge. A failed post-merge CI run is Integrated — verification failed. Neither state is resolved.
+- Do not manually overwrite or remove automated event history. Correct an erroneous event with a new dated correction record; preserve prior evidence.
+- The recorder does not authorize implementation, approve a finding, complete a remediation wave, merge a PR, or change database/product state.
