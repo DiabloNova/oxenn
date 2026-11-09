@@ -16,7 +16,7 @@ The `AuthProvider` stores user session credentials client-side for UI mocking pu
 *Status: Implemented*
 
 ### Multi-Tenant Isolation & Row-Level Security (RLS)
-The canonical Drizzle schema models 70 tables across the system. Of these, 51 tenant-scoped tables carry explicit `pgPolicy` Row-Level Security (RLS) definitions. The checked-in `database/drizzle/0005_force_rls.sql` migration enables and forces RLS for the same 51-table set, matching both the latest Drizzle snapshot and the generated runtime tenant-table list. Tenant scoping enforces transaction-local `SET LOCAL app.current_tenant_id = $1` inside active transactions, guaranteeing leased PostgreSQL clients are released securely. Fallbacks explicitly fail closed when database connections or queries fail.
+The canonical Drizzle schema and active migration journal are checked by the tenant ownership and RLS migration verifiers. For the current per-table repository inventory—including ownership, declared policy objects, complete tenant-policy coverage, ENABLE/FORCE migration coverage, and the runtime-verification boundary—see the generated [Database Reference Matrix](../database/reference-matrix.md) and the [Canonical Data Contract](../database/canonical-data-contract.md). The canonical transaction-local setting is `app.current_tenant_id`. Static schema and migration checks do not establish the state of a deployed database; runtime enforcement is exercised by the PostgreSQL isolation suite against disposable CI PostgreSQL.
 *Status: Implemented*
 
 ### Cache Security

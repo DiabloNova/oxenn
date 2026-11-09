@@ -20,13 +20,21 @@ limited to server-derived tenant identity, SSRF-safe outbound fetching,
 subscription authorization for premium audit work, executable regression
 coverage, and accurate release documentation.
 
-## 1.2 Verified repository baseline
+## 1.2 Historical Phase 1 repository baseline — 2026-11-04
 
-The canonical Drizzle schema contains 70 tables and the reconciled tenant RLS
-subset contains 51 policy-bearing tables. The 70/51 figures are repository
-inventory counts, not proof of any particular database's deployed migration
-state. The architecture, security, and database reconciliation documents now
-use the same totals.
+The 70-table / 51-policy-bearing-table figures below were the repository
+inventory recorded for this Phase 1 workstream on 2026-11-04. They are retained
+as a dated historical baseline, not as the current repository inventory or a
+claim about deployed database state. Subsequent DB-001 remediation and the
+DOC-001 ownership-governance work changed the repository contract. For the
+current per-table inventory, use the generated [Database Reference Matrix](../database/reference-matrix.md);
+for ownership and verification semantics, use the [Canonical Data Contract](../database/canonical-data-contract.md).
+
+At the time this Phase 1 baseline was written, the canonical Drizzle schema
+was recorded as containing 70 tables and its reconciled tenant RLS subset as
+containing 51 policy-bearing tables. Those numbers are historical evidence
+only and must not be reused as current counts. They never proved any
+particular database's deployed migration state.
 
 The current workflow's relevant checks are typecheck, lint, build, unit/UI
 tests, schema alignment, RLS migration coverage, migration-chain validation,
