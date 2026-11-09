@@ -96,7 +96,7 @@ export function collectRlsDocumentationIssues(documents: Record<string, string>)
   return issues;
 }
 
-export function verifyRlsDocumentation(documents) {
+export function verifyRlsDocumentation(documents: Record<string, string>) {
   const issues = collectRlsDocumentationIssues(documents);
   assert.deepEqual(issues, [], `RLS documentation consistency failed:\n- ${issues.join("\n- ")}`);
   return { checkedCurrentDocuments: CURRENT_RLS_DOCUMENTS.length, checkedHistoricalDocuments: HISTORICAL_RLS_DOCUMENTS.length };
