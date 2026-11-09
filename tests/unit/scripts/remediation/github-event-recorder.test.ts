@@ -22,6 +22,8 @@ const recorder = require("../../../../scripts/remediation/github-event-recorder.
   directFindingId: (path: string) => string | null;
   eventIdFor: (eventType: string, pullRequest: Record<string, unknown> | null, workflowRun: Record<string, unknown> | null) => string;
   extractFindingIds: (pullRequest: Record<string, unknown>, files: Array<{ filename: string }>) => string[];
+  extractExplicitFindingIds: (body: string) => string[];
+  buildFindingAssociation: (candidateIds: string[], explicitIds: string[], fileFindingIds: Array<{ finding_id: string | null; path: string }>) => { candidate_finding_ids: string[]; explicit_finding_ids: string[]; finding_ids: string[] };
   statusForRecord: (record: Record<string, unknown>) => string | null;
   updateFindingStatus: (content: string, status: string, details: string) => { content: string; changed: boolean };
   updateLedgerRow: (content: string, findingId: string, status: string, evidence: string, commitLink: string | null) => { content: string; changed: boolean; previousStatus: string | null };
@@ -48,6 +50,35 @@ describe("GitHub remediation event recorder", () => {
       [{ filename: "ai_tasks/problem-register/findings/016-DOC-002.md" }],
     );
     expect(ids).toEqual(["DB-002", "DOC-001", "DOC-002", "SCR-001"]);
+  });
+
+  it("ignores incidental ID-like substrings in branch and title hints", () => {
+    const candidates = recorder.extractFindingIds({
+      title: "Fix SHA-256 and DOC-003",
+      head: { ref: "fix/doc-003-tenant-2026-11-10" },
+    }, []);
+    expect(candidates).toEqual(["DOC-003", "SHA-256"]);
+    const association = recorder.buildFindingAssociation(candidates, [], [
+      { finding_id: "DOC-003", path: "ai_tasks/problem-register/findings/017-DOC-003.md" },
+    ]);
+    expect(association.finding_ids).toEqual(["DOC-003"]);
+    expect(association.candidate_finding_ids).toContain("SHA-256");
+  });
+
+  it("keeps explicitly referenced unknown IDs in the fail-closed mapping set", () => {
+    const explicit = recorder.extractExplicitFindingIds("Finding-IDs: DOC-003, SHA-256");
+    expect(explicit).toEqual(["DOC-003", "SHA-256"]);
+    const association = recorder.buildFindingAssociation(["DOC-003", "SHA-256"], explicit, [
+      { finding_id: "DOC-003", path: "ai_tasks/problem-register/findings/017-DOC-003.md" },
+    ]);
+    expect(association.finding_ids).toEqual(["DOC-003", "SHA-256"]);
+    expect(recorder.hasCanonicalFindingMapping({
+      finding_ids: association.finding_ids,
+      mapping_complete: true,
+      canonical_mapping_complete: true,
+      canonical_finding_paths: { "DOC-003": "ai_tasks/problem-register/findings/017-DOC-003.md" },
+      file_finding_ids: [{ finding_id: "DOC-003", path: "ai_tasks/problem-register/findings/017-DOC-003.md" }],
+    })).toBe(false);
   });
 
   it("recognizes only canonical numbered finding record paths", () => {
@@ -188,6 +219,21 @@ describe("GitHub remediation event recorder", () => {
     expect(result.content).toContain("https://example.test/commit/abcdef123456");
   });
 
+  it("replaces a stale verified commit when a non-verified finding advances", () => {
+    const row = "| [DOC-001](./findings/015-DOC-001.md) | Wave 1 | **Integrated — verification pending** | [oldsha1](https://example.test/commit/oldsha1) | [Prior](https://example.test/prior) |";
+    const result = recorder.updateLedgerRow(row, "DOC-001", "Verified complete", "[PR #125](https://example.test/pull/125)", "[newsha22](https://example.test/commit/newsha22)");
+    expect(result.content).toContain("https://example.test/commit/newsha22");
+    expect(result.content).not.toContain("https://example.test/commit/oldsha1");
+    expect(result.content).toContain("https://example.test/prior");
+  });
+
+  it("preserves the verified commit of a finding already verified on main", () => {
+    const row = "| [DOC-001](./findings/015-DOC-001.md) | Wave 1 | **Verified complete** — merged to main | [oldsha1](https://example.test/commit/oldsha1) | prior evidence |";
+    const result = recorder.updateLedgerRow(row, "DOC-001", "Verified complete", "new evidence", "[newsha22](https://example.test/commit/newsha22)");
+    expect(result.content).toContain("https://example.test/commit/oldsha1");
+    expect(result.content).not.toContain("https://example.test/commit/newsha22");
+  });
+
   it("allows a branch-only verified Finding to advance to main verification", () => {
     const previous = "- Status: **Verified complete** — investigation branch only.";
     const result = recorder.updateFindingStatus(previous, "Verified complete", "PR #125; exact main merge CI passed");
@@ -307,9 +353,11 @@ describe("GitHub remediation event recorder", () => {
     expect(fake.blobs[0]).toContain(record.event_id);
   });
 
-  it("records a verified merge commit on both the ledger and finding", async () => {
+  it("records a verified merge commit on both the ledger and finding and clears stale rejection state", async () => {
     const fake = makeFakeGitHub();
-    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [mergedRecord], { info: () => {}, warning: () => {} });
+    const record: Record<string, unknown> = { ...mergedRecord, transition_rejected: true };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(record.transition_rejected).toBeUndefined();
     expect(fake.blobs.some((blob) => blob.includes("| [abcdef12](https://github.com/DiabloNova/oxenn/commit/abcdef1234567890) |"))).toBe(true);
     expect(fake.blobs.some((blob) => blob.includes("- Status: **Verified complete**"))).toBe(true);
     expect(fake.updateCalls).toBe(1);

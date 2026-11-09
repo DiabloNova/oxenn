@@ -2,28 +2,48 @@ const PROGRESS_PATH = "ai_tasks/problem-register/REMEDIATION_PROGRESS.md";
 const FINDINGS_DIR = "ai_tasks/problem-register/findings";
 const EVENTS_DIR = "ai_tasks/problem-register/events";
 
-function extractFindingIds(pullRequest, files) {
+function extractIdTokens(value) {
+  const ids = [];
+  const pattern = /(?:^|[^A-Z0-9])([A-Z]{2,5}-\d{3})(?!\d)/gi;
+  for (const match of String(value || "").matchAll(pattern)) ids.push(match[1].toUpperCase());
+  return ids;
+}
+
+function extractExplicitFindingIds(body) {
   const ids = new Set();
-  const sources = [
-    pullRequest && pullRequest.title,
-    pullRequest && pullRequest.head && pullRequest.head.ref,
-  ];
-  for (const source of sources) {
-    if (!source) continue;
-    const matches = String(source).match(/[A-Z]{2,5}-\d{3}/gi) || [];
-    for (const match of matches) ids.add(match.toUpperCase());
-  }
-  const body = String((pullRequest && pullRequest.body) || "");
-  const explicitMarkers = body.matchAll(/^\s*Finding-IDs\s*:\s*([^\r\n]+)/gim);
-  for (const marker of explicitMarkers) {
-    const matches = marker[1].match(/[A-Z]{2,5}-\d{3}/gi) || [];
-    for (const match of matches) ids.add(match.toUpperCase());
-  }
-  for (const file of files || []) {
-    const match = String(file.filename || file.path || "").match(/(?:^|\/)\d{3}-([A-Z]{2,5}-\d{3})\.md$/i);
-    if (match) ids.add(match[1].toUpperCase());
+  const markers = String(body || "").matchAll(/^\s*Finding-IDs?\s*:\s*([^\r\n]+)/gim);
+  for (const marker of markers) {
+    for (const id of extractIdTokens(marker[1])) ids.add(id);
   }
   return Array.from(ids).sort();
+}
+
+function extractFindingIds(pullRequest, files) {
+  const ids = new Set();
+  const sources = [pullRequest && pullRequest.title, pullRequest && pullRequest.head && pullRequest.head.ref];
+  for (const source of sources) {
+    for (const id of extractIdTokens(source)) ids.add(id);
+  }
+  for (const id of extractExplicitFindingIds(pullRequest && pullRequest.body)) ids.add(id);
+  for (const file of files || []) {
+    const id = directFindingId(file.filename || file.path);
+    if (id) ids.add(id);
+  }
+  return Array.from(ids).sort();
+}
+
+function buildFindingAssociation(candidateIds, explicitIds, fileFindingIds) {
+  const candidates = Array.from(new Set(candidateIds || [])).sort();
+  const explicit = Array.from(new Set(explicitIds || [])).sort();
+  const canonicalFileIds = (fileFindingIds || [])
+    .filter((file) => file && file.finding_id && directFindingId(file.path) === file.finding_id)
+    .map((file) => file.finding_id);
+  return {
+    candidate_finding_ids: candidates,
+    explicit_finding_ids: explicit,
+    // Branch/title matches are hints only. Transitions use changed canonical files plus explicit markers.
+    finding_ids: Array.from(new Set([...canonicalFileIds, ...explicit])).sort(),
+  };
 }
 
 function directFindingId(path) {
@@ -107,7 +127,9 @@ function updateLedgerRow(content, findingId, status, evidence, commitLink) {
     cells[3] = " **" + status + "** ";
   }
   cells[5] = " " + mergeEvidence(cells[5], evidence) + " ";
-  if (commitLink && (!cells[4].trim() || cells[4].trim() === "—")) {
+  const previousCommit = cells[4].trim();
+  const canRefreshCommit = !isMainVerifiedStatus(previousStatus) || !previousCommit || previousCommit === "—";
+  if (commitLink && canRefreshCommit && previousCommit !== commitLink) {
     cells[4] = " " + commitLink + " ";
   }
   lines[index] = cells.join("|");
@@ -282,11 +304,16 @@ async function fetchPullRequestRecord(github, owner, repo, number, run) {
     additions: file.additions,
     deletions: file.deletions,
   }));
-  const findingIds = extractFindingIds(pr, fileResult.files);
   const fileFindingIds = files.map((file) => ({
     path: file.path,
     finding_id: directFindingId(file.path),
   }));
+  const association = buildFindingAssociation(
+    extractFindingIds(pr, fileResult.files),
+    extractExplicitFindingIds(pr.body),
+    fileFindingIds,
+  );
+  const findingIds = association.finding_ids;
   const postMerge = Boolean(
     run &&
     ["push", "workflow_dispatch"].includes(run.event) &&
@@ -303,6 +330,8 @@ async function fetchPullRequestRecord(github, owner, repo, number, run) {
     repository: owner + "/" + repo,
     repository_url: "https://github.com/" + owner + "/" + repo,
     finding_ids: findingIds,
+    candidate_finding_ids: association.candidate_finding_ids,
+    explicit_finding_ids: association.explicit_finding_ids,
     file_finding_ids: fileFindingIds,
     changed_files: files,
     mapping_complete: fileResult.complete,
@@ -388,11 +417,13 @@ async function buildUnassociatedRunRecord(github, owner, repo, run) {
   } catch (error) {
     if (error.status !== 404) throw error;
   }
-  const findingIds = extractFindingIds({
-    title: run.head_commit && run.head_commit.message,
-    body: "",
-    head: { ref: run.head_branch },
-  }, files);
+  const fileFindingIds = files.map((file) => ({ path: file.path, finding_id: directFindingId(file.path) }));
+  const association = buildFindingAssociation(
+    extractFindingIds({ title: run.head_commit && run.head_commit.message, body: "", head: { ref: run.head_branch } }, files),
+    [],
+    fileFindingIds,
+  );
+  const findingIds = association.finding_ids;
   return {
     schema_version: 1,
     event_id: "",
@@ -401,7 +432,9 @@ async function buildUnassociatedRunRecord(github, owner, repo, run) {
     repository: owner + "/" + repo,
     repository_url: "https://github.com/" + owner + "/" + repo,
     finding_ids: findingIds,
-    file_finding_ids: files.map((file) => ({ path: file.path, finding_id: directFindingId(file.path) })),
+    candidate_finding_ids: association.candidate_finding_ids,
+    explicit_finding_ids: association.explicit_finding_ids,
+    file_finding_ids: fileFindingIds,
     changed_files: files,
     mapping_complete: true,
     pull_request: null,
@@ -454,7 +487,9 @@ async function persistRecords(github, owner, repo, records, core) {
       // Pre-merge CI is intentionally not persisted to main: it is not a remediation disposition.
       if (record.event_type === "workflow_run.completed" && !record.is_post_merge_main_ci) continue;
       if (record.event_type === "workflow_run.completed" && (!record.finding_ids || record.finding_ids.length === 0)) continue;
-      if (record.event_type === "pull_request.closed" && (!record.finding_ids || record.finding_ids.length === 0)) continue;
+      if (record.event_type === "pull_request.closed" &&
+          (!record.finding_ids || record.finding_ids.length === 0) &&
+          (!record.candidate_finding_ids || record.candidate_finding_ids.length === 0)) continue;
 
       const month = String(record.occurred_at || new Date().toISOString()).slice(0, 7);
       const eventPath = EVENTS_DIR + "/" + month + ".jsonl";
@@ -473,6 +508,7 @@ async function persistRecords(github, owner, repo, records, core) {
       let paths = {};
       let stagedProgress = progress;
       const stagedFindingChanges = [];
+      delete record.transition_rejected;
       record.resulting_statuses = {};
       if (record.finding_ids && record.finding_ids.length > 0) {
         paths = await findFindingPaths(github, owner, repo, baseSha, record.finding_ids);
@@ -652,7 +688,9 @@ async function recordGitHubEvent({ github, context, core }) {
 
 module.exports = {
   appendEventIfNew,
+  buildFindingAssociation,
   directFindingId,
+  extractExplicitFindingIds,
   findFindingPaths,
   hasCanonicalFindingMapping,
   isMainVerifiedStatus,

@@ -6,7 +6,7 @@ The recorder listens to:
 - Pull requests closed against main: records whether the PR merged or closed without merging.
 - Completed runs of the repository CI workflow: retains post-merge runs associated with the exact merge commit on main. Only `success` advances a finding to Verified complete; `failure`, `timed_out`, and `action_required` produce verification-failed status. `cancelled`, `skipped`, and `neutral` outcomes are evidence-only. Pre-merge and unrelated CI completions are no-ops and do not create commits on main.
 
-Each event contains a deterministic event ID, UTC timestamp, repository, PR/CI references, finding IDs, changed file paths, and direct finding-file associations where available. Monthly sharding keeps individual files bounded. Re-delivered events are ignored by event ID.
+Each event contains a deterministic event ID, UTC timestamp, repository, PR/CI references, candidate and authoritative finding IDs, changed file paths, and direct finding-file associations where available. Monthly sharding keeps individual files bounded. Re-delivered events are ignored by event ID.
 
 Finding IDs may be discovered from branch names, PR titles, explicit Finding-IDs: lines, and changed paths, but discovery alone never authorizes a status transition. Every transitioned ID must have exactly one canonical numbered finding file in the repository, that exact path must appear in the PR's changed files with the matching ID, and exactly one matching row must exist in the ledger. Missing, duplicate, incomplete, or mixed valid/invalid mappings fail closed for the entire event; no partial finding transition is written. Other changed paths remain recorded at PR level and are not guessed to belong to one finding.
 
