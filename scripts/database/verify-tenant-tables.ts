@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-context";
 
 interface SnapshotPolicy {
@@ -18,6 +19,42 @@ interface SnapshotTable {
 
 export interface TenantTableSnapshot {
   tables: Record<string, SnapshotTable>;
+}
+
+/**
+ * Explicit, reviewed exceptions for tables that carry a tenant ownership column
+ * but are intentionally global. Every entry must include a non-empty rationale.
+ * No current table is exempt from marker-based ownership.
+ */
+export const GLOBAL_OWNERSHIP_EXCEPTIONS: Readonly<Record<string, string>> = Object.freeze({});
+
+export type TableOwnershipScope = "Tenant-Owned" | "Global";
+
+/**
+ * Ownership is a schema/domain fact, not a consequence of RLS policy presence.
+ * organizations is the tenant root; organization_id and tenant_id are explicit
+ * ownership markers. RLS is checked independently.
+ */
+export function getTableOwnershipScope(
+  table: Pick<SnapshotTable, "name" | "columns">,
+): TableOwnershipScope {
+  if (Object.hasOwn(GLOBAL_OWNERSHIP_EXCEPTIONS, table.name)) {
+    const rationale = GLOBAL_OWNERSHIP_EXCEPTIONS[table.name];
+    if (!rationale?.trim()) {
+      throw new Error(
+        "[verify-tenant-tables] Global ownership exception for " + table.name +
+        " requires a non-empty rationale.",
+      );
+    }
+    return "Global";
+  }
+
+  const columns = table.columns ?? {};
+  return table.name === "organizations" ||
+    Object.hasOwn(columns, "organization_id") ||
+    Object.hasOwn(columns, "tenant_id")
+    ? "Tenant-Owned"
+    : "Global";
 }
 
 function getCanonicalMetadataDirectory(rootDir: string): string {
@@ -136,12 +173,7 @@ export function getTenantTableCoverageFromSnapshot(snapshot: TenantTableSnapshot
 } {
   const tables = Object.values(snapshot.tables);
   const tenantTables = tables
-    .filter((table) => {
-      const columns = table.columns ?? {};
-      return table.name === "organizations" ||
-        Object.hasOwn(columns, "organization_id") ||
-        Object.hasOwn(columns, "tenant_id");
-    })
+    .filter((table) => getTableOwnershipScope(table) === "Tenant-Owned")
     .map((table) => table.name)
     .sort();
 
@@ -249,7 +281,7 @@ export function verifyTenantTables(options?: { fix?: boolean }): {
   };
 }
 
-if (require.main === module) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const args = process.argv.slice(2);
   const fix = args.includes("--fix") || args.includes("--generate");
 

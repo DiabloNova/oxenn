@@ -32,29 +32,21 @@ No existing document in `docs/` was modified during this audit.
 
 ## 2. Findings
 
-### DOC-001 — Tenant-owned junction tables are documented as Global because their RLS policies are missing
+### DOC-001 — Ownership scope and RLS / migration verification must remain independent
 
-**Priority: P1 — security-boundary documentation and classification defect.**  
-**Confidence: High.**  
-**Related finding: DB-001.**
+**Priority: P2 — canonical data-contract and generated-reporting consistency.**
+**Confidence: High.**
+**Related finding: DB-001 (the original schema defect has since been remediated in the checked-in source and migration history).**
 
-The generated [Database Reference Matrix](../docs/database/reference-matrix.md) classifies all five of the following tables as `Global`, with `RLS Policies Defined: ❌`:
+The original DOC-001 observation was accurate for the earlier documentation baseline: the five organization-owned junction tables (`pages_keywords`, `pages_topics`, `pages_entities`, `keywords_topics`, and `topics_entities`) were classified as Global because tenant RLS policies were missing. That specific current-state claim is superseded by the repository's later DB-001 remediation and must not be repeated as the present state.
 
-- `pages_keywords`
-- `pages_topics`
-- `pages_entities`
-- `keywords_topics`
-- `topics_entities`
+Revalidation against the current `main` snapshot shows that all five tables are organization-owned, declare tenant policies, and are represented as Tenant-Scoped in the current Reference Matrix. The canonical Drizzle declarations include the tenant policy helper, migration `0014_db_001_join_table_rls.sql` adds ENABLE / FORCE and the four operation policies, and migration `0015_db_001_composite_tenant_fks.sql` adds tenant-consistent composite foreign keys. Both migrations are present in the active journal. The current generated ownership inventory also includes all five tables.
 
-However, every one of these tables has a non-null `organization_id` foreign key and is consumed by the tenant AI-intelligence repository. Their data represents relationships between tenant-owned pages, keywords, topics and entities; it is not platform-global reference data.
+The remaining architectural issue is the contract between ownership and security evidence. Ownership must be derived from the canonical domain/schema contract (`organizations`, `organization_id`, and `tenant_id`), not from whether a policy happens to exist. A missing policy is a protection defect on a Tenant-Owned table; it is never evidence that the table is Global. The Reference Matrix must also distinguish declared policy objects, complete tenant-policy coverage, checked-in ENABLE / FORCE migration coverage, and actual runtime enforcement.
 
-This matches the concrete schema/migration defect recorded as DB-001: the current Drizzle declarations do not define tenant policies for these five tables, and migration `0005_force_rls.sql` does not enable/force RLS for them. The matrix's present classification rule therefore hides an actual tenant-owned data boundary: absence of a policy is being used as evidence that a table is global.
+**Impact:** without this separation, a future missing policy could again cause a tenant-owned table to be represented as Global, and static documentation could be mistaken for proof of runtime enforcement.
 
-The [Canonical Data Contract](../docs/database/canonical-data-contract.md) reinforces this rule by defining a table as global when it is absent from the policy-bearing tenant-scoped table map. That is circular for a tenant-owned table whose policy is missing.
-
-**Impact:** documentation consumers, generated scope reports and reviewers may interpret the five tables as intentionally global rather than as unprotected tenant-owned data. A static generated matrix can accurately mirror the policy list and still misclassify the business/data ownership model.
-
-**Required disposition:** classify table ownership independently from whether an RLS policy exists. The reference matrix should expose separate attributes for tenant ownership, declared RLS policy, RLS enable/force migration coverage and verified runtime enforcement. Reconcile the matrix after DB-001 is remediated; do not label these tables Global merely because their policies are absent.
+**Required disposition:** keep one canonical ownership classifier shared by tenant-table verification, migration verification, and matrix generation; require a rationale for any approved Global exception with tenant ownership markers; generate separate ownership, policy, migration, and runtime-verification fields; add regression tests proving that tenant-owned tables remain Tenant-Owned when policy coverage is absent. Runtime status must remain explicitly unverified unless established by the PostgreSQL isolation suite.
 
 ### DOC-002 — Database security specifications describe incompatible or obsolete RLS coverage
 
@@ -64,12 +56,12 @@ The [Canonical Data Contract](../docs/database/canonical-data-contract.md) reinf
 
 The database/security documentation does not currently express one consistent contract:
 
-- [Tenant Context Specification](../docs/architecture/database/tenant-context-spec.md) says exactly 12 tables are strictly isolated by RLS. The current repository snapshot contains 70 tables and 51 policy-bearing tables; the 12-table list is obsolete.
-- [Database Reconciliation Report](../docs/architecture/database/reconciliation-report.md) is a historical report that uses an older 51/19 split and classifies all 19 tables without policies as Global/System Context. That grouping includes tenant-owned junction tables and therefore repeats the DOC-001 misclassification.
+- [Tenant Context Specification](../docs/architecture/database/tenant-context-spec.md) says exactly 12 tables are strictly isolated by RLS. The current Drizzle snapshot contains 70 tables, including 56 tenant-owned tables with declared RLS policies; the 12-table list is obsolete.
+- [Database Reconciliation Report](../docs/architecture/database/reconciliation-report.md) is a historical report that uses an older 51/19 split and classifies all 19 tables without policies as Global/System Context. That historical grouping includes junction tables whose tenant ownership and RLS coverage have since been corrected in the canonical schema and migrations 0014 / 0015; it must not be treated as the current state.
 - [Security README](../docs/security/README.md), [Architecture README](../docs/architecture/README.md), [MVP Phase 0](../docs/project/MVP_PHASE_0_SCOPE_BASELINE.md) and [MVP Phase 1](../docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md) state that the 51-policy set matches the tenant-scoped table set and is fully covered.
 - [Feature Architecture](../docs/architecture/features/ARCHITECTURE.md) contains an illustrative policy using `app.current_organization_id`, whereas the canonical policies and current database contract use `app.current_tenant_id`.
 
-The count of 51 policy-bearing tables is supported by the current snapshot and migration inventory. It is not equivalent to proving that every tenant-owned table is protected: the five junction tables in DB-001 are the counterexample. Nor does a checked-in migration prove what is applied to a live database; the repository's own context documentation correctly distinguishes static checks from live RLS verification.
+The current snapshot contains 56 tenant-owned tables and all 56 declare tenant RLS policies; the active migration journal statically enables and forces RLS for those 56 tables. This does not prove that the migrations have been applied to production or that runtime enforcement has been independently verified there. The five junction tables that were the original DB-001 counterexample now have four tenant policies each and are included in migrations 0014 / 0015.
 
 **Required disposition:** publish one current RLS contract with distinct counts for (a) tenant-owned tables, (b) tables with policies declared, (c) tables enabled/forced in the migration chain and (d) tables verified against a disposable live PostgreSQL instance. Mark the 12-table and 2024/19-table descriptions as superseded historical material, and update examples to use the canonical tenant setting. Do not claim production RLS state from repository documentation alone.
 
@@ -203,4 +195,4 @@ No live database was queried, no deployed application was exercised, no API was 
 - No product document, architecture specification, migration, source-code file, PR or issue was edited.
 - Only an audit report under `ai_tasks/` and the audit-workspace README link are authorized changes.
 
-**Conclusion:** the `docs/` folder has been inventoried and the current high-impact documentation inconsistencies are recorded. The most important issues are the Global/tenant classification of five unprotected junction tables (DOC-001/DB-001), inconsistent RLS/security specifications (DOC-002), and unverified product-status claims (DOC-005). Historical roadmap conflicts remain cross-referenced to BL-008 rather than duplicated. The next root-level folder has not been inspected; this phase ends here pending explicit approval.
+**Conclusion:** the `docs/` folder has been inventoried and the current high-impact documentation inconsistencies are recorded. DOC-001 now tracks the residual requirement to keep ownership scope independent from policy, migration, and runtime evidence; its original five-table Global / missing-RLS observation is superseded by the checked-in DB-001 remediation. The remaining high-impact items include obsolete RLS/security specifications (DOC-002) and unverified product-status claims (DOC-005). Historical roadmap conflicts remain cross-referenced to BL-008 rather than duplicated. The next root-level folder has not been inspected; this phase ends here pending explicit approval.
