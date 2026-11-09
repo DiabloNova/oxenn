@@ -1,20 +1,30 @@
 # Privileged Database Paths
 
-This document outlines all permitted explicit system-context leases (`runWithSystemContext`) that allow querying the database without a bound `tenant_id`.
+This document inventories the registered `runWithSystemContext` purpose tags, their verified direct call sites, and the database tables observed in those call paths. It is a documentation and audit-metadata inventory; the `allowedTables` field in the registry is recorded in the privileged-access audit event and is **not** a SQL table allowlist or an enforcement boundary.
 
-| Purpose Tag | Allowed Tables | Caller Module | Justification |
-| :--- | :--- | :--- | :--- |
-| **sys-login** | `users`, `tenants`, `tenant_users`, `email_verification_tokens`, `password_reset_tokens` | `src/app/actions/auth.ts` | Requires user lookup across all tenants during authentication, and issues or consumes global verification/reset tokens. |
-| **sys-register** | `users`, `tenants`, `tenant_users`, `email_verification_tokens` | `src/app/actions/auth.ts` | Creates the initial user and tenant, and triggers issuance of verification tokens. |
-| **sys-auth-check** | `users` | `src/services/auth/authorization.ts` | Verifies user existence/status globally. |
-| **sys-auth-role-check** | `tenant_users`, `roles` | `src/services/auth/authorization.ts` | Checks cross-tenant roles without a specific tenant lease. |
-| **sys-auth-api-check** | `users` | `src/services/auth/authorization.ts` | Verifies API user existence globally. |
-| **sys-create-workspace** | `tenants`, `tenant_users` | `src/app/actions/workspace.ts` | Creates a new tenant and assigns the user. |
-| **sys-list-workspaces** | `tenants`, `tenant_users` | `src/app/actions/workspace.ts` | Fetches all tenants a user belongs to. |
-| **sys-accept-invitation** | `tenant_invitations`, `tenant_users` | `src/app/actions/workspace.ts` | Resolves a cross-tenant invitation. |
-| **sys-switch-workspace** | `tenant_users`, `roles` | `src/app/actions/workspace.ts` | Fetches user roles for target workspace before leasing. |
-| **sys-api-key-auth** | `api_keys`, `tenants` | `src/features/public-api/services/api-service.ts` | Looks up API key across tenants to establish identity. |
-| **api-key-issue** | `api_keys` | `scripts/api/issue-key.ts` | CLI command to issue a new API key without a specific tenant web session. |
-| **api-key-revoke** | `api_keys` | `scripts/api/revoke-key.ts` | CLI command to look up and revoke an API key globally by key ID. |
-| **sys-admin-run** | `*` | `tests/**` | System administrator/test runner privilege context for executing test suites. |
-| **test-req** | `*` | `verification/**` | System context test tag for verification probe. |
+The table names below use the canonical Drizzle schema names. Workspace membership and its authoritative role are stored in `organization_members`; the `roles` table is frozen legacy schema and is not an authorization source.
+
+| Purpose Tag | Status | Observed Tables | Verified Caller Modules | Justification / Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **sys-login** | In use | `users`, `user_credentials`, `auth_rate_limits`, `email_verification_tokens`, `password_reset_tokens`, `sessions`, `organizations`, `organization_members`, `audit_records` | `src/app/actions/auth.ts`, `src/app/actions/account.ts`, `src/services/auth/session.ts` | Shared authentication and account-security context: credential checks, login rate limiting, verification/reset tokens, session lifecycle, workspace identity resolution, and account-deactivation audit writes. |
+| **sys-register** | In use | `users`, `user_credentials`, `organizations`, `organization_members`, `auth_rate_limits` | `src/app/actions/auth.ts` | Applies registration rate limits and creates the initial user, credentials, organization, and membership. |
+| **sys-auth-check** | In use | `sessions`, `users`, `organizations`, `organization_members` | `src/services/auth/session.ts`, `src/services/auth/authorization.ts` | Validates the persisted session and verifies membership in the requested workspace. |
+| **sys-auth-role-check** | In use | `organizations`, `organization_members` | `src/services/auth/authorization.ts` | Reads the authoritative workspace role from `organization_members.role`; it does not use the frozen-legacy `roles` table. |
+| **sys-auth-api-check** | Registered; no current caller found | — | — | Retained as a registered purpose pending owner confirmation. No direct `runWithSystemContext` call using this tag was found in the inspected application, script, test, or verification sources; its intended ownership and future use remain unresolved. |
+| **sys-create-workspace** | In use | `organizations`, `organization_members` | `src/app/actions/workspace.ts` | Creates a workspace (`organizations`) and its initial membership (`organization_members`). |
+| **sys-list-workspaces** | In use | `organizations`, `organization_members` | `src/app/actions/workspace.ts`, `src/app/actions/account.ts` | Lists a user's workspace memberships and associated organization details. |
+| **sys-accept-invitation** | In use | `organization_invitations`, `organization_members` | `src/app/actions/workspace.ts` | Resolves a pending organization invitation and creates the accepted user's membership. |
+| **sys-switch-workspace** | In use | `organization_members`, `sessions` | `src/app/actions/workspace.ts` | Re-reads the target workspace role, creates the replacement session, and revokes the previous session. |
+| **sys-api-key-auth** | In use | `api_keys` | `src/features/public-api/services/api-service.ts` | Looks up an API key by prefix before switching to its organization-scoped context. |
+| **api-key-issue** | In use | `api_keys` | `scripts/api/issue-key.ts` | CLI operation that inserts a new API key for the supplied organization. |
+| **api-key-revoke** | In use | `api_keys` | `scripts/api/revoke-key.ts` | CLI operation that revokes an API key by its identifier. |
+| **sys-admin-run** | In use (test-only / verification-gated) | `*` | `scripts/auth/grant-super-admin.ts`, `tests/features/public-api/public-api.test.ts`, `tests/features/ai-intelligence/tenant-pipeline.test.ts`, `tests/features/ai-intelligence/run-all.ts`, `tests/features/admin/run-all.ts` | Broad system-context purpose used by test runners and the explicit super-admin grant CLI. The runtime's existing test/verification gate remains authoritative; this inventory does not change it. |
+| **test-req** | In use (verification probe) | `*` | `verification/phase-0/probe-system-context.ts` | System-context purpose used by the Phase 0 verification probe. |
+
+## Schema naming and interpretation
+
+- Historical names `tenants`, `tenant_users`, and `tenant_invitations` are not the current workspace tables. Their current schema counterparts are `organizations`, `organization_members`, and `organization_invitations`.
+- `organization_members.role` is the current authorization role source. The schema still contains `roles` and `permissions` as frozen-legacy tables; they are not used for current authorization decisions.
+- `*` denotes a deliberately broad test/verification context, not a table-by-table allowlist.
+- “Observed Tables” records tables referenced by the inspected caller paths. It is not a claim that every query is statically constrained to those tables.
+- `sys-auth-api-check` remains registered but has no verified direct caller. Do not remove or repurpose it solely from this inventory; confirm its ownership and intended lifecycle first.

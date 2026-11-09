@@ -15,80 +15,108 @@ export type PrivilegedPurposeTag =
   | "test-req";
 
 export interface PrivilegedPathInfo {
+  /** Tables observed in the documented caller paths; audit metadata only, not SQL enforcement. */
   allowedTables: string[];
-  callerModule: string;
+  /** Canonical, complete list of verified direct call sites for this purpose. */
+  callerModules: string[];
+  /** @deprecated Use callerModules; retained as a compatibility alias for existing integrations. */
+  callerModule?: string;
+  /** Indicates whether a verified direct caller currently exists. */
+  status: "in-use" | "unreferenced";
   justification: string;
 }
 
+function definePath(
+  allowedTables: string[],
+  callerModules: string[],
+  justification: string,
+  status: PrivilegedPathInfo["status"] = "in-use"
+): PrivilegedPathInfo {
+  return {
+    allowedTables,
+    callerModules,
+    ...(callerModules[0] ? { callerModule: callerModules[0] } : {}),
+    status,
+    justification
+  };
+}
+
 export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedPathInfo> = {
-  "sys-login": {
-    allowedTables: ["users", "tenants", "tenant_users", "email_verification_tokens", "password_reset_tokens"],
-    callerModule: "src/app/actions/auth.ts",
-    justification: "Requires user lookup across all tenants during authentication."
-  },
-  "sys-register": {
-    allowedTables: ["users", "tenants", "tenant_users", "email_verification_tokens"],
-    callerModule: "src/app/actions/auth.ts",
-    justification: "Creates the initial user and tenant."
-  },
-  "sys-auth-check": {
-    allowedTables: ["users"],
-    callerModule: "src/services/auth/authorization.ts",
-    justification: "Verifies user existence/status globally."
-  },
-  "sys-auth-role-check": {
-    allowedTables: ["tenant_users", "roles"],
-    callerModule: "src/services/auth/authorization.ts",
-    justification: "Checks cross-tenant roles without a specific tenant lease."
-  },
-  "sys-auth-api-check": {
-    allowedTables: ["users"],
-    callerModule: "src/services/auth/authorization.ts",
-    justification: "Verifies API user existence globally."
-  },
-  "sys-create-workspace": {
-    allowedTables: ["tenants", "tenant_users"],
-    callerModule: "src/app/actions/workspace.ts",
-    justification: "Creates a new tenant and assigns the user."
-  },
-  "sys-list-workspaces": {
-    allowedTables: ["tenants", "tenant_users"],
-    callerModule: "src/app/actions/workspace.ts",
-    justification: "Fetches all tenants a user belongs to."
-  },
-  "sys-accept-invitation": {
-    allowedTables: ["tenant_invitations", "tenant_users"],
-    callerModule: "src/app/actions/workspace.ts",
-    justification: "Resolves a cross-tenant invitation."
-  },
-  "sys-switch-workspace": {
-    allowedTables: ["tenant_users", "roles"],
-    callerModule: "src/app/actions/workspace.ts",
-    justification: "Fetches user roles for target workspace before leasing."
-  },
-  "sys-api-key-auth": {
-    allowedTables: ["api_keys", "tenants"],
-    callerModule: "src/features/public-api/services/api-service.ts",
-    justification: "Looks up API key across tenants to establish identity."
-  },
-  "api-key-issue": {
-    allowedTables: ["api_keys"],
-    callerModule: "scripts/api/issue-key.ts",
-    justification: "CLI command to issue a new API key without a specific tenant web session."
-  },
-  "api-key-revoke": {
-    allowedTables: ["api_keys"],
-    callerModule: "scripts/api/revoke-key.ts",
-    justification: "CLI command to lookup and revoke an API key globally by key ID."
-  },
-  "sys-admin-run": {
-    allowedTables: ["*"],
-    callerModule: "tests/**",
-    justification: "System administrator/test runner privilege context for executing test suites."
-  },
-  "test-req": {
-    allowedTables: ["*"],
-    callerModule: "verification/**",
-    justification: "System context test tag for verification probe."
-  }
+  "sys-login": definePath(
+    ["users", "user_credentials", "auth_rate_limits", "email_verification_tokens", "password_reset_tokens", "sessions", "organizations", "organization_members", "audit_records"],
+    ["src/app/actions/auth.ts", "src/app/actions/account.ts", "src/services/auth/session.ts"],
+    "Shared authentication and account-security context for credentials, rate limits, verification/reset tokens, session lifecycle, workspace identity resolution, and account-deactivation audit writes."
+  ),
+  "sys-register": definePath(
+    ["users", "user_credentials", "organizations", "organization_members", "auth_rate_limits"],
+    ["src/app/actions/auth.ts"],
+    "Applies registration rate limits and creates the initial user, credentials, organization, and membership."
+  ),
+  "sys-auth-check": definePath(
+    ["sessions", "users", "organizations", "organization_members"],
+    ["src/services/auth/session.ts", "src/services/auth/authorization.ts"],
+    "Validates the persisted session and verifies membership in the requested workspace."
+  ),
+  "sys-auth-role-check": definePath(
+    ["organizations", "organization_members"],
+    ["src/services/auth/authorization.ts"],
+    "Reads the authoritative workspace role from organization_members.role; it does not use the frozen-legacy roles table."
+  ),
+  "sys-auth-api-check": definePath(
+    [],
+    [],
+    "Registered purpose retained pending owner confirmation; no direct caller was found in the inspected application, script, test, or verification sources.",
+    "unreferenced"
+  ),
+  "sys-create-workspace": definePath(
+    ["organizations", "organization_members"],
+    ["src/app/actions/workspace.ts"],
+    "Creates a workspace (organizations) and its initial membership (organization_members)."
+  ),
+  "sys-list-workspaces": definePath(
+    ["organizations", "organization_members"],
+    ["src/app/actions/workspace.ts", "src/app/actions/account.ts"],
+    "Lists a user's workspace memberships and associated organization details."
+  ),
+  "sys-accept-invitation": definePath(
+    ["organization_invitations", "organization_members"],
+    ["src/app/actions/workspace.ts"],
+    "Resolves a pending organization invitation and creates the accepted user's membership."
+  ),
+  "sys-switch-workspace": definePath(
+    ["organization_members", "sessions"],
+    ["src/app/actions/workspace.ts"],
+    "Re-reads the target workspace role, creates the replacement session, and revokes the previous session."
+  ),
+  "sys-api-key-auth": definePath(
+    ["api_keys"],
+    ["src/features/public-api/services/api-service.ts"],
+    "Looks up an API key by prefix before switching to its organization-scoped context."
+  ),
+  "api-key-issue": definePath(
+    ["api_keys"],
+    ["scripts/api/issue-key.ts"],
+    "CLI operation that inserts a new API key for the supplied organization."
+  ),
+  "api-key-revoke": definePath(
+    ["api_keys"],
+    ["scripts/api/revoke-key.ts"],
+    "CLI operation that revokes an API key by its identifier."
+  ),
+  "sys-admin-run": definePath(
+    ["*"],
+    [
+      "scripts/auth/grant-super-admin.ts",
+      "tests/features/public-api/public-api.test.ts",
+      "tests/features/ai-intelligence/tenant-pipeline.test.ts",
+      "tests/features/ai-intelligence/run-all.ts",
+      "tests/features/admin/run-all.ts"
+    ],
+    "Broad system-context purpose used by test runners and the explicit super-admin grant CLI; the existing runtime test/verification gate remains authoritative."
+  ),
+  "test-req": definePath(
+    ["*"],
+    ["verification/phase-0/probe-system-context.ts"],
+    "System-context purpose used by the Phase 0 verification probe."
+  )
 };
