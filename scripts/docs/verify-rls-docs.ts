@@ -16,9 +16,9 @@ export const HISTORICAL_RLS_DOCUMENTS = [
   "docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md",
 ];
 
-export function collectRlsDocumentationIssues(documents) {
+export function collectRlsDocumentationIssues(documents: Record<string, string>) {
   const issues = [];
-  const read = (relativePath) => {
+  const read = (relativePath: string): string => {
     const content = documents[relativePath];
     if (typeof content !== "string") {
       issues.push(`Missing required RLS documentation: ${relativePath}`);

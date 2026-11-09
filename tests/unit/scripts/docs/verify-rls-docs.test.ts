@@ -5,7 +5,7 @@ import {
   CURRENT_RLS_DOCUMENTS,
   HISTORICAL_RLS_DOCUMENTS,
   verifyRlsDocumentation,
-} from "../../../../scripts/docs/verify-rls-docs.mjs";
+} from "../../../../scripts/docs/verify-rls-docs";
 
 const requiredPaths = [
   ...CURRENT_RLS_DOCUMENTS,

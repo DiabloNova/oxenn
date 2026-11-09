@@ -55,7 +55,7 @@ jobs:
         run: node scripts/docs/verify-phase-0-baseline.mjs
 
       - name: Verify RLS documentation consistency
-        run: node scripts/docs/verify-rls-docs.mjs
+        run: pnpm exec tsx scripts/docs/verify-rls-docs.ts
 
       - name: Verify Drizzle migration chain
         run: pnpm exec drizzle-kit check --config=drizzle.config.ts
