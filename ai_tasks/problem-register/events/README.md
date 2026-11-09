@@ -8,7 +8,7 @@ The recorder listens to:
 
 Each event contains a deterministic event ID, UTC timestamp, repository, PR/CI references, finding IDs, changed file paths, and direct finding-file associations where available. Monthly sharding keeps individual files bounded. Re-delivered events are ignored by event ID.
 
-Finding IDs are discovered from canonical finding-record paths, branch names, PR titles, and PR descriptions. For a multi-finding PR, changed finding-record paths provide exact per-file associations; other changed paths remain recorded at PR level and are not guessed to belong to one finding.
+Finding IDs are discovered from canonical finding-record paths, branch names, PR titles, and explicit Finding-IDs: lines in PR descriptions. For a single-finding PR, changed paths are attributed to that finding. For a multi-finding PR, changed finding-record paths provide exact per-file associations; other changed paths remain recorded at PR level and are not guessed to belong to one finding.
 
 The recorder never checks out or executes code from a pull request. It checks out the trusted main branch, uses read-only PR/CI metadata, and writes with the GitHub token's repository contents permission. It does not alter branch protection, merge PRs, force-update refs, or run database commands. Writes use a non-force Git ref update with bounded retries; if main is protected against the write or the update cannot be reconciled, the workflow fails safely.
 
