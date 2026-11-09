@@ -6,6 +6,7 @@ interface Journal {
 }
 interface SnapshotTable {
   name: string;
+  columns?: Record<string, unknown>;
   policies?: Record<string, unknown>;
 }
 interface Snapshot {
@@ -344,13 +345,18 @@ function main(): void {
     String(journal.entries[journal.entries.length - 1].idx).padStart(4, "0") + "_snapshot.json",
   );
   const snapshot: Snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
-  const policyTables = Object.values(snapshot.tables)
-    .filter((table) => table.policies && Object.keys(table.policies).length > 0)
+  const tenantTables = Object.values(snapshot.tables)
+    .filter((table) => {
+      const columns = table.columns ?? {};
+      return table.name === "organizations" ||
+        Object.hasOwn(columns, "organization_id") ||
+        Object.hasOwn(columns, "tenant_id");
+    })
     .map((table) => normalizeTableName(table.name))
     .sort();
 
   const state = new Map<string, RlsState>(
-    policyTables.map((table) => [table, { enabled: false, forced: false }]),
+    tenantTables.map((table) => [table, { enabled: false, forced: false }]),
   );
   const migrationFiles = journal.entries.map((entry) => {
     const filePath = path.join(migrationDirectory, entry.tag + ".sql");
@@ -367,8 +373,8 @@ function main(): void {
     }
   }
 
-  const missingEnable = policyTables.filter((table) => !state.get(table)?.enabled);
-  const missingForce = policyTables.filter((table) => !state.get(table)?.forced);
+  const missingEnable = tenantTables.filter((table) => !state.get(table)?.enabled);
+  const missingForce = tenantTables.filter((table) => !state.get(table)?.forced);
 
   if (missingEnable.length || missingForce.length) {
     console.error("RLS migration final-state verification failed.");
@@ -379,7 +385,7 @@ function main(): void {
   }
 
   console.log(
-    `RLS migration final-state verified for ${policyTables.length} policy-bearing tables (journal order; ENABLE + FORCE active).`,
+    `RLS migration final-state verified for ${tenantTables.length} tenant-owned tables (journal order; ENABLE + FORCE active).`,
   );
   console.log("Static migration verification only; this does not inspect a live database.");
 }

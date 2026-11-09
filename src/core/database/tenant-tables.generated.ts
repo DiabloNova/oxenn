@@ -1,7 +1,7 @@
 /**
  * AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY.
  * Generated from database/drizzle latest snapshot by scripts/database/verify-tenant-tables.ts.
- * Represents all schema tables with at least one Row Level Security (RLS) tenant isolation policy.
+ * Represents every organization-owned / tenant-owned table, regardless of current policy coverage.
  */
 
 export const TENANT_SCOPED_TABLES = Object.freeze([
@@ -33,6 +33,7 @@ export const TENANT_SCOPED_TABLES = Object.freeze([
   "faq_opportunities",
   "historical_metrics",
   "keywords",
+  "keywords_topics",
   "kg_alignments",
   "kg_entities",
   "kg_relationships",
@@ -42,6 +43,9 @@ export const TENANT_SCOPED_TABLES = Object.freeze([
   "organization_members",
   "organizations",
   "pages",
+  "pages_entities",
+  "pages_keywords",
+  "pages_topics",
   "position_observations",
   "premium_audits",
   "prompt_definitions",
@@ -54,8 +58,9 @@ export const TENANT_SCOPED_TABLES = Object.freeze([
   "tenant_quotas",
   "tenant_subscriptions",
   "topics",
+  "topics_entities",
   "visibility_scores",
-  "websites"
+  "websites",
 ] as const);
 
 export type TenantScopedTable = (typeof TENANT_SCOPED_TABLES)[number];

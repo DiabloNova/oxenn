@@ -99,6 +99,20 @@
       "when": 1792578550000,
       "tag": "0013_remove_api_keys_prefix_index",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794197661154,
+      "tag": "0014_db_001_join_table_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794200000000,
+      "tag": "0015_db_001_composite_tenant_fks",
+      "breakpoints": true
     }
   ]
 }

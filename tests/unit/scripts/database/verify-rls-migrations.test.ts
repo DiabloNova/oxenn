@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 const temporaryRoots: string[] = [];
 const verifierPath = path.resolve(process.cwd(), "scripts/database/verify-rls-migrations.ts");
 
-function runVerifier(finalMigration: string) {
+function runVerifier(finalMigration: string, includeUnprotectedTenantTable = false) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "rls-verifier-regression-"));
   temporaryRoots.push(root);
 
@@ -30,8 +30,18 @@ function runVerifier(finalMigration: string) {
       tables: {
         tenant_data: {
           name: "tenant_data",
-          policies: { tenant_policy: {} },
+          columns: { organization_id: { type: "uuid" } },
+          policies: {},
         },
+        ...(includeUnprotectedTenantTable
+          ? {
+              tenant_join: {
+                name: "tenant_join",
+                columns: { organization_id: { type: "uuid" } },
+                policies: {},
+              },
+            }
+          : {}),
       },
     }),
   );
@@ -54,6 +64,14 @@ afterEach(() => {
 });
 
 describe("RLS migration verifier DO-block fail-closed behavior", () => {
+  it("requires RLS coverage for tenant-owned tables even when the snapshot has no policies", () => {
+    const result = runVerifier("", true);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("tenant_join");
+    expect(result.stderr).toContain("RLS not enabled at end of journal");
+  });
+
   it("rejects dynamic SQL in a DO block after a Drizzle statement breakpoint", () => {
     const result = runVerifier(
       "--> statement-breakpoint\nDO $$ BEGIN EXECUTE 'ALTER TABLE tenant_data DISABLE ROW LEVEL SECURITY'; END $$;\n",

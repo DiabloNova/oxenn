@@ -244,9 +244,19 @@ function main() {
 
   const rlsEntry = journal.entries.find((entry) => entry.tag === "0005_force_rls");
   assert.ok(rlsEntry, "Migration journal does not contain 0005_force_rls");
-  const migrationRls = rlsTables(readFile("database/drizzle/" + rlsEntry.tag + ".sql"));
-  assertSameSet(migrationRls.enabled, policyTables, "RLS ENABLE migration set and latest snapshot");
-  assertSameSet(migrationRls.forced, policyTables, "RLS FORCE migration set and latest snapshot");
+  // RLS coverage is cumulative: later forward-only migrations may enable and
+  // force RLS for tables added after the original baseline migration.
+  const migrationRls = journal.entries.reduce(
+    (combined, entry) => {
+      const migrationState = rlsTables(readFile("database/drizzle/" + entry.tag + ".sql"));
+      combined.enabled.push(...migrationState.enabled);
+      combined.forced.push(...migrationState.forced);
+      return combined;
+    },
+    { enabled: [], forced: [] },
+  );
+  assertSameSet(migrationRls.enabled, policyTables, "Cumulative RLS ENABLE migration set and latest snapshot");
+  assertSameSet(migrationRls.forced, policyTables, "Cumulative RLS FORCE migration set and latest snapshot");
 
   const totalTables = schemaTables.length;
   const rlsCount = policyTables.length;

@@ -283,12 +283,12 @@ A direct scan of the exported `pgTable` declarations in `database/schema/index.t
 
 This is a declaration inventory only; it does not establish that migrations have been applied to staging or production.
 
-**Count reconciliation:** the 68 declarations in `database/schema/index.ts`, plus the separately declared `organizations` and `api_keys` tables, produce 70 schema tables. The latest checked-in Drizzle snapshot also contains 70 tables. The architecture README previously stated 57; that stale count is corrected on this branch. The 51 RLS-protected tables are a subset of the 70 and are not a conflicting total.
+**Count reconciliation:** the 68 declarations in `database/schema/index.ts`, plus the separately declared `organizations` and `api_keys` tables, produce 70 schema tables. The latest checked-in Drizzle snapshot also contains 70 tables. The architecture README previously stated 57; that stale count is corrected on this branch. The 56 RLS-protected tables are a subset of the 70 and are not a conflicting total.
 
 The source-of-truth schema is composed from `database/schema/index.ts` and its two table modules above. The ordered migration history is `database/drizzle/meta/_journal.json` plus the SQL files named by that journal.
 
 
-## 13. Static migration coverage reconciliation — 2026-11-04
+## 13. Static migration coverage reconciliation — 2026-11-09
 
 This check was performed against the checked-in files on `mvp/phase-0-scope-baseline`. It is a repository-level static reconciliation; it did not connect to or modify any database.
 
@@ -296,8 +296,8 @@ This check was performed against the checked-in files on `mvp/phase-0-scope-base
 
 - Drizzle Kit is configured by `drizzle.config.ts` with schema `database/schema/index.ts` and migration output `database/drizzle`.
 - The effective schema is composed of 70 table declarations: 68 in `database/schema/index.ts`, plus `organizations` in `database/schema/organization-table.ts` and `api_keys` in `database/schema/api-keys.ts`.
-- The latest journal entry is `0013_remove_api_keys_prefix_index`; its corresponding snapshot is `database/drizzle/meta/0013_snapshot.json`.
-- The ordered journal contains 14 entries, and all 14 referenced SQL migration files exist.
+- The latest journal entry is `0015_db_001_composite_tenant_fks`; its corresponding snapshot is `database/drizzle/meta/0015_snapshot.json`.
+- The ordered journal contains 16 entries, and all 16 referenced SQL migration files exist.
 - The effective schema names and latest snapshot names match exactly: **70 / 70**, with no schema-only or snapshot-only table.
 - Across the journal, the migration SQL creates 70 unique tables. That set matches the latest snapshot exactly: no snapshot table lacks a CREATE TABLE in the migration history, and no migration-created table is absent from the snapshot.
 
@@ -313,9 +313,9 @@ Every table in this MVP map exists in the latest Drizzle snapshot and has tenant
 
 ### 13.3 RLS coverage reconciliation
 
-The latest snapshot contains **51 policy-bearing tables**. The generated runtime list in `src/core/database/tenant-tables.generated.ts` also contains 51 entries and matches the snapshot policy-table set exactly (no missing or extra entries).
+The latest snapshot contains **56 policy-bearing tables**. The generated runtime list in `src/core/database/tenant-tables.generated.ts` also contains 56 entries and matches the snapshot policy-table set exactly (no missing or extra entries).
 
-Migration `0005_force_rls.sql` contains both `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` for all 51 of those tables. The two statement sets match the snapshot policy-table set exactly. All 16 tables in the MVP entity map above are among those policy-bearing tables.
+Migration `0005_force_rls.sql` contains both `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` for the original 51 tables. Migration `0014_db_001_join_table_rls.sql` adds both flags for the five tenant-owned junction tables. Across the ordered journal, the cumulative statements are present for all 56 of those tables and match the snapshot policy-table set exactly. Migration `0015_db_001_composite_tenant_fks.sql` adds tenant-consistent composite foreign keys for all ten references from those five junction tables, with a read-only preflight that aborts on mismatched existing rows. All 16 tables in the MVP entity map above are among those policy-bearing tables.
 
 The current CI workflow includes three related checks:
 - `pnpm tsx scripts/database/verify-tenant-tables.ts`
@@ -328,7 +328,7 @@ These checks are defined in the workflow, but they were **not executed locally d
 
 **Repository-level migration coverage: PASS.** No missing MVP table creation, missing snapshot entry, or RLS-list mismatch was found in the checked-in schema, snapshot, generated runtime list, or migration SQL.
 
-The 57-table statement previously in `docs/architecture/README.md` was stale and is updated to 70 on this branch; the text now distinguishes the 51 policy-bearing subset.
+The 57-table statement previously in `docs/architecture/README.md` was stale and is updated to 70 on this branch; the text now distinguishes the 56 policy-bearing subset.
 
 Still **NOT VERIFIED**:
 - Whether these migrations have been applied to any particular staging or production database.
@@ -336,4 +336,4 @@ Still **NOT VERIFIED**:
 - Whether production roles, grants, connection settings, and effective RLS behavior are correct.
 - Whether the CI workflow has passed on a PR containing these changes.
 
-No migration was run, no database was queried, and no application runtime behavior was changed by this reconciliation.
+The CI Isolation Suite applies the checked-in migration chain to a disposable PostgreSQL database and verifies the resulting RLS and junction constraints. No staging or production database was connected, queried, or mutated by this change; no existing data was automatically reassigned or deleted.

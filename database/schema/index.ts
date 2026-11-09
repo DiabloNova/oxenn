@@ -1,5 +1,6 @@
 import {
   pgTable,
+  foreignKey,
   uuid,
   text,
   integer,
@@ -354,6 +355,7 @@ export const entities = pgTable("entities", {
   version: integer("version").notNull().default(1),
 }, (table) => [
   index("idx_entities_organization").on(table.organizationId),
+  uniqueIndex("idx_entities_id_organization_id_fk").on(table.id, table.organizationId),
   index("idx_entities_type").on(table.entityType),
   ...tenantPolicy("organization_id")
 ]);
@@ -429,6 +431,7 @@ export const pages = pgTable("pages", {
 }, (table) => [
   index("idx_pages_organization").on(table.organizationId),
   index("idx_pages_website").on(table.websiteId),
+  uniqueIndex("idx_pages_id_organization_id_fk").on(table.id, table.organizationId),
   uniqueIndex("idx_pages_url_org").on(table.organizationId, table.normalizedUrl).where(sql`deleted_at IS NULL`),
   ...tenantPolicy("organization_id")
 ]);
@@ -450,6 +453,7 @@ export const keywords = pgTable("keywords", {
   version: integer("version").notNull().default(1),
 }, (table) => [
   index("idx_keywords_organization").on(table.organizationId),
+  uniqueIndex("idx_keywords_id_organization_id_fk").on(table.id, table.organizationId),
   uniqueIndex("idx_keywords_term_org").on(table.organizationId, table.normalizedTerm).where(sql`deleted_at IS NULL`),
   ...tenantPolicy("organization_id")
 ]);
@@ -470,6 +474,7 @@ export const topics = pgTable("topics", {
   version: integer("version").notNull().default(1),
 }, (table) => [
   index("idx_topics_organization").on(table.organizationId),
+  uniqueIndex("idx_topics_id_organization_id_fk").on(table.id, table.organizationId),
   uniqueIndex("idx_topics_name_org").on(table.organizationId, table.name).where(sql`deleted_at IS NULL`),
   ...tenantPolicy("organization_id")
 ]);
@@ -511,56 +516,81 @@ export const historicalMetrics = pgTable("historical_metrics", {
 ]);
 
 export const pagesKeywords = pgTable("pages_keywords", {
-  pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }),
-  keywordId: uuid("keyword_id").notNull().references(() => keywords.id, { onDelete: "cascade" }),
+  pageId: uuid("page_id").notNull(),
+  keywordId: uuid("keyword_id").notNull(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   isPrimary: boolean("is_primary").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
 }, (table) => [
   primaryKey({ columns: [table.pageId, table.keywordId] }),
   index("idx_pages_keywords_org").on(table.organizationId),
+  index("idx_pages_keywords_page_id_org_id_fk").on(table.pageId, table.organizationId),
+  index("idx_pages_keywords_keyword_id_org_id_fk").on(table.keywordId, table.organizationId),
+  foreignKey({ name: "pages_keywords_page_id_org_id_fkey", columns: [table.pageId, table.organizationId], foreignColumns: [pages.id, pages.organizationId] }).onDelete("cascade"),
+  foreignKey({ name: "pages_keywords_keyword_id_org_id_fkey", columns: [table.keywordId, table.organizationId], foreignColumns: [keywords.id, keywords.organizationId] }).onDelete("cascade"),
+  ...tenantPolicy("organization_id"),
 ]);
 
 export const pagesTopics = pgTable("pages_topics", {
-  pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }),
-  topicId: uuid("topic_id").notNull().references(() => topics.id, { onDelete: "cascade" }),
+  pageId: uuid("page_id").notNull(),
+  topicId: uuid("topic_id").notNull(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   score: doublePrecision("score").notNull().default(1.0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
 }, (table) => [
   primaryKey({ columns: [table.pageId, table.topicId] }),
   index("idx_pages_topics_org").on(table.organizationId),
+  index("idx_pages_topics_page_id_org_id_fk").on(table.pageId, table.organizationId),
+  index("idx_pages_topics_topic_id_org_id_fk").on(table.topicId, table.organizationId),
+  foreignKey({ name: "pages_topics_page_id_org_id_fkey", columns: [table.pageId, table.organizationId], foreignColumns: [pages.id, pages.organizationId] }).onDelete("cascade"),
+  foreignKey({ name: "pages_topics_topic_id_org_id_fkey", columns: [table.topicId, table.organizationId], foreignColumns: [topics.id, topics.organizationId] }).onDelete("cascade"),
+  ...tenantPolicy("organization_id"),
 ]);
 
 export const pagesEntities = pgTable("pages_entities", {
-  pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }),
-  entityId: uuid("entity_id").notNull().references(() => entities.id, { onDelete: "cascade" }),
+  pageId: uuid("page_id").notNull(),
+  entityId: uuid("entity_id").notNull(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   salience: doublePrecision("salience").notNull().default(1.0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
 }, (table) => [
   primaryKey({ columns: [table.pageId, table.entityId] }),
   index("idx_pages_entities_org").on(table.organizationId),
+  index("idx_pages_entities_page_id_org_id_fk").on(table.pageId, table.organizationId),
+  index("idx_pages_entities_entity_id_org_id_fk").on(table.entityId, table.organizationId),
+  foreignKey({ name: "pages_entities_page_id_org_id_fkey", columns: [table.pageId, table.organizationId], foreignColumns: [pages.id, pages.organizationId] }).onDelete("cascade"),
+  foreignKey({ name: "pages_entities_entity_id_org_id_fkey", columns: [table.entityId, table.organizationId], foreignColumns: [entities.id, entities.organizationId] }).onDelete("cascade"),
+  ...tenantPolicy("organization_id"),
 ]);
 
 export const keywordsTopics = pgTable("keywords_topics", {
-  keywordId: uuid("keyword_id").notNull().references(() => keywords.id, { onDelete: "cascade" }),
-  topicId: uuid("topic_id").notNull().references(() => topics.id, { onDelete: "cascade" }),
+  keywordId: uuid("keyword_id").notNull(),
+  topicId: uuid("topic_id").notNull(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
 }, (table) => [
   primaryKey({ columns: [table.keywordId, table.topicId] }),
   index("idx_keywords_topics_org").on(table.organizationId),
+  index("idx_keywords_topics_keyword_id_org_id_fk").on(table.keywordId, table.organizationId),
+  index("idx_keywords_topics_topic_id_org_id_fk").on(table.topicId, table.organizationId),
+  foreignKey({ name: "keywords_topics_keyword_id_org_id_fkey", columns: [table.keywordId, table.organizationId], foreignColumns: [keywords.id, keywords.organizationId] }).onDelete("cascade"),
+  foreignKey({ name: "keywords_topics_topic_id_org_id_fkey", columns: [table.topicId, table.organizationId], foreignColumns: [topics.id, topics.organizationId] }).onDelete("cascade"),
+  ...tenantPolicy("organization_id"),
 ]);
 
 export const topicsEntities = pgTable("topics_entities", {
-  topicId: uuid("topic_id").notNull().references(() => topics.id, { onDelete: "cascade" }),
-  entityId: uuid("entity_id").notNull().references(() => entities.id, { onDelete: "cascade" }),
+  topicId: uuid("topic_id").notNull(),
+  entityId: uuid("entity_id").notNull(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
 }, (table) => [
   primaryKey({ columns: [table.topicId, table.entityId] }),
   index("idx_topics_entities_org").on(table.organizationId),
+  index("idx_topics_entities_topic_id_org_id_fk").on(table.topicId, table.organizationId),
+  index("idx_topics_entities_entity_id_org_id_fk").on(table.entityId, table.organizationId),
+  foreignKey({ name: "topics_entities_topic_id_org_id_fkey", columns: [table.topicId, table.organizationId], foreignColumns: [topics.id, topics.organizationId] }).onDelete("cascade"),
+  foreignKey({ name: "topics_entities_entity_id_org_id_fkey", columns: [table.entityId, table.organizationId], foreignColumns: [entities.id, entities.organizationId] }).onDelete("cascade"),
+  ...tenantPolicy("organization_id"),
 ]);
 
 // ==========================================

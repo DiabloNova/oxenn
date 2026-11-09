@@ -1154,6 +1154,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_entities_id_organization_id_fk` | `id, organization_id` | `btree` | ✅ | — |
 | `idx_entities_organization` | `organization_id` | `btree` | ❌ | — |
 | `idx_entities_type` | `entity_type` | `btree` | ❌ | — |
 
@@ -1343,6 +1344,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_keywords_id_organization_id_fk` | `id, organization_id` | `btree` | ✅ | — |
 | `idx_keywords_organization` | `organization_id` | `btree` | ❌ | — |
 | `idx_keywords_term_org` | `organization_id, normalized_term` | `btree` | ✅ | `deleted_at IS NULL` |
 
@@ -1356,8 +1358,8 @@
 
 ## Table: `keywords_topics`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1380,15 +1382,17 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_keywords_topics_keyword_id_org_id_fk` | `keyword_id, organization_id` | `btree` | ❌ | — |
 | `idx_keywords_topics_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_keywords_topics_topic_id_org_id_fk` | `topic_id, organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
-| `keywords_topics_keyword_id_keywords_id_fk` | `keyword_id` | `keywords` | `id` | cascade |
+| `keywords_topics_keyword_id_org_id_fkey` | `keyword_id, organization_id` | `keywords` | `id, organization_id` | cascade |
 | `keywords_topics_organization_id_organizations_id_fk` | `organization_id` | `organizations` | `id` | cascade |
-| `keywords_topics_topic_id_topics_id_fk` | `topic_id` | `topics` | `id` | cascade |
+| `keywords_topics_topic_id_org_id_fkey` | `topic_id, organization_id` | `topics` | `id, organization_id` | cascade |
 
 ---
 
@@ -1722,6 +1726,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_pages_id_organization_id_fk` | `id, organization_id` | `btree` | ✅ | — |
 | `idx_pages_organization` | `organization_id` | `btree` | ❌ | — |
 | `idx_pages_url_org` | `organization_id, normalized_url` | `btree` | ✅ | `deleted_at IS NULL` |
 | `idx_pages_website` | `website_id` | `btree` | ❌ | — |
@@ -1737,8 +1742,8 @@
 
 ## Table: `pages_entities`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1762,22 +1767,24 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_pages_entities_entity_id_org_id_fk` | `entity_id, organization_id` | `btree` | ❌ | — |
 | `idx_pages_entities_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_pages_entities_page_id_org_id_fk` | `page_id, organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
-| `pages_entities_entity_id_entities_id_fk` | `entity_id` | `entities` | `id` | cascade |
+| `pages_entities_entity_id_org_id_fkey` | `entity_id, organization_id` | `entities` | `id, organization_id` | cascade |
 | `pages_entities_organization_id_organizations_id_fk` | `organization_id` | `organizations` | `id` | cascade |
-| `pages_entities_page_id_pages_id_fk` | `page_id` | `pages` | `id` | cascade |
+| `pages_entities_page_id_org_id_fkey` | `page_id, organization_id` | `pages` | `id, organization_id` | cascade |
 
 ---
 
 ## Table: `pages_keywords`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1801,22 +1808,24 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_pages_keywords_keyword_id_org_id_fk` | `keyword_id, organization_id` | `btree` | ❌ | — |
 | `idx_pages_keywords_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_pages_keywords_page_id_org_id_fk` | `page_id, organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
-| `pages_keywords_keyword_id_keywords_id_fk` | `keyword_id` | `keywords` | `id` | cascade |
+| `pages_keywords_keyword_id_org_id_fkey` | `keyword_id, organization_id` | `keywords` | `id, organization_id` | cascade |
 | `pages_keywords_organization_id_organizations_id_fk` | `organization_id` | `organizations` | `id` | cascade |
-| `pages_keywords_page_id_pages_id_fk` | `page_id` | `pages` | `id` | cascade |
+| `pages_keywords_page_id_org_id_fkey` | `page_id, organization_id` | `pages` | `id, organization_id` | cascade |
 
 ---
 
 ## Table: `pages_topics`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1841,14 +1850,16 @@
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
 | `idx_pages_topics_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_pages_topics_page_id_org_id_fk` | `page_id, organization_id` | `btree` | ❌ | — |
+| `idx_pages_topics_topic_id_org_id_fk` | `topic_id, organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
 | `pages_topics_organization_id_organizations_id_fk` | `organization_id` | `organizations` | `id` | cascade |
-| `pages_topics_page_id_pages_id_fk` | `page_id` | `pages` | `id` | cascade |
-| `pages_topics_topic_id_topics_id_fk` | `topic_id` | `topics` | `id` | cascade |
+| `pages_topics_page_id_org_id_fkey` | `page_id, organization_id` | `pages` | `id, organization_id` | cascade |
+| `pages_topics_topic_id_org_id_fkey` | `topic_id, organization_id` | `topics` | `id, organization_id` | cascade |
 
 ---
 
@@ -2491,6 +2502,7 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_topics_id_organization_id_fk` | `id, organization_id` | `btree` | ✅ | — |
 | `idx_topics_name_org` | `organization_id, name` | `btree` | ✅ | `deleted_at IS NULL` |
 | `idx_topics_organization` | `organization_id` | `btree` | ❌ | — |
 
@@ -2505,8 +2517,8 @@
 
 ## Table: `topics_entities`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2529,15 +2541,17 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_topics_entities_entity_id_org_id_fk` | `entity_id, organization_id` | `btree` | ❌ | — |
 | `idx_topics_entities_org` | `organization_id` | `btree` | ❌ | — |
+| `idx_topics_entities_topic_id_org_id_fk` | `topic_id, organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
-| `topics_entities_entity_id_entities_id_fk` | `entity_id` | `entities` | `id` | cascade |
+| `topics_entities_entity_id_org_id_fkey` | `entity_id, organization_id` | `entities` | `id, organization_id` | cascade |
 | `topics_entities_organization_id_organizations_id_fk` | `organization_id` | `organizations` | `id` | cascade |
-| `topics_entities_topic_id_topics_id_fk` | `topic_id` | `topics` | `id` | cascade |
+| `topics_entities_topic_id_org_id_fkey` | `topic_id, organization_id` | `topics` | `id, organization_id` | cascade |
 
 ---
 
