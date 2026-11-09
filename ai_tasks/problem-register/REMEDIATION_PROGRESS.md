@@ -85,7 +85,7 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [DB-004](./findings/013-DB-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DB-005](./findings/014-DB-005.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-001](./findings/015-DOC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | **Verified complete** — merged into `main` via PR #122 on 2026-11-09 | [4e54e8b](https://github.com/DiabloNova/oxenn/commit/4e54e8b2acee85c9728fd3da9f0e596f08b08bad) | [Execution log](./REMEDIATION_PROGRESS.md#doc-001-investigation-branch-2026-11-09) · [Merge correction](./REMEDIATION_PROGRESS.md#correction--doc-001-merge-status--2026-11-09) · [PR #122](https://github.com/DiabloNova/oxenn/pull/122) |
-| [DOC-002](./findings/016-DOC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implementation complete on branch; PR/merge not authorized | `3ace8e7` | CI run #665 passed |
+| [DOC-002](./findings/016-DOC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implementation and CI verified on branch; PR #123 open and unmerged; Codacy six-critical summary pending issue-level triage | `b85a9fb` | [CI run #672](https://github.com/DiabloNova/oxenn/actions/runs/42598489930) · [PR #123](https://github.com/DiabloNova/oxenn/pull/123) · Vercel duplicate preview deployments disabled; daily quota reset pending |
 | [DOC-003](./findings/017-DOC-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-004](./findings/018-DOC-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-005](./findings/019-DOC-005.md) | Wave 3 — AI provider behavior and evidence integrity | Not started — pending Wave 0 revalidation | — | — |
@@ -248,6 +248,38 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Unit Tests: success, including the focused RLS documentation regression tests and UI tests.
 - Isolation Suite: success against the workflow's disposable PostgreSQL service.
 - This final workflow validates the DOC-002 closeout status/audit changes. The subsequent ledger-only commit records this result and does not change application or test code.
+
+### DOC-002 post-review remediation — 2026-11-09
+
+**Authorization and branch boundary**
+- The user approved all Codacy and HayDeer inline findings, the additional regression coverage, and inspection/correction of redundant Vercel project settings after identification.
+- All repository edits were made only on `investigation/016-doc-002`. PR #123 remains open and unmerged. The PR base is `main` at `4e54e8b2acee85c9728fd3da9f0e596f08b08bad`; no commit was written to `main`.
+- The final code/test commit is `b85a9fbe46d21a01b553685130d7c5102ea55acf`. Subsequent changes in this section are documentation-only status records.
+
+**Code and documentation corrections**
+- `scripts/docs/verify-rls-docs.ts`: added a canonical repository-path resolver that rejects absolute paths and lexical traversal, canonicalizes the repository root and target with `realpathSync`, and rejects symlink escapes. The explicit current/historical allowlists are frozen.
+- The direct-execution guard now converts `import.meta.url` with `fileURLToPath`, avoiding percent-encoded path mismatches for workspaces containing spaces or Unicode.
+- `tests/unit/scripts/docs/verify-rls-docs.test.ts`: expanded to cover stale active 51-table claims, historical Phase 1 date/evidence labels, DOC-002's 56/14 current inventory, Phase 0 distinction, missing required documents, `../` traversal, absolute paths, symlink escapes, and decoded entrypoint paths. The focused file now contains 14 test cases.
+- `findings/016-DOC-002.md`: corrected the implementation path to `.ts`, explaining that the `.mjs` prototype was temporary.
+- `REMEDIATION_PROGRESS.md`: corrected the current DOC-001 row to show PR #122 merged into `main`; preserved its dated historical execution notes.
+
+**Verification**
+- Intermediate CI run #670 on `5c16aafb` exposed two incorrect test-fixture mutations; those tests were corrected. This was a test-fixture issue, not a production checker failure.
+- Final CI run #672 on `b85a9fbe` passed all three jobs: Build and Test, Unit Tests/UI Tests, and Isolation Suite. [Run #672](https://github.com/DiabloNova/oxenn/actions/runs/42598489930).
+- Build and Test passed TypeScript typecheck, lint, tenant-table alignment, RLS migration coverage, Phase 0 verification, the RLS documentation checker (4 active and 2 historical documents), Drizzle migration-chain check, build, Reference Matrix generation, and generated-file no-drift guard.
+- Unit Tests: 63 test files passed and 1 skipped; 373 tests passed and 1 remained todo. UI tests: 4 files and 33 tests passed.
+- Isolation Suite passed against disposable CI PostgreSQL: 56 tenant tables and 543 assertions. No production/staging database was accessed.
+
+**Vercel project review and limited configuration correction**
+- The `oxenn` team is on the Hobby plan. Vercel bot comments identify the precise failure as `api-deployments-free-per-day`: more than 100 deployments in 24 hours, retry after 24 hours. This is an owner/team quota, not an application build error.
+- Three Vercel projects were confirmed to point to the same `DiabloNova/oxenn` repository, `main` production branch, Next.js framework, repository root, and Node 24 configuration: `oxenn`, `oxenn-q9bo`, and `oxenn-5987`. No project environment variables or custom domains were returned; each has its own default `vercel.app` aliases and existing production deployment.
+- Kept `oxenn` as the canonical preview project. Set only `previewDeploymentsDisabled=true` on `oxenn-q9bo` and `oxenn-5987`. Verified the setting persisted. Their production deployments and aliases were preserved; no project was deleted, no Git connection or production setting was changed, and no environment variable was touched.
+- The daily deployment quota was already exhausted during this work. No further deployment was forced; the current Vercel failure status remains until the quota window resets. The two duplicate projects should no longer generate new PR preview deployments.
+
+**Review disposition and remaining external blocker**
+- All six original inline Codacy/HayDeer review threads were resolved after their fixes were committed and CI passed.
+- A separate Codacy bot summary comment still reports six critical issues, but its individual issue records are not present in the GitHub PR timeline and the Codacy dashboard endpoint was inaccessible through the available connection. GitHub code-scanning returned no alerts, which is not evidence that Codacy's separate six-item report is clear. Those six items are therefore not claimed resolved and require the Codacy issue details for triage.
+- PR #123 remains open; no merge was performed or authorized.
 
 ## 6. Wave-level gates
 
