@@ -54,7 +54,12 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
   ),
   "sys-auth-check": definePath(
     ["sessions", "users", "organizations", "organization_members"],
-    ["src/services/auth/session.ts", "src/services/auth/authorization.ts"],
+    [
+      "src/services/auth/session.ts",
+      "src/services/auth/authorization.ts",
+      "tests/unit/core/tenant-context/privileged-paths.test.ts",
+      "tests/unit/core/tenant-context/system-mode-bypass.test.ts"
+    ],
     "Validates the persisted session and verifies membership in the requested workspace."
   ),
   "sys-auth-role-check": definePath(
