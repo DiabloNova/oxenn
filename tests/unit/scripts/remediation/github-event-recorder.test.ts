@@ -407,6 +407,44 @@ describe("GitHub remediation event recorder", () => {
     expect(fake.updateCalls).toBe(1);
   });
 
+  it("does not retain a merged candidate-only event when its ID has no canonical finding file", async () => {
+    const fake = makeFakeGitHub();
+    const record: Record<string, unknown> = {
+      event_id: "pull_request.closed:125:2026-11-09T15:00:00Z:merged-candidate-only",
+      event_type: "pull_request.closed",
+      occurred_at: "2026-11-09T15:00:00Z",
+      finding_ids: [],
+      candidate_finding_ids: ["FIX-101"],
+      file_finding_ids: [],
+      mapping_complete: true,
+      pull_request: { number: 125, merged: true },
+      changed_files: [],
+    };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(fake.blobs).toHaveLength(0);
+    expect(fake.updateCalls).toBe(0);
+  });
+
+  it("does not retain exact post-merge candidate-only CI without a canonical finding match", async () => {
+    const fake = makeFakeGitHub();
+    const record: Record<string, unknown> = {
+      event_id: "workflow_run.completed:42:1:125:candidate-only",
+      event_type: "workflow_run.completed",
+      occurred_at: "2026-11-09T15:00:00Z",
+      finding_ids: [],
+      candidate_finding_ids: ["FIX-101"],
+      file_finding_ids: [],
+      mapping_complete: true,
+      is_post_merge_main_ci: true,
+      pull_request: { number: 125, merged: true, merge_commit_sha: "abcdef1234567890" },
+      workflow_run: { id: 42, conclusion: "success", head_sha: "abcdef1234567890" },
+      changed_files: [],
+    };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(fake.blobs).toHaveLength(0);
+    expect(fake.updateCalls).toBe(0);
+  });
+
   it("retains merged PR event evidence when authoritative finding paths are ambiguous", async () => {
     const duplicateDirectory = [
       { type: "file", name: "015-DOC-001.md", path: "ai_tasks/problem-register/findings/015-DOC-001.md" },

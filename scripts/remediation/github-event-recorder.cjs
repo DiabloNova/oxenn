@@ -519,9 +519,16 @@ async function persistRecords(github, owner, repo, records, core) {
         : findingIds;
       if (lookupIds.length > 0) {
         const resolvedPaths = await findFindingPaths(github, owner, repo, baseSha, lookupIds);
-        // Keep merged and exact post-merge events auditable on mapping failure; only unmerged candidate-only events require a unique match.
-        const unmergedClosure = record.event_type === "pull_request.closed" && !(record.pull_request && record.pull_request.merged);
-        if (Object.keys(resolvedPaths).length === 0 && unmergedClosure) continue;
+        const resolvedIds = Object.keys(resolvedPaths);
+        const hasResolvedCandidate = candidateIds.some((id) => Boolean(resolvedPaths[id]));
+        const mergedClosure = record.event_type === "pull_request.closed" && Boolean(record.pull_request && record.pull_request.merged);
+        const unmergedClosure = record.event_type === "pull_request.closed" && !mergedClosure;
+        const postMergeCi = record.event_type === "workflow_run.completed" && record.is_post_merge_main_ci === true;
+        const authoritativeAuditEvent = findingIds.length > 0 && (mergedClosure || postMergeCi);
+        // Mapping failures remain auditable for authoritative merged/post-merge events; candidate-only hints must resolve uniquely.
+        if (unmergedClosure && resolvedIds.length === 0) continue;
+        if (findingIds.length === 0 && !hasResolvedCandidate) continue;
+        if (resolvedIds.length === 0 && !authoritativeAuditEvent) continue;
         for (const findingId of findingIds) {
           if (resolvedPaths[findingId]) paths[findingId] = resolvedPaths[findingId];
         }
