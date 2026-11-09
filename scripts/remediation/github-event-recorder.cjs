@@ -126,12 +126,6 @@ function updateFindingStatus(content, status, details) {
   if (isMainVerifiedStatus(previous) && status !== "Verified complete") {
     return { content, changed: false, valid: true, protected: true };
   }
-  if (/Verified complete/i.test(previous)) {
-    const branchOnly = /investigation branch only|branch-only/i.test(previous);
-    if (!branchOnly || status === "Verified complete") {
-      return { content, changed: false, valid: true, protected: true };
-    }
-  }
   if ((/Integrated — verification failed/i.test(previous) || /Closed without merge/i.test(previous)) &&
       status === "Integrated — verification pending" && !hasNewPullRequestReference(previous, details)) {
     return { content, changed: false, valid: true, protected: true };

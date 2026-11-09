@@ -188,6 +188,14 @@ describe("GitHub remediation event recorder", () => {
     expect(result.content).toContain("https://example.test/commit/abcdef123456");
   });
 
+  it("allows a branch-only verified Finding to advance to main verification", () => {
+    const previous = "- Status: **Verified complete** — investigation branch only.";
+    const result = recorder.updateFindingStatus(previous, "Verified complete", "PR #125; exact main merge CI passed");
+    expect(result.changed).toBe(true);
+    expect(result.content).toContain("PR #125; exact main merge CI passed");
+    expect(result.content).not.toContain("investigation branch only");
+  });
+
   it("allows a new PR to retry a failed Finding while rejecting a delayed event from the same PR", () => {
     const previous = "- Status: **Integrated — verification failed** (PR #124; see CI run #42).";
     const next = recorder.updateFindingStatus(previous, "Integrated — verification pending", "PR #125 merged; post-merge CI pending");
