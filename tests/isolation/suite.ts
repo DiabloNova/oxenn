@@ -551,12 +551,12 @@ async function runTest() {
           colName === "policy" || colName === "result" || colName === "normalized_result" ||
           colName === "crawl_policy" || colName === "snapshot_metadata" || colName === "event_metadata" ||
           colName === "properties" || colName === "capabilities" || colName === "metadata"
-        ) return `${index + 1}::jsonb`;
-        return `${index + 1}`;
+        ) return "$" + (index + 1) + "::jsonb";
+        return "$" + (index + 1);
       }).join(", ");
       const valuesA = [rowsMapA[tableName], ...requiredCols.map((column) => getDefaultValue(column, true, tableName))];
       await client.query(
-        `INSERT INTO {tableName} ({colNames.join(", ")}) VALUES ({placeholders})`,
+        "INSERT INTO " + tableName + " (" + colNames.join(", ") + ") VALUES (" + placeholders + ")",
         valuesA,
       );
     }
