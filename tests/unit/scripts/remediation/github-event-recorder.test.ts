@@ -270,7 +270,7 @@ describe("GitHub remediation event recorder", () => {
     const progress = "| [DOC-001](./findings/015-DOC-001.md) | Wave 1 | **Integrated — verification failed** | — | [PR #125](https://example.test/pull/125) |\n";
     const finding = "# DOC-001\n- Status: **Integrated — verification failed** (PR #125; see CI run #42).\n";
     const fake = makeFakeGitHub({ progress, finding });
-    const record = {
+    const record: Record<string, unknown> = {
       ...mergedRecord,
       event_id: "pull_request.closed:125:2026-11-09T15:00:00Z:abcdef1234567890",
       event_type: "pull_request.closed",
