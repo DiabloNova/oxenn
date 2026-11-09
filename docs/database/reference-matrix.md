@@ -1356,8 +1356,8 @@
 
 ## Table: `keywords_topics`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1737,8 +1737,8 @@
 
 ## Table: `pages_entities`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1776,8 +1776,8 @@
 
 ## Table: `pages_keywords`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1815,8 +1815,8 @@
 
 ## Table: `pages_topics`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2505,8 +2505,8 @@
 
 ## Table: `topics_entities`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Scope:** Tenant-Scoped
+- **RLS Policies Defined:** ✅
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
