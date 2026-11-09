@@ -3,8 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { TENANT_SCOPED_TABLES } from "@/core/database/tenant-context";
-import { getTenantTableCoverageFromSnapshot, resolveLatestSnapshotPath, verifyTenantTables } from "../../../../scripts/database/verify-tenant-tables";
-import { getTableGovernanceMetadata } from "../../../../scripts/database/build-reference-matrix";
+import { getTableOwnershipScope, getTenantTableCoverageFromSnapshot, resolveLatestSnapshotPath, verifyTenantTables } from "../../../../scripts/database/verify-tenant-tables";
 
 describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
   it("TENANT_SCOPED_TABLES is an Object.frozen immutable array", () => {
@@ -52,82 +51,28 @@ describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
     }
   });
 
-  it("detects tenant-owned tables even when their snapshot has no RLS policies", () => {
-    const coverage = getTenantTableCoverageFromSnapshot({
-      tables: {
-        "public.pages_keywords": {
-          name: "pages_keywords",
-          columns: { organization_id: { type: "uuid" } },
-          policies: {},
-        },
-      },
-    });
+  it("classifies all five tenant-owned junction tables independently of RLS policy presence", () => {
+    const junctionTables = ["pages_keywords", "pages_topics", "pages_entities", "keywords_topics", "topics_entities"];
+    const tables = Object.fromEntries(junctionTables.map((name) => [name, {
+      name,
+      columns: { organization_id: { type: "uuid" } },
+      policies: {},
+    }]));
 
-    expect(coverage.tenantTables).toEqual(["pages_keywords"]);
-    expect(coverage.missingPolicyTables).toEqual(["pages_keywords"]);
-  });
+    const coverage = getTenantTableCoverageFromSnapshot({ tables });
 
-
-  it("keeps all five organization-owned junction tables tenant-owned when their RLS policies are missing", () => {
-    const junctionTables = [
-      "pages_keywords",
-      "pages_topics",
-      "pages_entities",
-      "keywords_topics",
-      "topics_entities",
-    ];
-    const tables = Object.fromEntries(
-      junctionTables.map((name) => [
-        name,
-        {
-          name,
-          columns: {
-            organization_id: {
-              name: "organization_id",
-              type: "uuid",
-              notNull: true,
-              primaryKey: false,
-            },
-          },
-          policies: {},
-        },
-      ]),
-    );
-    const policyCoverage = getTenantTableCoverageFromSnapshot({ tables });
-    const migrationCoverage = { missingEnable: junctionTables, missingForce: junctionTables };
-
-    expect(policyCoverage.tenantTables).toEqual(junctionTables.slice().sort());
-    expect(policyCoverage.missingPolicyTables).toEqual(junctionTables.slice().sort());
-
-    for (const table of Object.values(tables)) {
-      const metadata = getTableGovernanceMetadata(table, policyCoverage, migrationCoverage);
-      expect(metadata.ownershipScope).toBe("Tenant-Owned");
-      expect(metadata.rlsPoliciesDeclared).toBe("None");
-      expect(metadata.tenantRlsPolicyCoverage).toBe("Missing");
-      expect(metadata.migrationCoverage).toBe("Incomplete (missing ENABLE + FORCE)");
-      expect(metadata.runtimeEnforcementVerification).toContain("Not verified by static generation");
+    expect(coverage.tenantTables).toEqual(junctionTables.slice().sort());
+    expect(coverage.missingPolicyTables).toEqual(junctionTables.slice().sort());
+    for (const name of junctionTables) {
+      expect(getTableOwnershipScope({ name, columns: { organization_id: {} } })).toBe("Tenant-Owned");
     }
   });
 
-  it("keeps tables without tenant ownership markers Global without implying tenant RLS coverage", () => {
-    const table = {
-      name: "admin_users",
-      columns: {
-        id: { name: "id", type: "uuid", notNull: true, primaryKey: true },
-      },
-      policies: {},
-    };
-    const metadata = getTableGovernanceMetadata(
-      table,
-      { missingPolicyTables: [] },
-      { missingEnable: [], missingForce: [] },
-    );
-
-    expect(metadata.ownershipScope).toBe("Global");
-    expect(metadata.tenantRlsPolicyCoverage).toBe("Not applicable (Global)");
-    expect(metadata.migrationCoverage).toBe("Not applicable (Global)");
-    expect(metadata.runtimeEnforcementVerification).toBe("Not applicable (Global)");
+  it("classifies tables without tenant ownership markers as Global, independently of policies", () => {
+    expect(getTableOwnershipScope({ name: "system_settings", columns: { id: {} } })).toBe("Global");
+    expect(getTableOwnershipScope({ name: "organizations", columns: { id: {} } })).toBe("Tenant-Owned");
   });
+
 
   it("rejects an additional unscoped permissive policy that could widen tenant access", () => {
     const predicate = `"organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid`;

@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { getTableOwnershipScope } from "./verify-tenant-tables";
 
 interface Journal {
@@ -366,7 +365,7 @@ export function getRlsMigrationCoverage(rootDir = process.cwd()): RlsMigrationCo
   const migrationFiles = journal.entries.map((entry) => {
     const filePath = path.join(migrationDirectory, entry.tag + ".sql");
     if (!fs.existsSync(filePath)) {
-      throw new Error("Migration journal entry " + entry.tag + " has no matching SQL file.");
+      throw new Error(`Migration journal entry "${entry.tag}" has no matching SQL file.`);
     }
     return { tag: entry.tag, sql: fs.readFileSync(filePath, "utf8") };
   });
@@ -404,10 +403,9 @@ function main(): void {
   }
 
   console.log(
-    "RLS migration final-state verified for " + coverage.tenantTables.length +
-    " tenant-owned tables (journal order; ENABLE + FORCE active).",
+    `RLS migration final-state verified for ${coverage.tenantTables.length} tenant-owned tables (journal order; ENABLE + FORCE active).`,
   );
   console.log("Static migration verification only; this does not inspect a live database.");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main();
+if (require.main === module) main();

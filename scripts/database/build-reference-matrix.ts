@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { pathToFileURL } from "node:url";
 import { findTableReferences as detectTableReferences } from "./reference-matrix-consumers";
 import { getTableOwnershipScope, getTenantTableCoverageFromSnapshot } from "./verify-tenant-tables";
 import { getRlsMigrationCoverage, type RlsMigrationCoverage } from "./verify-rls-migrations";
@@ -264,4 +263,4 @@ function generateMarkdown(): void {
   console.log("Generated docs/database/reference-matrix.md");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) generateMarkdown();
+if (require.main === module) generateMarkdown();

@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-context";
 
 interface SnapshotPolicy {
@@ -38,6 +37,9 @@ export type TableOwnershipScope = "Tenant-Owned" | "Global";
 export function getTableOwnershipScope(
   table: Pick<SnapshotTable, "name" | "columns">,
 ): TableOwnershipScope {
+  // The organization table is the tenant root and can never be a Global exception.
+  if (table.name === "organizations") return "Tenant-Owned";
+
   if (Object.hasOwn(GLOBAL_OWNERSHIP_EXCEPTIONS, table.name)) {
     const rationale = GLOBAL_OWNERSHIP_EXCEPTIONS[table.name];
     if (!rationale?.trim()) {
@@ -50,8 +52,7 @@ export function getTableOwnershipScope(
   }
 
   const columns = table.columns ?? {};
-  return table.name === "organizations" ||
-    Object.hasOwn(columns, "organization_id") ||
+  return Object.hasOwn(columns, "organization_id") ||
     Object.hasOwn(columns, "tenant_id")
     ? "Tenant-Owned"
     : "Global";
@@ -281,7 +282,7 @@ export function verifyTenantTables(options?: { fix?: boolean }): {
   };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (require.main === module) {
   const args = process.argv.slice(2);
   const fix = args.includes("--fix") || args.includes("--generate");
 
