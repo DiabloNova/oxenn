@@ -560,6 +560,14 @@ async function runTest() {
         valuesA,
       );
     }
+    // Deleting each parent fixture cascades to its junction rows. Recreate
+    // tenant A's links after restoring the parent IDs for the focused checks.
+    for (const junction of TENANT_JUNCTION_TABLES) {
+      await client.query(
+        "INSERT INTO " + junction.table + " (" + junction.leftColumn + ", " + junction.rightColumn + ", organization_id) VALUES ($1, $2, $3)",
+        [rowsMapA[junction.leftTable], rowsMapA[junction.rightTable], orgAId],
+      );
+    }
     await client.query("SET session_replication_role = 'origin'");
 
     for (const junction of TENANT_JUNCTION_TABLES) {
