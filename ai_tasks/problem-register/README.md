@@ -58,7 +58,7 @@ The documentation set is ready for review. Implementation may begin only after t
 
 The Remediation Event Recorder workflow maintains the execution history and finding lifecycle from GitHub events. It records closed PRs and completed CI runs in monthly append-only JSONL files under the events directory, including finding IDs, changed paths, PR/commit references, and CI outcomes.
 
-For reliable association, include each finding ID in the branch name, PR title, or PR description. When a PR addresses multiple findings, include the finding record file(s) in the changed paths so the recorder can map those files precisely. It records other changed paths without inventing a per-finding association.
+For reliable association, include each finding ID in the branch name or PR title; for IDs listed in the PR description, use an explicit line beginning with Finding-IDs:. When a PR addresses multiple findings, include the finding record file(s) in the changed paths so the recorder can map those files precisely. It records other changed paths without inventing a per-finding association.
 
 The recorder distinguishes branch/PR CI from post-merge verification. A merged PR is marked Integrated — verification pending; only successful CI on main for that exact merge commit advances the ledger and finding record to Verified complete. A closed, unmerged PR is marked Closed without merge. Failed post-merge CI is never represented as resolved.
 

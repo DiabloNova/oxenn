@@ -172,7 +172,7 @@ A wave is complete only when every in-scope finding is verified complete or has 
 
 ## GitHub lifecycle evidence and automated status transitions
 
-- Put every addressed finding ID in the working branch name, PR title, or PR description. For a PR covering multiple findings, include the individual finding-record paths among the changed files so file-level attribution is explicit. Do not rely on an inferred relationship between unrelated changed files and a finding.
+- Put every addressed finding ID in the working branch name or PR title; in a PR description, use an explicit line beginning with Finding-IDs:. For a PR covering multiple findings, include the individual finding-record paths among the changed files so file-level attribution is explicit. Do not rely on an inferred relationship between unrelated changed files and a finding.
 - The Remediation Event Recorder stores completed PR/CI events in monthly append-only JSONL files and records exact changed paths, commit SHAs, PR references, and CI outcomes.
 - A successful CI run on a feature branch is pre-merge evidence only. It must never be described as Verified complete.
 - A merged PR is Integrated — verification pending until CI succeeds on main for the exact merge commit. Only then may the ledger and finding record be marked Verified complete.

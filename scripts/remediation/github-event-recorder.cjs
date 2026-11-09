@@ -6,12 +6,17 @@ function extractFindingIds(pullRequest, files) {
   const ids = new Set();
   const sources = [
     pullRequest && pullRequest.title,
-    pullRequest && pullRequest.body,
     pullRequest && pullRequest.head && pullRequest.head.ref,
   ];
   for (const source of sources) {
     if (!source) continue;
     const matches = String(source).match(/[A-Z]{2,5}-\d{3}/gi) || [];
+    for (const match of matches) ids.add(match.toUpperCase());
+  }
+  const body = String((pullRequest && pullRequest.body) || "");
+  const explicitMarkers = body.matchAll(/^\s*Finding-IDs\s*:\s*([^\r\n]+)/gim);
+  for (const marker of explicitMarkers) {
+    const matches = marker[1].match(/[A-Z]{2,5}-\d{3}/gi) || [];
     for (const match of matches) ids.add(match.toUpperCase());
   }
   for (const file of files || []) {
@@ -247,7 +252,7 @@ async function fetchPullRequestRecord(github, owner, repo, number, run) {
   const findingIds = extractFindingIds(pr, fileResult.files);
   const fileFindingIds = files.map((file) => ({
     path: file.path,
-    finding_id: directFindingId(file.path),
+    finding_id: directFindingId(file.path) || (findingIds.length === 1 ? findingIds[0] : null),
   }));
   const postMerge = Boolean(
     run &&

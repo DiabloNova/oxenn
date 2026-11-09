@@ -17,7 +17,7 @@ describe("GitHub remediation event recorder", () => {
     const ids = recorder.extractFindingIds(
       {
         title: "Remediate DOC-001 and DB-002",
-        body: "Finding-IDs: SCR-001",
+        body: "Related finding: SRC-003\nFinding-IDs: SCR-001",
         head: { ref: "investigation/015-doc-001-scope" },
       },
       [{ filename: "ai_tasks/problem-register/findings/016-DOC-002.md" }],
