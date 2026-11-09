@@ -41,6 +41,9 @@ Use exactly one primary status per finding:
 Historical-only execution restrictions (for example, `DO NOT RUN`) are safety annotations, not lifecycle statuses. Record the primary status as `Blocked` when a historical artifact is review-only, and preserve the explicit prohibition in the planned-stage label and the finding record. A status change never authorizes execution of a historical script.
 - **Implemented — verification pending** — code is changed but required tests/review/evidence are incomplete.
 - **Verified complete** — acceptance criteria pass on a recorded commit and evidence is linked.
+- **Integrated — verification pending** — the PR is merged to `main`, but successful CI for the exact merge commit has not yet been confirmed.
+- **Integrated — verification failed** — the PR is merged, but post-merge CI failed or required verification did not complete successfully.
+- **Closed without merge** — the PR closed without merging; no resolution is claimed.
 - **Deferred / out of scope** — user-approved deferral or explicit scope decision is recorded.
 
 Do not use "done", "fixed", or "complete" based only on an edit, local test, green unrelated CI, or an AI-generated claim. "Verified complete" requires evidence.
