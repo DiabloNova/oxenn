@@ -203,6 +203,9 @@ async function readFile(github, owner, repo, path, ref) {
   try {
     const response = await github.rest.repos.getContent({ owner, repo, path, ref });
     if (Array.isArray(response.data) || response.data.type !== "file") return null;
+    if (response.data.encoding !== "base64") {
+      throw new Error("Refusing to rewrite " + path + ": GitHub did not return complete base64 file content.");
+    }
     return {
       sha: response.data.sha,
       content: Buffer.from(response.data.content || "", "base64").toString("utf8"),
