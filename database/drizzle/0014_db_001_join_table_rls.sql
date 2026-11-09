@@ -1,0 +1,32 @@
+-- DB-001: Enforce transaction-local tenant isolation on organization-owned junction tables.
+
+ALTER TABLE "pages_keywords" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "pages_keywords" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "select_organization_id_isolation_policy" ON "pages_keywords" AS PERMISSIVE FOR SELECT TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "insert_organization_id_isolation_policy" ON "pages_keywords" AS PERMISSIVE FOR INSERT TO public WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "update_organization_id_isolation_policy" ON "pages_keywords" AS PERMISSIVE FOR UPDATE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid) WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "delete_organization_id_isolation_policy" ON "pages_keywords" AS PERMISSIVE FOR DELETE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+ALTER TABLE "pages_topics" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "pages_topics" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "select_organization_id_isolation_policy" ON "pages_topics" AS PERMISSIVE FOR SELECT TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "insert_organization_id_isolation_policy" ON "pages_topics" AS PERMISSIVE FOR INSERT TO public WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "update_organization_id_isolation_policy" ON "pages_topics" AS PERMISSIVE FOR UPDATE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid) WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "delete_organization_id_isolation_policy" ON "pages_topics" AS PERMISSIVE FOR DELETE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+ALTER TABLE "pages_entities" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "pages_entities" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "select_organization_id_isolation_policy" ON "pages_entities" AS PERMISSIVE FOR SELECT TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "insert_organization_id_isolation_policy" ON "pages_entities" AS PERMISSIVE FOR INSERT TO public WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "update_organization_id_isolation_policy" ON "pages_entities" AS PERMISSIVE FOR UPDATE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid) WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "delete_organization_id_isolation_policy" ON "pages_entities" AS PERMISSIVE FOR DELETE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+ALTER TABLE "keywords_topics" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "keywords_topics" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "select_organization_id_isolation_policy" ON "keywords_topics" AS PERMISSIVE FOR SELECT TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "insert_organization_id_isolation_policy" ON "keywords_topics" AS PERMISSIVE FOR INSERT TO public WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "update_organization_id_isolation_policy" ON "keywords_topics" AS PERMISSIVE FOR UPDATE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid) WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "delete_organization_id_isolation_policy" ON "keywords_topics" AS PERMISSIVE FOR DELETE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+ALTER TABLE "topics_entities" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "topics_entities" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "select_organization_id_isolation_policy" ON "topics_entities" AS PERMISSIVE FOR SELECT TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "insert_organization_id_isolation_policy" ON "topics_entities" AS PERMISSIVE FOR INSERT TO public WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "update_organization_id_isolation_policy" ON "topics_entities" AS PERMISSIVE FOR UPDATE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid) WITH CHECK ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+CREATE POLICY "delete_organization_id_isolation_policy" ON "topics_entities" AS PERMISSIVE FOR DELETE TO public USING ("organization_id" = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);

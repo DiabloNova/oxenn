@@ -519,6 +519,7 @@ export const pagesKeywords = pgTable("pages_keywords", {
 }, (table) => [
   primaryKey({ columns: [table.pageId, table.keywordId] }),
   index("idx_pages_keywords_org").on(table.organizationId),
+  ...tenantPolicy("organization_id"),
 ]);
 
 export const pagesTopics = pgTable("pages_topics", {
@@ -530,6 +531,7 @@ export const pagesTopics = pgTable("pages_topics", {
 }, (table) => [
   primaryKey({ columns: [table.pageId, table.topicId] }),
   index("idx_pages_topics_org").on(table.organizationId),
+  ...tenantPolicy("organization_id"),
 ]);
 
 export const pagesEntities = pgTable("pages_entities", {
@@ -541,6 +543,7 @@ export const pagesEntities = pgTable("pages_entities", {
 }, (table) => [
   primaryKey({ columns: [table.pageId, table.entityId] }),
   index("idx_pages_entities_org").on(table.organizationId),
+  ...tenantPolicy("organization_id"),
 ]);
 
 export const keywordsTopics = pgTable("keywords_topics", {
@@ -551,6 +554,7 @@ export const keywordsTopics = pgTable("keywords_topics", {
 }, (table) => [
   primaryKey({ columns: [table.keywordId, table.topicId] }),
   index("idx_keywords_topics_org").on(table.organizationId),
+  ...tenantPolicy("organization_id"),
 ]);
 
 export const topicsEntities = pgTable("topics_entities", {
@@ -561,6 +565,7 @@ export const topicsEntities = pgTable("topics_entities", {
 }, (table) => [
   primaryKey({ columns: [table.topicId, table.entityId] }),
   index("idx_topics_entities_org").on(table.organizationId),
+  ...tenantPolicy("organization_id"),
 ]);
 
 // ==========================================

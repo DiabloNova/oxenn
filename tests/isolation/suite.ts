@@ -14,13 +14,18 @@ const GLOBAL_TABLES = [
   "ai_provider_configs",
   "audit_records",
   "feature_flags",
-  "system_configurations",
-  "pages_keywords",
-  "pages_topics",
-  "pages_entities",
-  "keywords_topics",
-  "topics_entities"
+  "system_configurations"
 ];
+
+const TENANT_JUNCTION_TABLES = [
+  { table: "pages_keywords", leftColumn: "page_id", leftTable: "pages", rightColumn: "keyword_id", rightTable: "keywords" },
+  { table: "pages_topics", leftColumn: "page_id", leftTable: "pages", rightColumn: "topic_id", rightTable: "topics" },
+  { table: "pages_entities", leftColumn: "page_id", leftTable: "pages", rightColumn: "entity_id", rightTable: "entities" },
+  { table: "keywords_topics", leftColumn: "keyword_id", leftTable: "keywords", rightColumn: "topic_id", rightTable: "topics" },
+  { table: "topics_entities", leftColumn: "topic_id", leftTable: "topics", rightColumn: "entity_id", rightTable: "entities" },
+] as const;
+const TENANT_JUNCTION_TABLE_NAMES = new Set<string>(TENANT_JUNCTION_TABLES.map(({ table }) => table));
+const REGULAR_TENANT_TABLES = TENANT_SCOPED_TABLES.filter((tableName) => !TENANT_JUNCTION_TABLE_NAMES.has(tableName));
 
 function randomUUID() {
   return crypto.randomUUID();
@@ -290,7 +295,7 @@ async function runTest() {
     const rowsMapB: Record<string, string> = {};
 
     console.log(`Verifying ${TENANT_SCOPED_TABLES.length} tenant tables...`);
-    for (const tableName of TENANT_SCOPED_TABLES) {
+    for (const tableName of REGULAR_TENANT_TABLES) {
       const columns = tablesMetadata[tableName];
       if (!columns) throw new Error(`Table ${tableName} not found in metadata`);
 
@@ -326,13 +331,19 @@ async function runTest() {
       }
     }
 
+    for (const junction of TENANT_JUNCTION_TABLES) {
+      const insertSql = `INSERT INTO ${junction.table} (${junction.leftColumn}, ${junction.rightColumn}, organization_id) VALUES ($1, $2, $3)`;
+      await client.query(insertSql, [rowsMapA[junction.leftTable], rowsMapA[junction.rightTable], orgAId]);
+      await client.query(insertSql, [rowsMapB[junction.leftTable], rowsMapB[junction.rightTable], orgBId]);
+    }
+
     await client.query("SET session_replication_role = 'origin'");
     console.log("Fixtures inserted successfully.");
 
     let success = true;
     let assertionsCount = 0;
 
-    for (const tableName of TENANT_SCOPED_TABLES) {
+    for (const tableName of REGULAR_TENANT_TABLES) {
       await client.query("SET ROLE app_runtime");
 
       const idA = rowsMapA[tableName];
@@ -519,6 +530,119 @@ async function runTest() {
       }
       assertionsCount++;
 
+      await client.query("RESET ROLE");
+    }
+
+    for (const junction of TENANT_JUNCTION_TABLES) {
+      const tableName = junction.table;
+      const insertSql = `INSERT INTO ${tableName} (${junction.leftColumn}, ${junction.rightColumn}, organization_id) VALUES ($1, $2, $3)`;
+      const valuesA = [rowsMapA[junction.leftTable], rowsMapA[junction.rightTable], orgAId];
+      const valuesB = [rowsMapB[junction.leftTable], rowsMapB[junction.rightTable], orgBId];
+      const keyPredicate = `${junction.leftColumn} = $1 AND ${junction.rightColumn} = $2 AND organization_id = $3`;
+
+      await client.query("SET ROLE app_runtime");
+      await client.query("RESET app.current_tenant_id");
+
+      const noTenantRead = await client.query(`SELECT count(*) FROM ${tableName}`);
+      assertionsCount++;
+      if (Number(noTenantRead.rows[0].count) !== 0) {
+        console.error(`❌ ${tableName}: rows were visible without tenant context.`);
+        success = false;
+      }
+
+      await client.query("BEGIN");
+      await client.query("SAVEPOINT junction_unset_insert");
+      let unsetInsertError: string | null = null;
+      try {
+        await client.query(insertSql, valuesB);
+      } catch (error: unknown) {
+        unsetInsertError = (error as { code?: string }).code ?? null;
+      }
+      await client.query("ROLLBACK TO SAVEPOINT junction_unset_insert");
+      await client.query("COMMIT");
+      assertionsCount++;
+      if (unsetInsertError !== "42501") {
+        console.error(`❌ ${tableName}: expected RLS denial for INSERT without tenant context, got ${unsetInsertError ?? "success"}.`);
+        success = false;
+      }
+
+      await client.query("SELECT set_config('app.current_tenant_id', $1, false)", [orgAId]);
+      const readA = await client.query(`SELECT count(*) FROM ${tableName} WHERE organization_id = $1`, [orgAId]);
+      const readB = await client.query(`SELECT count(*) FROM ${tableName} WHERE organization_id = $1`, [orgBId]);
+      assertionsCount += 2;
+      if (Number(readA.rows[0].count) !== 1 || Number(readB.rows[0].count) !== 0) {
+        console.error(`❌ ${tableName}: tenant A did not see exactly its own relationship row.`);
+        success = false;
+      }
+
+      await client.query("BEGIN");
+      await client.query("SAVEPOINT junction_cross_insert");
+      let crossInsertError: string | null = null;
+      try {
+        await client.query(insertSql, valuesB);
+      } catch (error: unknown) {
+        crossInsertError = (error as { code?: string }).code ?? null;
+      }
+      await client.query("ROLLBACK TO SAVEPOINT junction_cross_insert");
+      await client.query("COMMIT");
+      assertionsCount++;
+      if (crossInsertError !== "42501") {
+        console.error(`❌ ${tableName}: tenant A was not blocked from inserting tenant B's relationship.`);
+        success = false;
+      }
+
+      const updateA = await client.query(
+        `UPDATE ${tableName} SET created_at = NOW() WHERE ${keyPredicate}`,
+        [valuesA[0], valuesA[1], orgAId],
+      );
+      assertionsCount++;
+      if (updateA.rowCount !== 1) {
+        console.error(`❌ ${tableName}: tenant A could not update its own relationship.`);
+        success = false;
+      }
+
+      await client.query("BEGIN");
+      await client.query("SAVEPOINT junction_transfer_ownership");
+      let transferError: string | null = null;
+      try {
+        await client.query(
+          `UPDATE ${tableName} SET organization_id = $1 WHERE ${junction.leftColumn} = $2 AND ${junction.rightColumn} = $3 AND organization_id = $4`,
+          [orgBId, valuesA[0], valuesA[1], orgAId],
+        );
+      } catch (error: unknown) {
+        transferError = (error as { code?: string }).code ?? null;
+      }
+      await client.query("ROLLBACK TO SAVEPOINT junction_transfer_ownership");
+      await client.query("COMMIT");
+      assertionsCount++;
+      if (transferError !== "42501") {
+        console.error(`❌ ${tableName}: UPDATE was allowed to transfer a row to another organization.`);
+        success = false;
+      }
+
+      const deleteB = await client.query(`DELETE FROM ${tableName} WHERE organization_id = $1`, [orgBId]);
+      assertionsCount++;
+      if (deleteB.rowCount !== 0) {
+        console.error(`❌ ${tableName}: tenant A deleted a tenant B relationship.`);
+        success = false;
+      }
+
+      const deleteA = await client.query(`DELETE FROM ${tableName} WHERE ${keyPredicate}`, [valuesA[0], valuesA[1], orgAId]);
+      assertionsCount++;
+      if (deleteA.rowCount !== 1) {
+        console.error(`❌ ${tableName}: tenant A could not delete its own relationship.`);
+        success = false;
+      }
+
+      const insertA = await client.query(insertSql, valuesA);
+      assertionsCount++;
+      if (insertA.rowCount !== 1) {
+        console.error(`❌ ${tableName}: tenant A could not insert its own relationship.`);
+        success = false;
+      }
+      await client.query(`DELETE FROM ${tableName} WHERE ${keyPredicate}`, [valuesA[0], valuesA[1], orgAId]);
+
+      await client.query("RESET app.current_tenant_id");
       await client.query("RESET ROLE");
     }
 
