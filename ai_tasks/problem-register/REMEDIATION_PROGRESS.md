@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — DOC-001 and DOC-002 are verified on main after PRs #122 and #123 merged and post-merge CI passed; project-wide Wave 0 remains incomplete.
+**Current overall status:** PARTIAL — DOC-001 and DOC-002 are verified and merged into `main` with post-merge CI passed; project-wide Wave 0 remains incomplete and the remaining findings are not approved.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -15,7 +15,7 @@
 | Metric | Current value |
 |---|---:|
 | Individual finding records | 97 |
-| Findings revalidated against current `main` | 2 |
+| Findings revalidated against current `main` | 3 |
 | Findings approved for implementation | 2 |
 | Findings with implementation started | 2 |
 | Findings with verified implementation complete | 2 |
@@ -41,9 +41,6 @@ Use exactly one primary status per finding:
 Historical-only execution restrictions (for example, `DO NOT RUN`) are safety annotations, not lifecycle statuses. Record the primary status as `Blocked` when a historical artifact is review-only, and preserve the explicit prohibition in the planned-stage label and the finding record. A status change never authorizes execution of a historical script.
 - **Implemented — verification pending** — code is changed but required tests/review/evidence are incomplete.
 - **Verified complete** — acceptance criteria pass on a recorded commit and evidence is linked.
-- **Integrated — verification pending** — the PR is merged to main, but successful CI for the exact merge commit has not yet been confirmed.
-- **Integrated — verification failed** — the PR is merged, but post-merge CI failed or required verification did not complete successfully.
-- **Closed without merge** — the PR closed without merging; no resolution is claimed.
 - **Deferred / out of scope** — user-approved deferral or explicit scope decision is recorded.
 
 Do not use "done", "fixed", or "complete" based only on an edit, local test, green unrelated CI, or an AI-generated claim. "Verified complete" requires evidence.
@@ -82,12 +79,12 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [RF-007](./findings/007-RF-007.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
 | [RF-008](./findings/008-RF-008.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
 | [RF-009](./findings/009-RF-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
-| [DB-001](./findings/010-DB-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
+| [DB-001](./findings/010-DB-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Already fixed in repository; Production/runtime state unverified | `4e54e8b` | CI isolation evidence on disposable PostgreSQL |
 | [DB-002](./findings/011-DB-002.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DB-003](./findings/012-DB-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DB-004](./findings/013-DB-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DB-005](./findings/014-DB-005.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
-| [DOC-001](./findings/015-DOC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | **Verified complete** — merged to main; post-merge CI passed | [642ca184](https://github.com/DiabloNova/oxenn/commit/642ca1849e4501f987ec86d7ea2e2d339c9557e7) | [Execution log](./REMEDIATION_PROGRESS.md#doc-001-post-merge-reconciliation-2026-11-09) · [PR #122](https://github.com/DiabloNova/oxenn/pull/122) · [merge commit 4e54e8b2](https://github.com/DiabloNova/oxenn/commit/4e54e8b2acee85c9728fd3da9f0e596f08b08bad) · [main CI run #42584501166](https://github.com/DiabloNova/oxenn/actions/runs/42584501166) |
+| [DOC-001](./findings/015-DOC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | **Verified complete** — merged into `main` via PR #122 on 2026-11-09 | [4e54e8b](https://github.com/DiabloNova/oxenn/commit/4e54e8b2acee85c9728fd3da9f0e596f08b08bad) | [Execution log](./REMEDIATION_PROGRESS.md#doc-001-investigation-branch-2026-11-09) · [Merge correction](./REMEDIATION_PROGRESS.md#correction--doc-001-merge-status--2026-11-09) · [PR #122](https://github.com/DiabloNova/oxenn/pull/122) |
 | [DOC-002](./findings/016-DOC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | **Verified complete** — merged to main; post-merge CI passed | [2f5a4d9e](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472) | [Execution log](./REMEDIATION_PROGRESS.md#doc-002-post-merge-reconciliation-2026-11-09) · [PR #123](https://github.com/DiabloNova/oxenn/pull/123) · [merge commit 2f5a4d9e](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472) · [main CI run #42605739033](https://github.com/DiabloNova/oxenn/actions/runs/42605739033) |
 | [DOC-003](./findings/017-DOC-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-004](./findings/018-DOC-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
@@ -221,6 +218,69 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Status transition: `Not started — pending Wave 0 revalidation` → **`Verified complete` on the investigation branch only**. This records the evidence for DOC-001 and does not mark Wave 0 or Wave 1 complete, nor does it authorize work on other findings.
 - Next permitted action: retain PR #122 for review/merge under the normal user-approval gate; after merge, reconcile the finding against the resulting `main` commit. No other finding or wave is authorized by this entry.
 
+
+### Correction — DOC-001 merge status — 2026-11-09
+
+- The prior DOC-001 entry correctly recorded that PR #122 was open at the time of that entry. This is a point-in-time statement and is now superseded: PR [#122](https://github.com/DiabloNova/oxenn/pull/122) was merged on 2026-11-09 into `main` at `4e54e8b2acee85c9728fd3da9f0e596f08b08bad`.
+- DOC-001 is therefore present on `main`; the earlier branch-only status is no longer current. No other finding or wave is implicitly authorized by that merge.
+
+### DOC-002 implementation — 2026-11-09
+
+- Finding: [DOC-002](./findings/016-DOC-002.md); related record: [DB-001](./findings/010-DB-001.md).
+- User authorization: explicit approval of the complete DOC-002 plan and its stated scope/limitations on 2026-11-09.
+- Repository: `DiabloNova/oxenn`; branch: `investigation/016-doc-002`.
+- Revalidation target: `main` at `4e54e8b2acee85c9728fd3da9f0e596f08b08bad`; branch base matched that commit before edits.
+- Implementation commits: `7a4ce6094b10f8c8781eecc43cda1a1d74af6ed9` (documentation/governance, checker/tests and CI step); `50b949f9752419d54872eb5b8e9432e87e31fab1` (TypeScript/Vitest integration); `8e54d61330acb8dcc67785380013e154a32110ec` (typecheck correction); `3ace8e7c1c1a46e5c3aa2e70920d531b80ea8d1d` (generated docs navigation index sync).
+- Paths changed (13 net): `docs/architecture/database/tenant-context-spec.md`; `docs/architecture/database/reconciliation-report.md`; `docs/security/README.md`; `docs/architecture/README.md`; `docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md`; `docs/architecture/features/ARCHITECTURE.md`; `ai_tasks/docs-folder-audit.md`; `ai_tasks/problem-register/findings/016-DOC-002.md`; `ai_tasks/problem-register/findings/010-DB-001.md`; `scripts/docs/verify-rls-docs.ts`; `tests/unit/scripts/docs/verify-rls-docs.test.ts`; `.github/workflows/ci.yml`; `src/lib/docsIndex.ts` (required generated navigation snippet update for the changed historical report). The temporary `.mjs` checker was replaced by the typed `.ts` implementation and is not present in the final tree. The DB Reference Matrix and generated tenant-table map remained unchanged.
+- Main documentation changes: the 12-table current inventory was removed from the tenant-context spec; the 2024 reconciliation report's 51/19 figures were retained with a prominent superseded/historical notice; active READMEs now point to the canonical contract and generated Matrix; Phase 1's 70/51 baseline is labelled historical; the feature policy example uses `app.current_tenant_id`; Phase 0's already-correct 56-table reconciliation was left unchanged.
+- DB-001 disposition: its five junction-table policy and migration defects are already fixed in the checked-in repository through migrations `0014_db_001_join_table_rls.sql` and `0015_db_001_composite_tenant_fks.sql`; the finding remains open only for separate Production/runtime verification, not for a repository code fix.
+- New documentation guard: an explicit allowlist checks active documents and separately checks historical labels. It does not globally ban 51/19 references and does not duplicate schema/migration validation.
+- Verification: the prepared-document checker smoke test passed on the staging copy (4 current docs, 2 historical docs). The first full CI dispatch (#663, SHA `50b949f`) failed at TypeScript typecheck due to one implicit-any parameter; this was corrected in commit `8e54d61`. CI run #664 at SHA `8e54d61` passed typecheck, lint, documentation gate, unit/UI tests, isolation suite, and build, but the generated-file drift guard correctly exposed the stale auto-generated `src/lib/docsIndex.ts` snippet. That generated navigation snippet was refreshed in commit `3ace8e7`. Final full CI run [#665](https://github.com/DiabloNova/oxenn/actions/runs/42588930161) at SHA `3ace8e7` completed successfully on 2026-11-09. Build and Test, Unit Tests, and Isolation Suite jobs all passed; Typecheck, Lint, tenant-table verifier, RLS migration verifier, Phase 0 verifier, new RLS docs verifier, Drizzle chain check, Build, Reference Matrix generation, and generated-file no-drift check all passed.
+- Database/production boundary: no schema, SQL migration, Drizzle journal/snapshot, generated Matrix, generated tenant-table map, or existing database verifier was changed. The isolation suite runs only in the workflow's disposable PostgreSQL service. No Production/staging database was connected to or modified.
+- PR/merge boundary: no PR was created; no merge or direct `main` change was performed.
+- Current status: DOC-002 implementation is complete and CI-verified on the investigation branch. No PR or merge has been created. DOC-001 is merged; DB-001 is already fixed in repository with Production runtime unknown.
+
+
+### Post-closeout validation — 2026-11-09
+
+- Final CI run [#666](https://github.com/DiabloNova/oxenn/actions/runs/42589259231) executed on the closeout commit `7074f50e1cf0ab665912943c6bd944d00ca30b2c` and completed successfully.
+- Build and Test: success, including Typecheck, Lint, tenant ownership verifier, RLS migration coverage, Phase 0 documentation check, new RLS documentation consistency gate, Drizzle migration-chain check, application Build, Reference Matrix generation, and generated-file no-drift check.
+- Unit Tests: success, including the focused RLS documentation regression tests and UI tests.
+- Isolation Suite: success against the workflow's disposable PostgreSQL service.
+- This final workflow validates the DOC-002 closeout status/audit changes. The subsequent ledger-only commit records this result and does not change application or test code.
+
+### DOC-002 post-review remediation — 2026-11-09
+
+**Authorization and branch boundary**
+- The user approved all Codacy and HayDeer inline findings, the additional regression coverage, and inspection/correction of redundant Vercel project settings after identification.
+- All repository edits were made only on `investigation/016-doc-002`. PR #123 remains open and unmerged. The PR base is `main` at `4e54e8b2acee85c9728fd3da9f0e596f08b08bad`; no commit was written to `main`.
+- The final code/test commit is `b85a9fbe46d21a01b553685130d7c5102ea55acf`. Subsequent changes in this section are documentation-only status records.
+
+**Code and documentation corrections**
+- `scripts/docs/verify-rls-docs.ts`: added a canonical repository-path resolver that rejects absolute paths and lexical traversal, canonicalizes the repository root and target with `realpathSync`, and rejects symlink escapes. The explicit current/historical allowlists are frozen.
+- The direct-execution guard now converts `import.meta.url` with `fileURLToPath`, avoiding percent-encoded path mismatches for workspaces containing spaces or Unicode.
+- `tests/unit/scripts/docs/verify-rls-docs.test.ts`: expanded to cover stale active 51-table claims, historical Phase 1 date/evidence labels, DOC-002's 56/14 current inventory, Phase 0 distinction, missing required documents, `../` traversal, absolute paths, symlink escapes, and decoded entrypoint paths. The focused file now contains 14 test cases.
+- `findings/016-DOC-002.md`: corrected the implementation path to `.ts`, explaining that the `.mjs` prototype was temporary.
+- `REMEDIATION_PROGRESS.md`: corrected the current DOC-001 row to show PR #122 merged into `main`; preserved its dated historical execution notes.
+
+**Verification**
+- Intermediate CI run #670 on `5c16aafb` exposed two incorrect test-fixture mutations; those tests were corrected. This was a test-fixture issue, not a production checker failure.
+- Final CI run #672 on `b85a9fbe` passed all three jobs: Build and Test, Unit Tests/UI Tests, and Isolation Suite. [Run #672](https://github.com/DiabloNova/oxenn/actions/runs/42598489930).
+- Build and Test passed TypeScript typecheck, lint, tenant-table alignment, RLS migration coverage, Phase 0 verification, the RLS documentation checker (4 active and 2 historical documents), Drizzle migration-chain check, build, Reference Matrix generation, and generated-file no-drift guard.
+- Unit Tests: 63 test files passed and 1 skipped; 373 tests passed and 1 remained todo. UI tests: 4 files and 33 tests passed.
+- Isolation Suite passed against disposable CI PostgreSQL: 56 tenant tables and 543 assertions. No production/staging database was accessed.
+
+**Vercel project review and limited configuration correction**
+- The `oxenn` team is on the Hobby plan. Vercel bot comments identify the precise failure as `api-deployments-free-per-day`: more than 100 deployments in 24 hours, retry after 24 hours. This is an owner/team quota, not an application build error.
+- Three Vercel projects were confirmed to point to the same `DiabloNova/oxenn` repository, `main` production branch, Next.js framework, repository root, and Node 24 configuration: `oxenn`, `oxenn-q9bo`, and `oxenn-5987`. No project environment variables or custom domains were returned; each has its own default `vercel.app` aliases and existing production deployment.
+- Kept `oxenn` as the canonical preview project. Set only `previewDeploymentsDisabled=true` on `oxenn-q9bo` and `oxenn-5987`. Verified the setting persisted. Their production deployments and aliases were preserved; no project was deleted, no Git connection or production setting was changed, and no environment variable was touched.
+- The daily deployment quota was already exhausted during this work. No further deployment was forced; the current Vercel failure status remains until the quota window resets. The two duplicate projects should no longer generate new PR preview deployments.
+
+**Review disposition and remaining external blocker**
+- All six original inline Codacy/HayDeer review threads were resolved after their fixes were committed and CI passed.
+- A separate Codacy bot summary comment still reports six critical issues, but its individual issue records are not present in the GitHub PR timeline and the Codacy dashboard endpoint was inaccessible through the available connection. GitHub code-scanning returned no alerts, which is not evidence that Codacy's separate six-item report is clear. Those six items are therefore not claimed resolved and require the Codacy issue details for triage.
+- PR #123 remains open; no merge was performed or authorized.
+
 ## 6. Wave-level gates
 
 | Stage | Entry condition | Exit condition |
@@ -267,24 +327,12 @@ At the end of each wave, provide a concise wave summary and wait for the require
 The project is complete only when every in-scope finding is either verified complete or has an explicitly approved disposition (deferred, superseded, already fixed, or out of scope), with evidence. The number of changed files or closed issues is not a completion metric.
 
 
-### DOC-001 post-merge reconciliation — 2026-11-09
-
-- Finding: DOC-001.
-- Repository: DiabloNova/oxenn.
-- PR #122 was merged into main at 2026-11-09 08:14:26 UTC; the previous branch-only / open-PR status above is retained as historical evidence and is superseded by this dated correction.
-- PR head commit: 43433ba27c45c79518125c8b19b341a894082736.
-- Merge commit: 4e54e8b2acee85c9728fd3da9f0e596f08b08bad.
-- Post-merge verification: [GitHub Actions CI run #42584501166](https://github.com/DiabloNova/oxenn/actions/runs/42584501166) completed successfully on main for the exact merge commit. All three jobs passed: Build and Test, Unit Tests, and Isolation Suite.
-- Changed paths: 13 files in PR #122. The exact path list is preserved in the initial event records at events/2026-11.jsonl.
-- Result: DOC-001 is Verified complete on main. This does not complete Wave 0, authorize Wave 1, or change any other finding.
-- Historical backfill: the merge and CI events predate installation of the automated recorder. They are seeded as immutable initial events so the event history and current ledger agree.
-
 ### DOC-002 post-merge reconciliation — 2026-11-09
 
 - Finding: DOC-002.
-- Repository: DiabloNova/oxenn.
-- PR [#123](https://github.com/DiabloNova/oxenn/pull/123) was merged into `main` at 2026-11-09 11:02 UTC. The earlier pending/not-started tracker state is superseded by this dated reconciliation; the historical record is not deleted.
+- Repository: `DiabloNova/oxenn`.
+- PR [#123](https://github.com/DiabloNova/oxenn/pull/123) was merged into `main` at 2026-11-09 11:02 UTC. The earlier pending/not-started tracker state is superseded by this dated reconciliation; the historical record is retained.
 - Merge commit: [2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472).
-- Post-merge verification: [GitHub Actions CI run #42605739033](https://github.com/DiabloNova/oxenn/actions/runs/42605739033) completed successfully on `main` for the merge commit; Build and Test, Unit Tests, and Isolation Suite all passed.
+- Post-merge verification: [GitHub Actions CI run #42605739033](https://github.com/DiabloNova/oxenn/actions/runs/42605739033) completed successfully on `main` for the exact merge commit; Build and Test, Unit Tests, and Isolation Suite all passed.
 - Result: DOC-002 is **Verified complete on main**. This finding-level result does not complete Wave 0 or change the status of DOC-007, DOC-008, SCR-001, or any other finding.
 - Reconciliation note: this entry records the confirmed merge and exact-merge-commit CI result; it does not imply that the automated remediation event recorder is already active on `main`.
