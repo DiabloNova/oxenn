@@ -173,9 +173,11 @@ A wave is complete only when every in-scope finding is verified complete or has 
 ## GitHub lifecycle evidence and automated status transitions
 
 - Put every addressed finding ID in the working branch name or PR title; in a PR description, use an explicit line beginning with Finding-IDs:. For a PR covering multiple findings, include the individual finding-record paths among the changed files so file-level attribution is explicit. Do not rely on an inferred relationship between unrelated changed files and a finding.
-- The Remediation Event Recorder stores completed PR/CI events in monthly append-only JSONL files and records exact changed paths, commit SHAs, PR references, and CI outcomes.
+- The Remediation Event Recorder retains relevant PR lifecycle events and exact post-merge CI outcomes in monthly append-only JSONL files. Pre-merge and unrelated CI completions are no-ops and do not create commits on main.
 - A successful CI run on a feature branch is pre-merge evidence only. It must never be described as Verified complete.
-- A merged PR is Integrated — verification pending until CI succeeds on main for the exact merge commit. Only then may the ledger and finding record be marked Verified complete.
-- A closed PR that was not merged is Closed without merge. A failed post-merge CI run is Integrated — verification failed. Neither state is resolved.
+- A merged PR is Integrated — verification pending only when every finding has exactly one canonical finding file, that exact path is included in the PR's changed files, and exactly one matching ledger row exists. Missing, duplicate, incomplete, or mixed mappings fail closed for the whole event.
+- Only CI succeeding on main for the exact merge commit may advance an eligible finding to Verified complete. Verified Finding and Ledger statuses are immutable against delayed events; existing evidence links are preserved and the verified-commit column records the exact merge SHA.
+- A closed PR that was not merged is retained as JSONL evidence only. It cannot change the Ledger or an individual finding disposition. A failed post-merge CI run is Integrated — verification failed. Cancelled, skipped, and neutral post-merge runs are evidence-only and do not change the disposition. Neither failure nor evidence-only states are resolved.
+- Concurrent updates use bounded non-force retries. API and branch-protection failures stop safely; the recorder never bypasses repository protections.
 - Do not manually overwrite or remove automated event history. Correct an erroneous event with a new dated correction record; preserve prior evidence.
 - The recorder does not authorize implementation, approve a finding, complete a remediation wave, merge a PR, or change database/product state.

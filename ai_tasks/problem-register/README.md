@@ -2,7 +2,7 @@
 
 **97 individual records completed**
 
-**Status:** 97 findings recorded; DOC-001 is verified complete on main. The remaining findings still require Wave 0 revalidation and explicit approval before remediation.  
+**Status:** 97 findings recorded; DOC-001 and DOC-002 are verified complete on main. The remaining findings still require Wave 0 revalidation and explicit approval before remediation.  
 **Branch:** `docs/architecture-aligned-remediation-2026-11`  
 **Architecture reference:** [OXENN_PRODUCT_ARCHITECTURE.md](../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)
 
@@ -48,7 +48,7 @@ The 94 original audit identifiers are preserved individually. Three additional a
 - [AI Remediation Agent Prompt](./AI_REMEDIATION_AGENT_PROMPT.md) — English operating instructions for an AI agent: revalidation, dependency order, architecture invariants, implementation method, verification, parallel-work boundaries, stop conditions, and definition of done.
 - [Remediation Progress & Execution Log](./REMEDIATION_PROGRESS.md) — the live 97-finding ledger and dated execution history. Update it throughout the work so the current state, evidence, blockers, and next permitted action remain visible.
 
-The progress tracker began at **not started**. DOC-001 has since been verified on main; the remaining findings still require explicit approval and the mandatory Wave 0 gate before remediation.
+The progress tracker began at **not started**. DOC-001 and DOC-002 have since been verified on main; the remaining findings still require explicit approval and the mandatory Wave 0 gate before remediation.
 
 ## Next gate
 
@@ -56,10 +56,10 @@ The documentation set is ready for review. Implementation may begin only after t
 
 ## Automated GitHub event recording
 
-The Remediation Event Recorder workflow maintains the execution history and finding lifecycle from GitHub events. It records closed PRs and completed CI runs in monthly append-only JSONL files under the events directory, including finding IDs, changed paths, PR/commit references, and CI outcomes.
+The Remediation Event Recorder workflow maintains execution evidence from GitHub events. It records relevant PR closure events and exact post-merge CI runs in monthly append-only JSONL files under the events directory, including finding IDs, changed paths, PR/commit references, and CI outcomes. Pre-merge and unrelated CI completions are no-ops and do not create commits on main.
 
 For reliable association, include each finding ID in the branch name or PR title; for IDs listed in the PR description, use an explicit line beginning with Finding-IDs:. When a PR addresses multiple findings, include the finding record file(s) in the changed paths so the recorder can map those files precisely. It records other changed paths without inventing a per-finding association.
 
-The recorder distinguishes branch/PR CI from post-merge verification. A merged PR is marked Integrated — verification pending; only successful CI on main for that exact merge commit advances the ledger and finding record to Verified complete. A closed, unmerged PR is marked Closed without merge. Failed post-merge CI is never represented as resolved.
+The recorder distinguishes branch/PR CI from post-merge verification. A finding in a merged PR is marked Integrated — verification pending only when its exact canonical finding file is among the PR changed paths and exactly one ledger row exists; only successful CI on main for that exact merge commit advances it to Verified complete. A closed, unmerged PR is retained as event evidence but cannot change an authoritative finding disposition. Pre-merge CI completions are ignored for main-branch persistence. Failed post-merge CI is never represented as resolved. Every status transition requires an exact canonical finding file and an existing ledger row for every referenced finding ID; partial or unknown mappings fail closed.
 
-The workflow checks out only trusted main-branch code and never checks out or executes pull-request code. It uses non-force Git ref updates with bounded retry on concurrent updates. If repository permissions or branch rules prevent a safe write, the workflow fails rather than bypassing protections. See the [event-history contract](./events/README.md).
+The workflow checks out only trusted main-branch code and never checks out or executes pull-request code. Unmerged PR closure events are evidence-only. The recorder preserves existing evidence links, records the exact verified merge SHA, and uses non-force Git ref updates with bounded retry on concurrent updates. If repository permissions or branch rules prevent a safe write, the workflow fails rather than bypassing protections. See the [event-history contract](./events/README.md).

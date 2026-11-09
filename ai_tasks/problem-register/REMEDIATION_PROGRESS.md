@@ -328,3 +328,12 @@ At the end of each batch, report:
 At the end of each wave, provide a concise wave summary and wait for the required user approval before proceeding if the scope or next wave has not already been authorized.
 
 The project is complete only when every in-scope finding is either verified complete or has an explicitly approved disposition (deferred, superseded, already fixed, or out of scope), with evidence. The number of changed files or closed issues is not a completion metric.
+
+
+### DOC-002 post-merge reconciliation — 2026-11-09
+
+- Finding: [DOC-002](./findings/016-DOC-002.md).
+- PR [#123](https://github.com/DiabloNova/oxenn/pull/123) was merged to `main` at [`2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472`](https://github.com/DiabloNova/oxenn/commit/2f5a4d9ea42ec1491e1ab1601ebb12c18d93c472).
+- Post-merge CI run [#42605739033](https://github.com/DiabloNova/oxenn/actions/runs/42605739033) passed.
+- Current disposition: **Verified complete on main**. The earlier branch-only/unmerged wording in the individual finding and README is superseded; dated implementation and review notes remain historical.
+- Scope note: this records repository and CI evidence only. No production or staging database connection or query was made.
