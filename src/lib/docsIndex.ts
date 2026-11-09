@@ -95,7 +95,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Database Reconciliation Report & Implementation Plan",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Database Reconciliation Report & Implementation Plan  **Date:** August 2024 **Scope:** Reconstruct Database Source of Truth, Drizzle ORM Canonical Schema, and Migration Pipeline  ---  ## 1. Inventory & Reconciliation Summary  A comprehensive reconciliation was performed across: 1. Legacy hand-written SQL migrations (\`0001-0014\`) 2. TypeScript schema metadata (\`database/schema/*.ts\`) 3. Codebase repository/service usage patterns (\`src/\`, \`tests/\`)  ### Table Count & Verification - **Total Uniqu`
+    snippet: `# Database Reconciliation Report & Implementation Plan  **Date:** August 2024 **Scope:** Reconstruct Database Source of Truth, Drizzle ORM Canonical Schema, and Migration Pipeline   > **HISTORICAL SNAPSHOT — NOT THE CURRENT RLS CONTRACT** > This report records the repository state and Drizzle snapshot reviewed in August 2024. Its 51/19 policy split and table classifications below are retained as historical evidence only and are superseded by the current [Canonical Data Contract](../../database/canonical-data-contract.md)`
   },
   {
     slug: "tenant-context-spec",
