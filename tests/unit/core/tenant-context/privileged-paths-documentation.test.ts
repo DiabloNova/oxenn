@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -9,8 +7,16 @@ import { createContentSnippet } from "../../../../scripts/docs-snippet";
 
 type PurposeTag = keyof typeof PRIVILEGED_PATHS_REGISTRY;
 type DirectSystemContextCall = { purpose?: string; line: number };
+type RealPathResolver = (candidatePath: string) => string;
 
-const repositoryRoot = fs.realpathSync(process.cwd());
+function getRealPath(candidatePath: string): string {
+  if (!ts.sys.realpath) {
+    throw new Error("The TypeScript host must provide realpath for path-containment checks");
+  }
+  return ts.sys.realpath(candidatePath);
+}
+
+const repositoryRoot = getRealPath(ts.sys.getCurrentDirectory());
 
 function isOutsideRoot(rootPath: string, candidatePath: string): boolean {
   const relativePath = path.relative(rootPath, candidatePath);
@@ -21,15 +27,19 @@ function isOutsideRoot(rootPath: string, candidatePath: string): boolean {
   );
 }
 
-function resolveExistingPathWithinRoot(rootPath: string, candidatePath: string): string {
-  const canonicalRoot = fs.realpathSync(rootPath);
-  const resolvedCandidate = path.resolve(canonicalRoot, candidatePath);
+function resolveExistingPathWithinRoot(
+  rootPath: string,
+  candidatePath: string,
+  realPath: RealPathResolver = getRealPath
+): string {
+  const canonicalRoot = realPath(rootPath);
+  const resolvedCandidate = ts.sys.resolvePath(path.resolve(canonicalRoot, candidatePath));
 
   if (isOutsideRoot(canonicalRoot, resolvedCandidate)) {
     throw new Error(`Path escapes repository root: ${candidatePath}`);
   }
 
-  const canonicalCandidate = fs.realpathSync(resolvedCandidate);
+  const canonicalCandidate = realPath(resolvedCandidate);
   if (isOutsideRoot(canonicalRoot, canonicalCandidate)) {
     throw new Error(`Resolved path escapes repository root: ${candidatePath}`);
   }
@@ -37,54 +47,59 @@ function resolveExistingPathWithinRoot(rootPath: string, candidatePath: string):
   return canonicalCandidate;
 }
 
-function collectSourceFiles(directory: string): string[] {
-  const safeDirectory = resolveExistingPathWithinRoot(repositoryRoot, directory);
-  const files: string[] = [];
-
-  for (const entry of fs.readdirSync(safeDirectory, { withFileTypes: true })) {
-    const entryPath = resolveExistingPathWithinRoot(
-      repositoryRoot,
-      path.join(safeDirectory, entry.name)
-    );
-
-    if (entry.isSymbolicLink()) continue;
-    if (entry.isDirectory()) {
-      files.push(...collectSourceFiles(entryPath));
-      continue;
-    }
-
-    if (entry.isFile() && /\.(?:[cm]?[jt]sx?)$/.test(entry.name)) {
-      files.push(entryPath);
-    }
+function readFileWithinRoot(rootPath: string, candidatePath: string): string {
+  const safePath = resolveExistingPathWithinRoot(rootPath, candidatePath);
+  const content = ts.sys.readFile(safePath);
+  if (content === undefined) {
+    throw new Error(`Unable to read repository file: ${candidatePath}`);
   }
+  return content;
+}
 
-  return files;
+function collectSourceFiles(): string[] {
+  const extensions = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"];
+  const files = ts.sys.readDirectory(repositoryRoot, extensions, undefined, [
+    "src/**/*",
+    "scripts/**/*",
+    "tests/**/*",
+    "verification/**/*"
+  ]);
+
+  return files.map((filePath) => resolveExistingPathWithinRoot(repositoryRoot, filePath));
 }
 
 function collectSchemaTableNames(directory: string): Set<string> {
   const names = new Set<string>();
   const safeDirectory = resolveExistingPathWithinRoot(repositoryRoot, directory);
+  const files = ts.sys.readDirectory(safeDirectory, [".ts"], undefined, ["**/*.ts"]);
 
-  for (const entry of fs.readdirSync(safeDirectory, { withFileTypes: true })) {
-    const entryPath = resolveExistingPathWithinRoot(
-      repositoryRoot,
-      path.join(safeDirectory, entry.name)
-    );
-
-    if (entry.isSymbolicLink()) continue;
-    if (entry.isDirectory()) {
-      for (const name of collectSchemaTableNames(entryPath)) names.add(name);
-      continue;
-    }
-
-    if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
-    const source = fs.readFileSync(entryPath, "utf8");
+  for (const filePath of files) {
+    const source = readFileWithinRoot(repositoryRoot, filePath);
     for (const match of source.matchAll(/pgTable\(\s*["']([^"']+)["']/g)) {
       names.add(match[1]);
     }
   }
 
   return names;
+}
+
+function getStringLiteralValue(expression: ts.Expression | undefined): string | undefined {
+  let current = expression;
+  while (
+    current &&
+    (ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isTypeAssertionExpression(current) ||
+      ts.isSatisfiesExpression(current) ||
+      ts.isNonNullExpression(current))
+  ) {
+    current = current.expression;
+  }
+
+  return current &&
+    (ts.isStringLiteral(current) || ts.isNoSubstitutionTemplateLiteral(current))
+    ? current.text
+    : undefined;
 }
 
 function collectDirectSystemContextCalls(
@@ -117,21 +132,11 @@ function collectDirectSystemContextCalls(
         (ts.isPropertyAccessExpression(expression) &&
           expression.name.text === "runWithSystemContext") ||
         (ts.isElementAccessExpression(expression) &&
-          expression.argumentExpression !== undefined &&
-          (ts.isStringLiteral(expression.argumentExpression) ||
-            ts.isNoSubstitutionTemplateLiteral(expression.argumentExpression)) &&
-          expression.argumentExpression.text === "runWithSystemContext");
+          getStringLiteralValue(expression.argumentExpression) === "runWithSystemContext");
 
       if (isDirectSystemContextCall) {
-        const purposeArgument = node.arguments[1];
-        const purpose =
-          purposeArgument &&
-          (ts.isStringLiteral(purposeArgument) ||
-            ts.isNoSubstitutionTemplateLiteral(purposeArgument))
-            ? purposeArgument.text
-            : undefined;
         calls.push({
-          purpose,
+          purpose: getStringLiteralValue(node.arguments[1]),
           line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1
         });
       }
@@ -149,7 +154,7 @@ function parseDocumentationRows() {
     repositoryRoot,
     "docs/security/privileged-paths.md"
   );
-  const documentation = fs.readFileSync(documentationPath, "utf8");
+  const documentation = readFileWithinRoot(repositoryRoot, documentationPath);
   const rows = new Map<
     string,
     { status: string; tables: string[]; callers: string[] }
@@ -173,8 +178,7 @@ function parseDocumentationRows() {
 
 describe("Privileged paths documentation consistency", () => {
   const { documentation, rows: documentedRows } = parseDocumentationRows();
-  const schemaDirectory = resolveExistingPathWithinRoot(repositoryRoot, "database/schema");
-  const schemaTables = collectSchemaTableNames(schemaDirectory);
+  const schemaTables = collectSchemaTableNames("database/schema");
 
   it("documents every registered purpose exactly once", () => {
     const registryPurposes = Object.keys(PRIVILEGED_PATHS_REGISTRY).sort();
@@ -186,18 +190,23 @@ describe("Privileged paths documentation consistency", () => {
   it("reconciles every direct AST call site with the registry and documentation", () => {
     const callerModules = new Map<string, Set<string>>();
     const invalidCallSites: string[] = [];
-    const sourceRoots = ["src", "scripts", "tests", "verification"].map((root) =>
-      resolveExistingPathWithinRoot(repositoryRoot, root)
-    );
-    const sourceFiles = sourceRoots.flatMap((root) => collectSourceFiles(root));
+    const unregisteredCalls: string[] = [];
+    const expectedNegativeTestCalls = [
+      "tests/unit/core/tenant-context/privileged-paths.test.ts:unregistered-haxor-tag"
+    ];
 
-    for (const sourcePath of sourceFiles) {
-      const source = fs.readFileSync(sourcePath, "utf8");
+    for (const sourcePath of collectSourceFiles()) {
+      const source = readFileWithinRoot(repositoryRoot, sourcePath);
       const modulePath = path.relative(repositoryRoot, sourcePath).split(path.sep).join("/");
 
       for (const call of collectDirectSystemContextCalls(source, sourcePath)) {
         if (!call.purpose) {
           invalidCallSites.push(`${modulePath}:${call.line} uses a non-literal purpose`);
+          continue;
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(PRIVILEGED_PATHS_REGISTRY, call.purpose)) {
+          unregisteredCalls.push(`${modulePath}:${call.purpose}`);
           continue;
         }
 
@@ -207,14 +216,9 @@ describe("Privileged paths documentation consistency", () => {
       }
     }
 
+    // This negative unit test deliberately passes an unregistered literal to verify rejection.
     expect(invalidCallSites).toEqual([]);
-
-    for (const purpose of callerModules.keys()) {
-      expect(
-        Object.prototype.hasOwnProperty.call(PRIVILEGED_PATHS_REGISTRY, purpose),
-        `Direct call uses unregistered purpose ${purpose}`
-      ).toBe(true);
-    }
+    expect(unregisteredCalls.sort()).toEqual(expectedNegativeTestCalls);
 
     for (const purpose of Object.keys(PRIVILEGED_PATHS_REGISTRY) as PurposeTag[]) {
       const registryEntry = PRIVILEGED_PATHS_REGISTRY[purpose];
@@ -285,23 +289,15 @@ describe("Privileged paths documentation consistency", () => {
     );
   });
 
-  it("rejects symbolic links that resolve outside the trusted root", () => {
-    const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "privileged-paths-"));
-    const temporaryRoot = path.join(temporaryDirectory, "repository");
-    const outsideFile = path.join(temporaryDirectory, "outside.txt");
-    const escapedLink = path.join(temporaryRoot, "escaped.txt");
+  it("rejects paths whose canonical target escapes the trusted root", () => {
+    const candidatePath = ts.sys.resolvePath(path.resolve(repositoryRoot, "internal-link"));
+    const outsidePath = ts.sys.resolvePath(path.resolve(repositoryRoot, "../outside"));
+    const simulatedRealPath: RealPathResolver = (candidate) =>
+      candidate === candidatePath ? outsidePath : candidate;
 
-    try {
-      fs.mkdirSync(temporaryRoot);
-      fs.writeFileSync(outsideFile, "outside");
-      fs.symlinkSync(outsideFile, escapedLink);
-
-      expect(() => resolveExistingPathWithinRoot(temporaryRoot, escapedLink)).toThrow(
-        /Resolved path escapes repository root/
-      );
-    } finally {
-      fs.rmSync(temporaryDirectory, { recursive: true, force: true });
-    }
+    expect(() =>
+      resolveExistingPathWithinRoot(repositoryRoot, candidatePath, simulatedRealPath)
+    ).toThrow(/Resolved path escapes repository root/);
   });
 
   it("keeps the generated docs index snippet synchronized with the source markdown", () => {
