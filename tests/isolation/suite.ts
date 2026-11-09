@@ -533,6 +533,35 @@ async function runTest() {
       await client.query("RESET ROLE");
     }
 
+    // The regular-table checks above intentionally delete their tenant-A
+    // fixtures. Recreate only the junction parents with the same IDs so the
+    // relationship tests have valid FK targets without weakening constraints.
+    await client.query("SET session_replication_role = 'replica'");
+    const junctionParentTables = new Set(
+      TENANT_JUNCTION_TABLES.flatMap(({ leftTable, rightTable }) => [leftTable, rightTable]),
+    );
+    for (const tableName of junctionParentTables) {
+      const columns = tablesMetadata[tableName];
+      const requiredCols = columns.filter(
+        (column) => column.is_nullable === "NO" && column.column_default === null && column.column_name !== "id",
+      );
+      const colNames = ["id", ...requiredCols.map((column) => column.column_name)];
+      const placeholders = colNames.map((colName, index) => {
+        if (
+          colName === "policy" || colName === "result" || colName === "normalized_result" ||
+          colName === "crawl_policy" || colName === "snapshot_metadata" || colName === "event_metadata" ||
+          colName === "properties" || colName === "capabilities" || colName === "metadata"
+        ) return `${index + 1}::jsonb`;
+        return `${index + 1}`;
+      }).join(", ");
+      const valuesA = [rowsMapA[tableName], ...requiredCols.map((column) => getDefaultValue(column, true, tableName))];
+      await client.query(
+        `INSERT INTO {tableName} ({colNames.join(", ")}) VALUES ({placeholders})`,
+        valuesA,
+      );
+    }
+    await client.query("SET session_replication_role = 'origin'");
+
     for (const junction of TENANT_JUNCTION_TABLES) {
       const tableName = junction.table;
       const insertSql = `INSERT INTO ${tableName} (${junction.leftColumn}, ${junction.rightColumn}, organization_id) VALUES ($1, $2, $3)`;
