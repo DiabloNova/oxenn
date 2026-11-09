@@ -1,0 +1,38 @@
+name: Remediation Event Recorder
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - closed
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: read
+
+jobs:
+  record-remediation-event:
+    if: github.event_name == 'pull_request_target' || github.event.workflow_run.name == 'CI'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Always use the trusted default-branch version. Never check out or execute PR code here.
+      - name: Check out trusted main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Record lifecycle and CI evidence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const recorder = require('./scripts/remediation/github-event-recorder.cjs');
+            await recorder.recordGitHubEvent({ github, context, core });
