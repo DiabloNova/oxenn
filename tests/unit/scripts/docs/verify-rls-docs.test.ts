@@ -77,7 +77,7 @@ describe("RLS documentation consistency contract", () => {
     const target = HISTORICAL_RLS_DOCUMENTS[1];
     documents[target] = documents[target]
       .replace("Historical Phase 1 repository baseline", "Current Phase 1 repository baseline")
-      .replace("historical evidence only", "current evidence");
+      .replace(/historical evidence\\s+only/i, "current evidence");
     const issues = collectRlsDocumentationIssues(documents).join("\n");
     expect(issues).toContain("dated historical Phase 1 baseline");
     expect(issues).toContain("historical counts are not current inventory");
@@ -96,8 +96,8 @@ describe("RLS documentation consistency contract", () => {
     const documents = repositoryDocuments();
     const target = "ai_tasks/docs-folder-audit.md";
     documents[target] = documents[target].replace(
-      "MVP Phase 0 already records the corrected 56-table",
-      "MVP Phase 0 is still awaiting the 51-table",
+      "already records the corrected 56-table",
+      "still awaits the 51-table",
     );
     expect(collectRlsDocumentationIssues(documents).join("\n")).toContain(
       "distinguish the corrected MVP Phase 0 baseline",
