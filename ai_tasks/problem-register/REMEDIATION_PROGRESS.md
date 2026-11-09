@@ -240,6 +240,15 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - PR/merge boundary: no PR was created; no merge or direct `main` change was performed.
 - Current status: DOC-002 implementation is complete and CI-verified on the investigation branch. No PR or merge has been created. DOC-001 is merged; DB-001 is already fixed in repository with Production runtime unknown.
 
+
+### Post-closeout validation — 2026-11-09
+
+- Final CI run [#666](https://github.com/DiabloNova/oxenn/actions/runs/42589259231) executed on the closeout commit `7074f50e1cf0ab665912943c6bd944d00ca30b2c` and completed successfully.
+- Build and Test: success, including Typecheck, Lint, tenant ownership verifier, RLS migration coverage, Phase 0 documentation check, new RLS documentation consistency gate, Drizzle migration-chain check, application Build, Reference Matrix generation, and generated-file no-drift check.
+- Unit Tests: success, including the focused RLS documentation regression tests and UI tests.
+- Isolation Suite: success against the workflow's disposable PostgreSQL service.
+- This final workflow validates the DOC-002 closeout status/audit changes. The subsequent ledger-only commit records this result and does not change application or test code.
+
 ## 6. Wave-level gates
 
 | Stage | Entry condition | Exit condition |
