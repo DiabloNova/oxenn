@@ -1,9 +1,16 @@
 # Database Reference Matrix
 
+**Ownership rule:** `organizations` is the tenant root. A table is Tenant-Owned when its canonical schema declares `organization_id` or `tenant_id`, unless a reviewed exception with a rationale is recorded in `GLOBAL_OWNERSHIP_EXCEPTIONS`. Ownership is never inferred from whether an RLS policy exists.
+
+**Verification boundary:** policy declarations and ENABLE/FORCE migration coverage are static checks against the Drizzle snapshot and checked-in migration journal. Runtime enforcement is not inferred here; it requires the PostgreSQL isolation suite.
+
 ## Table: `admin_users`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
@@ -44,8 +51,11 @@
 
 ## Table: `aeo_analyses`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -85,8 +95,11 @@
 
 ## Table: `ai_engines`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -111,8 +124,11 @@
 
 ## Table: `ai_observations`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -155,8 +171,11 @@
 
 ## Table: `ai_provider_configs`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
@@ -183,8 +202,11 @@
 
 ## Table: `ai_visibility_audits`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -228,8 +250,11 @@
 
 ## Table: `api_keys`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `scripts/api/issue-key.ts`, `scripts/api/revoke-key.ts`, `src/features/public-api/repositories/api-key-repository.ts`, `tests/features/public-api/public-api.test.ts`, `tests/unit/core/tenant-context/system-mode-bypass.test.ts`
 
@@ -272,8 +297,11 @@
 
 ## Table: `audit_prompts`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -307,8 +335,11 @@
 
 ## Table: `audit_records`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/core/database/tenant-context/index.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
@@ -343,8 +374,11 @@
 
 ## Table: `auth_rate_limits`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`
 
@@ -373,8 +407,11 @@
 
 ## Table: `brand_associations`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -410,8 +447,11 @@
 
 ## Table: `brand_mentions`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -452,8 +492,11 @@
 
 ## Table: `brands`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -492,8 +535,11 @@
 
 ## Table: `citation_occurrences`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -531,8 +577,11 @@
 
 ## Table: `citation_sources`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -569,8 +618,11 @@
 
 ## Table: `citations`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -611,8 +663,11 @@
 
 ## Table: `competitive_analyses`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/analysis/competitive/route.ts`
 
@@ -642,8 +697,11 @@
 
 ## Table: `competitive_seo_findings`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -688,8 +746,11 @@
 
 ## Table: `competitor_changes`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -726,8 +787,11 @@
 
 ## Table: `competitors`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -766,8 +830,11 @@
 
 ## Table: `crawl_cache`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-cache-repository.ts`, `tests/features/acquisition/integration/run-all.ts`
 
@@ -806,8 +873,11 @@
 
 ## Table: `crawl_jobs`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-job-repository.ts`, `tests/features/acquisition/integration/run-all.ts`
 
@@ -881,8 +951,11 @@
 
 ## Table: `crawl_results`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/acquisition/infrastructure/persistence/postgres/crawl-result-repository.ts`
 
@@ -914,8 +987,11 @@
 
 ## Table: `crawl_snapshots`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/monitoring/repositories/crawl-snapshot-repository.ts`
 
@@ -952,8 +1028,11 @@
 
 ## Table: `credit_transactions`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/billing/services/subscription-service.ts`
 
@@ -985,8 +1064,11 @@
 
 ## Table: `diagnostic_finding_relationships`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1021,8 +1103,11 @@
 
 ## Table: `diagnostic_findings`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1063,8 +1148,11 @@
 
 ## Table: `document_embeddings`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/vector-store.ts`, `tests/features/audit/aeo-insight.test.ts`
 
@@ -1096,8 +1184,11 @@
 
 ## Table: `email_verification_tokens`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`
 
@@ -1128,8 +1219,11 @@
 
 ## Table: `entities`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1168,8 +1262,11 @@
 
 ## Table: `entity_relationships`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1210,8 +1307,11 @@
 
 ## Table: `faq_opportunities`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1246,8 +1346,11 @@
 
 ## Table: `feature_flags`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
@@ -1280,8 +1383,11 @@
 
 ## Table: `historical_metrics`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1316,8 +1422,11 @@
 
 ## Table: `keywords`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1358,8 +1467,11 @@
 
 ## Table: `keywords_topics`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1398,8 +1510,11 @@
 
 ## Table: `kg_alignments`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1435,8 +1550,11 @@
 
 ## Table: `kg_entities`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`
 
@@ -1469,8 +1587,11 @@
 
 ## Table: `kg_relationships`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`
 
@@ -1507,8 +1628,11 @@
 
 ## Table: `monitoring_alerts`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/monitoring/repositories/monitoring-alert-repository.ts`
 
@@ -1547,8 +1671,11 @@
 
 ## Table: `monitoring_configs`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/monitoring/repositories/monitoring-config-repository.ts`
 
@@ -1583,8 +1710,11 @@
 
 ## Table: `organization_invitations`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/workspace.ts`
 
@@ -1619,8 +1749,11 @@
 
 ## Table: `organization_members`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/isolation/suite.ts`
 
@@ -1653,8 +1786,11 @@
 
 ## Table: `organizations`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/features/public-api/public-api.test.ts`
 
@@ -1689,8 +1825,11 @@
 
 ## Table: `pages`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1742,8 +1881,11 @@
 
 ## Table: `pages_entities`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1783,8 +1925,11 @@
 
 ## Table: `pages_keywords`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1824,8 +1969,11 @@
 
 ## Table: `pages_topics`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1865,8 +2013,11 @@
 
 ## Table: `password_reset_tokens`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`
 
@@ -1897,8 +2048,11 @@
 
 ## Table: `permissions`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -1927,8 +2081,11 @@
 
 ## Table: `position_observations`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -1965,8 +2122,11 @@
 
 ## Table: `premium_audits`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/audit/engine/route.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/services/dashboard-home/index.ts`
 
@@ -2001,8 +2161,11 @@
 
 ## Table: `prompt_definitions`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2048,8 +2211,11 @@
 
 ## Table: `prompt_executions`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2101,8 +2267,11 @@
 
 ## Table: `prompt_schedules`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2141,8 +2310,11 @@
 
 ## Table: `prompts`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -2182,8 +2354,11 @@
 
 ## Table: `recommendation_observations`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2221,8 +2396,11 @@
 
 ## Table: `recommendations`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -2265,8 +2443,11 @@
 
 ## Table: `roles`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -2295,8 +2476,11 @@
 
 ## Table: `sessions`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
 
@@ -2334,8 +2518,11 @@
 
 ## Table: `system_configurations`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -2367,8 +2554,11 @@
 
 ## Table: `technical_audits`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/app/api/v1/optimization/technical/route.ts`
 
@@ -2398,8 +2588,11 @@
 
 ## Table: `tenant_quotas`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/billing/services/subscription-service.ts`, `src/features/public-api/services/api-quota-service.ts`, `tests/features/public-api/public-api.test.ts`
 
@@ -2439,8 +2632,11 @@
 
 ## Table: `tenant_subscriptions`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/billing/services/subscription-service.ts`
 
@@ -2476,8 +2672,11 @@
 
 ## Table: `topics`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2517,8 +2716,11 @@
 
 ## Table: `topics_entities`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
@@ -2557,8 +2759,11 @@
 
 ## Table: `user_credentials`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`
 
@@ -2592,8 +2797,11 @@
 
 ## Table: `users`
 
-- **Scope:** Global
-- **RLS Policies Defined:** ❌
+- **Ownership Scope:** Global
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (Global)
+- **Migration Coverage:** Not applicable (Global)
+- **Runtime Enforcement Verification:** Not applicable (Global)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
 
@@ -2625,8 +2833,11 @@
 
 ## Table: `visibility_scores`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -2669,8 +2880,11 @@
 
 ## Table: `websites`
 
-- **Scope:** Tenant-Scoped
-- **RLS Policies Defined:** ✅
+- **Ownership Scope:** Tenant-Owned
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
 - **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/unit/core/tenant-context/system-mode-bypass.test.ts`
 

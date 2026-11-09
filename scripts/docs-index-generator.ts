@@ -35,6 +35,30 @@ const DOC_TITLE_OVERRIDES: Record<string, { titleEn?: string; titleFa?: string }
   }
 };
 
+const REFERENCE_MATRIX_SNIPPET_PREFIXES = [
+  "## Table: ",
+  "- **Ownership Scope:** ",
+  "- **RLS Policies Declared:** ",
+  "- **Tenant RLS Policy Coverage:** ",
+  "- **Migration Coverage:** ",
+  "- **Runtime Enforcement Verification:** ",
+  "- **Status:** ",
+  "## Summary",
+  "- Total Tables: ",
+  "- WIRED Tables: ",
+  "- ORPHAN-TABLE"
+];
+
+export function createReferenceMatrixSnippet(content: string): string {
+  return content
+    .split("\n")
+    .filter(line =>
+      line === "# Database Reference Matrix" ||
+      REFERENCE_MATRIX_SNIPPET_PREFIXES.some(prefix => line.startsWith(prefix))
+    )
+    .join(" ");
+}
+
 function getAllDocs(docsRoot: string, currentDirectory = docsRoot): DocMeta[] {
   let docs: DocMeta[] = [];
 
@@ -78,21 +102,7 @@ function getAllDocs(docsRoot: string, currentDirectory = docsRoot): DocMeta[] {
         }
 
         if (slug === "reference-matrix") {
-          // Keep search metadata compact without discarding useful table names and security metadata.
-          contentSnippet = content
-            .split("\n")
-            .filter(line =>
-              line === "# Database Reference Matrix" ||
-              line.startsWith("## Table: ") ||
-              line.startsWith("- **Scope:** ") ||
-              line.startsWith("- **RLS Policies Defined:** ") ||
-              line.startsWith("- **Status:** ") ||
-              line.startsWith("## Summary") ||
-              line.startsWith("- Total Tables: ") ||
-              line.startsWith("- WIRED Tables: ") ||
-              line.startsWith("- ORPHAN-TABLE")
-            )
-            .join(" ");
+          contentSnippet = createReferenceMatrixSnippet(content);
         } else {
           contentSnippet = createContentSnippet(content);
         }

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { getTableOwnershipScope } from "./verify-tenant-tables";
 
 interface Journal {
   entries: { idx: number; tag: string }[];
@@ -332,9 +333,17 @@ function applyMigrationStatement(statement: string, state: Map<string, RlsState>
   }
 }
 
-function main(): void {
-  const root = process.cwd();
-  const migrationDirectory = path.join(root, "database/drizzle");
+export interface RlsMigrationCoverage {
+  tenantTables: string[];
+  enabledTables: string[];
+  forcedTables: string[];
+  missingEnable: string[];
+  missingForce: string[];
+}
+
+/** Read-only evaluation of the checked-in migration journal, not a live database. */
+export function getRlsMigrationCoverage(rootDir = process.cwd()): RlsMigrationCoverage {
+  const migrationDirectory = path.join(rootDir, "database/drizzle");
   const journalPath = path.join(migrationDirectory, "meta/_journal.json");
   const journal: Journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
   if (!journal.entries.length) throw new Error("Migration journal has no entries.");
@@ -346,12 +355,7 @@ function main(): void {
   );
   const snapshot: Snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
   const tenantTables = Object.values(snapshot.tables)
-    .filter((table) => {
-      const columns = table.columns ?? {};
-      return table.name === "organizations" ||
-        Object.hasOwn(columns, "organization_id") ||
-        Object.hasOwn(columns, "tenant_id");
-    })
+    .filter((table) => getTableOwnershipScope(table) === "Tenant-Owned")
     .map((table) => normalizeTableName(table.name))
     .sort();
 
@@ -375,19 +379,33 @@ function main(): void {
 
   const missingEnable = tenantTables.filter((table) => !state.get(table)?.enabled);
   const missingForce = tenantTables.filter((table) => !state.get(table)?.forced);
+  return {
+    tenantTables,
+    enabledTables: tenantTables.filter((table) => state.get(table)?.enabled),
+    forcedTables: tenantTables.filter((table) => state.get(table)?.forced),
+    missingEnable,
+    missingForce,
+  };
+}
 
-  if (missingEnable.length || missingForce.length) {
+function main(): void {
+  const coverage = getRlsMigrationCoverage();
+  if (coverage.missingEnable.length || coverage.missingForce.length) {
     console.error("RLS migration final-state verification failed.");
-    if (missingEnable.length) console.error("RLS not enabled at end of journal:", missingEnable.join(", "));
-    if (missingForce.length) console.error("RLS not forced at end of journal:", missingForce.join(", "));
+    if (coverage.missingEnable.length) {
+      console.error("RLS not enabled at end of journal:", coverage.missingEnable.join(", "));
+    }
+    if (coverage.missingForce.length) {
+      console.error("RLS not forced at end of journal:", coverage.missingForce.join(", "));
+    }
     process.exitCode = 1;
     return;
   }
 
   console.log(
-    `RLS migration final-state verified for ${tenantTables.length} tenant-owned tables (journal order; ENABLE + FORCE active).`,
+    `RLS migration final-state verified for ${coverage.tenantTables.length} tenant-owned tables (journal order; ENABLE + FORCE active).`,
   );
   console.log("Static migration verification only; this does not inspect a live database.");
 }
 
-main();
+if (require.main === module) main();

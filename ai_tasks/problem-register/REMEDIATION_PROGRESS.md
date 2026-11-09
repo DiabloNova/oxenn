@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** NOT STARTED — awaiting user approval and mandatory Wave 0 revalidation.
+**Current overall status:** PARTIAL — DOC-001 is verified on its investigation branch; project-wide Wave 0 remains incomplete and has not been approved for the remaining findings.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -15,14 +15,14 @@
 | Metric | Current value |
 |---|---:|
 | Individual finding records | 97 |
-| Findings revalidated against current `main` | 0 |
-| Findings approved for implementation | 0 |
-| Findings with implementation started | 0 |
-| Findings with verified implementation complete | 0 |
+| Findings revalidated against current `main` | 1 |
+| Findings approved for implementation | 1 |
+| Findings with implementation started | 1 |
+| Findings with verified implementation complete | 1 |
 | Findings blocked / historical-only | 2 |
 | Open implementation waves | 7 (not started) |
 
-**No code changes are authorized by this tracker.** The first activity, once explicitly approved, is Wave 0 revalidation. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
+**This tracker does not itself authorize code changes.** The narrowly scoped DOC-001 investigation was separately authorized and is recorded below; it does not waive mandatory Wave 0 revalidation or user approval for the remaining findings, and it does not authorize starting Wave 1. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
 
 ## 2. Status definitions
 
@@ -66,7 +66,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that the finding has been revalidated or approved. All records begin as not started, except the two historical scripts that must never be executed.
+The wave column is a proposed dependency placement, not proof that the finding has been revalidated or approved. DOC-001 has one recorded, branch-only verified disposition; the other 94 findings remain not started and the two historical scripts remain blocked. This individual result does not satisfy the project-wide Wave 0 exit condition.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -84,7 +84,7 @@ The wave column is a proposed dependency placement, not proof that the finding h
 | [DB-003](./findings/012-DB-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DB-004](./findings/013-DB-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
 | [DB-005](./findings/014-DB-005.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
-| [DOC-001](./findings/015-DOC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
+| [DOC-001](./findings/015-DOC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | **Verified complete** — investigation branch only; PR #122 remains open and unmerged | [642ca184](https://github.com/DiabloNova/oxenn/commit/642ca1849e4501f987ec86d7ea2e2d339c9557e7) | [Execution log](./REMEDIATION_PROGRESS.md#doc-001-investigation-branch-2026-11-09) · [CI run #42581412521](https://github.com/DiabloNova/oxenn/actions/runs/42581412521) · [PR #122](https://github.com/DiabloNova/oxenn/pull/122) |
 | [DOC-002](./findings/016-DOC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-003](./findings/017-DOC-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started — pending Wave 0 revalidation | — | — |
 | [DOC-004](./findings/018-DOC-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started — pending Wave 0 revalidation | — | — |
@@ -181,6 +181,42 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Revalidation: not started.
 - User authorization for code remediation: not yet granted.
 - Result: tracker initialized; all 97 findings await Wave 0 review. VER-005 and VER-006 are marked historical-only and must not be run.
+
+
+### DOC-001 investigation branch — 2026-11-09
+
+- Finding: [DOC-001](./findings/015-DOC-001.md).
+- Date/time (timezone): 2026-11-09 07:50 UTC.
+- Responsible agent/tool: ChatGPT, using the GitHub repository integration.
+- Repository: `DiabloNova/oxenn`.
+- Branch: `investigation/015-doc-001-tenant-owned-junction-tables`.
+- Revalidation target/base commit: `main` at `f92886262840286589ee62934090438a424e8191`.
+- Implementation/head commit verified: `642ca1849e4501f987ec86d7ea2e2d339c9557e7`. At verification time the branch was 5 commits ahead of `main`, 0 behind. PR [#122](https://github.com/DiabloNova/oxenn/pull/122) was open, mergeable, and not merged; the change is therefore **not present on `main`**.
+- Revalidation result: the finding was confirmed against the recorded `main` baseline. The baseline used a separate runtime table list for Matrix scope while tenant-table validation derived ownership from schema markers; this allowed tenant ownership and RLS-policy presence/coverage to be represented inconsistently. The five affected junction tables are `pages_keywords`, `pages_topics`, `pages_entities`, `keywords_topics`, and `topics_entities`.
+- Root cause and change: ownership scope, RLS policy declarations, tenant-policy coverage, migration coverage, and runtime-enforcement verification are now distinct dimensions. A shared schema-marker-based ownership classifier is used by the tenant-table and migration checks and the reference-matrix generator. Regression coverage keeps the five junction tables Tenant-Owned independently of policy presence.
+- Implementation paths changed at commit `642ca184` (12):
+  - `ai_tasks/docs-folder-audit.md`
+  - `ai_tasks/problem-register/findings/015-DOC-001.md`
+  - `docs/database/canonical-data-contract.md`
+  - `docs/database/reference-matrix.md`
+  - `scripts/database/build-reference-matrix.ts`
+  - `scripts/database/verify-rls-migrations.ts`
+  - `scripts/database/verify-tenant-tables.ts`
+  - `scripts/docs-index-generator.ts`
+  - `src/lib/docsIndex.ts`
+  - `tests/unit/core/tenant-context/tenant-tables.test.ts`
+  - `tests/unit/scripts/database/build-reference-matrix.test.ts`
+  - `tests/unit/scripts/docs-index-generator.test.ts`
+  - This progress-record correction changes only `ai_tasks/problem-register/REMEDIATION_PROGRESS.md`.
+- Verification actually observed in [GitHub Actions run #42581412521](https://github.com/DiabloNova/oxenn/actions/runs/42581412521) — overall conclusion `success`; all 3 workflow jobs completed successfully:
+  - Unit Tests: `pnpm exec vitest run --project unit` — 62 test files passed, 1 test file skipped; 359 tests passed, 1 todo. The skip and todo are recorded as such, not counted as passes.
+  - UI Tests: `pnpm exec vitest run --project ui` — 4 test files passed; 33 tests passed.
+  - Build and Test: Typecheck, Lint (0 errors; 213 warnings), tenant-table verification (56 tenant-owned tables), RLS migration coverage, Phase 0 baseline/documentation-link check, Drizzle migration-chain check, production build, Reference Matrix generation, and generated-file no-drift check all completed successfully.
+  - Isolation Suite: `pnpm run test:isolation` against the CI-created ephemeral PostgreSQL 16 database `isolation_test_db` — all isolation suites passed; ENABLE/FORCE and SELECT/INSERT/UPDATE/DELETE policies were verified for 56 tenant tables, with 543 assertions. The CI container was stopped after the suite.
+- Security/data boundary: no production database was connected to or modified; no schema or migration files were changed in this implementation batch. PostgreSQL verification used only the disposable CI container.
+- Open risks / limits: PR #122 remains unmerged, so the verified result is branch-only. The unit run had 1 skipped test file and 1 todo test as stated above. Review suggestions for additional migration-parser and malformed Global-exception edge-case tests remain suggestions, not evidence of executed tests; they are not claimed as passed here. Static Matrix generation does not itself prove production runtime enforcement.
+- Status transition: `Not started — pending Wave 0 revalidation` → **`Verified complete` on the investigation branch only**. This records the evidence for DOC-001 and does not mark Wave 0 or Wave 1 complete, nor does it authorize work on other findings.
+- Next permitted action: retain PR #122 for review/merge under the normal user-approval gate; after merge, reconcile the finding against the resulting `main` commit. No other finding or wave is authorized by this entry.
 
 ## 6. Wave-level gates
 

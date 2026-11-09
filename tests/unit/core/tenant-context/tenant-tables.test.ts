@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { TENANT_SCOPED_TABLES } from "@/core/database/tenant-context";
-import { getTenantTableCoverageFromSnapshot, resolveLatestSnapshotPath, verifyTenantTables } from "../../../../scripts/database/verify-tenant-tables";
+import { getTableOwnershipScope, getTenantTableCoverageFromSnapshot, resolveLatestSnapshotPath, verifyTenantTables } from "../../../../scripts/database/verify-tenant-tables";
 
 describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
   it("TENANT_SCOPED_TABLES is an Object.frozen immutable array", () => {
@@ -51,19 +51,26 @@ describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
     }
   });
 
-  it("detects tenant-owned tables even when their snapshot has no RLS policies", () => {
-    const coverage = getTenantTableCoverageFromSnapshot({
-      tables: {
-        "public.pages_keywords": {
-          name: "pages_keywords",
-          columns: { organization_id: { type: "uuid" } },
-          policies: {},
-        },
-      },
-    });
+  it("classifies all five tenant-owned junction tables independently of RLS policy presence", () => {
+    const junctionTables = ["pages_keywords", "pages_topics", "pages_entities", "keywords_topics", "topics_entities"];
+    const tables = Object.fromEntries(junctionTables.map((name) => [name, {
+      name,
+      columns: { organization_id: { type: "uuid" } },
+      policies: {},
+    }]));
 
-    expect(coverage.tenantTables).toEqual(["pages_keywords"]);
-    expect(coverage.missingPolicyTables).toEqual(["pages_keywords"]);
+    const coverage = getTenantTableCoverageFromSnapshot({ tables });
+
+    expect(coverage.tenantTables).toEqual(junctionTables.slice().sort());
+    expect(coverage.missingPolicyTables).toEqual(junctionTables.slice().sort());
+    for (const name of junctionTables) {
+      expect(getTableOwnershipScope({ name, columns: { organization_id: {} } })).toBe("Tenant-Owned");
+    }
+  });
+
+  it("classifies tables without tenant ownership markers as Global, independently of policies", () => {
+    expect(getTableOwnershipScope({ name: "system_settings", columns: { id: {} } })).toBe("Global");
+    expect(getTableOwnershipScope({ name: "organizations", columns: { id: {} } })).toBe("Tenant-Owned");
   });
 
 

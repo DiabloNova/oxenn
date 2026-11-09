@@ -20,6 +20,44 @@ export interface TenantTableSnapshot {
   tables: Record<string, SnapshotTable>;
 }
 
+/**
+ * Explicit, reviewed exceptions for tables that carry a tenant ownership column
+ * but are intentionally global. Every entry must include a non-empty rationale.
+ * No current table is exempt from marker-based ownership.
+ */
+export const GLOBAL_OWNERSHIP_EXCEPTIONS: Readonly<Record<string, string>> = Object.freeze({});
+
+export type TableOwnershipScope = "Tenant-Owned" | "Global";
+
+/**
+ * Ownership is a schema/domain fact, not a consequence of RLS policy presence.
+ * organizations is the tenant root; organization_id and tenant_id are explicit
+ * ownership markers. RLS is checked independently.
+ */
+export function getTableOwnershipScope(
+  table: Pick<SnapshotTable, "name" | "columns">,
+): TableOwnershipScope {
+  // The organization table is the tenant root and can never be a Global exception.
+  if (table.name === "organizations") return "Tenant-Owned";
+
+  if (Object.hasOwn(GLOBAL_OWNERSHIP_EXCEPTIONS, table.name)) {
+    const rationale = GLOBAL_OWNERSHIP_EXCEPTIONS[table.name];
+    if (!rationale?.trim()) {
+      throw new Error(
+        "[verify-tenant-tables] Global ownership exception for " + table.name +
+        " requires a non-empty rationale.",
+      );
+    }
+    return "Global";
+  }
+
+  const columns = table.columns ?? {};
+  return Object.hasOwn(columns, "organization_id") ||
+    Object.hasOwn(columns, "tenant_id")
+    ? "Tenant-Owned"
+    : "Global";
+}
+
 function getCanonicalMetadataDirectory(rootDir: string): string {
   const absoluteRoot = path.resolve(rootDir);
   if (!fs.existsSync(absoluteRoot)) {
@@ -136,12 +174,7 @@ export function getTenantTableCoverageFromSnapshot(snapshot: TenantTableSnapshot
 } {
   const tables = Object.values(snapshot.tables);
   const tenantTables = tables
-    .filter((table) => {
-      const columns = table.columns ?? {};
-      return table.name === "organizations" ||
-        Object.hasOwn(columns, "organization_id") ||
-        Object.hasOwn(columns, "tenant_id");
-    })
+    .filter((table) => getTableOwnershipScope(table) === "Tenant-Owned")
     .map((table) => table.name)
     .sort();
 

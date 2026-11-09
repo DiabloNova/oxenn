@@ -15,30 +15,31 @@ While `database/schema/index.ts` is the source, it is compiled into several crit
    - It is generated exclusively via `pnpm db:generate`.
    - Never edit the JSON metadata or generated SQL manually.
 
-2. **Runtime Tenant Scoped Tables Map** (`src/core/database/tenant-tables.generated.ts`):
-   - A deterministic, generated array of all tables configured with at least one Row Level Security (RLS) policy in the current Drizzle snapshot.
-   - Verified in CI via `scripts/database/verify-tenant-tables.ts` to ensure the runtime table list matches the tables with declared policies in the latest Drizzle snapshot. This check does not verify RLS activation in a live database.
+2. **Runtime Tenant-Owned Tables Map** (`src/core/database/tenant-tables.generated.ts`):
+   - A deterministic, generated inventory of tables owned by an organization. Ownership is derived from the canonical Drizzle snapshot: `organizations` is the tenant root, and `organization_id` / `tenant_id` are ownership markers unless a reviewed exception with a non-empty rationale is recorded in `GLOBAL_OWNERSHIP_EXCEPTIONS`.
+   - Verified in CI via `scripts/database/verify-tenant-tables.ts`. The verifier independently checks that every tenant-owned table has complete tenant-scoped SELECT / INSERT / UPDATE / DELETE policies. A missing policy is a defect on a tenant-owned table; it never changes the table's ownership classification. Static checks do not prove that migrations have been applied to a live database.
 
 3. **Reference Matrix Documentation** (`docs/database/reference-matrix.md`):
-   - An auto-generated matrix mapping tables to their scope (Global vs. Tenant-Scoped), declared RLS policies, indexes, constraints, foreign keys, and known consumers in the codebase.
-   - Generated via `scripts/database/build-reference-matrix.ts`.
+   - An auto-generated matrix reporting independent facts for each table: ownership scope, declared RLS policy objects, tenant-policy coverage, ENABLE / FORCE migration coverage, runtime enforcement verification boundary, indexes, constraints, foreign keys, and known consumers.
+   - Generated via `scripts/database/build-reference-matrix.ts`. Ownership is never inferred from policy or migration presence.
 
 ---
 
 ## Data Segregation Models (Scope)
 
-Tables are partitioned into two strictly distinct security models based on multi-tenant architecture.
+Tables have an explicit ownership scope. Tenant ownership, RLS policy coverage, migration state, and runtime enforcement are separate governance dimensions; none is inferred from another.
 
 ### 1. Global Tables
 Global tables contain core application configurations, user identities, system metadata, or definitions that apply identically across all tenants.
 
-- **RLS Disabled (❌):** This is an intended schema classification, not a runtime guarantee. A table is global only when it is absent from the policy-bearing tenant-scoped table map; `organizations` is tenant-scoped because its own `id` is protected by tenant RLS.
+- **Ownership classification:** A table is Global when it is not `organizations` and has neither an `organization_id` nor a `tenant_id` ownership marker. A table carrying either marker may be classified Global only through a reviewed entry in `GLOBAL_OWNERSHIP_EXCEPTIONS` with a non-empty rationale. Absence of an RLS policy or absence from the runtime tenant-owned map is never evidence of Global ownership. RLS settings and policies, if any, are reported independently.
 - **Access Rule:** Can be accessed via standard database clients. No special `tenant_id` context injection is needed, though application-level logic must still verify role permissions.
 
 ### 2. Tenant-Scoped Tables
 Tenant-scoped tables contain domain data belonging to a specific workspace or organization.
 
-- **Tenant RLS policy declared (✅):** They *must* have a PostgreSQL policy linking access to `current_setting('app.current_tenant_id', true)`.
+- **Ownership classification:** `organizations` is the tenant root. Other tables with `organization_id` or `tenant_id` are Tenant-Owned unless an explicit, reviewed exception with a rationale applies.
+- **Tenant RLS policy coverage:** Every Tenant-Owned table *must* have correctly scoped PostgreSQL policies for SELECT, INSERT, UPDATE, and DELETE, linking access to `current_setting('app.current_tenant_id', true)`. Missing or incomplete policies are security defects; they do not change ownership scope.
 - **Access Rule:** Can only be queried by non-owner roles (e.g., `app_runtime`) when the session has properly set the `app.current_tenant_id` parameter using `set_config`. Attempting to query these without a context will result in empty result sets or RLS constraint violations (42501).
 - **Isolation Enforcement:** Directly validated via `tests/isolation/suite.ts` which provisions a real database and executes assertions proving that cross-tenant read/write/update/delete operations are explicitly blocked by the database layer.
 
@@ -61,8 +62,8 @@ The data contract is verified via multiple independent testing paths:
    - **Environment:** Requires a running PostgreSQL instance. Uses explicit role separation (`app_owner` vs `app_runtime`) as defined in `database/bootstrap.sql`.
 
 3. **Schema Policy and Migration Verification** (`verify-tenant-tables.ts` and `verify-rls-migrations.ts`)
-   - `verify-tenant-tables.ts` compares policy-bearing table names in the latest Drizzle snapshot with `TENANT_SCOPED_TABLES`; it does not compare source `pgPolicy` expressions or inspect a live database.
-   - `verify-rls-migrations.ts` checks the checked-in migration history for `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` statements for every policy-bearing table. This is a static migration audit, not proof that migrations have been applied to production.
+   - `verify-tenant-tables.ts` derives ownership from the canonical snapshot and compares that inventory with `TENANT_SCOPED_TABLES`; it separately checks tenant-policy expressions and operation coverage. It does not inspect a live database.
+   - `verify-rls-migrations.ts` uses the same ownership classifier and checks the checked-in migration history for final `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` state for every Tenant-Owned table. This is a static migration audit, not proof that migrations have been applied to production.
    - The `test:isolation` CI job provisions ephemeral PostgreSQL and exercises tenant isolation. The `test:db` script is not currently invoked by CI; SQL invariants must be included in the isolation suite or the workflow must be updated before claiming those tests run.
 
 ---
