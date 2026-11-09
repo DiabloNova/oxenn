@@ -2,20 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-context";
 
-interface JournalEntry {
-  idx: number;
-  version: string;
-  when: number;
-  tag: string;
-  breakpoints?: boolean;
-}
-
-interface Journal {
-  version: string;
-  dialect: string;
-  entries: JournalEntry[];
-}
-
 interface SnapshotPolicy {
   as?: string;
   for?: string;
@@ -87,7 +73,7 @@ export function resolveLatestSnapshotPath(rootDir: string, journalValue: unknown
   }
 
   const snapshotFileName = `${String(latestIdx).padStart(4, "0")}_snapshot.json`;
-  if (!/^\\d{4}_snapshot\\.json$/.test(snapshotFileName)) {
+  if (!/^\d{4}_snapshot\.json$/.test(snapshotFileName)) {
     throw new Error("[verify-tenant-tables] Latest snapshot filename does not match the expected pattern.");
   }
 
