@@ -77,7 +77,7 @@ describe("RLS documentation consistency contract", () => {
     const target = HISTORICAL_RLS_DOCUMENTS[1];
     documents[target] = documents[target]
       .replace("Historical Phase 1 repository baseline", "Current Phase 1 repository baseline")
-      .replace(/historical evidence\\s+only/i, "current evidence");
+      .replace(/historical evidence\s+only/i, "current evidence");
     const issues = collectRlsDocumentationIssues(documents).join("\n");
     expect(issues).toContain("dated historical Phase 1 baseline");
     expect(issues).toContain("historical counts are not current inventory");
