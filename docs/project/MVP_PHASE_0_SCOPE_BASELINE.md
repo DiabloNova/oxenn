@@ -296,8 +296,8 @@ This check was performed against the checked-in files on `mvp/phase-0-scope-base
 
 - Drizzle Kit is configured by `drizzle.config.ts` with schema `database/schema/index.ts` and migration output `database/drizzle`.
 - The effective schema is composed of 70 table declarations: 68 in `database/schema/index.ts`, plus `organizations` in `database/schema/organization-table.ts` and `api_keys` in `database/schema/api-keys.ts`.
-- The latest journal entry is `0014_db_001_join_table_rls`; its corresponding snapshot is `database/drizzle/meta/0014_snapshot.json`.
-- The ordered journal contains 15 entries, and all 15 referenced SQL migration files exist.
+- The latest journal entry is `0015_db_001_composite_tenant_fks`; its corresponding snapshot is `database/drizzle/meta/0015_snapshot.json`.
+- The ordered journal contains 16 entries, and all 16 referenced SQL migration files exist.
 - The effective schema names and latest snapshot names match exactly: **70 / 70**, with no schema-only or snapshot-only table.
 - Across the journal, the migration SQL creates 70 unique tables. That set matches the latest snapshot exactly: no snapshot table lacks a CREATE TABLE in the migration history, and no migration-created table is absent from the snapshot.
 
@@ -315,7 +315,7 @@ Every table in this MVP map exists in the latest Drizzle snapshot and has tenant
 
 The latest snapshot contains **56 policy-bearing tables**. The generated runtime list in `src/core/database/tenant-tables.generated.ts` also contains 56 entries and matches the snapshot policy-table set exactly (no missing or extra entries).
 
-Migration `0005_force_rls.sql` contains both `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` for the original 51 tables. Migration `0014_db_001_join_table_rls.sql` adds both flags for the five tenant-owned junction tables. Across the ordered journal, the cumulative statements are present for all 56 of those tables and match the snapshot policy-table set exactly. All 16 tables in the MVP entity map above are among those policy-bearing tables.
+Migration `0005_force_rls.sql` contains both `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` for the original 51 tables. Migration `0014_db_001_join_table_rls.sql` adds both flags for the five tenant-owned junction tables. Across the ordered journal, the cumulative statements are present for all 56 of those tables and match the snapshot policy-table set exactly. Migration `0015_db_001_composite_tenant_fks.sql` adds tenant-consistent composite foreign keys for all ten references from those five junction tables, with a read-only preflight that aborts on mismatched existing rows. All 16 tables in the MVP entity map above are among those policy-bearing tables.
 
 The current CI workflow includes three related checks:
 - `pnpm tsx scripts/database/verify-tenant-tables.ts`
@@ -336,4 +336,4 @@ Still **NOT VERIFIED**:
 - Whether production roles, grants, connection settings, and effective RLS behavior are correct.
 - Whether the CI workflow has passed on a PR containing these changes.
 
-No migration was run, no database was queried, and no application runtime behavior was changed by this reconciliation.
+The CI Isolation Suite applies the checked-in migration chain to a disposable PostgreSQL database and verifies the resulting RLS and junction constraints. No staging or production database was connected, queried, or mutated by this change; no existing data was automatically reassigned or deleted.
