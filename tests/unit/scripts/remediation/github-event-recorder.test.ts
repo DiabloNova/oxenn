@@ -2,6 +2,21 @@ import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
+type GitHubStub = {
+  rest: {
+    git: {
+      getRef: () => Promise<{ data: { object: { sha: string } } }>;
+      getCommit: () => Promise<{ data: { tree: { sha: string } } }>;
+      createBlob: (args: { content: string }) => Promise<{ data: { sha: string } }>;
+      createTree: () => Promise<{ data: { sha: string } }>;
+      createCommit: () => Promise<{ data: { sha: string } }>;
+      updateRef: (args: { force: boolean }) => Promise<unknown>;
+    };
+    repos: {
+      getContent: (args: { path: string }) => Promise<{ data: unknown }>;
+    };
+  };
+};
 const recorder = require("../../../../scripts/remediation/github-event-recorder.cjs") as {
   appendEventIfNew: (existing: string, record: { event_id: string }) => { content: string; appended: boolean };
   directFindingId: (path: string) => string | null;
@@ -11,8 +26,8 @@ const recorder = require("../../../../scripts/remediation/github-event-recorder.
   updateFindingStatus: (content: string, status: string, details: string) => { content: string; changed: boolean };
   updateLedgerRow: (content: string, findingId: string, status: string, evidence: string, commitLink: string | null) => { content: string; changed: boolean; previousStatus: string | null };
   hasCanonicalFindingMapping: (record: Record<string, unknown>) => boolean;
-  findFindingPaths: (github: any, owner: string, repo: string, ref: string, ids: string[]) => Promise<Record<string, string>>;
-  persistRecords: (github: any, owner: string, repo: string, records: any[], core: any) => Promise<void>;
+  findFindingPaths: (github: GitHubStub, owner: string, repo: string, ref: string, ids: string[]) => Promise<Record<string, string>>;
+  persistRecords: (github: GitHubStub, owner: string, repo: string, records: Array<Record<string, unknown>>, core: { info: () => void; warning: (message: string) => void }) => Promise<void>;
 };
 
 const canonicalMapping = {
@@ -161,7 +176,7 @@ describe("GitHub remediation event recorder", () => {
     const github = { rest: { repos: { getContent: async () => ({ data: [
       { type: "file", name: "015-DOC-001.md", path: "ai_tasks/problem-register/findings/015-DOC-001.md" },
     ] }) } } };
-    await expect(recorder.findFindingPaths(github, "DiabloNova", "oxenn", "main", ["DOC-001"]))
+    await expect(recorder.findFindingPaths(github as unknown as GitHubStub, "DiabloNova", "oxenn", "main", ["DOC-001"]))
       .resolves.toEqual({ "DOC-001": "ai_tasks/problem-register/findings/015-DOC-001.md" });
   });
 
