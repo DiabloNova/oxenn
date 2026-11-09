@@ -280,7 +280,7 @@ describe("GitHub remediation event recorder", () => {
     expect(second.content).toBe(first.content);
   });
 
-  function makeFakeGitHub(options: { progress?: string; finding?: string; findingAfterFirstConflict?: string; event?: string; updateRef?: (call: number) => Promise<void>; getContentFailure?: number } = {}) {
+  function makeFakeGitHub(options: { progress?: string; finding?: string; findingAfterFirstConflict?: string; findingDirectory?: Array<{ type: string; name: string; path: string }>; event?: string; updateRef?: (call: number) => Promise<void>; getContentFailure?: number } = {}) {
     const progress = options.progress ?? "| [DOC-001](./findings/015-DOC-001.md) | Wave 1 | **Integrated — verification pending** | — | [Prior](https://example.test/prior) |\n";
     let finding = options.finding ?? "# DOC-001\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n";
     const event = options.event;
@@ -312,7 +312,7 @@ describe("GitHub remediation event recorder", () => {
           if (options.getContentFailure && path.endsWith("REMEDIATION_PROGRESS.md")) throw missing(options.getContentFailure);
           if (path === "ai_tasks/problem-register/REMEDIATION_PROGRESS.md") return encode(progress);
           if (path === "ai_tasks/problem-register/events/2026-11.jsonl") return event === undefined ? Promise.reject(missing()) : encode(event);
-          if (path === "ai_tasks/problem-register/findings") return { data: [{ type: "file", name: "015-DOC-001.md", path: "ai_tasks/problem-register/findings/015-DOC-001.md" }] };
+          if (path === "ai_tasks/problem-register/findings") return { data: options.findingDirectory ?? [{ type: "file", name: "015-DOC-001.md", path: "ai_tasks/problem-register/findings/015-DOC-001.md" }] };
           if (path === "ai_tasks/problem-register/findings/015-DOC-001.md") return encode(finding);
           throw missing();
         },
@@ -405,6 +405,63 @@ describe("GitHub remediation event recorder", () => {
     expect(record.resulting_statuses).toEqual({});
     expect(fake.blobs).toHaveLength(1);
     expect(fake.updateCalls).toBe(1);
+  });
+
+  it("retains merged PR event evidence when authoritative finding paths are ambiguous", async () => {
+    const duplicateDirectory = [
+      { type: "file", name: "015-DOC-001.md", path: "ai_tasks/problem-register/findings/015-DOC-001.md" },
+      { type: "file", name: "016-DOC-001.md", path: "ai_tasks/problem-register/findings/016-DOC-001.md" },
+    ];
+    const fake = makeFakeGitHub({ findingDirectory: duplicateDirectory });
+    const record: Record<string, unknown> = {
+      ...mergedRecord,
+      event_id: "pull_request.closed:125:2026-11-09T15:00:00Z:merged-ambiguous",
+      event_type: "pull_request.closed",
+      workflow_run: null,
+    };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(record.canonical_mapping_complete).toBe(false);
+    expect(record.resulting_statuses).toEqual({});
+    expect(fake.blobs).toHaveLength(1);
+    expect(fake.blobs[0]).toContain(record.event_id);
+    expect(fake.updateCalls).toBe(1);
+  });
+
+  it("retains exact post-merge CI evidence when authoritative finding paths are ambiguous", async () => {
+    const duplicateDirectory = [
+      { type: "file", name: "015-DOC-001.md", path: "ai_tasks/problem-register/findings/015-DOC-001.md" },
+      { type: "file", name: "016-DOC-001.md", path: "ai_tasks/problem-register/findings/016-DOC-001.md" },
+    ];
+    const fake = makeFakeGitHub({ findingDirectory: duplicateDirectory });
+    const record: Record<string, unknown> = { ...mergedRecord, event_id: "workflow_run.completed:42:1:125:ambiguous" };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(record.canonical_mapping_complete).toBe(false);
+    expect(record.resulting_statuses).toEqual({});
+    expect(fake.blobs).toHaveLength(1);
+    expect(fake.blobs[0]).toContain(record.event_id);
+    expect(fake.updateCalls).toBe(1);
+  });
+
+  it("does not retain an unmerged candidate-only event when its canonical path is ambiguous", async () => {
+    const duplicateDirectory = [
+      { type: "file", name: "015-DOC-001.md", path: "ai_tasks/problem-register/findings/015-DOC-001.md" },
+      { type: "file", name: "016-DOC-001.md", path: "ai_tasks/problem-register/findings/016-DOC-001.md" },
+    ];
+    const fake = makeFakeGitHub({ findingDirectory: duplicateDirectory });
+    const record: Record<string, unknown> = {
+      event_id: "pull_request.closed:125:2026-11-09T15:00:00Z:unmerged-ambiguous",
+      event_type: "pull_request.closed",
+      occurred_at: "2026-11-09T15:00:00Z",
+      finding_ids: [],
+      candidate_finding_ids: ["DOC-001"],
+      file_finding_ids: [],
+      mapping_complete: true,
+      pull_request: { number: 125, merged: false },
+      changed_files: [],
+    };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(fake.blobs).toHaveLength(0);
+    expect(fake.updateCalls).toBe(0);
   });
 
   it("clears rejection state when a non-force retry reprocesses an event successfully", async () => {

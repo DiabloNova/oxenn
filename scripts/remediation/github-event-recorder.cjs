@@ -486,7 +486,9 @@ async function persistRecords(github, owner, repo, records, core) {
     for (const record of records) {
       // Pre-merge CI is intentionally not persisted to main: it is not a remediation disposition.
       if (record.event_type === "workflow_run.completed" && !record.is_post_merge_main_ci) continue;
-      if (record.event_type === "workflow_run.completed" && (!record.finding_ids || record.finding_ids.length === 0)) continue;
+      if (record.event_type === "workflow_run.completed" &&
+          (!record.finding_ids || record.finding_ids.length === 0) &&
+          (!record.candidate_finding_ids || record.candidate_finding_ids.length === 0)) continue;
       if (record.event_type === "pull_request.closed" &&
           (!record.finding_ids || record.finding_ids.length === 0) &&
           (!record.candidate_finding_ids || record.candidate_finding_ids.length === 0)) continue;
@@ -512,12 +514,14 @@ async function persistRecords(github, owner, repo, records, core) {
       record.resulting_statuses = {};
       const findingIds = record.finding_ids || [];
       const candidateIds = record.candidate_finding_ids || [];
-      const lookupIds = record.event_type === "pull_request.closed"
+      const lookupIds = record.event_type === "pull_request.closed" || record.is_post_merge_main_ci
         ? Array.from(new Set([...findingIds, ...candidateIds]))
         : findingIds;
       if (lookupIds.length > 0) {
         const resolvedPaths = await findFindingPaths(github, owner, repo, baseSha, lookupIds);
-        if (Object.keys(resolvedPaths).length === 0) continue;
+        // Keep merged and exact post-merge events auditable on mapping failure; only unmerged candidate-only events require a unique match.
+        const unmergedClosure = record.event_type === "pull_request.closed" && !(record.pull_request && record.pull_request.merged);
+        if (Object.keys(resolvedPaths).length === 0 && unmergedClosure) continue;
         for (const findingId of findingIds) {
           if (resolvedPaths[findingId]) paths[findingId] = resolvedPaths[findingId];
         }
@@ -534,7 +538,8 @@ async function persistRecords(github, owner, repo, records, core) {
       } else {
         record.canonical_finding_paths = {};
         record.canonical_mapping_complete = false;
-        if (record.event_type === "pull_request.closed") continue;
+        if (record.event_type === "pull_request.closed" && !(record.pull_request && record.pull_request.merged)) continue;
+        if (record.event_type === "workflow_run.completed" && !record.is_post_merge_main_ci) continue;
       }
 
       // An unmerged PR is retained as event evidence only, and only when an ID resolves to a real finding file.
