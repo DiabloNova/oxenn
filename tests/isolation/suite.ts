@@ -628,6 +628,37 @@ async function runTest() {
         success = false;
       }
 
+      // A matching organization_id alone must not permit references to either
+      // side of a relationship owned by another tenant. Composite foreign keys
+      // enforce this independently of RLS visibility.
+      const mismatchedParentReferences = [
+        {
+          label: "left parent",
+          values: [rowsMapB[junction.leftTable], rowsMapA[junction.rightTable], orgAId],
+        },
+        {
+          label: "right parent",
+          values: [rowsMapA[junction.leftTable], rowsMapB[junction.rightTable], orgAId],
+        },
+      ];
+      for (const mismatch of mismatchedParentReferences) {
+        await client.query("BEGIN");
+        await client.query("SAVEPOINT junction_cross_tenant_reference");
+        let referenceError: string | null = null;
+        try {
+          await client.query(insertSql, mismatch.values);
+        } catch (error: unknown) {
+          referenceError = (error as { code?: string }).code ?? null;
+        }
+        await client.query("ROLLBACK TO SAVEPOINT junction_cross_tenant_reference");
+        await client.query("COMMIT");
+        assertionsCount++;
+        if (referenceError !== "23503") {
+          console.error(`❌ ${tableName}: ${mismatch.label} from another tenant was not rejected by the composite foreign key (got ${referenceError ?? "success"}).`);
+          success = false;
+        }
+      }
+
       const updateA = await client.query(
         `UPDATE ${tableName} SET created_at = NOW() WHERE ${keyPredicate}`,
         [valuesA[0], valuesA[1], orgAId],

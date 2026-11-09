@@ -78,3 +78,12 @@ pnpm run db:push
 2. **Deterministic Execution**: Foreign key creation and table references are strictly dependency-ordered. Core tables (`organizations`, `brands`, `entities`) are bootstrapped before dependent foreign keys.
 3. **Multi-Tenant Isolation**: Tenant-scoped tables enforce PostgreSQL Row Level Security (RLS) policies tied to `app.current_tenant_id` transaction settings via `TenantContextManager`. The 56-table tenant-owned inventory is derived from ownership columns and kept aligned across the latest Drizzle snapshot, the generated runtime tenant-table list, and the ordered RLS migrations.
 4. **Disposable Verification**: Schema migrations are validated against empty disposable PostgreSQL instances prior to production deployments.
+
+
+## 5. Tenant-Consistent Junction References
+
+Migration `0015_db_001_composite_tenant_fks.sql` strengthens the five tenant-owned junction tables. Their foreign keys pair each referenced record ID with the junction row's `organization_id`, and the referenced parent tables expose matching unique indexes on `(id, organization_id)`. Supporting indexes are created on both child-side reference pairs.
+
+Before changing any constraint, the migration performs read-only checks for tenant mismatches across all ten junction-to-parent relationships. It raises an exception and stops without changing data when a mismatch exists. Existing single-column foreign keys remain in place until the replacement composite foreign keys have been successfully added, preserving referential enforcement throughout the transition. No automatic reassignment or deletion of inconsistent rows is performed.
+
+The repository currently has no connected application database, so the preflight has not been run against production data from this change. It executes when the migration is applied and must pass before the new constraints can be installed. The isolation suite also verifies that a tenant cannot create a junction row referencing either a left-side or right-side parent owned by another tenant.

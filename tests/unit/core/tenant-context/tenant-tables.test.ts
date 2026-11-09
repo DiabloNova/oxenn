@@ -1,6 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { TENANT_SCOPED_TABLES } from "@/core/database/tenant-context";
-import { getTenantTableCoverageFromSnapshot, verifyTenantTables } from "../../../../scripts/database/verify-tenant-tables";
+import { getTenantTableCoverageFromSnapshot, resolveLatestSnapshotPath, verifyTenantTables } from "../../../../scripts/database/verify-tenant-tables";
 
 describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
   it("TENANT_SCOPED_TABLES is an Object.frozen immutable array", () => {
@@ -85,4 +88,64 @@ describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
     expect(coverage.missingPolicyTables).toEqual(["pages_keywords"]);
   });
 
+});
+
+
+const temporaryRoots: string[] = [];
+
+function createSnapshotPathFixture(): { root: string; metadataDirectory: string; snapshotPath: string } {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tenant-snapshot-path-"));
+  temporaryRoots.push(root);
+  const metadataDirectory = path.join(root, "database", "drizzle", "meta");
+  fs.mkdirSync(metadataDirectory, { recursive: true });
+  const snapshotPath = path.join(metadataDirectory, "0001_snapshot.json");
+  fs.writeFileSync(snapshotPath, JSON.stringify({ tables: {} }));
+  return { root, metadataDirectory, snapshotPath };
+}
+
+afterEach(() => {
+  for (const root of temporaryRoots.splice(0)) {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+describe("Tenant snapshot path validation", () => {
+  it("resolves a valid journal index to a snapshot in the canonical metadata directory", () => {
+    const fixture = createSnapshotPathFixture();
+    const resolved = resolveLatestSnapshotPath(fixture.root, { entries: [{ idx: 1 }] });
+
+    expect(resolved).toBe(fs.realpathSync(fixture.snapshotPath));
+    expect(path.dirname(resolved)).toBe(fs.realpathSync(fixture.metadataDirectory));
+  });
+
+  it.each([-1, 1.5, 10000, Number.MAX_SAFE_INTEGER + 1, "../0001", "0001"])(
+    "rejects an invalid journal index (%s)",
+    (idx) => {
+      const fixture = createSnapshotPathFixture();
+      expect(() => resolveLatestSnapshotPath(fixture.root, { entries: [{ idx }] })).toThrow(
+        "Latest journal index must be an integer between 0 and 9999",
+      );
+    },
+  );
+
+  it("rejects a snapshot symlink that resolves outside the metadata directory", () => {
+    const fixture = createSnapshotPathFixture();
+    const outsideDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "tenant-snapshot-outside-"));
+    temporaryRoots.push(outsideDirectory);
+    const outsideSnapshot = path.join(outsideDirectory, "outside_snapshot.json");
+    fs.writeFileSync(outsideSnapshot, JSON.stringify({ tables: {} }));
+    fs.unlinkSync(fixture.snapshotPath);
+    fs.symlinkSync(outsideSnapshot, fixture.snapshotPath);
+
+    expect(() => resolveLatestSnapshotPath(fixture.root, { entries: [{ idx: 1 }] })).toThrow(
+      "Latest snapshot resolves outside the metadata directory",
+    );
+  });
+
+  it("rejects a journal without entries", () => {
+    const fixture = createSnapshotPathFixture();
+    expect(() => resolveLatestSnapshotPath(fixture.root, { entries: [] })).toThrow(
+      "Journal file contains no entries",
+    );
+  });
 });

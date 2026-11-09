@@ -34,27 +34,109 @@ export interface TenantTableSnapshot {
   tables: Record<string, SnapshotTable>;
 }
 
-function readLatestSnapshot(): TenantTableSnapshot {
-  const rootDir = process.cwd();
-  const journalPath = path.join(rootDir, "database/drizzle/meta/_journal.json");
-  if (!fs.existsSync(journalPath)) {
-    throw new Error(`[verify-tenant-tables] Journal file not found at ${journalPath}`);
+function getCanonicalMetadataDirectory(rootDir: string): string {
+  const absoluteRoot = path.resolve(rootDir);
+  if (!fs.existsSync(absoluteRoot)) {
+    throw new Error(`[verify-tenant-tables] Repository root not found at ${absoluteRoot}`);
   }
 
-  const journal: Journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
-  if (!journal.entries || journal.entries.length === 0) {
+  const canonicalRoot = fs.realpathSync(absoluteRoot);
+  const metadataPath = path.resolve(absoluteRoot, "database", "drizzle", "meta");
+  if (!fs.existsSync(metadataPath)) {
+    throw new Error(`[verify-tenant-tables] Metadata directory not found at ${metadataPath}`);
+  }
+
+  const canonicalMetadataPath = fs.realpathSync(metadataPath);
+  const expectedMetadataPath = path.join(canonicalRoot, "database", "drizzle", "meta");
+  if (canonicalMetadataPath !== expectedMetadataPath) {
+    throw new Error("[verify-tenant-tables] Metadata directory resolves outside the repository metadata path.");
+  }
+
+  return canonicalMetadataPath;
+}
+
+/**
+ * Validate the journal index and resolve the snapshot through canonical paths.
+ * The result must be a regular file directly inside the real metadata directory;
+ * symlinked metadata directories and snapshot files are rejected.
+ */
+export function resolveLatestSnapshotPath(rootDir: string, journalValue: unknown): string {
+  const metadataDirectory = getCanonicalMetadataDirectory(rootDir);
+  if (
+    typeof journalValue !== "object" ||
+    journalValue === null ||
+    !("entries" in journalValue) ||
+    !Array.isArray((journalValue as { entries?: unknown }).entries)
+  ) {
+    throw new Error("[verify-tenant-tables] Journal must contain an entries array.");
+  }
+
+  const entries = (journalValue as { entries: unknown[] }).entries;
+  if (entries.length === 0) {
     throw new Error("[verify-tenant-tables] Journal file contains no entries.");
   }
 
-  const lastIdx = journal.entries[journal.entries.length - 1].idx;
-  const padIdx = String(lastIdx).padStart(4, "0");
-  const snapshotPath = path.join(rootDir, `database/drizzle/meta/${padIdx}_snapshot.json`);
+  const latestEntry = entries[entries.length - 1];
+  if (typeof latestEntry !== "object" || latestEntry === null || !("idx" in latestEntry)) {
+    throw new Error("[verify-tenant-tables] Latest journal entry has no valid index.");
+  }
 
+  const latestIdx = (latestEntry as { idx: unknown }).idx;
+  if (!Number.isSafeInteger(latestIdx) || (latestIdx as number) < 0 || (latestIdx as number) > 9999) {
+    throw new Error("[verify-tenant-tables] Latest journal index must be an integer between 0 and 9999.");
+  }
+
+  const snapshotFileName = `${String(latestIdx).padStart(4, "0")}_snapshot.json`;
+  if (!/^\\d{4}_snapshot\\.json$/.test(snapshotFileName)) {
+    throw new Error("[verify-tenant-tables] Latest snapshot filename does not match the expected pattern.");
+  }
+
+  const snapshotPath = path.resolve(metadataDirectory, snapshotFileName);
+  if (path.dirname(snapshotPath) !== metadataDirectory || path.basename(snapshotPath) !== snapshotFileName) {
+    throw new Error("[verify-tenant-tables] Latest snapshot path escapes the metadata directory.");
+  }
   if (!fs.existsSync(snapshotPath)) {
     throw new Error(`[verify-tenant-tables] Latest snapshot file not found at ${snapshotPath}`);
   }
 
-  return JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
+  const canonicalSnapshotPath = fs.realpathSync(snapshotPath);
+  if (path.dirname(canonicalSnapshotPath) !== metadataDirectory || path.basename(canonicalSnapshotPath) !== snapshotFileName) {
+    throw new Error("[verify-tenant-tables] Latest snapshot resolves outside the metadata directory.");
+  }
+  if (!fs.statSync(canonicalSnapshotPath).isFile()) {
+    throw new Error("[verify-tenant-tables] Latest snapshot path is not a regular file.");
+  }
+
+  return canonicalSnapshotPath;
+}
+
+function readLatestSnapshot(): TenantTableSnapshot {
+  const rootDir = process.cwd();
+  const metadataDirectory = getCanonicalMetadataDirectory(rootDir);
+  const journalPath = path.join(metadataDirectory, "_journal.json");
+  if (!fs.existsSync(journalPath)) {
+    throw new Error(`[verify-tenant-tables] Journal file not found at ${journalPath}`);
+  }
+
+  const canonicalJournalPath = fs.realpathSync(journalPath);
+  if (path.dirname(canonicalJournalPath) !== metadataDirectory || path.basename(canonicalJournalPath) !== "_journal.json") {
+    throw new Error("[verify-tenant-tables] Journal file resolves outside the metadata directory.");
+  }
+
+  const journal: unknown = JSON.parse(fs.readFileSync(canonicalJournalPath, "utf8"));
+  const snapshotPath = resolveLatestSnapshotPath(rootDir, journal);
+  const snapshotValue: unknown = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
+  if (
+    typeof snapshotValue !== "object" ||
+    snapshotValue === null ||
+    !("tables" in snapshotValue) ||
+    typeof (snapshotValue as { tables?: unknown }).tables !== "object" ||
+    (snapshotValue as { tables?: unknown }).tables === null
+  ) {
+    throw new Error("[verify-tenant-tables] Latest snapshot must contain a tables object.");
+  }
+
+  return snapshotValue as TenantTableSnapshot;
 }
 
 /**
