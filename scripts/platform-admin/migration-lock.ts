@@ -7,20 +7,21 @@ export interface PlatformAdminMigrationLockClient {
 export async function withPlatformAdminMigrationLock<T>(
   client: PlatformAdminMigrationLockClient,
   runMigrations: () => Promise<T>,
+  onUnlockError: (error: unknown) => void = () => undefined,
 ): Promise<T> {
   await client.query("SELECT pg_advisory_lock(hashtext($1))", [PLATFORM_ADMIN_MIGRATION_LOCK_NAME]);
 
-  let migrationFailed = false;
   try {
     return await runMigrations();
-  } catch (error) {
-    migrationFailed = true;
-    throw error;
   } finally {
     try {
       await client.query("SELECT pg_advisory_unlock(hashtext($1))", [PLATFORM_ADMIN_MIGRATION_LOCK_NAME]);
     } catch (unlockError) {
-      if (!migrationFailed) throw unlockError;
+      try {
+        onUnlockError(unlockError);
+      } catch {
+        // Cleanup reporting must not replace the migration result.
+      }
     }
   }
 }

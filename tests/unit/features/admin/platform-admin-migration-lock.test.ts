@@ -20,6 +20,39 @@ describe("Platform Admin migration advisory lock", () => {
     expect(events).toEqual(["lock", "migrate", "unlock"]);
   });
 
+  it("preserves migration success when advisory-lock cleanup fails", async () => {
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [] })
+        .mockRejectedValueOnce(new Error("unlock failed")),
+    };
+    const onUnlockError = vi.fn();
+
+    await expect(
+      withPlatformAdminMigrationLock(client, async () => "applied", onUnlockError),
+    ).resolves.toBe("applied");
+    expect(onUnlockError).toHaveBeenCalledWith(expect.objectContaining({ message: "unlock failed" }));
+  });
+
+  it("preserves the migration error when both migration and lock cleanup fail", async () => {
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [] })
+        .mockRejectedValueOnce(new Error("unlock failed")),
+    };
+    const migrationFailure = new Error("migration failed");
+    const onUnlockError = vi.fn();
+
+    await expect(
+      withPlatformAdminMigrationLock(
+        client,
+        async () => { throw migrationFailure; },
+        onUnlockError,
+      ),
+    ).rejects.toBe(migrationFailure);
+    expect(onUnlockError).toHaveBeenCalledWith(expect.objectContaining({ message: "unlock failed" }));
+  });
+
   it("releases the database lock when migration execution fails", async () => {
     const events: string[] = [];
     const client = {

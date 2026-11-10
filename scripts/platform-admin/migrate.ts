@@ -24,18 +24,32 @@ async function main(): Promise<void> {
 
   try {
     await client.connect();
-    await withPlatformAdminMigrationLock(client, async () => {
-      const database = drizzle(client);
-      const migrationsFolder = path.resolve(process.cwd(), "database/platform-admin/drizzle");
-      await migrate(database, {
-        migrationsFolder,
-        migrationsTable: "__platform_admin_drizzle_migrations",
-        migrationsSchema: "public",
-      });
-    });
+    await withPlatformAdminMigrationLock(
+      client,
+      async () => {
+        const database = drizzle(client);
+        const migrationsFolder = path.resolve(process.cwd(), "database/platform-admin/drizzle");
+        await migrate(database, {
+          migrationsFolder,
+          migrationsTable: "__platform_admin_drizzle_migrations",
+          migrationsSchema: "public",
+        });
+      },
+      (error) => {
+        process.stderr.write(
+          `Warning: Platform Admin migrations finished, but advisory-lock cleanup failed; the connection will be closed. ${error instanceof Error ? error.message : "unknown cleanup error"}\n`,
+        );
+      },
+    );
     process.stdout.write("Platform Admin Drizzle migrations applied successfully.\n");
   } finally {
-    await client.end();
+    try {
+      await client.end();
+    } catch (error) {
+      process.stderr.write(
+        `Warning: Platform Admin migration connection cleanup failed. ${error instanceof Error ? error.message : "unknown cleanup error"}\n`,
+      );
+    }
   }
 }
 

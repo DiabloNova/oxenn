@@ -98,6 +98,8 @@ Review the generated SQL and snapshot, then apply it with:
 pnpm run platform-admin:migrate
 ```
 
+The runner holds a PostgreSQL advisory lock on the migration connection across migration-history reads and application. If the unlock request fails after migrations succeed, it reports a cleanup warning and closes the connection without misreporting the completed migration as failed.
+
 The Platform Admin uses the repository's Drizzle migration engine with a separate `drizzle.platform-admin.config.ts`, schema file, output directory, and migration-history table. Both `PLATFORM_ADMIN_DATABASE_URL` and `PLATFORM_ADMIN_MIGRATION_DATABASE_URL` are required; the guard verifies that they target the same dedicated database but use different PostgreSQL roles. The Platform Admin runner invokes Drizzle with `__platform_admin_drizzle_migrations`, holds a PostgreSQL advisory lock on the same dedicated connection across migration-history reads and application, and reads only `PLATFORM_ADMIN_MIGRATION_DATABASE_URL`. This reuses the existing migration framework without sharing the Workspace schema, migration directory, history table, or connection string. Do not use `pnpm db:migrate` for this control plane: the Workspace config and runner are bound to Workspace database settings and could otherwise apply DDL to the wrong database.
 
 ### First administrator bootstrap
