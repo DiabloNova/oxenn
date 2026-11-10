@@ -66,7 +66,11 @@ function getAllDocs(docsRoot: string, currentDirectory = docsRoot): DocMeta[] {
     return docs;
   }
 
-  const entries = fs.readdirSync(currentDirectory, { withFileTypes: true });
+  const entries = fs.readdirSync(currentDirectory, { withFileTypes: true }).sort((left, right) => {
+    if (left.name < right.name) return -1;
+    if (left.name > right.name) return 1;
+    return 0;
+  });
 
   for (const entry of entries) {
     const res = path.resolve(currentDirectory, entry.name);

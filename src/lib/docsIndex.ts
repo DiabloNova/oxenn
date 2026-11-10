@@ -338,12 +338,20 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Phase 02 — Creative Concept and Design Direction  **Concept name:** Signal Atlas — Oxenn's Living Digital Twin   **Design thesis:** Turn fragmented search and AI visibility signals into a clear model of where a brand stands, what is missing, and what to do next.   **Reference concept:** The generated Oxenn homepage image shared in the project conversation (1536 × 1024). It is an art-direction reference, not a production screenshot or proof of shipped functionality.  ## 1. Brand principles  1. `
   },
   {
-    slug: "RBAC_MODEL",
-    titleEn: "Hierarchical RBAC Security Model",
-    titleFa: "Hierarchical RBAC Security Model",
+    slug: "PLATFORM_ADMIN_AUTHENTICATION",
+    titleEn: "Platform Admin Authentication and Persistence Boundary",
+    titleFa: "Platform Admin Authentication and Persistence Boundary",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Hierarchical RBAC Security Model  This document specifies the administrative privilege levels and authorization structures enforced across the Admin console.  ## Roles and Ranks  We enforce a strict linear role hierarchy rank mapped numerically to compare permission levels:  | Role Name | Rank | Primary Accountability | |---|---|---| | **Super Admin** | 100 | Complete system override, administrative provisioning, billing bypass | | **Platform Admin** | 80 | Full tenant lifecycle management, fe`
+    snippet: `# Platform Admin Authentication and Persistence Boundary  **Status:** Stage 2 implementation is present in the repository. Production authentication remains disabled until a dedicated database, OIDC provider registration, runtime secrets, and the first explicitly provisioned account are configured.  ## 1. Trust boundary  Platform Admin authentication is independent from Workspace authentication. It does not read \`oxenn_session\`, \`organization_members.role\`, Workspace session snapshots, \`admin_users\`,`
+  },
+  {
+    slug: "RBAC_MODEL",
+    titleEn: "Role-Based Access Control (RBAC) Model",
+    titleFa: "Role-Based Access Control (RBAC) Model",
+    category: "security",
+    categoryFa: "Security",
+    snippet: `# Role-Based Access Control (RBAC) Model  This document describes Workspace RBAC and the separately defined Platform Admin RBAC. They have different principals, role authorities, scopes, and enforcement status. There is no implicit mapping between them.  ## 1. Workspace RBAC  ### Roles  The Workspace role union in \`src/types/auth.ts\` defines:  | Role | Intended scope | Current authority | |---|---|---| | \`viewer\` | Read-oriented access in a workspace | \`organization_members.role\` | | \`workspace_admin\``
   },
   {
     slug: "security",
@@ -351,7 +359,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Security Documentation",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Security Documentation  This section describes the security model and critical mechanisms in Seorchable.  ## Status Dictionary - **Implemented**: Security mechanism is enforced in the current codebase.  ## Core Security Mechanisms  ### Server-Side Identity Boundary The server-side identity boundary is fully hardened. Plain-text \`user_id\` and \`tenant_id\` cookies are strictly non-authoritative on the server. The comprehensive security suite validates resilience against user/tenant cookie tamperi`
+    snippet: `# Security Documentation  This section documents Oxenn's security boundaries, authorization models, and implementation status. It distinguishes repository-level code from capabilities that are only defined or scaffolded. Static source declarations do not prove deployed runtime state.  ## Status dictionary  - **Implemented**: the repository contains an enforcement path for the described boundary. This does not, by itself, prove deployed configuration or database state. - **Defined-only**: types, `
   },
   {
     slug: "SECURITY_MODEL",
@@ -359,7 +367,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Security Architecture Model",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Security Architecture Model  This document outlines the security, tenant authorization, Role-Based Access Control (RBAC), and compliance guidelines implemented for the AI Intelligence Engine.  ---  ## 1. Zero-Trust Tenant Isolation  The platform enforces zero-trust tenant isolation through multiple decoupled security shields:  1. **Repository Guard Rails**: Finders require explicit \`organizationId\` parameter filtering. 2. **Domain Layer Assertions**: Tenant contexts are verified inside domain `
+    snippet: `# Security Architecture Model  This document distinguishes the two authorization contexts in Oxenn and describes what the repository currently implements. A role name in one context does not grant a role or permission in the other context.  ## 1. Authorization boundaries  Oxenn has two distinct authorization models:  1. **Workspace authorization** governs customer/user access within an organization workspace. Its current role authority is \`organization_members.role\`. 2. **Platform Admin authoriz`
   },
   {
     slug: "privileged-paths",
@@ -367,7 +375,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Privileged Database Paths",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Privileged Database Paths  This document outlines all permitted explicit system-context leases (\`runWithSystemContext\`) that allow querying the database without a bound \`tenant_id\`.  | Purpose Tag | Allowed Tables | Caller Module | Justification | | :--- | :--- | :--- | :--- | | **sys-login** | \`users\`, \`tenants\`, \`tenant_users\`, \`email_verification_tokens\`, \`password_reset_tokens\` | \`src/app/actions/auth.ts\` | Requires user lookup across all tenants during authentication, and issues or consum`
+    snippet: `# Privileged Database Paths  This document inventories the registered \`runWithSystemContext\` purpose tags, their verified direct call sites, and the database tables observed in those call paths. It is a documentation and audit-metadata inventory; the \`allowedTables\` field in the registry is recorded in the privileged-access audit event and is **not** a SQL table allowlist or an enforcement boundary.  The table names below use the canonical Drizzle schema names. Workspace membership and its autho`
   },
   {
     slug: "services",
@@ -432,6 +440,22 @@ export const DOCS_INDEX: DocMeta[] = [
     category: "tasks_reports",
     categoryFa: "tasks_reports",
     snippet: `# Stage 3 — Audit Gate Regression Tests and Verification  **Status:** SUCCESS (Stage 3 verification passed)   **Date:** 2026-10-19   **PR:** [#86](https://github.com/DiabloNova/oxenn/pull/86)   **Branch:** \`fix/audit-remediation-p1-v1.1\`   **Verified implementation commit:** \`0e439e087922245f29476acc946374c6fe6aef0a\`  ## Invariant  The dependency audit gate must never interpret missing, empty, malformed, or ambiguous severity/patch metadata as safe evidence. Critical/high findings may be risk-ac`
+  },
+  {
+    slug: "doc-008-platform-admin-boundary-stage-1",
+    titleEn: "DOC-008 — Platform Admin Boundary (Stage 1) Report",
+    titleFa: "DOC-008 — Platform Admin Boundary (Stage 1) Report",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# DOC-008 — Platform Admin Boundary (Stage 1) Report  **Status:** COMPLETE — Stage 1 implementation only. The later identity-provider and persistence integration stage has not started and requires separate user approval.  ## Objective and invariant  Establish a server-only Platform Admin authorization boundary that denies by default and cannot derive Platform Admin authority from Workspace sessions, Workspace roles, or caller-supplied actor fields.  ## Implementation  Created src/features/admin/security/platform-admin.server.ts.`
+  },
+  {
+    slug: "doc-008-platform-admin-boundary-stage-2",
+    titleEn: "DOC-008 — Platform Admin Boundary (Stage 2) Report",
+    titleFa: "DOC-008 — Platform Admin Boundary (Stage 2) Report",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# DOC-008 — Platform Admin Boundary (Stage 2) Report  **Status:** Implementation committed to the existing Stage 2 branch; runtime activation and PR approval remain pending.  ## Scope and sequencing  Stage 1 was merged through PR #127. The existing \`feat/022-doc-008-platform-admin-identity\` branch was updated from \`main\` before Stage 2 work resumed. No additional branch or pull request was created. All Stage 2 changes are intended for the existing PR #128.  ## Implemented  - Added a provider-agn`
   },
   {
     slug: "zod-firecrawl-remediation",

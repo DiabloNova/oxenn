@@ -1,0 +1,36 @@
+# Automated remediation event history
+
+GitHub lifecycle and CI evidence is stored as append-only, monthly JSON Lines files in this directory.
+
+The recorder listens to:
+- Pull requests closed against main: only PRs with at least one finding-ID reference are considered; closures with no finding-ID reference are no-ops. Merged PRs carrying authoritative IDs are retained as audit evidence even when mapping is incomplete. Candidate-only closures, merged or unmerged, are retained only when a candidate resolves to exactly one canonical finding file.
+- Completed runs of the repository CI workflow: only exact post-merge runs associated with the merge commit on main and carrying at least one finding-ID reference are considered; runs with no finding-ID reference are no-ops. Events with authoritative IDs are retained even when finding mapping is incomplete; those events are evidence-only and do not change dispositions. Only `success` with complete canonical mapping, exactly one explicit approval declaration in the canonical Finding file (`- Verification approval: **Approved**`), and a non-empty `## Verification criteria` checklist whose every item is checked can advance a finding to Verified complete. A changed Finding file, a `Finding-IDs` reference, or successful CI alone is never completion approval. `failure`, `timed_out`, and `action_required` with complete mapping produce verification-failed status. `cancelled`, `skipped`, `neutral`, pre-merge, and unrelated CI completions never change dispositions; pre-merge and unrelated CI completions are no-ops.
+
+Each event contains a deterministic event ID, UTC timestamp, repository, PR/CI references, candidate and authoritative finding IDs, changed file paths, and direct finding-file associations where available. Monthly event logs use size-bounded shards (`YYYY-MM.jsonl`, then `YYYY-MM-001.jsonl`, etc.) capped at 900 KiB per shard. The recorder reads large existing blobs through the Git Blobs API when Contents API returns `encoding: none`, refuses blobs above the API 100 MiB limit, and refuses any single event larger than the shard budget. Re-delivered events are ignored by event ID across all shards for that month. If the event directory reaches the Contents API 1,000-entry listing limit, the recorder fails closed rather than performing an incomplete idempotency scan.
+
+Finding IDs may be discovered from branch names, PR titles, explicit Finding-IDs: lines, and changed paths, but discovery alone never authorizes a status transition. Every transitioned ID must have exactly one canonical numbered finding file in the repository, that exact path must appear in the PR's changed files with the matching ID, and exactly one matching row must exist in the ledger. Missing, duplicate, incomplete, or mixed valid/invalid mappings fail closed for the entire disposition transition; the merged PR or exact post-merge CI event is still retained as JSONL evidence. Other changed paths remain recorded at PR level and are not guessed to belong to one finding.
+
+The recorder never checks out or executes code from a pull request. It checks out the trusted main branch, uses read-only PR/CI metadata, and writes with the GitHub token's repository contents permission. It does not alter branch protection, merge PRs, force-update refs, or run database commands. Writes use a non-force Git ref update with bounded retries; if main is protected against the write or the update cannot be reconciled, the workflow fails safely.
+
+A finding is not marked Verified complete because a branch CI run passes or a PR is merely merged. The recorder does not mirror every repository event: events with no finding-ID reference are no-ops. The state sequence is:
+1. PR closed without merge: retain the closure as JSONL evidence only when a candidate resolves to exactly one canonical finding file; do not change any disposition.
+2. PR merged with at least one finding-ID reference: retain the closure event. Authoritative IDs remain auditable even if mapping is incomplete; candidate-only hints are retained only when they resolve to exactly one canonical finding file. Change to Integrated — verification pending only with complete canonical associations.
+3. Exact post-merge CI on main with at least one finding-ID reference: retain the event. Authoritative IDs remain auditable when mapping is incomplete; candidate-only hints require a unique canonical finding-file match. Change to Verified complete only with complete canonical associations.
+4. Post-merge CI failure: change to Integrated — verification failed only with complete canonical associations; otherwise retain evidence only.
+
+The human-readable ledger and finding status lines are updated only for merged PRs and exact post-merge CI events with complete canonical associations. Verified dispositions are immutable against delayed lifecycle events. Existing evidence links are retained. When a non-verified finding advances to Verified complete, the verified-commit column is refreshed to the exact merge SHA in the same ledger update; an already-main-verified finding keeps its original status details and SHA. Event IDs make delivery idempotent; concurrent main updates use bounded non-force retries, and protected-branch/API failures stop the write without bypassing protections.
+
+The recorder is intentionally evidence-only. It does not authorize remediation, mark a wave complete, approve a finding, or change product/database state.
+
+
+## Verification authorization
+
+A successful post-merge CI run is necessary but not sufficient to mark a Finding `Verified complete`. The canonical Finding file at the exact merge commit must contain exactly one declaration inside its `## Source` section: `- Verification approval: **Approved**` and a `## Verification criteria` section with at least one Markdown checklist item, and every item in that section must be checked (`- [x]` or `- [X]`). Missing markers, missing criteria, unchecked criteria, or incomplete canonical mappings leave the event as evidence only and do not change the Finding disposition. The approval field is an explicit maintainer completion declaration committed with the Finding; it is not inferred from a file edit or a CI result. The recorder reads this declaration from the exact merge commit, not from a later mutable PR description.
+
+## Status-line compatibility
+
+The recorder recognizes exactly one current `- Status:` line, whether its value is plain text or bold Markdown. Historical labels such as `- Status in source audit:` are not current status fields. Missing or multiple current Status lines fail closed; the recorder does not invent a current status for historical-only documents.
+
+## Append-only corrections
+
+Historical event records are never silently rewritten. A correction is appended as an `event_record.correction` record containing `corrects_event_id`, `corrected_fields`, a reason, and its own deterministic `event_id`. Readers should apply correction records as overlays using the recorder's `applyEventCorrections` helper; the original record remains available as immutable provenance. For the November seed records, the correction overlays replace only the erroneous `file_finding_ids` arrays with the canonical Finding-file association. The complete list of PR-changed paths remains in `changed_files`.

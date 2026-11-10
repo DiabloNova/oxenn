@@ -1,0 +1,869 @@
+const PROGRESS_PATH = "ai_tasks/problem-register/REMEDIATION_PROGRESS.md";
+const FINDINGS_DIR = "ai_tasks/problem-register/findings";
+const EVENTS_DIR = "ai_tasks/problem-register/events";
+const MAX_EVENT_SHARD_BYTES = 900 * 1024;
+const MAX_GIT_BLOB_BYTES = 100 * 1000 * 1000;
+
+function extractIdTokens(value) {
+  const ids = [];
+  const pattern = /(?:^|[^A-Z0-9])([A-Z]{2,5}-\d{3})(?!\d)/gi;
+  for (const match of String(value || "").matchAll(pattern)) ids.push(match[1].toUpperCase());
+  return ids;
+}
+
+function extractExplicitFindingIds(body) {
+  const ids = new Set();
+  const markers = String(body || "").matchAll(/^\s*Finding-IDs?\s*:\s*([^\r\n]+)/gim);
+  for (const marker of markers) {
+    for (const id of extractIdTokens(marker[1])) ids.add(id);
+  }
+  return Array.from(ids).sort();
+}
+
+function hasFindingVerificationApproval(content) {
+  const lines = String(content || "").split(/\r?\n/);
+  const sourceHeadings = lines.map((line, index) => /^##\s+Source\s*$/i.test(line) ? index : -1).filter((index) => index >= 0);
+  if (sourceHeadings.length !== 1) return false;
+  const sourceHeading = sourceHeadings[0];
+  let end = lines.length;
+  for (let index = sourceHeading + 1; index < lines.length; index += 1) {
+    if (/^##\s+/.test(lines[index])) { end = index; break; }
+  }
+  const source = lines.slice(sourceHeading + 1, end);
+  const approvals = source.filter((line) => /^- Verification approval:\s*\*\*Approved\*\*\.?\s*$/i.test(line));
+  const declarations = source.filter((line) => /^- Verification approval:/i.test(line));
+  return approvals.length === 1 && declarations.length === 1;
+}
+
+function hasCompleteAcceptanceCriteria(content) {
+  const lines = String(content || "").split(/\r?\n/);
+  const headings = lines.map((line, index) => /^##\s+Verification criteria\s*$/i.test(line) ? index : -1).filter((index) => index >= 0);
+  if (headings.length !== 1) return false;
+  const heading = headings[0];
+  let end = lines.length;
+  for (let index = heading + 1; index < lines.length; index += 1) {
+    if (/^##\s+/.test(lines[index])) { end = index; break; }
+  }
+  const criteria = lines.slice(heading + 1, end).filter((line) => /^\s*[-*]\s+/.test(line));
+  return criteria.length > 0 && criteria.every((line) => /^\s*[-*]\s+\[[xX]\]\s+\S/.test(line));
+}
+
+function isCanonicalStatusLine(line) {
+  return /^- Status:\s*\S.*$/i.test(String(line || ""));
+}
+
+function applyEventCorrections(records) {
+  const events = (records || []).filter((record) => record && record.event_type !== "event_record.correction").map((record) => ({ ...record }));
+  const byId = new Map(events.filter((record) => record.event_id).map((record) => [record.event_id, record]));
+  for (const correction of (records || []).filter((record) => record && record.event_type === "event_record.correction")) {
+    const target = byId.get(correction.corrects_event_id);
+    const replacement = correction.corrected_fields && correction.corrected_fields.file_finding_ids;
+    if (!target || !Array.isArray(replacement) || !replacement.every((item) =>
+      item && typeof item.path === "string" &&
+      (item.finding_id == null || typeof item.finding_id === "string")
+    )) continue;
+    target.file_finding_ids = replacement.map((item) => ({ path: item.path, finding_id: item.finding_id || null }));
+    target.correction_event_ids = Array.from(new Set([...(target.correction_event_ids || []), correction.event_id]));
+  }
+  return events;
+}
+
+function extractFindingIds(pullRequest, files) {
+  const ids = new Set();
+  const sources = [pullRequest && pullRequest.title, pullRequest && pullRequest.head && pullRequest.head.ref];
+  for (const source of sources) {
+    for (const id of extractIdTokens(source)) ids.add(id);
+  }
+  for (const id of extractExplicitFindingIds(pullRequest && pullRequest.body)) ids.add(id);
+  for (const file of files || []) {
+    const id = directFindingId(file.filename || file.path);
+    if (id) ids.add(id);
+  }
+  return Array.from(ids).sort();
+}
+
+function buildFindingAssociation(candidateIds, explicitIds, fileFindingIds) {
+  const candidates = Array.from(new Set(candidateIds || [])).sort();
+  const explicit = Array.from(new Set(explicitIds || [])).sort();
+  const canonicalFileIds = (fileFindingIds || [])
+    .filter((file) => file && file.finding_id && directFindingId(file.path) === file.finding_id)
+    .map((file) => file.finding_id);
+  return {
+    candidate_finding_ids: candidates,
+    explicit_finding_ids: explicit,
+    // Branch/title matches are hints only. Transitions use changed canonical files plus explicit markers.
+    finding_ids: Array.from(new Set([...canonicalFileIds, ...explicit])).sort(),
+  };
+}
+
+function directFindingId(path) {
+  const match = String(path || "").match(/(?:^|\/)\d{3}-([A-Z]{2,5}-\d{3})\.md$/i);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function isMainVerifiedStatus(value) {
+  return /Verified complete/i.test(String(value || "")) && !/investigation branch only|branch-only/i.test(String(value || ""));
+}
+
+function hasCanonicalFindingMapping(record) {
+  if (!record || record.mapping_complete !== true || record.canonical_mapping_complete !== true) return false;
+  const ids = Array.from(new Set(record.finding_ids || []));
+  const paths = record.canonical_finding_paths || {};
+  const changedFiles = record.file_finding_ids || [];
+  return ids.length > 0 && ids.every((id) =>
+    typeof paths[id] === "string" &&
+    directFindingId(paths[id]) === id &&
+    changedFiles.filter((file) => file && file.finding_id === id && file.path === paths[id]).length === 1
+  );
+}
+
+function ledgerHasFinding(content, findingId) {
+  const prefix = "| [" + findingId + "](";
+  return String(content).split(/\r?\n/).filter((line) => line.startsWith(prefix)).length === 1;
+}
+
+function hasNewPullRequestReference(existing, incoming) {
+  const previous = new Set((String(existing || "").match(/\bPR #\d+\b/g) || []).map((value) => value.toUpperCase()));
+  const next = (String(incoming || "").match(/\bPR #\d+\b/g) || []).map((value) => value.toUpperCase());
+  return next.some((value) => !previous.has(value));
+}
+
+function mergeEvidence(existing, incoming) {
+  const parts = [];
+  for (const value of [existing, incoming]) {
+    for (const part of String(value || "").split(/\s*·\s*/)) {
+      const item = part.trim();
+      if (item && item !== "—" && !parts.includes(item)) parts.push(item);
+    }
+  }
+  return parts.length ? parts.join(" · ") : "—";
+}
+
+function statusForRecord(record) {
+  if (!record || !record.finding_ids || record.finding_ids.length === 0) return null;
+  if (record.event_type === "pull_request.closed") {
+    if (!record.pull_request || !record.pull_request.merged) return "Closed without merge";
+    return hasCanonicalFindingMapping(record) ? "Integrated — verification pending" : null;
+  }
+  if (record.event_type === "workflow_run.completed" && record.is_post_merge_main_ci) {
+    if (!hasCanonicalFindingMapping(record)) return null;
+    if (record.workflow_run && record.workflow_run.conclusion === "success") {
+      if (record.acceptance_criteria_complete !== true) return null;
+      return "Verified complete";
+    }
+    if (record.workflow_run && ["failure", "timed_out", "action_required"].includes(record.workflow_run.conclusion)) {
+      return "Integrated — verification failed";
+    }
+    return null;
+  }
+  return null;
+}
+
+function updateLedgerRow(content, findingId, status, evidence, commitLink) {
+  const lines = String(content).split(/\r?\n/);
+  const prefix = "| [" + findingId + "](";
+  const index = lines.findIndex((line) => line.startsWith(prefix));
+  if (index < 0) return { content, changed: false, previousStatus: null };
+
+  const cells = lines[index].split("|");
+  if (cells.length < 7) return { content, changed: false, previousStatus: null };
+  const previousStatus = cells[3].trim();
+  if (isMainVerifiedStatus(previousStatus) && status !== "Verified complete") {
+    return { content, changed: false, previousStatus, resultingStatus: previousStatus };
+  }
+  if ((/Integrated — verification failed/i.test(previousStatus) || /Closed without merge/i.test(previousStatus)) &&
+      status === "Integrated — verification pending" && !hasNewPullRequestReference(cells[5], evidence)) {
+    return { content, changed: false, previousStatus, resultingStatus: previousStatus };
+  }
+
+  if (!(isMainVerifiedStatus(previousStatus) && status === "Verified complete")) {
+    cells[3] = " **" + status + "** ";
+  }
+  cells[5] = " " + mergeEvidence(cells[5], evidence) + " ";
+  const previousCommit = cells[4].trim();
+  const canRefreshCommit = !isMainVerifiedStatus(previousStatus) || !previousCommit || previousCommit === "—";
+  if (commitLink && canRefreshCommit && previousCommit !== commitLink) {
+    cells[4] = " " + commitLink + " ";
+  }
+  lines[index] = cells.join("|");
+  return { content: lines.join("\n"), changed: lines.join("\n") !== content, previousStatus, resultingStatus: status };
+}
+
+function updateFindingStatus(content, status, details) {
+  const lines = String(content).split(/\r?\n/);
+  const matches = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    if (isCanonicalStatusLine(lines[i])) matches.push(i);
+  }
+  if (matches.length !== 1) return { content, changed: false, valid: false };
+  const index = matches[0];
+  const previous = lines[index];
+  if (isMainVerifiedStatus(previous)) {
+    return { content, changed: false, valid: true, protected: true };
+  }
+  if ((/Integrated — verification failed/i.test(previous) || /Closed without merge/i.test(previous)) &&
+      status === "Integrated — verification pending" && !hasNewPullRequestReference(previous, details)) {
+    return { content, changed: false, valid: true, protected: true };
+  }
+  lines[index] = "- Status: **" + status + "**" + (details ? " (" + details + ")" : "") + ".";
+  return { content: lines.join("\n"), changed: lines.join("\n") !== content, valid: true };
+}
+
+function appendEventIfNew(existing, record) {
+  const current = String(existing || "");
+  const known = new Set();
+  for (const line of current.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    try {
+      const parsed = JSON.parse(line);
+      if (parsed.event_id) known.add(parsed.event_id);
+    } catch (_) {
+      // Preserve malformed historical lines; do not treat them as valid IDs.
+    }
+  }
+  if (known.has(record.event_id)) return { content: current, appended: false };
+  const separator = current && !current.endsWith("\n") ? "\n" : "";
+  return {
+    content: current + separator + JSON.stringify(record) + "\n",
+    appended: true,
+  };
+}
+
+function eventIdFor(eventType, pullRequest, workflowRun) {
+  if (eventType === "pull_request.closed") {
+    return [
+      eventType,
+      pullRequest.number,
+      pullRequest.closed_at || pullRequest.updated_at || "unknown-time",
+      pullRequest.merge_commit_sha || "unmerged",
+    ].join(":");
+  }
+  return [
+    eventType,
+    workflowRun.id,
+    workflowRun.run_attempt || 1,
+    pullRequest ? pullRequest.number : "unassociated",
+  ].join(":");
+}
+
+function safeMarkdown(value) {
+  return String(value == null ? "" : value).replace(/[|\r\n]/g, " ").trim();
+}
+
+function evidenceFor(record) {
+  const links = [];
+  if (record.pull_request && record.pull_request.url) {
+    links.push("[PR #" + record.pull_request.number + "](" + record.pull_request.url + ")");
+  }
+  if (record.workflow_run && record.workflow_run.url) {
+    links.push("[CI run #" + record.workflow_run.id + "](" + record.workflow_run.url + ")");
+  }
+  if (record.pull_request && record.pull_request.merge_commit_sha) {
+    links.push("[merge commit](" + record.repository_url + "/commit/" + record.pull_request.merge_commit_sha + ")");
+  }
+  return links.join(" · ") || "GitHub event recorded in the monthly event log";
+}
+
+function appendExecutionLog(content, record, status, eventPath) {
+  if (!status || !record.finding_ids || record.finding_ids.length === 0) return content;
+  if (String(content).includes(record.event_id)) return content;
+  const label = record.pull_request
+    ? "PR #" + record.pull_request.number
+    : "CI run #" + (record.workflow_run ? record.workflow_run.id : "unknown");
+  const lines = [
+    "",
+    "",
+    "### Automated GitHub event — " + label,
+    "",
+    "- Event ID: " + record.event_id,
+    "- Event type: " + record.event_type,
+    "- Recorded at (UTC): " + record.occurred_at,
+    "- Finding IDs: " + record.finding_ids.join(", "),
+    "- Branch: " + safeMarkdown(record.pull_request ? record.pull_request.head_branch : record.workflow_run && record.workflow_run.head_branch),
+    "- Commit: " + safeMarkdown(record.workflow_run ? record.workflow_run.head_sha : record.pull_request && record.pull_request.head_sha),
+    "- Changed files: " + record.changed_files.length + "; exact paths and per-file finding references are preserved in [" + eventPath.split("/").pop() + "](./events/" + eventPath.split("/").pop() + ").",
+    "- Resulting status: " + status + (record.workflow_run ? " (CI conclusion: " + record.workflow_run.conclusion + ")" : ""),
+    "- Evidence: " + evidenceFor(record),
+  ];
+  return String(content).replace(/\s*$/, "") + "\n" + lines.join("\n") + "\n";
+}
+
+function statusDetailsForFinding(status, record) {
+  if (status === "Integrated — verification pending") {
+    return "PR #" + record.pull_request.number + " merged; post-merge CI pending";
+  }
+  if (status === "Integrated — verification failed") {
+    return "PR #" + record.pull_request.number + " merged; see CI run #" + record.workflow_run.id;
+  }
+  if (status === "Closed without merge") {
+    return "PR #" + record.pull_request.number + " closed without merge; no resolution is claimed";
+  }
+  if (status === "Verified complete") {
+    return "PR #" + record.pull_request.number + " merged and post-merge CI run #" + record.workflow_run.id + " passed";
+  }
+  return "";
+}
+
+async function readFile(github, owner, repo, path, ref) {
+  try {
+    const response = await github.rest.repos.getContent({ owner, repo, path, ref });
+    if (Array.isArray(response.data) || response.data.type !== "file") return null;
+    if (Number(response.data.size || 0) > MAX_GIT_BLOB_BYTES) {
+      throw new Error("Refusing to rewrite " + path + ": file exceeds the Git Blobs API 100 MB limit.");
+    }
+    if (response.data.encoding === "base64") {
+      return {
+        sha: response.data.sha,
+        content: Buffer.from(response.data.content || "", "base64").toString("utf8"),
+      };
+    }
+    if (response.data.sha && github.rest.git && github.rest.git.getBlob) {
+      const blobResponse = await github.rest.git.getBlob({ owner, repo, file_sha: response.data.sha });
+      const blob = blobResponse.data;
+      if (Number(blob.size || response.data.size || 0) > MAX_GIT_BLOB_BYTES || blob.encoding !== "base64") {
+        throw new Error("Refusing to rewrite " + path + ": Git blob content is unavailable or exceeds the 100 MB API limit.");
+      }
+      return { sha: blob.sha || response.data.sha, content: Buffer.from(blob.content || "", "base64").toString("utf8") };
+    }
+    throw new Error("Refusing to rewrite " + path + ": GitHub did not return complete file content.");
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+}
+
+async function listChangedFiles(github, owner, repo, pullRequest) {
+  const files = [];
+  let page = 1;
+  while (page <= 30) {
+    const response = await github.rest.pulls.listFiles({
+      owner,
+      repo,
+      pull_number: pullRequest.number,
+      per_page: 100,
+      page,
+    });
+    files.push(...response.data);
+    if (response.data.length < 100) break;
+    page += 1;
+  }
+  return {
+    files,
+    complete: files.length === Number(pullRequest.changed_files || files.length),
+  };
+}
+
+async function fetchPullRequestRecord(github, owner, repo, number, run) {
+  const response = await github.rest.pulls.get({ owner, repo, pull_number: number });
+  const pr = response.data;
+  if (!pr.base || pr.base.ref !== "main") return null;
+  const fileResult = await listChangedFiles(github, owner, repo, pr);
+  const firstCommitResponse = await github.rest.pulls.listCommits({ owner, repo, pull_number: pr.number, per_page: 1, page: 1 });
+  const baseSha = firstCommitResponse.data[0] && firstCommitResponse.data[0].parents && firstCommitResponse.data[0].parents[0]
+    ? firstCommitResponse.data[0].parents[0].sha
+    : pr.base.sha;
+  const files = fileResult.files.map((file) => ({
+    path: file.filename,
+    status: file.status,
+    additions: file.additions,
+    deletions: file.deletions,
+  }));
+  const fileFindingIds = files.map((file) => ({
+    path: file.path,
+    finding_id: directFindingId(file.path),
+  }));
+  const association = buildFindingAssociation(
+    extractFindingIds(pr, fileResult.files),
+    extractExplicitFindingIds(pr.body),
+    fileFindingIds,
+  );
+  const findingIds = association.finding_ids;
+  const postMerge = Boolean(
+    run &&
+    ["push", "workflow_dispatch"].includes(run.event) &&
+    run.head_branch === "main" &&
+    pr.merged &&
+    pr.merge_commit_sha &&
+    pr.merge_commit_sha === run.head_sha
+  );
+  return {
+    schema_version: 1,
+    event_id: "",
+    event_type: run ? "workflow_run.completed" : "pull_request.closed",
+    occurred_at: run ? (run.updated_at || run.run_started_at) : (pr.closed_at || pr.updated_at),
+    repository: owner + "/" + repo,
+    repository_url: "https://github.com/" + owner + "/" + repo,
+    finding_ids: findingIds,
+    candidate_finding_ids: association.candidate_finding_ids,
+    explicit_finding_ids: association.explicit_finding_ids,
+    file_finding_ids: fileFindingIds,
+    changed_files: files,
+    mapping_complete: fileResult.complete,
+    pull_request: {
+      number: pr.number,
+      url: pr.html_url,
+      state: pr.state,
+      merged: Boolean(pr.merged),
+      merged_at: pr.merged_at || null,
+      base_branch: pr.base.ref,
+      base_sha: baseSha,
+      head_branch: pr.head.ref,
+      head_sha: pr.head.sha,
+      merge_commit_sha: pr.merge_commit_sha || null,
+    },
+    workflow_run: run ? {
+      id: run.id,
+      url: run.html_url,
+      name: run.name,
+      event: run.event,
+      conclusion: run.conclusion,
+      head_branch: run.head_branch,
+      head_sha: run.head_sha,
+      run_attempt: run.run_attempt || 1,
+    } : null,
+    is_post_merge_main_ci: postMerge,
+  };
+}
+
+async function resolvePullRequestsForRun(github, owner, repo, run) {
+  const numbers = new Set((run.pull_requests || []).map((pr) => pr.number).filter(Boolean));
+  if (numbers.size === 0 && github.rest.repos.listPullRequestsAssociatedWithCommit) {
+    try {
+      const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+        owner,
+        repo,
+        commit_sha: run.head_sha,
+      });
+      for (const pr of response.data || []) {
+        if (pr.number && pr.base && pr.base.ref === "main") numbers.add(pr.number);
+      }
+    } catch (error) {
+      if (error.status !== 404) throw error;
+    }
+  }
+  if (numbers.size === 0) {
+    for (let page = 1; page <= 10; page += 1) {
+      const response = await github.rest.pulls.list({
+        owner,
+        repo,
+        state: "all",
+        base: "main",
+        sort: "updated",
+        direction: "desc",
+        per_page: 100,
+        page,
+      });
+      for (const pr of response.data || []) {
+        const matchesHead = pr.head && pr.head.sha === run.head_sha;
+        const matchesMerge = pr.merge_commit_sha && pr.merge_commit_sha === run.head_sha;
+        if (pr.number && (matchesHead || matchesMerge)) numbers.add(pr.number);
+      }
+      if (numbers.size > 0 || response.data.length < 100) break;
+    }
+  }
+  return Array.from(numbers);
+}
+
+async function buildUnassociatedRunRecord(github, owner, repo, run) {
+  let files = [];
+  try {
+    const response = await github.rest.repos.getCommit({
+      owner,
+      repo,
+      ref: run.head_sha,
+    });
+    files = (response.data.files || []).map((file) => ({
+      path: file.filename,
+      status: file.status,
+      additions: file.additions,
+      deletions: file.deletions,
+    }));
+  } catch (error) {
+    if (error.status !== 404) throw error;
+  }
+  const fileFindingIds = files.map((file) => ({ path: file.path, finding_id: directFindingId(file.path) }));
+  const association = buildFindingAssociation(
+    extractFindingIds({ title: run.head_commit && run.head_commit.message, body: "", head: { ref: run.head_branch } }, files),
+    [],
+    fileFindingIds,
+  );
+  const findingIds = association.finding_ids;
+  return {
+    schema_version: 1,
+    event_id: "",
+    event_type: "workflow_run.completed",
+    occurred_at: run.updated_at || run.run_started_at,
+    repository: owner + "/" + repo,
+    repository_url: "https://github.com/" + owner + "/" + repo,
+    finding_ids: findingIds,
+    candidate_finding_ids: association.candidate_finding_ids,
+    explicit_finding_ids: association.explicit_finding_ids,
+    file_finding_ids: fileFindingIds,
+    changed_files: files,
+    mapping_complete: true,
+    pull_request: null,
+    workflow_run: {
+      id: run.id,
+      url: run.html_url,
+      name: run.name,
+      event: run.event,
+      conclusion: run.conclusion,
+      head_branch: run.head_branch,
+      head_sha: run.head_sha,
+      run_attempt: run.run_attempt || 1,
+    },
+    is_post_merge_main_ci: false,
+  };
+}
+
+async function findFindingPaths(github, owner, repo, ref, findingIds) {
+  if (findingIds.length === 0) return {};
+  const response = await github.rest.repos.getContent({
+    owner,
+    repo,
+    path: FINDINGS_DIR,
+    ref,
+  });
+  const entries = Array.isArray(response.data) ? response.data : [];
+  const result = {};
+  for (const id of findingIds) {
+    const suffix = ("-" + id + ".md").toUpperCase();
+    const matches = entries.filter((entry) => entry.type === "file" && typeof entry.path === "string" && entry.path.startsWith(FINDINGS_DIR + "/") && /^\d{3}-[A-Z]{2,5}-\d{3}\.md$/i.test(entry.name) && entry.name.toUpperCase().endsWith(suffix));
+    if (matches.length === 1) result[id] = matches[0].path;
+  }
+  return result;
+}
+
+async function loadMonthlyEventState(github, owner, repo, ref, month, eventContents) {
+  let listing;
+  try {
+    listing = await github.rest.repos.getContent({ owner, repo, path: EVENTS_DIR, ref });
+  } catch (error) {
+    if (error.status !== 404) throw error;
+    listing = { data: [] };
+  }
+  if (!Array.isArray(listing.data)) {
+    throw new Error("The event directory could not be enumerated; refusing an incomplete idempotency scan.");
+  }
+  if (listing.data.length >= 1000) {
+    throw new Error("The event directory reached the Contents API 1,000-entry limit; refusing an incomplete idempotency scan.");
+  }
+  const pattern = new RegExp("^" + month + "(?:-(\d{3}))?\.jsonl$");
+  const entries = (Array.isArray(listing.data) ? listing.data : [])
+    .filter((entry) => entry && entry.type === "file" && typeof entry.name === "string" && pattern.test(entry.name))
+    .sort((a, b) => {
+      const ai = Number((a.name.match(/-(\d{3})\.jsonl$/) || [])[1] || 0);
+      const bi = Number((b.name.match(/-(\d{3})\.jsonl$/) || [])[1] || 0);
+      return ai - bi;
+    });
+  const state = { paths: [], knownIds: new Set() };
+  for (const entry of entries) {
+    const file = await readFile(github, owner, repo, entry.path, ref);
+    if (!file) throw new Error("Refusing to append: listed event shard disappeared: " + entry.path);
+    eventContents.set(entry.path, file.content);
+    state.paths.push(entry.path);
+    for (const line of file.content.split(/\r?\n/).filter(Boolean)) {
+      try { const parsed = JSON.parse(line); if (parsed.event_id) state.knownIds.add(parsed.event_id); }
+      catch (_) { /* Preserve malformed historical lines; do not treat them as valid IDs. */ }
+    }
+  }
+  if (state.paths.length === 0) {
+    const path = EVENTS_DIR + "/" + month + ".jsonl";
+    state.paths.push(path);
+    eventContents.set(path, "");
+  }
+  return state;
+}
+
+function selectMonthlyEventShard(month, state, eventContents, record) {
+  const serialized = JSON.stringify(record) + "\n";
+  const serializedBytes = Buffer.byteLength(serialized, "utf8");
+  if (serializedBytes + 256 > MAX_EVENT_SHARD_BYTES) {
+    throw new Error("A single remediation event exceeds the bounded JSONL shard size.");
+  }
+  let path = state.paths[state.paths.length - 1];
+  let content = eventContents.get(path) || "";
+  const separatorBytes = content && !content.endsWith("\n") ? 1 : 0;
+  if (Buffer.byteLength(content, "utf8") + separatorBytes + serializedBytes + 256 > MAX_EVENT_SHARD_BYTES) {
+    const indexes = state.paths.map((item) => Number((item.match(/-(\d{3})\.jsonl$/) || [])[1] || 0));
+    const next = Math.max(0, ...indexes) + 1;
+    path = EVENTS_DIR + "/" + month + "-" + String(next).padStart(3, "0") + ".jsonl";
+    content = "";
+    state.paths.push(path);
+    eventContents.set(path, content);
+  }
+  return path;
+}
+
+async function persistRecords(github, owner, repo, records, core) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const refResponse = await github.rest.git.getRef({ owner, repo, ref: "heads/main" });
+    const baseSha = refResponse.data.object.sha;
+    const baseCommit = await github.rest.git.getCommit({ owner, repo, commit_sha: baseSha });
+    const progressFile = await readFile(github, owner, repo, PROGRESS_PATH, baseSha);
+    if (!progressFile) throw new Error("The remediation progress ledger is missing from main.");
+
+    let progress = progressFile.content;
+    const eventContents = new Map();
+    const eventStates = new Map();
+    const changed = new Map();
+    const pendingRecords = [];
+
+    for (const record of records) {
+      // Pre-merge CI is intentionally not persisted to main: it is not a remediation disposition.
+      if (record.event_type === "workflow_run.completed" && !record.is_post_merge_main_ci) continue;
+      if (record.event_type === "workflow_run.completed" &&
+          (!record.finding_ids || record.finding_ids.length === 0) &&
+          (!record.candidate_finding_ids || record.candidate_finding_ids.length === 0)) continue;
+      if (record.event_type === "pull_request.closed" &&
+          (!record.finding_ids || record.finding_ids.length === 0) &&
+          (!record.candidate_finding_ids || record.candidate_finding_ids.length === 0)) continue;
+
+      const month = String(record.occurred_at || new Date().toISOString()).slice(0, 7);
+      if (!eventStates.has(month)) {
+        eventStates.set(month, await loadMonthlyEventState(github, owner, repo, baseSha, month, eventContents));
+      }
+      const eventState = eventStates.get(month);
+      if (eventState.knownIds.has(record.event_id)) continue;
+      const eventPath = selectMonthlyEventShard(month, eventState, eventContents, record);
+      record.event_file = eventPath;
+      const existingText = eventContents.get(eventPath) || "";
+
+      let status = null;
+      let paths = {};
+      let stagedProgress = progress;
+      const stagedFindingChanges = [];
+      delete record.transition_rejected;
+      delete record.verification_rejected;
+      record.resulting_statuses = {};
+      const findingIds = record.finding_ids || [];
+      const candidateIds = record.candidate_finding_ids || [];
+      const lookupIds = record.event_type === "pull_request.closed" || record.is_post_merge_main_ci
+        ? Array.from(new Set([...findingIds, ...candidateIds]))
+        : findingIds;
+      if (lookupIds.length > 0) {
+        const resolvedPaths = await findFindingPaths(github, owner, repo, baseSha, lookupIds);
+        const resolvedIds = Object.keys(resolvedPaths);
+        const hasResolvedCandidate = candidateIds.some((id) => Boolean(resolvedPaths[id]));
+        const mergedClosure = record.event_type === "pull_request.closed" && Boolean(record.pull_request && record.pull_request.merged);
+        const unmergedClosure = record.event_type === "pull_request.closed" && !mergedClosure;
+        const postMergeCi = record.event_type === "workflow_run.completed" && record.is_post_merge_main_ci === true;
+        const authoritativeAuditEvent = findingIds.length > 0 && (mergedClosure || postMergeCi);
+        // Mapping failures remain auditable for authoritative merged/post-merge events; candidate-only hints must resolve uniquely.
+        if (unmergedClosure && resolvedIds.length === 0) continue;
+        if (findingIds.length === 0 && !hasResolvedCandidate) continue;
+        if (resolvedIds.length === 0 && !authoritativeAuditEvent) continue;
+        for (const findingId of findingIds) {
+          if (resolvedPaths[findingId]) paths[findingId] = resolvedPaths[findingId];
+        }
+        record.recognized_candidate_finding_ids = candidateIds.filter((id) => Boolean(resolvedPaths[id]));
+        record.canonical_finding_paths = paths;
+        record.canonical_mapping_complete = findingIds.length > 0 && findingIds.every((id) =>
+          Boolean(paths[id]) &&
+          ledgerHasFinding(progress, id) &&
+          (record.file_finding_ids || []).filter((file) => file && file.finding_id === id && file.path === paths[id]).length === 1
+        );
+        if (record.canonical_mapping_complete && record.mapping_complete === true) {
+          if (record.event_type === "workflow_run.completed" && record.workflow_run && record.workflow_run.conclusion === "success") {
+            let complete = findingIds.length > 0;
+            const verificationRef = record.pull_request && record.pull_request.merge_commit_sha
+              ? record.pull_request.merge_commit_sha
+              : baseSha;
+            if (complete) {
+              for (const findingId of findingIds) {
+                const findingFile = await readFile(github, owner, repo, paths[findingId], verificationRef);
+                if (!findingFile || !hasFindingVerificationApproval(findingFile.content) ||
+                    !hasCompleteAcceptanceCriteria(findingFile.content)) { complete = false; break; }
+              }
+            }
+            record.acceptance_criteria_complete = complete;
+            if (!complete) record.verification_rejected = true;
+          }
+          status = statusForRecord(record);
+        }
+      } else {
+        record.canonical_finding_paths = {};
+        record.canonical_mapping_complete = false;
+        if (record.event_type === "pull_request.closed" && !(record.pull_request && record.pull_request.merged)) continue;
+        if (record.event_type === "workflow_run.completed" && !record.is_post_merge_main_ci) continue;
+      }
+
+      // An unmerged PR is retained as event evidence only, and only when an ID resolves to a real finding file.
+      const mayChangeDisposition = Boolean(
+        status && status !== "Closed without merge" &&
+        ((record.event_type === "pull_request.closed" && record.pull_request && record.pull_request.merged) || record.is_post_merge_main_ci)
+      );
+      if (mayChangeDisposition) {
+        const evidence = evidenceFor(record);
+        const mergeSha = record.pull_request && record.pull_request.merge_commit_sha;
+        const commitLink = status === "Verified complete" && mergeSha && record.workflow_run && record.workflow_run.head_sha === mergeSha
+          ? "[" + mergeSha.slice(0, 8) + "](https://github.com/" + owner + "/" + repo + "/commit/" + mergeSha + ")"
+          : null;
+        const findingFiles = {};
+        let allFindingRecordsValid = true;
+        for (const findingId of record.finding_ids) {
+          const path = paths[findingId];
+          const file = await readFile(github, owner, repo, path, baseSha);
+          if (!file) { allFindingRecordsValid = false; break; }
+          const statusLines = file.content.split(/\r?\n/).filter(isCanonicalStatusLine);
+          if (statusLines.length !== 1) { allFindingRecordsValid = false; break; }
+          if (isMainVerifiedStatus(statusLines[0]) && status !== "Verified complete") { allFindingRecordsValid = false; break; }
+          findingFiles[findingId] = { path, content: file.content };
+        }
+        for (const findingId of record.finding_ids) {
+          const ledgerRow = updateLedgerRow(stagedProgress, findingId, status, evidence, commitLink);
+          if (ledgerRow.previousStatus == null || ledgerRow.resultingStatus !== status ||
+              (isMainVerifiedStatus(ledgerRow.previousStatus) && status !== "Verified complete")) {
+            allFindingRecordsValid = false;
+            break;
+          }
+          stagedProgress = ledgerRow.content;
+        }
+        if (allFindingRecordsValid) {
+          for (const findingId of record.finding_ids) {
+            const item = findingFiles[findingId];
+            const updated = updateFindingStatus(item.content, status, statusDetailsForFinding(status, record));
+            if (!updated.valid || (updated.protected && status !== "Verified complete")) { allFindingRecordsValid = false; break; }
+            if (updated.changed) stagedFindingChanges.push([item.path, updated.content]);
+          }
+        }
+        if (allFindingRecordsValid) {
+          progress = stagedProgress;
+          for (const [path, content] of stagedFindingChanges) changed.set(path, content);
+          for (const findingId of record.finding_ids) record.resulting_statuses[findingId] = status;
+          progress = appendExecutionLog(progress, record, status, eventPath);
+        } else {
+          record.transition_rejected = true;
+          record.resulting_statuses = {};
+          core.warning("Refusing all finding transitions for this event: at least one finding record or ledger association is missing or invalid.");
+        }
+      }
+
+      const append = appendEventIfNew(existingText, record);
+      if (append.appended) {
+        eventContents.set(eventPath, append.content);
+        eventState.knownIds.add(record.event_id);
+        changed.set(eventPath, append.content);
+        pendingRecords.push(record);
+      }
+    }
+
+    if (pendingRecords.length === 0) {
+      core.info("No relevant remediation event requires persistence; no commit required.");
+      return;
+    }
+
+    if (progress !== progressFile.content) changed.set(PROGRESS_PATH, progress);
+    if (changed.size === 0) return;
+
+    const treeEntries = [];
+    for (const [path, content] of changed.entries()) {
+      const blob = await github.rest.git.createBlob({
+        owner,
+        repo,
+        content,
+        encoding: "utf-8",
+      });
+      treeEntries.push({ path, mode: "100644", type: "blob", sha: blob.data.sha });
+    }
+    const tree = await github.rest.git.createTree({
+      owner,
+      repo,
+      base_tree: baseCommit.data.tree.sha,
+      tree: treeEntries,
+    });
+    const ids = Array.from(new Set(pendingRecords.flatMap((record) => record.finding_ids || [])));
+    const commit = await github.rest.git.createCommit({
+      owner,
+      repo,
+      message: "chore(remediation): record GitHub lifecycle evidence" + (ids.length ? " (" + ids.join(", ") + ")" : ""),
+      tree: tree.data.sha,
+      parents: [baseSha],
+    });
+    try {
+      await github.rest.git.updateRef({
+        owner,
+        repo,
+        ref: "heads/main",
+        sha: commit.data.sha,
+        force: false,
+      });
+      core.info("Recorded " + pendingRecords.length + " GitHub event(s) in " + commit.data.sha + ".");
+      return;
+    } catch (error) {
+      const retryableConflict = error.status === 409 || (error.status === 422 && /fast.?forward/i.test(String(error.message || "")));
+      if (!retryableConflict) throw error;
+      core.warning("main advanced during event recording; retrying against the new tip (attempt " + (attempt + 1) + ").");
+    }
+  }
+  throw new Error("Could not safely update main after five non-fast-forward retries; no force update was attempted.");
+}
+
+async function recordGitHubEvent({ github, context, core }) {
+  const owner = context.repo.owner;
+  const repo = context.repo.repo;
+  const records = [];
+
+  if (context.eventName === "pull_request_target") {
+    const pr = context.payload.pull_request;
+    if (!pr || !pr.number) return;
+    const record = await fetchPullRequestRecord(github, owner, repo, pr.number, null);
+    if (record) {
+      record.event_id = eventIdFor(record.event_type, {
+        number: record.pull_request.number,
+        closed_at: pr.closed_at || record.occurred_at,
+        updated_at: pr.updated_at,
+        merge_commit_sha: record.pull_request.merge_commit_sha,
+      }, null);
+      records.push(record);
+    }
+  } else if (context.eventName === "workflow_run") {
+    const run = context.payload.workflow_run;
+    if (!run || run.name !== "CI" || run.status !== "completed") return;
+    const numbers = await resolvePullRequestsForRun(github, owner, repo, run);
+    for (const number of numbers) {
+      const record = await fetchPullRequestRecord(github, owner, repo, number, run);
+      if (!record) continue;
+      record.event_id = eventIdFor(record.event_type, record.pull_request, run);
+      records.push(record);
+    }
+    if (records.length === 0) {
+      const record = await buildUnassociatedRunRecord(github, owner, repo, run);
+      record.event_id = eventIdFor(record.event_type, null, run);
+      records.push(record);
+    }
+  } else {
+    core.info("Unsupported event type; nothing recorded.");
+    return;
+  }
+
+  if (records.length === 0) {
+    core.info("No applicable GitHub event was found.");
+    return;
+  }
+  await persistRecords(github, owner, repo, records, core);
+}
+
+module.exports = {
+  appendEventIfNew,
+  applyEventCorrections,
+  buildFindingAssociation,
+  hasFindingVerificationApproval,
+  hasCompleteAcceptanceCriteria,
+  isCanonicalStatusLine,
+  directFindingId,
+  extractExplicitFindingIds,
+  findFindingPaths,
+  hasCanonicalFindingMapping,
+  isMainVerifiedStatus,
+  ledgerHasFinding,
+  mergeEvidence,
+  persistRecords,
+  eventIdFor,
+  extractFindingIds,
+  statusForRecord,
+  updateFindingStatus,
+  updateLedgerRow,
+  recordGitHubEvent,
+  readFile,
+};
