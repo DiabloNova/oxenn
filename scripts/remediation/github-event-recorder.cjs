@@ -1,6 +1,8 @@
 const PROGRESS_PATH = "ai_tasks/problem-register/REMEDIATION_PROGRESS.md";
 const FINDINGS_DIR = "ai_tasks/problem-register/findings";
 const EVENTS_DIR = "ai_tasks/problem-register/events";
+const MAX_EVENT_SHARD_BYTES = 900 * 1024;
+const MAX_GIT_BLOB_BYTES = 100 * 1000 * 1000;
 
 function extractIdTokens(value) {
   const ids = [];
@@ -16,6 +18,54 @@ function extractExplicitFindingIds(body) {
     for (const id of extractIdTokens(marker[1])) ids.add(id);
   }
   return Array.from(ids).sort();
+}
+
+function hasFindingVerificationApproval(content) {
+  const lines = String(content || "").split(/\r?\n/);
+  const sourceHeadings = lines.map((line, index) => /^##\s+Source\s*$/i.test(line) ? index : -1).filter((index) => index >= 0);
+  if (sourceHeadings.length !== 1) return false;
+  const sourceHeading = sourceHeadings[0];
+  let end = lines.length;
+  for (let index = sourceHeading + 1; index < lines.length; index += 1) {
+    if (/^##\s+/.test(lines[index])) { end = index; break; }
+  }
+  const source = lines.slice(sourceHeading + 1, end);
+  const approvals = source.filter((line) => /^- Verification approval:\s*\*\*Approved\*\*\.?\s*$/i.test(line));
+  const declarations = source.filter((line) => /^- Verification approval:/i.test(line));
+  return approvals.length === 1 && declarations.length === 1;
+}
+
+function hasCompleteAcceptanceCriteria(content) {
+  const lines = String(content || "").split(/\r?\n/);
+  const headings = lines.map((line, index) => /^##\s+Verification criteria\s*$/i.test(line) ? index : -1).filter((index) => index >= 0);
+  if (headings.length !== 1) return false;
+  const heading = headings[0];
+  let end = lines.length;
+  for (let index = heading + 1; index < lines.length; index += 1) {
+    if (/^##\s+/.test(lines[index])) { end = index; break; }
+  }
+  const criteria = lines.slice(heading + 1, end).filter((line) => /^\s*[-*]\s+/.test(line));
+  return criteria.length > 0 && criteria.every((line) => /^\s*[-*]\s+\[[xX]\]\s+\S/.test(line));
+}
+
+function isCanonicalStatusLine(line) {
+  return /^- Status:\s*\S.*$/i.test(String(line || ""));
+}
+
+function applyEventCorrections(records) {
+  const events = (records || []).filter((record) => record && record.event_type !== "event_record.correction").map((record) => ({ ...record }));
+  const byId = new Map(events.filter((record) => record.event_id).map((record) => [record.event_id, record]));
+  for (const correction of (records || []).filter((record) => record && record.event_type === "event_record.correction")) {
+    const target = byId.get(correction.corrects_event_id);
+    const replacement = correction.corrected_fields && correction.corrected_fields.file_finding_ids;
+    if (!target || !Array.isArray(replacement) || !replacement.every((item) =>
+      item && typeof item.path === "string" &&
+      (item.finding_id == null || typeof item.finding_id === "string")
+    )) continue;
+    target.file_finding_ids = replacement.map((item) => ({ path: item.path, finding_id: item.finding_id || null }));
+    target.correction_event_ids = Array.from(new Set([...(target.correction_event_ids || []), correction.event_id]));
+  }
+  return events;
 }
 
 function extractFindingIds(pullRequest, files) {
@@ -97,7 +147,10 @@ function statusForRecord(record) {
   }
   if (record.event_type === "workflow_run.completed" && record.is_post_merge_main_ci) {
     if (!hasCanonicalFindingMapping(record)) return null;
-    if (record.workflow_run && record.workflow_run.conclusion === "success") return "Verified complete";
+    if (record.workflow_run && record.workflow_run.conclusion === "success") {
+      if (record.acceptance_criteria_complete !== true) return null;
+      return "Verified complete";
+    }
     if (record.workflow_run && ["failure", "timed_out", "action_required"].includes(record.workflow_run.conclusion)) {
       return "Integrated — verification failed";
     }
@@ -140,7 +193,7 @@ function updateFindingStatus(content, status, details) {
   const lines = String(content).split(/\r?\n/);
   const matches = [];
   for (let i = 0; i < lines.length; i += 1) {
-    if (/^- Status: \*\*.*\*\*.*$/.test(lines[i])) matches.push(i);
+    if (isCanonicalStatusLine(lines[i])) matches.push(i);
   }
   if (matches.length !== 1) return { content, changed: false, valid: false };
   const index = matches[0];
@@ -255,13 +308,24 @@ async function readFile(github, owner, repo, path, ref) {
   try {
     const response = await github.rest.repos.getContent({ owner, repo, path, ref });
     if (Array.isArray(response.data) || response.data.type !== "file") return null;
-    if (response.data.encoding !== "base64") {
-      throw new Error("Refusing to rewrite " + path + ": GitHub did not return complete base64 file content.");
+    if (Number(response.data.size || 0) > MAX_GIT_BLOB_BYTES) {
+      throw new Error("Refusing to rewrite " + path + ": file exceeds the Git Blobs API 100 MB limit.");
     }
-    return {
-      sha: response.data.sha,
-      content: Buffer.from(response.data.content || "", "base64").toString("utf8"),
-    };
+    if (response.data.encoding === "base64") {
+      return {
+        sha: response.data.sha,
+        content: Buffer.from(response.data.content || "", "base64").toString("utf8"),
+      };
+    }
+    if (response.data.sha && github.rest.git && github.rest.git.getBlob) {
+      const blobResponse = await github.rest.git.getBlob({ owner, repo, file_sha: response.data.sha });
+      const blob = blobResponse.data;
+      if (Number(blob.size || response.data.size || 0) > MAX_GIT_BLOB_BYTES || blob.encoding !== "base64") {
+        throw new Error("Refusing to rewrite " + path + ": Git blob content is unavailable or exceeds the 100 MB API limit.");
+      }
+      return { sha: blob.sha || response.data.sha, content: Buffer.from(blob.content || "", "base64").toString("utf8") };
+    }
+    throw new Error("Refusing to rewrite " + path + ": GitHub did not return complete file content.");
   } catch (error) {
     if (error.status === 404) return null;
     throw error;
@@ -470,6 +534,67 @@ async function findFindingPaths(github, owner, repo, ref, findingIds) {
   return result;
 }
 
+async function loadMonthlyEventState(github, owner, repo, ref, month, eventContents) {
+  let listing;
+  try {
+    listing = await github.rest.repos.getContent({ owner, repo, path: EVENTS_DIR, ref });
+  } catch (error) {
+    if (error.status !== 404) throw error;
+    listing = { data: [] };
+  }
+  if (!Array.isArray(listing.data)) {
+    throw new Error("The event directory could not be enumerated; refusing an incomplete idempotency scan.");
+  }
+  if (listing.data.length >= 1000) {
+    throw new Error("The event directory reached the Contents API 1,000-entry limit; refusing an incomplete idempotency scan.");
+  }
+  const pattern = new RegExp("^" + month + "(?:-(\d{3}))?\.jsonl$");
+  const entries = (Array.isArray(listing.data) ? listing.data : [])
+    .filter((entry) => entry && entry.type === "file" && typeof entry.name === "string" && pattern.test(entry.name))
+    .sort((a, b) => {
+      const ai = Number((a.name.match(/-(\d{3})\.jsonl$/) || [])[1] || 0);
+      const bi = Number((b.name.match(/-(\d{3})\.jsonl$/) || [])[1] || 0);
+      return ai - bi;
+    });
+  const state = { paths: [], knownIds: new Set() };
+  for (const entry of entries) {
+    const file = await readFile(github, owner, repo, entry.path, ref);
+    if (!file) throw new Error("Refusing to append: listed event shard disappeared: " + entry.path);
+    eventContents.set(entry.path, file.content);
+    state.paths.push(entry.path);
+    for (const line of file.content.split(/\r?\n/).filter(Boolean)) {
+      try { const parsed = JSON.parse(line); if (parsed.event_id) state.knownIds.add(parsed.event_id); }
+      catch (_) { /* Preserve malformed historical lines; do not treat them as valid IDs. */ }
+    }
+  }
+  if (state.paths.length === 0) {
+    const path = EVENTS_DIR + "/" + month + ".jsonl";
+    state.paths.push(path);
+    eventContents.set(path, "");
+  }
+  return state;
+}
+
+function selectMonthlyEventShard(month, state, eventContents, record) {
+  const serialized = JSON.stringify(record) + "\n";
+  const serializedBytes = Buffer.byteLength(serialized, "utf8");
+  if (serializedBytes + 256 > MAX_EVENT_SHARD_BYTES) {
+    throw new Error("A single remediation event exceeds the bounded JSONL shard size.");
+  }
+  let path = state.paths[state.paths.length - 1];
+  let content = eventContents.get(path) || "";
+  const separatorBytes = content && !content.endsWith("\n") ? 1 : 0;
+  if (Buffer.byteLength(content, "utf8") + separatorBytes + serializedBytes + 256 > MAX_EVENT_SHARD_BYTES) {
+    const indexes = state.paths.map((item) => Number((item.match(/-(\d{3})\.jsonl$/) || [])[1] || 0));
+    const next = Math.max(0, ...indexes) + 1;
+    path = EVENTS_DIR + "/" + month + "-" + String(next).padStart(3, "0") + ".jsonl";
+    content = "";
+    state.paths.push(path);
+    eventContents.set(path, content);
+  }
+  return path;
+}
+
 async function persistRecords(github, owner, repo, records, core) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const refResponse = await github.rest.git.getRef({ owner, repo, ref: "heads/main" });
@@ -480,6 +605,7 @@ async function persistRecords(github, owner, repo, records, core) {
 
     let progress = progressFile.content;
     const eventContents = new Map();
+    const eventStates = new Map();
     const changed = new Map();
     const pendingRecords = [];
 
@@ -494,23 +620,21 @@ async function persistRecords(github, owner, repo, records, core) {
           (!record.candidate_finding_ids || record.candidate_finding_ids.length === 0)) continue;
 
       const month = String(record.occurred_at || new Date().toISOString()).slice(0, 7);
-      const eventPath = EVENTS_DIR + "/" + month + ".jsonl";
-      if (!eventContents.has(eventPath)) {
-        const existing = await readFile(github, owner, repo, eventPath, baseSha);
-        eventContents.set(eventPath, existing ? existing.content : "");
+      if (!eventStates.has(month)) {
+        eventStates.set(month, await loadMonthlyEventState(github, owner, repo, baseSha, month, eventContents));
       }
-      const existingText = eventContents.get(eventPath);
-      const known = new Set(existingText.split(/\r?\n/).filter(Boolean).flatMap((line) => {
-        try { const parsed = JSON.parse(line); return parsed.event_id ? [parsed.event_id] : []; }
-        catch (_) { return []; }
-      }));
-      if (known.has(record.event_id)) continue;
+      const eventState = eventStates.get(month);
+      if (eventState.knownIds.has(record.event_id)) continue;
+      const eventPath = selectMonthlyEventShard(month, eventState, eventContents, record);
+      record.event_file = eventPath;
+      const existingText = eventContents.get(eventPath) || "";
 
       let status = null;
       let paths = {};
       let stagedProgress = progress;
       const stagedFindingChanges = [];
       delete record.transition_rejected;
+      delete record.verification_rejected;
       record.resulting_statuses = {};
       const findingIds = record.finding_ids || [];
       const candidateIds = record.candidate_finding_ids || [];
@@ -540,6 +664,21 @@ async function persistRecords(github, owner, repo, records, core) {
           (record.file_finding_ids || []).filter((file) => file && file.finding_id === id && file.path === paths[id]).length === 1
         );
         if (record.canonical_mapping_complete && record.mapping_complete === true) {
+          if (record.event_type === "workflow_run.completed" && record.workflow_run && record.workflow_run.conclusion === "success") {
+            let complete = findingIds.length > 0;
+            const verificationRef = record.pull_request && record.pull_request.merge_commit_sha
+              ? record.pull_request.merge_commit_sha
+              : baseSha;
+            if (complete) {
+              for (const findingId of findingIds) {
+                const findingFile = await readFile(github, owner, repo, paths[findingId], verificationRef);
+                if (!findingFile || !hasFindingVerificationApproval(findingFile.content) ||
+                    !hasCompleteAcceptanceCriteria(findingFile.content)) { complete = false; break; }
+              }
+            }
+            record.acceptance_criteria_complete = complete;
+            if (!complete) record.verification_rejected = true;
+          }
           status = statusForRecord(record);
         }
       } else {
@@ -566,7 +705,7 @@ async function persistRecords(github, owner, repo, records, core) {
           const path = paths[findingId];
           const file = await readFile(github, owner, repo, path, baseSha);
           if (!file) { allFindingRecordsValid = false; break; }
-          const statusLines = file.content.split(/\r?\n/).filter((line) => /^- Status: \*\*.*\*\*.*$/.test(line));
+          const statusLines = file.content.split(/\r?\n/).filter(isCanonicalStatusLine);
           if (statusLines.length !== 1) { allFindingRecordsValid = false; break; }
           if (isMainVerifiedStatus(statusLines[0]) && status !== "Verified complete") { allFindingRecordsValid = false; break; }
           findingFiles[findingId] = { path, content: file.content };
@@ -603,6 +742,8 @@ async function persistRecords(github, owner, repo, records, core) {
       const append = appendEventIfNew(existingText, record);
       if (append.appended) {
         eventContents.set(eventPath, append.content);
+        eventState.knownIds.add(record.event_id);
+        changed.set(eventPath, append.content);
         pendingRecords.push(record);
       }
     }
@@ -612,9 +753,6 @@ async function persistRecords(github, owner, repo, records, core) {
       return;
     }
 
-    for (const [path, content] of eventContents.entries()) {
-      if (content !== "") changed.set(path, content);
-    }
     if (progress !== progressFile.content) changed.set(PROGRESS_PATH, progress);
     if (changed.size === 0) return;
 
@@ -708,7 +846,11 @@ async function recordGitHubEvent({ github, context, core }) {
 
 module.exports = {
   appendEventIfNew,
+  applyEventCorrections,
   buildFindingAssociation,
+  hasFindingVerificationApproval,
+  hasCompleteAcceptanceCriteria,
+  isCanonicalStatusLine,
   directFindingId,
   extractExplicitFindingIds,
   findFindingPaths,
@@ -723,4 +865,5 @@ module.exports = {
   updateFindingStatus,
   updateLedgerRow,
   recordGitHubEvent,
+  readFile,
 };

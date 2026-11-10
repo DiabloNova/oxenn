@@ -7,6 +7,7 @@ type GitHubStub = {
     git: {
       getRef: () => Promise<{ data: { object: { sha: string } } }>;
       getCommit: () => Promise<{ data: { tree: { sha: string } } }>;
+      getBlob: (args: { file_sha: string }) => Promise<{ data: { sha: string; size: number; encoding: string; content: string } }>;
       createBlob: (args: { content: string }) => Promise<{ data: { sha: string } }>;
       createTree: () => Promise<{ data: { sha: string } }>;
       createCommit: () => Promise<{ data: { sha: string } }>;
@@ -23,6 +24,10 @@ const recorder = require("../../../../scripts/remediation/github-event-recorder.
   eventIdFor: (eventType: string, pullRequest: Record<string, unknown> | null, workflowRun: Record<string, unknown> | null) => string;
   extractFindingIds: (pullRequest: Record<string, unknown>, files: Array<{ filename: string }>) => string[];
   extractExplicitFindingIds: (body: string) => string[];
+  hasFindingVerificationApproval: (content: string) => boolean;
+  hasCompleteAcceptanceCriteria: (content: string) => boolean;
+  applyEventCorrections: (records: Array<Record<string, unknown>>) => Array<Record<string, unknown>>;
+  readFile: (github: GitHubStub, owner: string, repo: string, path: string, ref: string) => Promise<{ sha: string; content: string } | null>;
   buildFindingAssociation: (candidateIds: string[], explicitIds: string[], fileFindingIds: Array<{ finding_id: string | null; path: string }>) => { candidate_finding_ids: string[]; explicit_finding_ids: string[]; finding_ids: string[] };
   statusForRecord: (record: Record<string, unknown>) => string | null;
   updateFindingStatus: (content: string, status: string, details: string) => { content: string; changed: boolean; valid: boolean; protected?: boolean };
@@ -95,14 +100,17 @@ describe("GitHub remediation event recorder", () => {
     })).toBeNull();
   });
 
-  it("requires successful main CI for the exact merged commit before resolution", () => {
-    expect(recorder.statusForRecord({
+  it("requires explicit per-finding approval and completed acceptance criteria in addition to exact post-merge CI", () => {
+    const base = {
       event_type: "workflow_run.completed",
       finding_ids: ["DOC-001"],
       is_post_merge_main_ci: true,
       ...canonicalMapping,
       workflow_run: { conclusion: "success" },
-    })).toBe("Verified complete");
+      acceptance_criteria_complete: true,
+    };
+    expect(recorder.statusForRecord(base)).toBe("Verified complete");
+    expect(recorder.statusForRecord({ ...base, acceptance_criteria_complete: false })).toBeNull();
   });
 
   it("does not resolve when post-merge CI fails or file mapping is incomplete", () => {
@@ -185,12 +193,16 @@ describe("GitHub remediation event recorder", () => {
     expect(result.content).toContain("Integrated — verification pending");
   });
 
-  it("updates a finding status only when exactly one canonical status line exists", () => {
-    const original = "# Finding\n\n- Finding ID: DOC-001\n- Status: **In progress**.\n";
+  it("updates exactly one canonical Status line in bold or plain format, without treating historical labels as current status", () => {
+    const original = "# Finding\n\n## Source\n- Finding ID: DOC-001\n- Status: **In progress**.\n";
     const updated = recorder.updateFindingStatus(original, "Verified complete on main", "PR #122 and CI run #42584501166 passed");
     expect(updated.changed).toBe(true);
     expect(updated.content).toContain("Verified complete on main");
-    expect(recorder.updateFindingStatus("# Finding\n- Status: **A**.\n- Status: **B**.\n", "Verified complete", "").changed).toBe(false);
+    const plain = recorder.updateFindingStatus("# Finding\n\n## Source\n- Status: missing preflight confirmed; production validity unknown\n", "Integrated — verification pending", "PR #125 merged");
+    expect(plain.valid).toBe(true);
+    expect(plain.content).toContain("- Status: **Integrated — verification pending**");
+    expect(recorder.updateFindingStatus("# Finding\n\n## Source\n- Status in source audit: confirmed static defect\n", "Verified complete", "").valid).toBe(false);
+    expect(recorder.updateFindingStatus("# Finding\n\n## Source\n- Status: **A**.\n- Status: B\n", "Verified complete", "").changed).toBe(false);
   });
 
   it("requires exact canonical paths for every finding in a mixed-ID event", () => {
@@ -282,7 +294,7 @@ describe("GitHub remediation event recorder", () => {
 
   function makeFakeGitHub(options: { progress?: string; finding?: string; findingAfterFirstConflict?: string; findingDirectory?: Array<{ type: string; name: string; path: string }>; event?: string; updateRef?: (call: number) => Promise<void>; getContentFailure?: number } = {}) {
     const progress = options.progress ?? "| [DOC-001](./findings/015-DOC-001.md) | Wave 1 | **Integrated — verification pending** | — | [Prior](https://example.test/prior) |\n";
-    let finding = options.finding ?? "# DOC-001\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n";
+    let finding = options.finding ?? "# DOC-001\n\n## Source\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n- Verification approval: **Approved**\n\n## Verification criteria\n- [x] The remediation-specific acceptance test passes.\n";
     const event = options.event;
     const blobs: string[] = [];
     const forceFlags: boolean[] = [];
@@ -294,6 +306,7 @@ describe("GitHub remediation event recorder", () => {
       git: {
         getRef: async () => ({ data: { object: { sha: "base-" + (++refCalls) } } }),
         getCommit: async () => ({ data: { tree: { sha: "tree-base" } } }),
+        getBlob: async ({ file_sha }: { file_sha: string }) => ({ data: { sha: file_sha, size: 0, encoding: "base64", content: "" } }),
         createBlob: async ({ content }: { content: string }) => { blobs.push(content); return { data: { sha: "blob-" + blobs.length } }; },
         createTree: async () => ({ data: { sha: "tree-new" } }),
         createCommit: async () => ({ data: { sha: "commit-new" } }),
@@ -311,6 +324,7 @@ describe("GitHub remediation event recorder", () => {
         getContent: async ({ path }: { path: string }) => {
           if (options.getContentFailure && path.endsWith("REMEDIATION_PROGRESS.md")) throw missing(options.getContentFailure);
           if (path === "ai_tasks/problem-register/REMEDIATION_PROGRESS.md") return encode(progress);
+          if (path === "ai_tasks/problem-register/events") return { data: event === undefined ? [] : [{ type: "file", name: "2026-11.jsonl", path: "ai_tasks/problem-register/events/2026-11.jsonl" }] };
           if (path === "ai_tasks/problem-register/events/2026-11.jsonl") return event === undefined ? Promise.reject(missing()) : encode(event);
           if (path === "ai_tasks/problem-register/findings") return { data: options.findingDirectory ?? [{ type: "file", name: "015-DOC-001.md", path: "ai_tasks/problem-register/findings/015-DOC-001.md" }] };
           if (path === "ai_tasks/problem-register/findings/015-DOC-001.md") return encode(finding);
@@ -334,6 +348,81 @@ describe("GitHub remediation event recorder", () => {
     changed_files: [{ path: "ai_tasks/problem-register/findings/015-DOC-001.md" }],
     file_finding_ids: [{ finding_id: "DOC-001", path: "ai_tasks/problem-register/findings/015-DOC-001.md" }],
   };
+
+  it("requires exactly one explicit approval declaration in the canonical Finding file", () => {
+    expect(recorder.hasFindingVerificationApproval("## Source\n- Verification approval: **Approved**\n")).toBe(true);
+    expect(recorder.hasFindingVerificationApproval("## Source\n- Verification approval: **Approved**\n## Source\n- Verification approval: **Approved**\n")).toBe(false);
+    expect(recorder.hasFindingVerificationApproval("## Source\n- Verification approval: **Pending**\n")).toBe(false);
+    expect(recorder.hasFindingVerificationApproval("- Verification approval: **Approved**\n")).toBe(false);
+    expect(recorder.hasFindingVerificationApproval("## Source\n- Verification approval: **Approved**\n- Verification approval: **Approved**\n")).toBe(false);
+  });
+
+  it("requires a non-empty Verification criteria checklist with every item checked", () => {
+    expect(recorder.hasCompleteAcceptanceCriteria("## Verification criteria\n- [x] Test passes\n")).toBe(true);
+    expect(recorder.hasCompleteAcceptanceCriteria("## Verification criteria\n- [x] Test passes\n- [ ] Runtime evidence pending\n")).toBe(false);
+    expect(recorder.hasCompleteAcceptanceCriteria("## Verification criteria\n- Test passes\n")).toBe(false);
+    expect(recorder.hasCompleteAcceptanceCriteria("## Verification criteria\n- [x] First\n## Verification criteria\n- [x] Duplicate\n")).toBe(false);
+  });
+
+  it("applies append-only correction events as overlays without mutating original event records", () => {
+    const original = { event_id: "evt-1", event_type: "pull_request.closed", file_finding_ids: [{ path: "docs/guide.md", finding_id: "DOC-001" }] };
+    const correction = { event_id: "correction-1", event_type: "event_record.correction", corrects_event_id: "evt-1", corrected_fields: { file_finding_ids: [{ path: "ai_tasks/problem-register/findings/015-DOC-001.md", finding_id: "DOC-001" }] } };
+    const result = recorder.applyEventCorrections([original, correction]);
+    expect(result).toHaveLength(1);
+    expect(result[0].file_finding_ids).toEqual(correction.corrected_fields.file_finding_ids);
+    expect(result[0].correction_event_ids).toEqual(["correction-1"]);
+    expect(original.file_finding_ids[0].path).toBe("docs/guide.md");
+  });
+
+  it("reads Contents API files over 1 MB through the Git Blobs API fallback", async () => {
+    const largeContent = "x".repeat(1024 * 1024 + 10);
+    const github = { rest: {
+      repos: { getContent: async () => ({ data: { type: "file", encoding: "none", content: "", sha: "large-blob", size: largeContent.length } }) },
+      git: { getBlob: async () => ({ data: { sha: "large-blob", size: largeContent.length, encoding: "base64", content: Buffer.from(largeContent).toString("base64") } }) },
+    } } as unknown as GitHubStub;
+    await expect(recorder.readFile(github, "DiabloNova", "oxenn", "large.jsonl", "main"))
+      .resolves.toEqual({ sha: "large-blob", content: largeContent });
+  });
+
+  it("rotates a full monthly JSONL file into a bounded numbered shard", async () => {
+    const fullShard = "x".repeat(900 * 1024);
+    const fake = makeFakeGitHub({ event: fullShard });
+    const record: Record<string, unknown> = {
+      event_id: "pull_request.closed:125:2026-11-10T00:00:00Z:unmerged-shard",
+      event_type: "pull_request.closed",
+      occurred_at: "2026-11-10T00:00:00Z",
+      finding_ids: [],
+      candidate_finding_ids: ["DOC-001"],
+      file_finding_ids: [],
+      mapping_complete: true,
+      pull_request: { number: 125, merged: false },
+      changed_files: [],
+    };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(record.event_file).toBe("ai_tasks/problem-register/events/2026-11-001.jsonl");
+    expect(fake.blobs.some((blob) => blob.includes(record.event_id as string))).toBe(true);
+  });
+
+  it("does not verify a finding from a canonical file edit and successful CI without explicit approval", async () => {
+    const record: Record<string, unknown> = { ...mergedRecord };
+    const findingWithoutApproval = "# DOC-001\n\n## Source\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n\n## Verification criteria\n- [x] Acceptance test passes\n";
+    const fake = makeFakeGitHub({ finding: findingWithoutApproval });
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(record.verification_rejected).toBe(true);
+    expect(record.resulting_statuses).toEqual({});
+    expect(fake.blobs.some((blob) => blob.includes("- Status: **Verified complete**"))).toBe(false);
+    expect(fake.blobs.some((blob) => blob.includes(record.event_id as string))).toBe(true);
+  });
+
+  it("does not verify when explicit approval exists but acceptance criteria remain unchecked", async () => {
+    const finding = "# DOC-001\n\n## Source\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n- Verification approval: **Approved**\n\n## Verification criteria\n- [ ] Runtime evidence pending\n";
+    const fake = makeFakeGitHub({ finding });
+    const record: Record<string, unknown> = { ...mergedRecord };
+    await recorder.persistRecords(fake.github, "DiabloNova", "oxenn", [record], { info: () => {}, warning: () => {} });
+    expect(record.verification_rejected).toBe(true);
+    expect(record.resulting_statuses).toEqual({});
+    expect(fake.blobs.some((blob) => blob.includes("- Status: **Verified complete**"))).toBe(false);
+  });
 
   it("does not persist pre-merge CI runs to main", async () => {
     const fake = makeFakeGitHub();
@@ -525,8 +614,8 @@ describe("GitHub remediation event recorder", () => {
   });
 
   it("clears rejection state when a non-force retry reprocesses an event successfully", async () => {
-    const invalidFinding = "# DOC-001\n- Finding ID: DOC-001\n- Evidence only; no status line yet.\n";
-    const validFinding = "# DOC-001\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n";
+    const invalidFinding = "# DOC-001\n\n## Source\n- Finding ID: DOC-001\n- Evidence only; no status line yet.\n";
+    const validFinding = "# DOC-001\n\n## Source\n- Finding ID: DOC-001\n- Status: **Integrated — verification pending**.\n- Verification approval: **Approved**\n\n## Verification criteria\n- [x] The remediation-specific acceptance test passes.\n";
     const staleProgress = "| [DOC-001](./findings/015-DOC-001.md) | Wave 1 | **Integrated — verification pending** | [oldsha1](https://example.test/commit/oldsha1) | [Prior](https://example.test/prior) |\n";
     const fake = makeFakeGitHub({ progress: staleProgress, finding: invalidFinding, findingAfterFirstConflict: validFinding });
     const record: Record<string, unknown> = { ...mergedRecord };
