@@ -434,6 +434,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Stage 3 — Audit Gate Regression Tests and Verification  **Status:** SUCCESS (Stage 3 verification passed)   **Date:** 2026-10-19   **PR:** [#86](https://github.com/DiabloNova/oxenn/pull/86)   **Branch:** \`fix/audit-remediation-p1-v1.1\`   **Verified implementation commit:** \`0e439e087922245f29476acc946374c6fe6aef0a\`  ## Invariant  The dependency audit gate must never interpret missing, empty, malformed, or ambiguous severity/patch metadata as safe evidence. Critical/high findings may be risk-ac`
   },
   {
+    slug: "doc-008-platform-admin-boundary-stage-1",
+    titleEn: "DOC-008 — Platform Admin Boundary (Stage 1) Report",
+    titleFa: "DOC-008 — Platform Admin Boundary (Stage 1) Report",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# DOC-008 — Platform Admin Boundary (Stage 1) Report  **Status:** COMPLETE — Stage 1 implementation only. The later identity-provider and persistence integration stage has not started and requires separate user approval.  ## Objective and invariant  Establish a server-only Platform Admin authorization boundary that denies by default and cannot derive Platform Admin authority from Workspace sessions, Workspace roles, or caller-supplied actor fields.  ## Implementation  Created src/features/admin/security/platform-admin.server.ts.`
+  },
+  {
     slug: "zod-firecrawl-remediation",
     titleEn: "Firecrawl and Zod dependency remediation",
     titleFa: "Firecrawl and Zod dependency remediation",
