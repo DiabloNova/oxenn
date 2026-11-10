@@ -136,3 +136,25 @@ describe("docs index generation visibility", () => {
     expect(generatedIndex).not.toContain('slug: "unreadable-internal"');
   });
 });
+
+
+describe("deterministic docs index ordering", () => {
+  it("sorts filesystem entries before generating the public index", () => {
+    const fixtureRoot = mkdtempSync(path.join(tmpdir(), "oxenn-docs-order-"));
+    const docsDirectory = path.join(fixtureRoot, "docs");
+    const outputFile = path.join(fixtureRoot, "src", "lib", "docsIndex.ts");
+    try {
+      mkdirSync(docsDirectory, { recursive: true });
+      mkdirSync(path.dirname(outputFile), { recursive: true });
+      writeFileSync(path.join(docsDirectory, "zeta-guide.md"), "# Zeta guide\nZeta content");
+      writeFileSync(path.join(docsDirectory, "alpha-guide.md"), "# Alpha guide\nAlpha content");
+      generateDocsIndex({ docsDirectory, outputFile });
+      const generatedIndex = readFileSync(outputFile, "utf-8");
+      expect(generatedIndex.indexOf('slug: "alpha-guide"')).toBeLessThan(
+        generatedIndex.indexOf('slug: "zeta-guide"')
+      );
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+});

@@ -1,32 +1,67 @@
 # Security Documentation
 
-This section describes the security model and critical mechanisms in Seorchable.
+This section documents Oxenn's security boundaries, authorization models, and implementation status. It distinguishes repository-level code from capabilities that are only defined or scaffolded. Static source declarations do not prove deployed runtime state.
 
-## Status Dictionary
-- **Implemented**: Security mechanism is enforced in the current codebase.
+## Status dictionary
 
-## Core Security Mechanisms
+- **Implemented**: the repository contains an enforcement path for the described boundary. This does not, by itself, prove deployed configuration or database state.
+- **Defined-only**: types, schema declarations, permission names, or policy intent exist, but a complete enforcement path is not demonstrated.
+- **Scaffolded**: helper classes or partial application components exist, but they are not wired into a complete authenticated runtime boundary.
+- **Not exposed**: no production route or public entrypoint for the capability was found in the inspected route tree.
+- **Unknown**: evidence is insufficient to establish runtime or deployment state.
 
-### Server-Side Identity Boundary
-The server-side identity boundary is fully hardened. Plain-text `user_id` and `tenant_id` cookies are strictly non-authoritative on the server. The comprehensive security suite validates resilience against user/tenant cookie tampering, spoofing, and session forgery.
-*Status: Implemented*
+## Authorization domains
 
-### Authentication and Authorization
-The `AuthProvider` stores user session credentials client-side for UI mocking purposes, but the client synchronizes this state from the server session (`getServerSessionAction`) on mount. Server-side Role-Based Access Control (RBAC) hierarchy and workspace membership validation rules are managed in `src/services/auth/authorization.ts` through `requireWorkspaceMembership(userId, workspaceId)` and `requireRole(requiredRole)`.
-*Status: Implemented*
+Oxenn contains two distinct authorization contexts. They must not be conflated.
 
-### Multi-Tenant Isolation & Row-Level Security (RLS)
-The canonical Drizzle schema and active migration journal are checked by the tenant ownership and RLS migration verifiers. For the current per-table repository inventory—including ownership, declared policy objects, complete tenant-policy coverage, ENABLE/FORCE migration coverage, and the runtime-verification boundary—see the generated [Database Reference Matrix](../database/reference-matrix.md) and the [Canonical Data Contract](../database/canonical-data-contract.md). The canonical transaction-local setting is `app.current_tenant_id`. Static schema and migration checks do not establish the state of a deployed database; runtime enforcement is exercised by the PostgreSQL isolation suite against disposable CI PostgreSQL.
-*Status: Implemented*
+### Workspace RBAC
 
-### Cache Security
-The cache layer is secured against client-side tenantId spoofing by validating that any requested key's tenant ID strictly matches the server-verified active session user's workspace ID, throwing a security violation on mismatch.
-*Status: Implemented*
+Workspace roles are `super_admin`, `workspace_admin`, and `viewer`. Their persisted authority is `organization_members.role`. The server-side helpers in `src/services/auth/authorization.ts` resolve the authenticated session and query membership roles.
 
-### Server Actions Validation
-The server-side authentication system prevents client-side identity fabrication or signing oracle vulnerabilities by resolving user objects, roles, and workspace IDs strictly on the server inside `loginAction` and `registerAction`, accepting only simple inputs from the client.
-*Status: Implemented*
+The Workspace `super_admin` role is an operator-only cross-workspace override. Repository policy restricts assignment to `scripts/auth/grant-super-admin.ts`; normal application flows must not grant it. It is not the Platform Admin `Super Admin` role.
 
-## Detailed Security Specifications
+*Status: Implemented as repository-level server-side authorization logic. Deployed database state is not verified.*
+
+### Platform Admin RBAC
+
+The separate Platform Admin domain defines seven internal roles and a permission map in `src/features/admin/domain/types.ts` and `src/features/admin/security/index.ts`. Helper classes can evaluate supplied role and user objects, but they do not establish a trusted administrator identity. The application handlers accept actor fields as command inputs. The `AdminAPIClient` describes itself as a mock over an in-memory store, but its constructor wires PostgreSQL-backed CQRS handlers and repositories. `PostgresAdminUserRepository` issues SQL reads but ignores returned rows and obtains administrator records from a static in-memory `Map`; its write paths issue SQL through `PostgresClient`. The client accepts actor data as method arguments and is not a Next.js route handler. No Platform Admin production route was found under `src/app/api`.
+
+The schema declares `admin_users.role_id` and normalized `roles`/`permissions` relationships, while the current admin repository reads returned records from an in-memory map and writes columns that do not match the declared schema. The schema also labels `roles` and `permissions` as frozen legacy structures not used for authorization decisions.
+
+*Status: Role definitions are defined-only; evaluator and application pieces are scaffolded; a production-exposed, server-authenticated Platform Admin enforcement path is not demonstrated (not exposed in the inspected route tree).*
+
+### Cross-context rule
+
+A Workspace role never implies a Platform Admin role or permission. A Platform Admin role never implies customer Workspace membership. Do not accept a caller-supplied role or permission list as proof of identity. Any future mapping requires a deliberate, audited design.
+
+## Other security mechanisms
+
+### Server-side identity boundary
+
+Workspace API identity is resolved from the server-validated session by `authorizeApiRequest`; caller-supplied identity headers are not authoritative.
+
+*Status: Implemented in the inspected Workspace authorization helper; coverage must still be verified at each route boundary.*
+
+### Multi-tenant isolation and row-level security
+
+The repository contains tenant-scoped schema and migration verification tooling, including the canonical transaction-local setting `app.current_tenant_id`. Static schema and migration checks do not establish deployed database state. No database is connected to this repository, and this documentation task does not inspect or change one.
+
+*Status: Repository checks and code are present; deployed database enforcement is unknown.*
+
+### Cache security and server actions
+
+The repository contains tenant/session checks for cache access and server-side identity resolution in authentication actions.
+
+*Status: Implemented in repository code as described by the relevant source; not a claim about deployed runtime state.*
+
+## Detailed specifications
+
 - [Security Model Overview](./SECURITY_MODEL.md)
 - [RBAC Model Specification](./RBAC_MODEL.md)
+- [Privileged Paths](./privileged-paths.md)
+- [Database Reference Matrix](../database/reference-matrix.md)
+- [Canonical Data Contract](../database/canonical-data-contract.md)
+
+## Verification boundary
+
+This documentation update is limited to source inspection. No database was connected or queried, no migration was applied or modified, and no tests or deployment checks were run. Platform Admin runtime enforcement remains a separate technical remediation requiring its own approved scope.
