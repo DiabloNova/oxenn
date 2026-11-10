@@ -367,7 +367,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Privileged Database Paths",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Privileged Database Paths  This document outlines all permitted explicit system-context leases (\`runWithSystemContext\`) that allow querying the database without a bound \`tenant_id\`.  | Purpose Tag | Allowed Tables | Caller Module | Justification | | :--- | :--- | :--- | :--- | | **sys-login** | \`users\`, \`tenants\`, \`tenant_users\`, \`email_verification_tokens\`, \`password_reset_tokens\` | \`src/app/actions/auth.ts\` | Requires user lookup across all tenants during authentication, and issues or consum`
+    snippet: `# Privileged Database Paths  This document inventories the registered \`runWithSystemContext\` purpose tags, their verified direct call sites, and the database tables observed in those call paths. It is a documentation and audit-metadata inventory; the \`allowedTables\` field in the registry is recorded in the privileged-access audit event and is **not** a SQL table allowlist or an enforcement boundary.  The table names below use the canonical Drizzle schema names. Workspace membership and its autho`
   },
   {
     slug: "services",
