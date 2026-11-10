@@ -50,7 +50,7 @@ The same domain defines permissions such as `tenant:create`, `tenant:write`, `te
 - The helpers evaluate a role string or an `AdminUser` object supplied by their caller.
 - They do not authenticate the administrator or load a trusted Platform Admin principal from a server session.
 - The application handlers accept actor fields such as `actorId`, `actorEmail`, and `actorRole` in command inputs. The inspected handler methods do not invoke these helpers to authenticate and authorize that actor at the handler boundary.
-- The `AdminAPIClient` is explicitly a mock API client over an in-memory store. Its methods accept actor data as arguments; it is not a Next.js route handler.
+- The `AdminAPIClient` describes itself as a mock API client over an in-memory store, but its constructor wires PostgreSQL-backed CQRS handlers and repository adapters. `PostgresAdminUserRepository` issues SQL read queries but ignores their returned rows and obtains returned administrator records from a static in-memory `Map`; its write paths issue SQL through `PostgresClient`. The client methods accept actor data as arguments; this client is not a Next.js route handler and does not establish a server-authenticated Platform Admin principal.
 - No Platform Admin route handler was found under `src/app/api` in the inspected repository tree.
 
 Consequently, the seven roles and permission evaluator are defined/scaffolded, but the repository does not demonstrate an exposed, server-authenticated Platform Admin enforcement path. The numeric hierarchy and helper methods must not be represented as proof of effective production authorization.

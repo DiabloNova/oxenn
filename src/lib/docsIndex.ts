@@ -339,11 +339,11 @@ export const DOCS_INDEX: DocMeta[] = [
   },
   {
     slug: "RBAC_MODEL",
-    titleEn: "Hierarchical RBAC Security Model",
-    titleFa: "Hierarchical RBAC Security Model",
+    titleEn: "Role-Based Access Control (RBAC) Model",
+    titleFa: "Role-Based Access Control (RBAC) Model",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Hierarchical RBAC Security Model  This document specifies the administrative privilege levels and authorization structures enforced across the Admin console.  ## Roles and Ranks  We enforce a strict linear role hierarchy rank mapped numerically to compare permission levels:  | Role Name | Rank | Primary Accountability | |---|---|---| | **Super Admin** | 100 | Complete system override, administrative provisioning, billing bypass | | **Platform Admin** | 80 | Full tenant lifecycle management, fe`
+    snippet: `# Role-Based Access Control (RBAC) Model  This document describes Workspace RBAC and the separately defined Platform Admin RBAC. They have different principals, role authorities, scopes, and enforcement status. There is no implicit mapping between them.  ## 1. Workspace RBAC  ### Roles  The Workspace role union in \`src/types/auth.ts\` defines:  | Role | Intended scope | Current authority | |---|---|---| | \`viewer\` | Read-oriented access in a workspace | \`organization_members.role\` | | \`workspace_admin\``
   },
   {
     slug: "security",
@@ -351,7 +351,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Security Documentation",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Security Documentation  This section describes the security model and critical mechanisms in Seorchable.  ## Status Dictionary - **Implemented**: Security mechanism is enforced in the current codebase.  ## Core Security Mechanisms  ### Server-Side Identity Boundary The server-side identity boundary is fully hardened. Plain-text \`user_id\` and \`tenant_id\` cookies are strictly non-authoritative on the server. The comprehensive security suite validates resilience against user/tenant cookie tamperi`
+    snippet: `# Security Documentation  This section documents Oxenn's security boundaries, authorization models, and implementation status. It distinguishes repository-level code from capabilities that are only defined or scaffolded. Static source declarations do not prove deployed runtime state.  ## Status dictionary  - **Implemented**: the repository contains an enforcement path for the described boundary. This does not, by itself, prove deployed configuration or database state. - **Defined-only**: types, `
   },
   {
     slug: "SECURITY_MODEL",
@@ -359,7 +359,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Security Architecture Model",
     category: "security",
     categoryFa: "Security",
-    snippet: `# Security Architecture Model  This document outlines the security, tenant authorization, Role-Based Access Control (RBAC), and compliance guidelines implemented for the AI Intelligence Engine.  ---  ## 1. Zero-Trust Tenant Isolation  The platform enforces zero-trust tenant isolation through multiple decoupled security shields:  1. **Repository Guard Rails**: Finders require explicit \`organizationId\` parameter filtering. 2. **Domain Layer Assertions**: Tenant contexts are verified inside domain `
+    snippet: `# Security Architecture Model  This document distinguishes the two authorization contexts in Oxenn and describes what the repository currently implements. A role name in one context does not grant a role or permission in the other context.  ## 1. Authorization boundaries  Oxenn has two distinct authorization models:  1. **Workspace authorization** governs customer/user access within an organization workspace. Its current role authority is \`organization_members.role\`. 2. **Platform Admin authoriz`
   },
   {
     slug: "privileged-paths",

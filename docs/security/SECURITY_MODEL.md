@@ -57,7 +57,7 @@ It also defines a separate permission vocabulary and role-to-permission map in `
 
 The repository currently contains authorization helper classes such as `PermissionChecker` and `AdminAuthorizationGuard`. They evaluate a supplied role or `AdminUser` object. They do not independently authenticate an administrator or resolve a trusted actor from a server session. The application handlers accept actor fields, including `actorRole`, in command inputs; the inspected handlers do not establish a server-authenticated Platform Admin principal before acting.
 
-The `AdminAPIClient` in `src/features/admin/api/v1/admin/index.ts` describes itself as a mock API client operating over an in-memory store. It is not a Next.js route handler. No corresponding Platform Admin route was found under `src/app/api` in the inspected tree. Therefore the current repository does not demonstrate a production-exposed, server-authenticated Platform Admin authorization boundary.
+The `AdminAPIClient` in `src/features/admin/api/v1/admin/index.ts` describes itself as a mock API client over an in-memory store, but its constructor wires PostgreSQL-backed CQRS handlers and repository adapters. `PostgresAdminUserRepository` issues SQL read queries but ignores their returned rows and obtains returned administrator records from a static in-memory `Map`; its write paths issue SQL through `PostgresClient`. The client methods accept actor data as arguments; it is not a Next.js route handler. No corresponding Platform Admin route was found under `src/app/api` in the inspected tree. Therefore the current repository does not demonstrate a production-exposed, server-authenticated Platform Admin authorization boundary.
 
 ### Persistence status
 
