@@ -307,6 +307,15 @@ describe("Platform Admin OIDC control plane", () => {
     expect(storeMock.createPlatformAdminSession).not.toHaveBeenCalled();
   });
 
+  it("rejects providers that do not advertise RS256 ID-token signatures", async () => {
+    oidcMock.discovery.mockResolvedValue({
+      serverMetadata: () => ({ ...configuredMetadata(), id_token_signing_alg_values_supported: ["ES256"] }),
+    });
+
+    await expect(startPlatformAdminOidcLogin()).rejects.toThrow("does not advertise RS256 ID-token signatures");
+    expect(storeMock.createPlatformAdminOidcTransaction).not.toHaveBeenCalled();
+  });
+
   it("rejects OIDC discovery endpoints that do not use HTTPS", async () => {
     oidcMock.discovery.mockResolvedValue({
       serverMetadata: () => ({ ...configuredMetadata(), jwks_uri: "http://identity.example.test/jwks" }),

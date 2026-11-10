@@ -30,7 +30,6 @@ interface PlatformAdminOidcSettings {
   clientSecret: string;
   redirectUri: string;
   transactionSecret: string;
-  signingAlgorithm: "RS256" | "ES256";
   acceptedMfaAmrValues: string[];
   requiredAcrValues: string[];
 }
@@ -67,10 +66,6 @@ function getSettings(): PlatformAdminOidcSettings {
   const clientSecret = requiredEnvironmentValue("PLATFORM_ADMIN_OIDC_CLIENT_SECRET");
   const redirectUri = requiredEnvironmentValue("PLATFORM_ADMIN_OIDC_REDIRECT_URI");
   const transactionSecret = requiredEnvironmentValue("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET");
-  const signingAlgorithm = process.env.PLATFORM_ADMIN_OIDC_ID_TOKEN_SIGNING_ALG?.trim() || "RS256";
-  if (signingAlgorithm !== "RS256" && signingAlgorithm !== "ES256") {
-    throw new Error("PLATFORM_ADMIN_OIDC_ID_TOKEN_SIGNING_ALG must be RS256 or ES256.");
-  }
   const acceptedMfaAmrValues = (
     process.env.PLATFORM_ADMIN_OIDC_MFA_AMR_VALUES ?? "mfa"
   ).split(",").map((value) => value.trim()).filter(Boolean);
@@ -92,7 +87,6 @@ function getSettings(): PlatformAdminOidcSettings {
     clientSecret,
     redirectUri,
     transactionSecret,
-    signingAlgorithm,
     acceptedMfaAmrValues,
     requiredAcrValues,
   };
@@ -114,7 +108,7 @@ async function getOidcConfiguration(
   settings: PlatformAdminOidcSettings,
 ): Promise<oidc.Configuration> {
   const cacheKey = createHash("sha256")
-    .update(`${settings.issuer}\0${settings.clientId}\0${settings.clientSecret}\0${settings.redirectUri}\0${settings.signingAlgorithm}`)
+    .update(`${settings.issuer}\0${settings.clientId}\0${settings.clientSecret}\0${settings.redirectUri}`)
     .digest("hex");
 
   if (cachedConfiguration?.cacheKey === cacheKey) {
@@ -127,8 +121,6 @@ async function getOidcConfiguration(
     {
       redirect_uris: [settings.redirectUri],
       token_endpoint_auth_method: "client_secret_basic",
-      // This is a configured RS256/ES256 algorithm identifier, not a credential or bearer token.
-      id_token_signed_response_alg: settings.signingAlgorithm,
     },
     oidc.ClientSecretBasic(settings.clientSecret),
   ).then((configuration) => {
@@ -150,8 +142,9 @@ async function getOidcConfiguration(
     if (!metadata.code_challenge_methods_supported?.includes("S256")) {
       throw new Error("The OIDC provider must advertise PKCE S256 support.");
     }
-    if (!metadata.id_token_signing_alg_values_supported?.includes(settings.signingAlgorithm)) {
-      throw new Error("The OIDC provider does not advertise the configured ID token signing algorithm.");
+    // OIDC Core defaults ID-token signatures to RS256 when the client does not request an override.
+    if (!metadata.id_token_signing_alg_values_supported?.includes("RS256")) {
+      throw new Error("The OIDC provider does not advertise RS256 ID-token signatures.");
     }
     if (
       metadata.token_endpoint_auth_methods_supported &&

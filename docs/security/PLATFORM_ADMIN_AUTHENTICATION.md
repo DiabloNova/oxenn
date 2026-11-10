@@ -18,7 +18,7 @@ The server uses `openid-client` 6.8.9 and the Authorization Code flow with PKCE 
 2. The server stores a hash of state, the nonce, an AES-256-GCM-encrypted PKCE verifier, a hash of the browser-binding value, the exact redirect URI, and a ten-minute expiry in `platform_admin_oidc_transactions`.
 3. The browser receives the binding value in an HttpOnly, Secure, SameSite=Lax `__Host-platform_admin_oidc` cookie and is redirected to the discovered authorization endpoint.
 4. `GET /api/platform-admin/auth/callback` requires the matching browser cookie and consumes the transaction atomically. It rejects missing, expired, replayed, or browser-mismatched transactions.
-5. `openid-client` exchanges the code and validates state, nonce, PKCE, issuer, audience, expiry, and the ID-token signature. The configured signing algorithm is restricted to RS256 by default or ES256 when explicitly configured. The authorization request uses `prompt=login`; by default, the validated ID token must contain `amr: ["mfa"]`. Deployments may configure accepted AMR values and exact ACR values; configured ACR values are requested and checked against the returned claim. The discovered authorization, token, and JWKS endpoints must use HTTPS outside local development.
+5. `openid-client` exchanges the code and validates state, nonce, PKCE, issuer, audience, expiry, and the ID-token signature. ID-token signatures are restricted to RS256; the OIDC client defaults to RS256 when no per-client signing algorithm override is supplied. The authorization request uses `prompt=login`; by default, the validated ID token must contain `amr: ["mfa"]`. Deployments may configure accepted AMR values and exact ACR values; configured ACR values are requested and checked against the returned claim. The discovered authorization, token, and JWKS endpoints must use HTTPS outside local development.
 6. The application resolves the exact issuer/subject pair in the isolated Platform Admin database. Unknown or inactive identities are denied; no just-in-time provisioning occurs.
 7. The server creates a random opaque session token, stores only its SHA-256 hash, and sets an HttpOnly, Secure, SameSite=Strict `__Host-platform_admin_session` cookie. The default absolute session lifetime is eight hours.
 8. `POST /api/platform-admin/auth/logout` revokes the database session and expires the browser cookie.
@@ -55,7 +55,6 @@ Configure these values through the deployment secret manager. Do not commit real
 | `PLATFORM_ADMIN_OIDC_ISSUER` | Exact OIDC issuer identifier |
 | `PLATFORM_ADMIN_OIDC_CLIENT_ID` | Confidential OIDC client ID / expected audience |
 | `PLATFORM_ADMIN_OIDC_CLIENT_SECRET` | Confidential OIDC client secret |
-| `PLATFORM_ADMIN_OIDC_ID_TOKEN_SIGNING_ALG` | `RS256` by default; `ES256` is also supported |
 | `PLATFORM_ADMIN_OIDC_MFA_AMR_VALUES` | Accepted ID-token AMR values; defaults to `mfa` |
 | `PLATFORM_ADMIN_OIDC_REQUIRED_ACR_VALUES` | Optional comma-separated ACR values requested and required in the ID token |
 | `PLATFORM_ADMIN_OIDC_REDIRECT_URI` | Exact registered callback URI: `/api/platform-admin/auth/callback` |

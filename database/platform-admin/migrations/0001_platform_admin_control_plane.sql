@@ -1,3 +1,4 @@
+-- PostgreSQL 13+ migration; SQL Server-only session directives do not apply.
 CREATE TABLE IF NOT EXISTS platform_admin_schema_migrations (
   id text PRIMARY KEY,
   applied_at timestamptz NOT NULL DEFAULT now()
