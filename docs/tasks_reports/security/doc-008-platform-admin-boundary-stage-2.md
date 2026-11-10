@@ -8,17 +8,17 @@ Stage 1 was merged through PR #127. The existing `feat/022-doc-008-platform-admi
 
 ## Implemented
 
-- Added a provider-agnostic OpenID Connect Authorization Code flow using `openid-client` 6.8.9, PKCE S256, fresh state and nonce, exact issuer/audience checks, RS256-only ID-token signature validation, and default MFA AMR enforcement with optional ACR policy.
+- Added a provider-agnostic OpenID Connect Authorization Code flow using `openid-client` 6.8.9, PKCE S256, fresh state and nonce, exact issuer/audience checks, explicit `enableNonRepudiationChecks` for cryptographic ID-token signature validation, an explicit RS256 protected-header check, and default MFA AMR enforcement with optional ACR policy.
 - Added a browser-bound, ten-minute, one-use OIDC transaction. The database stores a state hash, browser-binding hash, nonce, redirect URI, and AES-256-GCM-encrypted PKCE verifier.
 - Added server-only Platform Admin session resolution. The application stores only a hash of a random opaque session token and checks account status and current explicit permission grants on each authorization lookup.
-- Added login, callback, and logout route handlers. Cookies are HttpOnly, Secure, host-only, and use SameSite=Lax for the OIDC binding cookie and SameSite=Strict for the authenticated session cookie. Login and callback attempts have database-backed per-IP rate limits using hashed keys and a trusted `x-real-ip` proxy header.
-- Added a separate Platform Admin PostgreSQL persistence model for accounts, `(issuer, subject)` identities, explicit permission grants, opaque sessions, OIDC transactions, audit events, and migration history.
-- Added a dedicated migration runner and one-time first-admin bootstrap command. Both use the migration-only connection variable and refuse Workspace database reuse. Runtime and migration URLs must target the same dedicated database and use different PostgreSQL roles when both are configured.
+- Added login, callback, and logout route handlers. Cookies are HttpOnly, Secure, host-only, and use SameSite=Lax for the OIDC binding cookie and SameSite=Strict for the authenticated session cookie. Login and callback attempts have database-backed per-IP rate limits using HMAC keys and a trusted `x-real-ip` proxy header. Successful and denied login audit events use the same HMAC-pseudonymized external subject, and a denied callback writes one event.
+- Added a separate Platform Admin PostgreSQL persistence model for accounts, `(issuer, subject)` identities, explicit permission grants, opaque sessions, OIDC transactions, audit events, and Drizzle-managed migration history.
+- Added a dedicated Drizzle schema/config/output and migration command using the repository's Drizzle migration framework with a separate migration-history table, plus a one-time first-admin bootstrap command. Both use the migration-only connection variable and refuse Workspace database reuse. Runtime and migration URLs must target the same dedicated database and use different PostgreSQL roles.
 - Added configuration guidance and documented the production activation boundary.
 
 ## Verification performed locally
 
-- 37 targeted unit tests passed across the Stage 1 authorization boundary, OIDC flow, persistence, rate limiting, and database isolation suites.
+- 41 targeted unit tests passed across the Stage 1 authorization boundary, OIDC flow, persistence, rate limiting, and database isolation suites.
 - Targeted TypeScript checking passed for the Stage 2 source files, route handlers, scripts, and tests.
 - The OIDC tests use mocked discovery, token exchange, and persistence. They verify state/nonce/PKCE construction, browser binding, issuer/audience rejection, endpoint HTTPS enforcement, no JIT provisioning, and default-deny behavior.
 

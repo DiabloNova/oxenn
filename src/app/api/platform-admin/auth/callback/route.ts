@@ -7,6 +7,7 @@ import {
 } from "@/features/admin/security/platform-admin-store.server";
 import {
   completePlatformAdminOidcLogin,
+  PlatformAdminOidcDeniedError,
   PLATFORM_ADMIN_OIDC_BINDING_COOKIE,
   PLATFORM_ADMIN_SESSION_COOKIE,
 } from "@/features/admin/security/platform-admin-oidc.server";
@@ -82,12 +83,14 @@ export async function GET(request: Request): Promise<NextResponse> {
     clearBindingCookie(response);
     response.headers.set("Cache-Control", "no-store");
     return response;
-  } catch {
+  } catch (error) {
+    const denial = error instanceof PlatformAdminOidcDeniedError ? error : null;
     try {
       await recordPlatformAdminAuditEvent({
         eventType: "platform_admin.login",
         outcome: "denied",
-        details: { reason: "oidc_callback_failed" },
+        subject: denial?.auditSubject ?? null,
+        details: denial?.auditDetails ?? { reason: "oidc_callback_failed" },
       });
     } catch {
       // Authentication remains denied if the audit store is unavailable.

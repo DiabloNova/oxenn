@@ -1,66 +1,36 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
+import path from "node:path";
 import { assertDedicatedPlatformAdminDatabaseUrl } from "../../src/features/admin/security/platform-admin-database-guard";
 
 async function main(): Promise<void> {
-  const connectionString = process.env.PLATFORM_ADMIN_MIGRATION_DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("PLATFORM_ADMIN_MIGRATION_DATABASE_URL is required; no Workspace database fallback is permitted.");
+  const runtimeUrl = process.env.PLATFORM_ADMIN_DATABASE_URL;
+  const migrationUrl = process.env.PLATFORM_ADMIN_MIGRATION_DATABASE_URL;
+  if (!runtimeUrl || !migrationUrl) {
+    throw new Error(
+      "PLATFORM_ADMIN_DATABASE_URL and PLATFORM_ADMIN_MIGRATION_DATABASE_URL are required; no Workspace database fallback is permitted.",
+    );
   }
-  assertDedicatedPlatformAdminDatabaseUrl(
-    connectionString,
-    "PLATFORM_ADMIN_MIGRATION_DATABASE_URL",
-  );
+  assertDedicatedPlatformAdminDatabaseUrl(runtimeUrl);
+  assertDedicatedPlatformAdminDatabaseUrl(migrationUrl);
 
   const pool = new Pool({
-    connectionString,
+    connectionString: migrationUrl,
     max: 1,
     connectionTimeoutMillis: 5_000,
     application_name: "oxenn-platform-admin-migrator",
   });
 
   try {
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      await client.query("SELECT pg_advisory_xact_lock(hashtext('oxenn-platform-admin-migrations'))");
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS platform_admin_schema_migrations (
-          id text PRIMARY KEY,
-          applied_at timestamptz NOT NULL DEFAULT now()
-        )
-      `);
-
-      const migrationId = "0001_platform_admin_control_plane";
-      const applied = await client.query(
-        "SELECT 1 FROM platform_admin_schema_migrations WHERE id = $1",
-        [migrationId],
-      );
-
-      if (applied.rowCount === 0) {
-        const migrationPath = path.resolve(
-          process.cwd(),
-          "database/platform-admin/migrations/0001_platform_admin_control_plane.sql",
-        );
-        const migrationSql = await readFile(migrationPath, "utf8");
-        await client.query(migrationSql);
-        await client.query(
-          "INSERT INTO platform_admin_schema_migrations (id) VALUES ($1)",
-          [migrationId],
-        );
-      }
-
-      await client.query("COMMIT");
-      process.stdout.write(
-        `Platform Admin migration ${migrationId}: ${applied.rowCount === 0 ? "applied" : "already applied"}.\n`,
-      );
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+    const database = drizzle(pool);
+    const migrationsFolder = path.resolve(process.cwd(), "database/platform-admin/drizzle");
+    await migrate(database, {
+      migrationsFolder,
+      migrationsTable: "__platform_admin_drizzle_migrations",
+      migrationsSchema: "public",
+    });
+    process.stdout.write("Platform Admin Drizzle migrations applied successfully.\n");
   } finally {
     await pool.end();
   }

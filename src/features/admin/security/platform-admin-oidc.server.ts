@@ -14,8 +14,8 @@ import {
   createPlatformAdminSession,
   findActivePlatformAdminIdentity,
   findPlatformAdminSessionIdentity,
+  hashPlatformAdminAuditSubject,
   hashPlatformAdminSecret,
-  recordPlatformAdminAuditEvent,
   revokePlatformAdminSession,
 } from "./platform-admin-store.server";
 
@@ -23,6 +23,16 @@ export const PLATFORM_ADMIN_SESSION_COOKIE = "__Host-platform_admin_session";
 export const PLATFORM_ADMIN_OIDC_BINDING_COOKIE = "__Host-platform_admin_oidc";
 const OIDC_TRANSACTION_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_SESSION_TTL_SECONDS = 8 * 60 * 60;
+
+export class PlatformAdminOidcDeniedError extends Error {
+  constructor(
+    readonly auditSubject: string,
+    readonly auditDetails: Record<string, unknown>,
+  ) {
+    super("The verified external identity is not provisioned as an active Platform Admin.");
+    this.name = "PlatformAdminOidcDeniedError";
+  }
+}
 
 interface PlatformAdminOidcSettings {
   issuer: string;
@@ -124,6 +134,7 @@ async function getOidcConfiguration(
     },
     oidc.ClientSecretBasic(settings.clientSecret),
   ).then((configuration) => {
+    oidc.enableNonRepudiationChecks(configuration);
     const metadata = configuration.serverMetadata();
     if (metadata.issuer !== settings.issuer) {
       throw new Error("The discovered OIDC issuer does not match the configured issuer.");
@@ -171,6 +182,30 @@ function encryptCodeVerifier(value: string, secret: string): string {
   const ciphertext = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return [iv, tag, ciphertext].map((part) => part.toString("base64url")).join(".");
+}
+
+function assertRs256IdToken(idToken: string | undefined): void {
+  if (!idToken) {
+    throw new Error("The OIDC token response did not contain an ID token.");
+  }
+  const segments = idToken.split(".");
+  if (segments.length !== 3 || !segments[0] || !segments[1] || !segments[2]) {
+    throw new Error("The OIDC ID token is not a compact signed JWT.");
+  }
+
+  let protectedHeader: unknown;
+  try {
+    protectedHeader = JSON.parse(Buffer.from(segments[0], "base64url").toString("utf8"));
+  } catch {
+    throw new Error("The OIDC ID-token protected header is invalid.");
+  }
+  if (
+    typeof protectedHeader !== "object" ||
+    protectedHeader === null ||
+    (protectedHeader as { alg?: unknown }).alg !== "RS256"
+  ) {
+    throw new Error("The OIDC ID token must use RS256.");
+  }
 }
 
 function decryptCodeVerifier(value: string, secret: string): string {
@@ -283,6 +318,7 @@ export async function completePlatformAdminOidcLogin(
       settings.transactionSecret,
     ),
   });
+  assertRs256IdToken(tokens.id_token);
   const claims = tokens.claims();
   if (!claims) throw new Error("The OIDC token response did not contain validated ID token claims.");
   const audiences =
@@ -313,15 +349,13 @@ export async function completePlatformAdminOidcLogin(
     throw new Error("The validated OIDC ID token does not satisfy the Platform Admin identity contract.");
   }
 
+  const auditSubject = hashPlatformAdminAuditSubject(settings.issuer, claims.sub);
   const identity = await findActivePlatformAdminIdentity(settings.issuer, claims.sub);
   if (!identity) {
-    await recordPlatformAdminAuditEvent({
-      eventType: "platform_admin.login",
-      outcome: "denied",
-      subject: claims.sub,
-      details: { reason: "identity_not_provisioned_or_inactive", issuer: settings.issuer },
+    throw new PlatformAdminOidcDeniedError(auditSubject, {
+      reason: "identity_not_provisioned_or_inactive",
+      issuer: settings.issuer,
     });
-    throw new Error("The verified external identity is not provisioned as an active Platform Admin.");
   }
 
   const sessionToken = randomBytes(32).toString("base64url");
@@ -332,6 +366,8 @@ export async function completePlatformAdminOidcLogin(
     audience: settings.clientId,
     tokenHash: hashPlatformAdminSecret(sessionToken),
     expiresAt,
+    auditSubject,
+    auditIssuer: settings.issuer,
   });
 
   return { sessionToken, expiresAt };

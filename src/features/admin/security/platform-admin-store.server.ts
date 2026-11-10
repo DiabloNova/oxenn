@@ -70,7 +70,6 @@ export async function findActivePlatformAdminIdentity(
   const result = await getPlatformAdminPool().query<StoredPlatformAdminIdentity>(
     `SELECT external_identity.id AS "identityId",
             admin_account.id AS "accountId",
-            admin_session.audience,
             external_identity.issuer,
             external_identity.subject,
             COALESCE(
@@ -101,6 +100,8 @@ export async function createPlatformAdminSession(input: {
   audience: string;
   tokenHash: string;
   expiresAt: Date;
+  auditSubject: string;
+  auditIssuer: string;
 }): Promise<void> {
   const pool = getPlatformAdminPool();
   const client = await pool.connect();
@@ -122,8 +123,8 @@ export async function createPlatformAdminSession(input: {
     await client.query(
       `INSERT INTO platform_admin_audit_events
         (actor_account_id, event_type, outcome, subject, details)
-       VALUES ($1, 'platform_admin.login', 'success', $2, '{}'::jsonb)`,
-      [input.accountId, input.identityId],
+       VALUES ($1, 'platform_admin.login', 'success', $2, $3::jsonb)`,
+      [input.accountId, input.auditSubject, JSON.stringify({ issuer: input.auditIssuer })],
     );
     await client.query("COMMIT");
   } catch (error) {
@@ -257,10 +258,18 @@ export function hashPlatformAdminSecret(value: string): string {
 }
 
 
-export function hashPlatformAdminRateLimitKey(value: string): string {
+function hashPlatformAdminHmac(purpose: string, value: string): string {
   const secret = process.env.PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET;
   if (!secret || secret.length < 32) {
-    throw new Error("A strong Platform Admin transaction secret is required for rate limiting.");
+    throw new Error("A strong Platform Admin transaction secret is required for keyed audit and rate-limit hashes.");
   }
-  return createHmac("sha256", secret).update(`rate-limit:${value}`).digest("hex");
+  return createHmac("sha256", secret).update(`${purpose}:${value}`).digest("hex");
+}
+
+export function hashPlatformAdminRateLimitKey(value: string): string {
+  return hashPlatformAdminHmac("rate-limit", value);
+}
+
+export function hashPlatformAdminAuditSubject(issuer: string, subject: string): string {
+  return hashPlatformAdminHmac("audit-subject", `${issuer}\0${subject}`);
 }

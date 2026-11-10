@@ -39,7 +39,7 @@ The OIDC login, callback, and logout endpoints are under `src/app/api/platform-a
 
 ### Persistence isolation
 
-The new tables live in a dedicated Platform Admin PostgreSQL database and are created by `database/platform-admin/migrations/0001_platform_admin_control_plane.sql`. Runtime access uses `PLATFORM_ADMIN_DATABASE_URL`; migration and first-admin bootstrap use `PLATFORM_ADMIN_MIGRATION_DATABASE_URL` with a different PostgreSQL role. The database URL guard rejects reuse of the Workspace, migration, or authenticator database. No fallback to Workspace connection variables exists.
+The new tables are defined in `database/platform-admin/schema/index.ts` and generated into `database/platform-admin/drizzle/` through the separate `drizzle.platform-admin.config.ts`. Runtime access uses `PLATFORM_ADMIN_DATABASE_URL`; migration and first-admin bootstrap use `PLATFORM_ADMIN_MIGRATION_DATABASE_URL` with a different PostgreSQL role. The migration command uses the existing Drizzle migration engine with its own `__platform_admin_drizzle_migrations` history table. The database URL guard rejects reuse of the Workspace, migration, or authenticator database. No fallback to Workspace connection variables exists.
 
 The schema stores accounts, `(issuer, subject)` external identities, explicit permission grants, hashed sessions, OIDC transactions, audit events, and its own migration ledger. The legacy `admin_users`, `roles`, and `permissions` tables remain frozen and are not used as the new authority source. No dedicated database has been provisioned or connected, no migration has been applied, and no first administrator has been bootstrapped. The runtime therefore remains fail-closed until the required deployment configuration and provisioning steps are completed.
 

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const oidcMock = vi.hoisted(() => ({
   discovery: vi.fn(),
+  enableNonRepudiationChecks: vi.fn(),
   ClientSecretBasic: vi.fn(() => ({ method: "client_secret_basic" })),
   randomState: vi.fn(() => "state-value"),
   randomNonce: vi.fn(() => "nonce-value"),
@@ -18,6 +19,7 @@ const storeMock = vi.hoisted(() => ({
   findActivePlatformAdminIdentity: vi.fn(),
   findPlatformAdminSessionIdentity: vi.fn(),
   hashPlatformAdminSecret: vi.fn((value: string) => `sha256:${value}`),
+  hashPlatformAdminAuditSubject: vi.fn((issuer: string, subject: string) => `audit:${issuer}:${subject}`),
   recordPlatformAdminAuditEvent: vi.fn(),
   revokePlatformAdminSession: vi.fn(),
 }));
@@ -32,6 +34,9 @@ import {
   isPlatformAdminOidcConfigured,
   startPlatformAdminOidcLogin,
 } from "../../../../src/features/admin/security/platform-admin-oidc.server";
+
+const createIdToken = (alg = "RS256") =>
+  `${Buffer.from(JSON.stringify({ alg, typ: "JWT" })).toString("base64url")}.payload.signature`;
 
 const configuredMetadata = () => ({
   issuer: "https://identity.example.test",
@@ -82,6 +87,7 @@ describe("Platform Admin OIDC control plane", () => {
     storeMock.createPlatformAdminSession.mockResolvedValue(undefined);
     storeMock.recordPlatformAdminAuditEvent.mockResolvedValue(undefined);
     oidcMock.authorizationCodeGrant.mockResolvedValue({
+      id_token: createIdToken(),
       claims: () => ({
         iss: "https://identity.example.test",
         sub: "immutable-subject",
@@ -98,6 +104,15 @@ describe("Platform Admin OIDC control plane", () => {
     expect(isPlatformAdminOidcConfigured()).toBe(true);
     vi.stubEnv("PLATFORM_ADMIN_OIDC_CLIENT_SECRET", "");
     expect(isPlatformAdminOidcConfigured()).toBe(false);
+  });
+
+  it("enables cryptographic ID-token signature verification on the discovered configuration", async () => {
+    const configuration = { serverMetadata: () => configuredMetadata() };
+    oidcMock.discovery.mockResolvedValue(configuration);
+
+    await startPlatformAdminOidcLogin();
+
+    expect(oidcMock.enableNonRepudiationChecks).toHaveBeenCalledWith(configuration);
   });
 
   it("starts Authorization Code flow with state, nonce, PKCE S256 and a browser binding", async () => {
@@ -150,11 +165,52 @@ describe("Platform Admin OIDC control plane", () => {
       "https://identity.example.test",
       "immutable-subject",
     );
+    expect(storeMock.hashPlatformAdminAuditSubject).toHaveBeenCalledWith(
+      "https://identity.example.test",
+      "immutable-subject",
+    );
     expect(storeMock.createPlatformAdminSession).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: "account-id", identityId: "identity-id", audience: process.env.PLATFORM_ADMIN_OIDC_CLIENT_ID }),
+      expect.objectContaining({
+        accountId: "account-id",
+        identityId: "identity-id",
+        audience: process.env.PLATFORM_ADMIN_OIDC_CLIENT_ID,
+        auditSubject: "audit:https://identity.example.test:immutable-subject",
+        auditIssuer: "https://identity.example.test",
+      }),
     );
     expect(result.sessionToken).toHaveLength(43);
     expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("rejects an ID token whose protected header does not explicitly use RS256", async () => {
+    const login = await startPlatformAdminOidcLogin();
+    const transaction = storeMock.createPlatformAdminOidcTransaction.mock.calls[0]?.[0];
+    storeMock.consumePlatformAdminOidcTransaction.mockResolvedValue({
+      nonce: "nonce-value",
+      codeVerifierCiphertext: transaction.codeVerifierCiphertext,
+      redirectUri: transaction.redirectUri,
+    });
+    oidcMock.authorizationCodeGrant.mockResolvedValue({
+      id_token: createIdToken("ES256"),
+      claims: () => ({
+        iss: "https://identity.example.test",
+        sub: "immutable-subject",
+        aud: process.env.PLATFORM_ADMIN_OIDC_CLIENT_ID,
+        nonce: "nonce-value",
+        amr: ["mfa"],
+        exp: Math.floor(Date.now() / 1000) + 300,
+        iat: Math.floor(Date.now() / 1000),
+      }),
+    });
+
+    await expect(
+      completePlatformAdminOidcLogin(
+        new URL("https://app.example.test/api/platform-admin/auth/callback?state=state-value&code=authorization-code"),
+        login.browserBinding,
+      ),
+    ).rejects.toThrow("must use RS256");
+    expect(storeMock.findActivePlatformAdminIdentity).not.toHaveBeenCalled();
+    expect(storeMock.createPlatformAdminSession).not.toHaveBeenCalled();
   });
 
   it("binds existing sessions to the currently configured issuer and audience", async () => {
@@ -206,6 +262,7 @@ describe("Platform Admin OIDC control plane", () => {
       redirectUri: transaction.redirectUri,
     });
     oidcMock.authorizationCodeGrant.mockResolvedValue({
+      id_token: createIdToken(),
       claims: () => ({
         iss: "https://identity.example.test",
         sub: "immutable-subject",
@@ -241,11 +298,16 @@ describe("Platform Admin OIDC control plane", () => {
         new URL("https://app.example.test/api/platform-admin/auth/callback?state=state-value&code=authorization-code"),
         login.browserBinding,
       ),
-    ).rejects.toThrow("not provisioned as an active Platform Admin");
+    ).rejects.toMatchObject({
+      name: "PlatformAdminOidcDeniedError",
+      auditSubject: "audit:https://identity.example.test:immutable-subject",
+      auditDetails: {
+        reason: "identity_not_provisioned_or_inactive",
+        issuer: "https://identity.example.test",
+      },
+    });
     expect(storeMock.createPlatformAdminSession).not.toHaveBeenCalled();
-    expect(storeMock.recordPlatformAdminAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ outcome: "denied", subject: "immutable-subject" }),
-    );
+    expect(storeMock.recordPlatformAdminAuditEvent).not.toHaveBeenCalled();
   });
 
   it("rejects a tampered encrypted PKCE verifier before attempting token exchange", async () => {
@@ -287,6 +349,7 @@ describe("Platform Admin OIDC control plane", () => {
       redirectUri: transaction.redirectUri,
     });
     oidcMock.authorizationCodeGrant.mockResolvedValue({
+      id_token: createIdToken(),
       claims: () => ({
         iss: "https://identity.example.test",
         sub: "immutable-subject",

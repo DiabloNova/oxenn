@@ -28,7 +28,8 @@
     "audit:gate": "node scripts/audit-gate.mjs",
     "test:audit-gate": "node --test scripts/audit-gate.test.mjs",
     "platform-admin:migrate": "pnpm exec tsx scripts/platform-admin/migrate.ts",
-    "platform-admin:bootstrap": "pnpm exec tsx scripts/platform-admin/bootstrap-first-admin.ts"
+    "platform-admin:bootstrap": "pnpm exec tsx scripts/platform-admin/bootstrap-first-admin.ts",
+    "platform-admin:generate": "pnpm exec drizzle-kit generate --config drizzle.platform-admin.config.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.99",

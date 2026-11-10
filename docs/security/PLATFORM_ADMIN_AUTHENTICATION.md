@@ -18,18 +18,18 @@ The server uses `openid-client` 6.8.9 and the Authorization Code flow with PKCE 
 2. The server stores a hash of state, the nonce, an AES-256-GCM-encrypted PKCE verifier, a hash of the browser-binding value, the exact redirect URI, and a ten-minute expiry in `platform_admin_oidc_transactions`.
 3. The browser receives the binding value in an HttpOnly, Secure, SameSite=Lax `__Host-platform_admin_oidc` cookie and is redirected to the discovered authorization endpoint.
 4. `GET /api/platform-admin/auth/callback` requires the matching browser cookie and consumes the transaction atomically. It rejects missing, expired, replayed, or browser-mismatched transactions.
-5. `openid-client` exchanges the code and validates state, nonce, PKCE, issuer, audience, expiry, and the ID-token signature. ID-token signatures are restricted to RS256; the OIDC client defaults to RS256 when no per-client signing algorithm override is supplied. The authorization request uses `prompt=login`; by default, the validated ID token must contain `amr: ["mfa"]`. Deployments may configure accepted AMR values and exact ACR values; configured ACR values are requested and checked against the returned claim. The discovered authorization, token, and JWKS endpoints must use HTTPS outside local development.
-6. The application resolves the exact issuer/subject pair in the isolated Platform Admin database. Unknown or inactive identities are denied; no just-in-time provisioning occurs.
+5. The OIDC client enables `enableNonRepudiationChecks` on the discovered configuration before any token exchange. `openid-client` then validates the ID-token signature against the provider JWKS as well as state, nonce, PKCE, issuer, audience, and expiry. The application additionally parses the already-verified protected header and rejects any algorithm other than RS256; providers must advertise RS256. The authorization request uses `prompt=login`; by default, the validated ID token must contain `amr: ["mfa"]`. Deployments may configure accepted AMR values and exact ACR values; configured ACR values are requested and checked against the returned claim. The discovered authorization, token, and JWKS endpoints must use HTTPS outside local development.
+6. The application resolves the exact issuer/subject pair in the isolated Platform Admin database. Unknown or inactive identities are denied; no just-in-time provisioning occurs. Successful and denied login audit events use the same HMAC pseudonym derived from the issuer/subject pair, never the raw external subject, and the callback records only one denial event per attempt.
 7. The server creates a random opaque session token, stores only its SHA-256 hash, and sets an HttpOnly, Secure, SameSite=Strict `__Host-platform_admin_session` cookie. The default absolute session lifetime is eight hours.
 8. `POST /api/platform-admin/auth/logout` revokes the database session and expires the browser cookie.
 
 Login initiation is limited to 10 requests per 15 minutes per trusted client IP; callback attempts are limited to 20 per 15 minutes. Only an HMAC-SHA-256 of the rate-limit key is stored; the raw IP address is not persisted. In production, the application must run behind a trusted reverse proxy that overwrites `x-real-ip`; requests without that trusted header fail closed. Do not pass through a client-supplied `x-real-ip` value.
 
-ID tokens, access tokens, client secrets, raw session tokens, authorization codes, and PKCE verifiers are never written to audit records. The temporary PKCE verifier is encrypted before persistence. The session table stores only a one-way token hash.
+ID tokens, access tokens, client secrets, raw session tokens, authorization codes, raw OIDC subjects, and PKCE verifiers are never written to audit records. Login audit subjects are HMAC pseudonyms derived from the issuer/subject pair. The temporary PKCE verifier is encrypted before persistence. The session table stores only a one-way token hash.
 
 ## 3. Isolated persistence
 
-The Platform Admin Control Plane uses a dedicated PostgreSQL database. It does not share the Workspace database or its credentials. The migration creates these tables:
+The Platform Admin Control Plane uses a dedicated PostgreSQL database. It does not share the Workspace database or its credentials. The Drizzle schema at `database/platform-admin/schema/index.ts` generates these control-plane tables:
 
 - `platform_admin_accounts` — active or suspended internal accounts;
 - `platform_admin_external_identities` — unique `(issuer, subject)` links;
@@ -38,7 +38,7 @@ The Platform Admin Control Plane uses a dedicated PostgreSQL database. It does n
 - `platform_admin_oidc_transactions` — short-lived, one-use browser-bound OIDC transactions;
 - `platform_admin_auth_rate_limits` — hashed client keys and bounded authentication attempt windows;
 - `platform_admin_audit_events` — authentication, bootstrap, and logout evidence;
-- `platform_admin_schema_migrations` — migration history for this database only.
+- `__platform_admin_drizzle_migrations` — Drizzle migration history for this database only; it is owned by the migration role and unavailable to the runtime role.
 
 `PLATFORM_ADMIN_DATABASE_URL` is the least-privilege runtime connection. `PLATFORM_ADMIN_MIGRATION_DATABASE_URL` is the privileged migration/bootstrap connection. When both are present, the application checks that they target the same dedicated database but use different PostgreSQL roles. Both URLs are rejected if they point to the same host, port, and database as `DATABASE_URL`, `MIGRATION_DATABASE_URL`, or `AUTHENTICATOR_DATABASE_URL`.
 
@@ -58,7 +58,7 @@ Configure these values through the deployment secret manager. Do not commit real
 | `PLATFORM_ADMIN_OIDC_MFA_AMR_VALUES` | Accepted ID-token AMR values; defaults to `mfa` |
 | `PLATFORM_ADMIN_OIDC_REQUIRED_ACR_VALUES` | Optional comma-separated ACR values requested and required in the ID token |
 | `PLATFORM_ADMIN_OIDC_REDIRECT_URI` | Exact registered callback URI: `/api/platform-admin/auth/callback` |
-| `PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET` | At least 32 random characters used to encrypt short-lived PKCE verifiers |
+| `PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET` | At least 32 random characters used to encrypt PKCE verifiers and derive keyed audit/rate-limit pseudonyms |
 | `PLATFORM_ADMIN_SESSION_TTL_SECONDS` | Absolute session lifetime; 300–86400 seconds, default 28800 |
 
 Provision a dedicated database named, for example, `oxenn_platform_admin`. Create separate PostgreSQL roles for migration ownership and runtime access. The migration role must own the database/schema and tables. The runtime role must not own tables or receive DDL privileges. Grant `CONNECT` on the database and `USAGE` on the schema, then apply only the following table/column privileges after migration:
@@ -84,13 +84,19 @@ GRANT SELECT, INSERT, UPDATE, DELETE
 
 Do not grant the runtime role write access to accounts, external identities (other than `last_authenticated_at`), permission grants, or the migration ledger. Do not grant broad default DML privileges; each future migration must explicitly review and grant only the additional runtime permissions it needs. In production, both Platform Admin database URLs must include `sslmode=require`, `verify-ca`, or `verify-full`.
 
-After provisioning the database and configuring the migration URL, run:
+After provisioning the database and configuring both URLs, generate any new migration from the dedicated Drizzle schema with:
+
+```bash
+pnpm run platform-admin:generate
+```
+
+Review the generated SQL and snapshot, then apply it with:
 
 ```bash
 pnpm run platform-admin:migrate
 ```
 
-This command reads only `PLATFORM_ADMIN_MIGRATION_DATABASE_URL`, takes a PostgreSQL advisory lock, and applies the isolated SQL migration once. It does not connect to or migrate the Workspace database.
+The Platform Admin uses the repository's Drizzle migration engine with a separate `drizzle.platform-admin.config.ts`, schema file, output directory, and migration-history table. Both `PLATFORM_ADMIN_DATABASE_URL` and `PLATFORM_ADMIN_MIGRATION_DATABASE_URL` are required; the guard verifies that they target the same dedicated database but use different PostgreSQL roles. The Platform Admin runner invokes Drizzle with `__platform_admin_drizzle_migrations` and reads only `PLATFORM_ADMIN_MIGRATION_DATABASE_URL`. This reuses the existing migration framework without sharing the Workspace schema, migration directory, history table, or connection string. Do not use `pnpm db:migrate` for this control plane: the Workspace config and runner are bound to Workspace database settings and could otherwise apply DDL to the wrong database.
 
 ### First administrator bootstrap
 

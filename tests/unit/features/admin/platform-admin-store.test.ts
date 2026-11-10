@@ -12,7 +12,9 @@ vi.mock("../../../../src/features/admin/security/platform-admin-database.server"
 
 import {
   consumePlatformAdminAuthRateLimit,
+  findActivePlatformAdminIdentity,
   findPlatformAdminSessionIdentity,
+  hashPlatformAdminAuditSubject,
   hashPlatformAdminRateLimitKey,
   revokePlatformAdminSession,
 } from "../../../../src/features/admin/security/platform-admin-store.server";
@@ -45,6 +47,16 @@ describe("Platform Admin persistence boundary", () => {
     expect(poolMock.query.mock.calls[1]?.[1]).not.toContain("203.0.113.10");
   });
 
+  it("pseudonymizes the same external identity consistently for login audit events", () => {
+    vi.stubEnv("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET", "a-test-transaction-secret-with-more-than-32-characters");
+    const first = hashPlatformAdminAuditSubject("https://identity.example.test", "immutable-subject");
+
+    expect(first).toMatch(/^[a-f0-9]{64}$/);
+    expect(first).toBe(hashPlatformAdminAuditSubject("https://identity.example.test", "immutable-subject"));
+    expect(first).not.toBe(hashPlatformAdminAuditSubject("https://other.example.test", "immutable-subject"));
+    expect(first).not.toContain("immutable-subject");
+  });
+
   it("rejects attempts above the rate-limit threshold", async () => {
     vi.stubEnv("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET", "a-test-transaction-secret-with-more-than-32-characters");
     poolMock.query
@@ -58,6 +70,33 @@ describe("Platform Admin persistence boundary", () => {
         windowSeconds: 900,
       }),
     ).resolves.toBe(false);
+  });
+
+  it("resolves an active OIDC identity without depending on a session row", async () => {
+    poolMock.query.mockResolvedValueOnce({
+      rows: [{
+        identityId: "identity-id",
+        accountId: "account-id",
+        issuer: "https://identity.example.test",
+        subject: "immutable-subject",
+        grantedPermissions: ["tenant:read"],
+      }],
+      rowCount: 1,
+    });
+
+    const result = await findActivePlatformAdminIdentity(
+      "https://identity.example.test",
+      "immutable-subject",
+    );
+
+    expect(result?.identityId).toBe("identity-id");
+    expect(result?.grantedPermissions).toEqual(["tenant:read"]);
+    const query = String(poolMock.query.mock.calls[0]?.[0]);
+    expect(query).toContain("FROM platform_admin_external_identities AS external_identity");
+    expect(query).toContain("external_identity.issuer = $1");
+    expect(query).toContain("external_identity.subject = $2");
+    expect(query).not.toContain("admin_session");
+    expect(query).not.toContain("platform_admin_sessions");
   });
 
   it("binds session lookups to the current issuer and audience", async () => {
