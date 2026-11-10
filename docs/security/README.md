@@ -24,11 +24,11 @@ The Workspace `super_admin` role is an operator-only cross-workspace override. R
 
 ### Platform Admin RBAC
 
-The separate Platform Admin domain defines seven internal roles and a permission map in `src/features/admin/domain/types.ts` and `src/features/admin/security/index.ts`. Helper classes can evaluate supplied role and user objects, but they do not establish a trusted administrator identity. The application handlers accept actor fields as command inputs. The `AdminAPIClient` describes itself as a mock over an in-memory store, but its constructor wires PostgreSQL-backed CQRS handlers and repositories. `PostgresAdminUserRepository` issues SQL reads but ignores returned rows and obtains administrator records from a static in-memory `Map`; its write paths issue SQL through `PostgresClient`. The client accepts actor data as method arguments and is not a Next.js route handler. No Platform Admin production route was found under `src/app/api`.
+The older seven-role hierarchy and helper classes in `src/features/admin/security/index.ts` remain defined/scaffolded and are not the authority source for the new boundary. Stage 1 added a server-only, default-deny principal resolver and exact-permission guard. Stage 2 adds provider-agnostic OIDC login/callback/logout endpoints, browser-bound state/nonce/PKCE S256 transactions, opaque hashed sessions, and a separate Platform Admin persistence model. Accounts are keyed by the exact `(issuer, subject)` pair and receive only explicit permission grants; login never auto-provisions an account.
 
-The schema declares `admin_users.role_id` and normalized `roles`/`permissions` relationships, while the current admin repository reads returned records from an in-memory map and writes columns that do not match the declared schema. The schema also labels `roles` and `permissions` as frozen legacy structures not used for authorization decisions.
+The `AdminAPIClient` and its CQRS handlers remain separate legacy scaffolding. The client accepts actor data as method arguments, and the handlers have not yet been wired to the new guard. The OIDC endpoints authenticate identities but do not expose Platform Admin business operations.
 
-*Status: Role definitions are defined-only; evaluator and application pieces are scaffolded; a production-exposed, server-authenticated Platform Admin enforcement path is not demonstrated (not exposed in the inspected route tree).*
+*Status: Authentication and persistence code are implemented in the repository; production activation is pending a dedicated database, OIDC provider registration, secrets, migration, and controlled first-admin bootstrap. No live database or provider has been configured or accessed.*
 
 ### Cross-context rule
 
@@ -58,10 +58,11 @@ The repository contains tenant/session checks for cache access and server-side i
 
 - [Security Model Overview](./SECURITY_MODEL.md)
 - [RBAC Model Specification](./RBAC_MODEL.md)
+- [Platform Admin Authentication](./PLATFORM_ADMIN_AUTHENTICATION.md)
 - [Privileged Paths](./privileged-paths.md)
 - [Database Reference Matrix](../database/reference-matrix.md)
 - [Canonical Data Contract](../database/canonical-data-contract.md)
 
 ## Verification boundary
 
-This documentation update is limited to source inspection. No database was connected or queried, no migration was applied or modified, and no tests or deployment checks were run. Platform Admin runtime enforcement remains a separate technical remediation requiring its own approved scope.
+Stage 2 unit tests cover the server-only authorization boundary, OIDC transaction construction and validation, unprovisioned identity denial, and dedicated database URL separation. Targeted TypeScript checking has also been run. Full repository CI and independent review remain required for the final PR head. No live OIDC provider or database was connected, no migration was executed, and no first administrator was provisioned. Production activation and wiring of Platform Admin business operations remain separate steps.

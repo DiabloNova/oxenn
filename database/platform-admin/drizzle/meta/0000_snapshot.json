@@ -1,0 +1,716 @@
+{
+  "id": "a6b930c7-b4b2-4a03-9ae1-1a912e509843",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.platform_admin_accounts": {
+      "name": "platform_admin_accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "disabled_at": {
+          "name": "disabled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "platform_admin_accounts_status_check": {
+          "name": "platform_admin_accounts_status_check",
+          "value": "\"platform_admin_accounts\".\"status\" IN ('active', 'suspended')"
+        },
+        "platform_admin_accounts_display_name_check": {
+          "name": "platform_admin_accounts_display_name_check",
+          "value": "length(btrim(\"platform_admin_accounts\".\"display_name\")) > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.platform_admin_audit_events": {
+      "name": "platform_admin_audit_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "actor_account_id": {
+          "name": "actor_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "platform_admin_audit_events_created_idx": {
+          "name": "platform_admin_audit_events_created_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "platform_admin_audit_events_actor_idx": {
+          "name": "platform_admin_audit_events_actor_idx",
+          "columns": [
+            {
+              "expression": "actor_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_audit_events_actor_account_id_platform_admin_accounts_id_fk": {
+          "name": "platform_admin_audit_events_actor_account_id_platform_admin_accounts_id_fk",
+          "tableFrom": "platform_admin_audit_events",
+          "tableTo": "platform_admin_accounts",
+          "columnsFrom": [
+            "actor_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "platform_admin_audit_events_outcome_check": {
+          "name": "platform_admin_audit_events_outcome_check",
+          "value": "\"platform_admin_audit_events\".\"outcome\" IN ('success', 'denied', 'error')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.platform_admin_auth_rate_limits": {
+      "name": "platform_admin_auth_rate_limits",
+      "schema": "",
+      "columns": {
+        "key_hash": {
+          "name": "key_hash",
+          "type": "char(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "window_started_at": {
+          "name": "window_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "platform_admin_auth_rate_limits_expiry_idx": {
+          "name": "platform_admin_auth_rate_limits_expiry_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "platform_admin_auth_rate_limits_key_hash_check": {
+          "name": "platform_admin_auth_rate_limits_key_hash_check",
+          "value": "\"platform_admin_auth_rate_limits\".\"key_hash\" ~ '^[a-f0-9]{64}$'"
+        },
+        "platform_admin_auth_rate_limits_attempt_count_check": {
+          "name": "platform_admin_auth_rate_limits_attempt_count_check",
+          "value": "\"platform_admin_auth_rate_limits\".\"attempt_count\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.platform_admin_external_identities": {
+      "name": "platform_admin_external_identities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issuer": {
+          "name": "issuer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_authenticated_at": {
+          "name": "last_authenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "platform_admin_external_identity_issuer_subject_unique": {
+          "name": "platform_admin_external_identity_issuer_subject_unique",
+          "columns": [
+            {
+              "expression": "issuer",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "subject",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "platform_admin_external_identities_account_idx": {
+          "name": "platform_admin_external_identities_account_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_external_identities_account_id_platform_admin_accounts_id_fk": {
+          "name": "platform_admin_external_identities_account_id_platform_admin_accounts_id_fk",
+          "tableFrom": "platform_admin_external_identities",
+          "tableTo": "platform_admin_accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "platform_admin_external_identities_issuer_check": {
+          "name": "platform_admin_external_identities_issuer_check",
+          "value": "length(btrim(\"platform_admin_external_identities\".\"issuer\")) > 0"
+        },
+        "platform_admin_external_identities_subject_check": {
+          "name": "platform_admin_external_identities_subject_check",
+          "value": "length(btrim(\"platform_admin_external_identities\".\"subject\")) > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.platform_admin_oidc_transactions": {
+      "name": "platform_admin_oidc_transactions",
+      "schema": "",
+      "columns": {
+        "state_hash": {
+          "name": "state_hash",
+          "type": "char(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nonce": {
+          "name": "nonce",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_verifier_ciphertext": {
+          "name": "code_verifier_ciphertext",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "browser_binding_hash": {
+          "name": "browser_binding_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "redirect_uri": {
+          "name": "redirect_uri",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "platform_admin_oidc_transactions_expiry_idx": {
+          "name": "platform_admin_oidc_transactions_expiry_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "platform_admin_oidc_transactions_state_hash_check": {
+          "name": "platform_admin_oidc_transactions_state_hash_check",
+          "value": "\"platform_admin_oidc_transactions\".\"state_hash\" ~ '^[a-f0-9]{64}$'"
+        },
+        "platform_admin_oidc_transactions_binding_hash_check": {
+          "name": "platform_admin_oidc_transactions_binding_hash_check",
+          "value": "\"platform_admin_oidc_transactions\".\"browser_binding_hash\" ~ '^[a-f0-9]{64}$'"
+        },
+        "platform_admin_oidc_transactions_expiry_check": {
+          "name": "platform_admin_oidc_transactions_expiry_check",
+          "value": "\"platform_admin_oidc_transactions\".\"expires_at\" > \"platform_admin_oidc_transactions\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.platform_admin_permission_grants": {
+      "name": "platform_admin_permission_grants",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permission_key": {
+          "name": "permission_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "granted_by_account_id": {
+          "name": "granted_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "granted_at": {
+          "name": "granted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "platform_admin_permission_grants_active_unique": {
+          "name": "platform_admin_permission_grants_active_unique",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "permission_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"platform_admin_permission_grants\".\"revoked_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "platform_admin_permission_grants_account_idx": {
+          "name": "platform_admin_permission_grants_account_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"platform_admin_permission_grants\".\"revoked_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_permission_grants_account_id_platform_admin_accounts_id_fk": {
+          "name": "platform_admin_permission_grants_account_id_platform_admin_accounts_id_fk",
+          "tableFrom": "platform_admin_permission_grants",
+          "tableTo": "platform_admin_accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "platform_admin_permission_grants_granted_by_account_id_platform_admin_accounts_id_fk": {
+          "name": "platform_admin_permission_grants_granted_by_account_id_platform_admin_accounts_id_fk",
+          "tableFrom": "platform_admin_permission_grants",
+          "tableTo": "platform_admin_accounts",
+          "columnsFrom": [
+            "granted_by_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "platform_admin_permission_grants_permission_key_check": {
+          "name": "platform_admin_permission_grants_permission_key_check",
+          "value": "\"platform_admin_permission_grants\".\"permission_key\" IN (\n        'tenant:create', 'tenant:write', 'tenant:read', 'tenant:suspend',\n        'tenant:activate', 'tenant:archive', 'admin:write', 'admin:read',\n        'config:write', 'config:read', 'ai:manage', 'ai:read', 'audit:read',\n        'billing:write', 'billing:read', 'prompt:manage', 'crawler:manage',\n        'system:monitor'\n      )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.platform_admin_sessions": {
+      "name": "platform_admin_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_identity_id": {
+          "name": "external_identity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "audience": {
+          "name": "audience",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "platform_admin_sessions_active_account_idx": {
+          "name": "platform_admin_sessions_active_account_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"platform_admin_sessions\".\"revoked_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_sessions_account_id_platform_admin_accounts_id_fk": {
+          "name": "platform_admin_sessions_account_id_platform_admin_accounts_id_fk",
+          "tableFrom": "platform_admin_sessions",
+          "tableTo": "platform_admin_accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "platform_admin_sessions_external_identity_id_platform_admin_external_identities_id_fk": {
+          "name": "platform_admin_sessions_external_identity_id_platform_admin_external_identities_id_fk",
+          "tableFrom": "platform_admin_sessions",
+          "tableTo": "platform_admin_external_identities",
+          "columnsFrom": [
+            "external_identity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "platform_admin_sessions_token_hash_unique": {
+          "name": "platform_admin_sessions_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "platform_admin_sessions_audience_check": {
+          "name": "platform_admin_sessions_audience_check",
+          "value": "length(btrim(\"platform_admin_sessions\".\"audience\")) > 0"
+        },
+        "platform_admin_sessions_token_hash_check": {
+          "name": "platform_admin_sessions_token_hash_check",
+          "value": "\"platform_admin_sessions\".\"token_hash\" ~ '^[a-f0-9]{64}$'"
+        },
+        "platform_admin_sessions_expiry_check": {
+          "name": "platform_admin_sessions_expiry_check",
+          "value": "\"platform_admin_sessions\".\"expires_at\" > \"platform_admin_sessions\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

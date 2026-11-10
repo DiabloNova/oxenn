@@ -338,6 +338,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Phase 02 — Creative Concept and Design Direction  **Concept name:** Signal Atlas — Oxenn's Living Digital Twin   **Design thesis:** Turn fragmented search and AI visibility signals into a clear model of where a brand stands, what is missing, and what to do next.   **Reference concept:** The generated Oxenn homepage image shared in the project conversation (1536 × 1024). It is an art-direction reference, not a production screenshot or proof of shipped functionality.  ## 1. Brand principles  1. `
   },
   {
+    slug: "PLATFORM_ADMIN_AUTHENTICATION",
+    titleEn: "Platform Admin Authentication and Persistence Boundary",
+    titleFa: "Platform Admin Authentication and Persistence Boundary",
+    category: "security",
+    categoryFa: "Security",
+    snippet: `# Platform Admin Authentication and Persistence Boundary  **Status:** Stage 2 implementation is present in the repository. Production authentication remains disabled until a dedicated database, OIDC provider registration, runtime secrets, and the first explicitly provisioned account are configured.  ## 1. Trust boundary  Platform Admin authentication is independent from Workspace authentication. It does not read \`oxenn_session\`, \`organization_members.role\`, Workspace session snapshots, \`admin_users\`,`
+  },
+  {
     slug: "RBAC_MODEL",
     titleEn: "Role-Based Access Control (RBAC) Model",
     titleFa: "Role-Based Access Control (RBAC) Model",
@@ -440,6 +448,14 @@ export const DOCS_INDEX: DocMeta[] = [
     category: "tasks_reports",
     categoryFa: "tasks_reports",
     snippet: `# DOC-008 — Platform Admin Boundary (Stage 1) Report  **Status:** COMPLETE — Stage 1 implementation only. The later identity-provider and persistence integration stage has not started and requires separate user approval.  ## Objective and invariant  Establish a server-only Platform Admin authorization boundary that denies by default and cannot derive Platform Admin authority from Workspace sessions, Workspace roles, or caller-supplied actor fields.  ## Implementation  Created src/features/admin/security/platform-admin.server.ts.`
+  },
+  {
+    slug: "doc-008-platform-admin-boundary-stage-2",
+    titleEn: "DOC-008 — Platform Admin Boundary (Stage 2) Report",
+    titleFa: "DOC-008 — Platform Admin Boundary (Stage 2) Report",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# DOC-008 — Platform Admin Boundary (Stage 2) Report  **Status:** Implementation committed to the existing Stage 2 branch; runtime activation and PR approval remain pending.  ## Scope and sequencing  Stage 1 was merged through PR #127. The existing \`feat/022-doc-008-platform-admin-identity\` branch was updated from \`main\` before Stage 2 work resumed. No additional branch or pull request was created. All Stage 2 changes are intended for the existing PR #128.  ## Implemented  - Added a provider-agn`
   },
   {
     slug: "zod-firecrawl-remediation",

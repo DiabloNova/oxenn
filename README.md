@@ -65,6 +65,7 @@ Under our single-runner doctrine, database migrations exist exclusively in `data
 
 [![Maintainability](https://qlty.sh/gh/DiabloNova/projects/oxenn/maintainability.svg)](https://qlty.sh/gh/DiabloNova/projects/oxenn)
 [![Code Coverage](https://qlty.sh/gh/DiabloNova/projects/oxenn/coverage.svg)](https://qlty.sh/gh/DiabloNova/projects/oxenn)  
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/bd3e1e94dcc64c7ab35d2bc12285d4ce)](https://app.codacy.com/gh/DiabloNova/oxenn/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
 ## 7. Documentation Portal
 
