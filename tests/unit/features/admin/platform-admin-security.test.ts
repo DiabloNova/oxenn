@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const providerModuleMock = vi.hoisted(() => ({
   getTrustedPlatformAdminIdentityProvider: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/headers", () => ({ cookies: vi.fn() }));
 vi.mock(
   "../../../../src/features/admin/security/platform-admin-identity-provider.server",
   () => providerModuleMock,
@@ -42,8 +43,20 @@ const providerFor = (
 });
 
 describe("Platform Admin server-side authorization boundary", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   beforeEach(() => {
     vi.clearAllMocks();
+    for (const name of [
+      "PLATFORM_ADMIN_DATABASE_URL",
+      "PLATFORM_ADMIN_OIDC_ISSUER",
+      "PLATFORM_ADMIN_OIDC_CLIENT_ID",
+      "PLATFORM_ADMIN_OIDC_CLIENT_SECRET",
+      "PLATFORM_ADMIN_OIDC_REDIRECT_URI",
+      "PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET",
+    ]) {
+      vi.stubEnv(name, "");
+    }
     useTrustedProvider(null);
   });
 

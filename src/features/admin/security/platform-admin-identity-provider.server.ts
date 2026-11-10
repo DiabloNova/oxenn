@@ -1,11 +1,16 @@
 import "server-only";
 
+import { cookies } from "next/headers";
 import type { Permission } from "../domain/types";
+import {
+  authenticatePlatformAdminSession,
+  isPlatformAdminOidcConfigured,
+  PLATFORM_ADMIN_SESSION_COOKIE,
+} from "./platform-admin-oidc.server";
 
 /**
- * Identity returned only after a trusted server-side adapter verifies the
- * administrator's credential/session and resolves explicit Platform Admin
- * grants from an authoritative source.
+ * Identity returned only after the OIDC client validates the authorization
+ * response and the isolated Platform Admin store confirms an active account.
  */
 export interface VerifiedPlatformAdminIdentity {
   readonly issuer: string;
@@ -16,24 +21,39 @@ export interface VerifiedPlatformAdminIdentity {
 }
 
 /**
- * Contract for the trusted Platform Admin identity adapter.
- *
- * This type is intentionally kept in the server-only provider module. Callers
- * must not supply an implementation to authorization functions.
+ * Contract for the trusted Platform Admin identity adapter. Production callers
+ * cannot supply an implementation to the authorization API.
  */
 export interface PlatformAdminIdentityProvider {
   authenticatePlatformAdmin(): Promise<VerifiedPlatformAdminIdentity | null>;
 }
 
 /**
- * Trusted provider composition root.
- *
- * Stage 1 deliberately has no configured identity provider and therefore
- * returns null. Stage 2 may construct the real provider here after its
- * authentication and canonical persistence contracts are implemented.
- *
- * Do not add a setter or accept request/caller-controlled provider data here.
+ * Server-only composition root. It remains unavailable until the dedicated
+ * Platform Admin database and complete OIDC client configuration are present.
  */
 export function getTrustedPlatformAdminIdentityProvider(): PlatformAdminIdentityProvider | null {
-  return null;
+  if (!isPlatformAdminOidcConfigured()) return null;
+
+  return {
+    async authenticatePlatformAdmin() {
+      const cookieStore = await cookies();
+      const sessionToken = cookieStore.get(PLATFORM_ADMIN_SESSION_COOKIE)?.value;
+      if (!sessionToken) return null;
+
+      const issuer = process.env.PLATFORM_ADMIN_OIDC_ISSUER?.trim();
+      const audience = process.env.PLATFORM_ADMIN_OIDC_CLIENT_ID?.trim();
+      if (!issuer || !audience) return null;
+      const identity = await authenticatePlatformAdminSession(sessionToken, issuer, audience);
+      if (!identity) return null;
+
+      return {
+        issuer: identity.issuer,
+        subject: identity.subject,
+        audience,
+        isActive: true,
+        grantedPermissions: identity.grantedPermissions as Permission[],
+      };
+    },
+  };
 }

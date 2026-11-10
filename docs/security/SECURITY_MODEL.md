@@ -41,35 +41,21 @@ These helpers provide repository-level server-side enforcement primitives. Their
 
 ### Separate intended context
 
-The Platform Admin domain in `src/features/admin/domain/types.ts` defines seven internal roles:
+The Platform Admin domain in `src/features/admin/domain/types.ts` still defines seven legacy internal role names and the older role-permission map in `src/features/admin/security/index.ts`. Those definitions do not establish a trusted identity and are not used as the authority source by the Stage 1/Stage 2 server-side boundary. Stage 2 uses explicit permission grants attached to a separately provisioned Platform Admin account; it does not infer grants from a role name or numeric hierarchy.
 
-- `Super Admin`
-- `Platform Admin`
-- `Security Auditor`
-- `Operations`
-- `Finance`
-- `Support`
-- `Read-Only Observer`
+### Trusted identity and session boundary
 
-It also defines a separate permission vocabulary and role-to-permission map in `src/features/admin/security/index.ts`. These definitions describe the intended internal administration model; they do not create Workspace membership and are not derived from `organization_members.role`.
+`src/features/admin/security/platform-admin.server.ts` resolves an opaque principal through a private server-only composition root. The resolver accepts no caller-supplied provider or actor fields and denies access when configuration, identity, account state, or permission data is missing or invalid.
 
-### Current implementation boundary
+Stage 2 adds a provider-agnostic OpenID Connect Authorization Code flow using `openid-client`, PKCE S256, state, nonce, exact issuer/audience validation, a constrained ID-token signing algorithm, and default MFA AMR enforcement with optional ACR policy. The login, callback, and logout handlers live under `src/app/api/platform-admin/auth/`. The callback consumes a short-lived browser-bound transaction and creates an opaque server session only after the verified `(issuer, subject)` pair matches an active, pre-provisioned Platform Admin account. Email and Workspace identity are not used as the account key. No just-in-time account provisioning occurs.
 
-The repository currently contains authorization helper classes such as `PermissionChecker` and `AdminAuthorizationGuard`. They evaluate a supplied role or `AdminUser` object. They do not independently authenticate an administrator or resolve a trusted actor from a server session. The application handlers accept actor fields, including `actorRole`, in command inputs; the inspected handlers do not establish a server-authenticated Platform Admin principal before acting.
+The existing `AdminAPIClient` in `src/features/admin/api/v1/admin/index.ts` still accepts actor data as method arguments. Its constructor wires PostgreSQL-backed CQRS handlers and repository adapters, while `PostgresAdminUserRepository` ignores returned SQL read rows and obtains administrator records from a static in-memory `Map`; its write paths issue SQL through `PostgresClient`. It is not a Next.js route handler and has not been wired to the new Platform Admin principal or guard. The Stage 2 authentication endpoints therefore do not imply that existing admin business operations are exposed or protected.
 
-The `AdminAPIClient` in `src/features/admin/api/v1/admin/index.ts` describes itself as a mock API client over an in-memory store, but its constructor wires PostgreSQL-backed CQRS handlers and repository adapters. `PostgresAdminUserRepository` issues SQL read queries but ignores their returned rows and obtains returned administrator records from a static in-memory `Map`; its write paths issue SQL through `PostgresClient`. The client methods accept actor data as arguments; it is not a Next.js route handler. No corresponding Platform Admin route was found under `src/app/api` in the inspected tree. Therefore the current repository does not demonstrate a production-exposed, server-authenticated Platform Admin authorization boundary.
+### Isolated persistence
 
-### Persistence status
+Stage 2 adds a separate Platform Admin persistence model in `database/platform-admin/migrations/0001_platform_admin_control_plane.sql`. It stores accounts, external identities keyed by `(issuer, subject)`, explicit permission grants, hashed opaque sessions, short-lived OIDC transactions, audit events, and a separate migration ledger. Runtime access uses `PLATFORM_ADMIN_DATABASE_URL`; migration and bootstrap operations use `PLATFORM_ADMIN_MIGRATION_DATABASE_URL`. Both must target a database distinct from the Workspace and authenticator databases, and use different PostgreSQL roles. The runtime has no fallback to `DATABASE_URL`, `MIGRATION_DATABASE_URL`, or `AUTHENTICATOR_DATABASE_URL`.
 
-The schema source declares `admin_users` with a `role_id` foreign key to `roles`, and `permissions` with a `role_id` relationship. The schema also explicitly labels `roles` and `permissions` as frozen legacy structures that are no longer used for authorization decisions, and identifies `organization_members.role` as the Workspace authorization source.
-
-The current `PostgresAdminUserRepository` does not provide a reliable database-backed Platform Admin role authority:
-
-- Read queries are issued, but their returned rows are not used to construct the returned administrator records; the repository reads from a static in-memory map.
-- Write queries refer to `admin_users.role`, `permissions`, and `sso_identities` columns that do not match the declared `admin_users.role_id` schema and normalized role/permission relationships.
-- SSO-related domain fields do not, by themselves, establish a working identity federation or authentication flow.
-
-The schema declarations are source-code definitions only. No database is connected to this repository, and no deployed database state or migration execution has been inspected as part of this documentation work.
+No real OIDC provider is configured, no dedicated database has been provisioned or connected, and no migration or first-admin bootstrap has been run. The code remains fail-closed until deployment configuration and controlled provisioning are complete. The older `admin_users`, `roles`, and `permissions` schema remains frozen legacy data and is not used by the new boundary.
 
 ## 4. Cross-context security rules
 

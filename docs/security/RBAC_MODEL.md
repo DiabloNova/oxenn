@@ -27,64 +27,35 @@ The Workspace `super_admin` role is not the Platform Admin `Super Admin` role. P
 
 ## 2. Platform Admin RBAC
 
-### Defined roles
+### Defined roles versus effective grants
 
-The Platform Admin domain in `src/features/admin/domain/types.ts` defines these seven internal roles:
+The Platform Admin domain in `src/features/admin/domain/types.ts` retains seven legacy internal role names. The older numeric role hierarchy and role-permission map in `src/features/admin/security/index.ts` are not used by the new server-side Platform Admin boundary. Stage 2 stores direct, explicit permission grants against a canonical Platform Admin account. The guard accepts only exact known permission keys; it does not derive permissions from role names, hierarchy, wildcard values, Workspace roles, or caller-supplied actor fields.
 
-| Role | Defined responsibility |
-|---|---|
-| `Super Admin` | Highest-level platform administration and controlled overrides |
-| `Platform Admin` | Platform and tenant lifecycle administration |
-| `Security Auditor` | Security and audit inspection |
-| `Operations` | Operational configuration and monitoring |
-| `Finance` | Billing and financial administration |
-| `Support` | Customer support operations |
-| `Read-Only Observer` | Non-mutating platform observation |
+### Identity and enforcement boundary
 
-The same domain defines permissions such as `tenant:create`, `tenant:write`, `tenant:read`, `admin:write`, `config:write`, `ai:manage`, `audit:read`, `billing:write`, `prompt:manage`, `crawler:manage`, and `system:monitor`.
+Stage 1 added `src/features/admin/security/platform-admin.server.ts`, a server-only default-deny resolver and exact-permission guard. The exported resolver accepts no provider parameter. Stage 2 adds a provider-agnostic OIDC Authorization Code flow with PKCE S256, state, nonce, issuer/audience/signature/expiry validation, browser-bound one-time transactions, and opaque database-backed sessions. External identity is keyed by `(issuer, subject)`, not email. Unknown or inactive identities are denied; login does not create accounts or grants.
 
-### Defined evaluator versus effective authorization
+The OIDC login, callback, and logout endpoints are under `src/app/api/platform-admin/auth/`. The legacy `AdminAPIClient` still accepts actor data as method arguments and has not been wired to the new principal or guard. No Platform Admin business-operation route is exposed by this change. Authentication endpoints must not be treated as evidence that the older admin CQRS handlers are protected.
 
-`src/features/admin/security/index.ts` defines a numeric role hierarchy, a role-permission map, `PermissionChecker`, `SecurityPolicyEvaluator`, and `AdminAuthorizationGuard`. These are authorization helpers, not a complete identity boundary:
+### Persistence isolation
 
-- The helpers evaluate a role string or an `AdminUser` object supplied by their caller.
-- They do not authenticate the administrator or load a trusted Platform Admin principal from a server session.
-- The application handlers accept actor fields such as `actorId`, `actorEmail`, and `actorRole` in command inputs. The inspected handler methods do not invoke these helpers to authenticate and authorize that actor at the handler boundary.
-- The `AdminAPIClient` describes itself as a mock API client over an in-memory store, but its constructor wires PostgreSQL-backed CQRS handlers and repository adapters. `PostgresAdminUserRepository` issues SQL read queries but ignores their returned rows and obtains returned administrator records from a static in-memory `Map`; its write paths issue SQL through `PostgresClient`. The client methods accept actor data as arguments; this client is not a Next.js route handler and does not establish a server-authenticated Platform Admin principal.
-- No Platform Admin route handler was found under `src/app/api` in the inspected repository tree.
+The new tables live in a dedicated Platform Admin PostgreSQL database and are created by `database/platform-admin/migrations/0001_platform_admin_control_plane.sql`. Runtime access uses `PLATFORM_ADMIN_DATABASE_URL`; migration and first-admin bootstrap use `PLATFORM_ADMIN_MIGRATION_DATABASE_URL` with a different PostgreSQL role. The database URL guard rejects reuse of the Workspace, migration, or authenticator database. No fallback to Workspace connection variables exists.
 
-Consequently, the seven roles and permission evaluator are defined/scaffolded, but the repository does not demonstrate an exposed, server-authenticated Platform Admin enforcement path. The numeric hierarchy and helper methods must not be represented as proof of effective production authorization.
-
-### Persistence contract and mismatch
-
-The schema source declares:
-
-- `admin_users.role_id` referencing `roles.id`;
-- `permissions.role_id` referencing `roles.id`;
-- a separate `permissions.permission_key` field.
-
-The schema comments explicitly mark `roles` and `permissions` as frozen legacy tables not used for authorization decisions, and identify `organization_members.role` as the current Workspace authorization source.
-
-The current `PostgresAdminUserRepository` is not aligned with this schema contract:
-
-- Read methods execute SQL but use a static in-memory `Map` as the source of returned `AdminUser` records.
-- Write methods target `admin_users.role`, `admin_users.permissions`, and `admin_users.sso_identities`, whereas the declared schema uses `role_id` and normalized related tables and does not declare those columns on `admin_users`.
-- The repository therefore cannot be described as a functioning database-backed source of Platform Admin roles or permissions.
-
-No database is connected to this repository. The schema is only a code declaration here; deployed database state and applied migrations are unknown and were not accessed.
+The schema stores accounts, `(issuer, subject)` external identities, explicit permission grants, hashed sessions, OIDC transactions, audit events, and its own migration ledger. The legacy `admin_users`, `roles`, and `permissions` tables remain frozen and are not used as the new authority source. No dedicated database has been provisioned or connected, no migration has been applied, and no first administrator has been bootstrapped. The runtime therefore remains fail-closed until the required deployment configuration and provisioning steps are completed.
 
 ## 3. Status matrix
 
 | Dimension | Workspace RBAC | Platform Admin RBAC |
 |---|---|---|
-| Role definitions | Implemented in `src/types/auth.ts` | Defined in domain types |
-| Authoritative identity | Server-validated Workspace session | No complete trusted Platform Admin principal demonstrated |
-| Role authority | `organization_members.role` | Intended admin model is not reliably persisted/read by current adapter |
-| Persistence contract | Workspace membership schema | `admin_users.role_id` and legacy role/permission schema declarations; adapter contract mismatch |
-| Evaluator | Server-side `requireRole` and `requireWorkspaceMembership` | Role/permission helper classes exist |
-| Enforcement entrypoint | Workspace server helpers; route coverage must be assessed per boundary | Mock API client and handlers accept caller-provided actor fields; no production route found |
-| Current status | Implemented in repository code; deployed DB not verified | Defined-only / scaffolded; production enforcement not demonstrated |
-| Test evidence | Workspace auth tests cover server-side identity and membership cases | Helper-level tests exist; they do not establish an authenticated production route or DB-backed role enforcement |
+| Role definitions | Implemented in `src/types/auth.ts` | Seven legacy names remain defined; not used as the new grant authority |
+| Authoritative identity | Server-validated Workspace session | Validated OIDC identity keyed by `(issuer, subject)` and an active dedicated account |
+| Permission authority | `organization_members.role` | Explicit `platform_admin_permission_grants` rows in the isolated Platform Admin database |
+| Persistence | Workspace membership schema | Dedicated Platform Admin schema and migration artifact; deployed database not verified |
+| Evaluator | Server-side `requireRole` and `requireWorkspaceMembership` | Server-only default-deny principal resolver and exact-permission guard |
+| Authentication entrypoint | Workspace session layer | OIDC login/callback/logout endpoints; disabled until deployment configuration is complete |
+| Business-operation enforcement | Workspace server helpers; route coverage must be assessed per boundary | Existing admin CQRS handlers are not yet wired to the new guard; no business-operation route is exposed by this change |
+| Current status | Implemented in repository code; deployed DB not verified | Authentication/persistence code implemented; runtime activation and business-route integration pending |
+| Test evidence | Workspace auth tests cover server-side identity and membership cases | Unit tests cover guard, OIDC checks, unprovisioned identities, and database separation; no live provider/database integration |
 
 ## 4. Required separation rules
 
@@ -96,15 +67,16 @@ No database is connected to this repository. The schema is only a code declarati
 
 ## 5. Test coverage and limitations
 
-Workspace authorization tests provide evidence for server-side session and membership behavior. Platform Admin helper tests exercise helper logic, but helper tests do not prove that an authenticated administrator reaches a production route or that permissions are read from persistent storage. The current admin security tests are not equivalent to end-to-end route/identity/persistence tests.
+The Stage 2 unit tests cover the default-deny principal boundary, caller-provider injection resistance, OIDC state/nonce/PKCE construction, browser binding, issuer and audience mismatch rejection, HTTPS endpoint enforcement, unprovisioned identity denial, and dedicated database URL separation. Targeted TypeScript checking covers the Stage 2 routes, persistence layer, migration/bootstrap scripts, and tests.
 
-The following negative integration coverage remains necessary before Platform Admin enforcement can be called implemented:
+The following integration work remains necessary before Platform Admin can be described as operational in production:
 
-- a forged or caller-supplied `actorRole` cannot authorize an administrative action;
-- Workspace `super_admin` cannot obtain Platform Admin permissions;
-- a Platform Admin principal cannot silently obtain Workspace membership;
-- inactive, unknown, or revoked admin principals fail closed;
-- role and permission changes are loaded from the authoritative persistence source;
-- each exposed admin route enforces identity, permission, and resource scope server-side.
+- configure and register the actual OIDC issuer/client and verify the provider's MFA policy;
+- provision the dedicated Platform Admin database and separate migration/runtime roles;
+- apply the isolated migration and explicitly bootstrap the first immutable `(issuer, subject)` identity;
+- verify real OIDC login, callback, session revocation, and grant changes against the provider and database;
+- wire every intended Platform Admin business route/handler to the server-only guard and verify resource scope;
+- add end-to-end negative tests proving Workspace roles and caller-supplied actor fields cannot authorize Platform Admin actions;
+- pass the full repository CI and independent security review on the final PR head.
 
-No tests were run for this documentation-only change.
+No live provider, database, migration, bootstrap, or deployment action has been performed. The OIDC and persistence tests use mocks and do not prove production configuration or deployed state.
