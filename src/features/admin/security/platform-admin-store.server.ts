@@ -261,7 +261,7 @@ export function hashPlatformAdminSecret(value: string): string {
 function hashPlatformAdminHmac(purpose: string, value: string): string {
   const secret = process.env.PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET;
   if (!secret || secret.length < 32) {
-    throw new Error("A strong Platform Admin transaction secret is required for keyed audit and rate-limit hashes.");
+    throw new Error("A strong Platform Admin transaction secret is required for rate-limit hashes.");
   }
   return createHmac("sha256", secret).update(`${purpose}:${value}`).digest("hex");
 }
@@ -271,5 +271,13 @@ export function hashPlatformAdminRateLimitKey(value: string): string {
 }
 
 export function hashPlatformAdminAuditSubject(issuer: string, subject: string): string {
-  return hashPlatformAdminHmac("audit-subject", `${issuer}\0${subject}`);
+  const secret = process.env.PLATFORM_ADMIN_AUDIT_SUBJECT_SECRET;
+  const keyVersion = process.env.PLATFORM_ADMIN_AUDIT_SUBJECT_KEY_VERSION?.trim();
+  if (!secret || secret.length < 32 || !keyVersion || !/^v[1-9][0-9]*$/.test(keyVersion)) {
+    throw new Error("A separate versioned Platform Admin audit-subject secret is required.");
+  }
+  const digest = createHmac("sha256", secret)
+    .update(`audit-subject:${issuer}\0${subject}`)
+    .digest("hex");
+  return `${keyVersion}:${digest}`;
 }

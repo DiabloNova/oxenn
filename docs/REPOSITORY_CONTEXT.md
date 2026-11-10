@@ -91,16 +91,22 @@ When modifying a flow, trace the actual caller, contract, adapter, persistence i
 
 The repository's documented and agent-enforced database contract is:
 
+**Workspace database (default):**
 - The canonical schema is defined by Drizzle declarations in `database/schema/index.ts` and its modular exports.
 - `database/schema/_legacy/` is quarantined. Do not import legacy `TableDefinition` objects as the authoritative schema.
-- Migration files belong only in `database/drizzle/`.
-- Generate migrations through `pnpm db:generate`; do not hand-edit generated SQL, snapshots, or `database/drizzle/meta/_journal.json`.
-- The only authorized application migration runner is `pnpm db:migrate`, implemented by `src/core/database/migrator.ts`.
-- `pnpm db:push` is development-only and must pass through `scripts/database/db-push-guard.ts`.
-- Migration connection resolution is `MIGRATION_DATABASE_URL ?? DATABASE_URL`. Runtime application code must use `DATABASE_URL` only, never `MIGRATION_DATABASE_URL`.
-- New/empty database bootstrap may require elevated privileges to install the pgvector extension; see `database/bootstrap.sql`.
+- Workspace migration files belong only in `database/drizzle/` and are generated through `pnpm db:generate`; do not hand-edit generated SQL, snapshots, or `database/drizzle/meta/_journal.json`.
+- The Workspace application migration runner is `pnpm db:migrate`, implemented by `src/core/database/migrator.ts`.
+- `pnpm db:push` is Workspace development-only and must pass through `scripts/database/db-push-guard.ts`.
+- Workspace migration connection resolution is `MIGRATION_DATABASE_URL ?? DATABASE_URL`. Workspace runtime code must use `DATABASE_URL` only, never `MIGRATION_DATABASE_URL`.
+- New/empty Workspace database bootstrap may require elevated privileges to install the pgvector extension; see `database/bootstrap.sql`.
 
-Never delete or rewrite migration history, reset the journal, introduce a second migration runner, or force a baseline to make tooling pass without explicit authorization. If schema, migration SQL, journal, snapshots, or generated artifacts disagree, stop and investigate the complete history before changing anything.
+**Explicit exception — DOC-008 Platform Admin control plane:**
+- The Platform Admin control plane is intentionally stored in a dedicated database with separate runtime and migration roles. Its Drizzle schema is `database/platform-admin/schema/index.ts`; generated migrations live in `database/platform-admin/drizzle/`.
+- Generate with `pnpm platform-admin:generate` and the dedicated `drizzle.platform-admin.config.ts`; apply with the guarded `pnpm platform-admin:migrate` runner. This uses the same Drizzle Kit/Drizzle ORM migration framework, not a handwritten SQL migration system.
+- The Platform Admin runner uses the separate `__platform_admin_drizzle_migrations` history table and holds a PostgreSQL advisory lock across migration-history reads and application. `PLATFORM_ADMIN_DATABASE_URL` and `PLATFORM_ADMIN_MIGRATION_DATABASE_URL` must target the same dedicated database with different PostgreSQL roles.
+- Never use Workspace `pnpm db:migrate` or `pnpm db:push` for the Platform Admin database. Neither Platform Admin URL may fall back to Workspace or authenticator connection variables.
+
+Never delete or rewrite migration history, reset a journal, hand-edit generated migrations, or force a baseline to make tooling pass without explicit authorization. The Platform Admin control-plane exception above is the only approved separate database configuration and runner. If schema, migration SQL, journal, snapshots, or generated artifacts disagree, stop and investigate the complete history before changing anything.
 
 ### 5.2 Tenant isolation and RLS
 

@@ -455,14 +455,15 @@ One artifact MUST NOT be assumed to prove the correctness of another.
 
 Before making database changes, the agent MUST inspect the relevant layers.
 
-Database & Migration Rules (Single-Runner Doctrine):
-- **Single Migration Location**: Migrations exist ONLY in `database/drizzle/` generated via `drizzle-kit generate`. Handwritten SQL migration folders or secondary runners are strictly prohibited.
-- **Single Source of Schema Truth**: All schema modifications MUST start in `database/schema/index.ts` (or modular exports re-exported by `database/schema/index.ts`).
-- **Single Migration Execution Path**: `pnpm db:migrate` (`src/core/database/migrator.ts`) is the ONLY authorized application path for executing database migrations.
-- **Dev Guarding**: `pnpm db:push` remains strictly dev-only and MUST be executed behind its safety guard (`scripts/database/db-push-guard.ts`).
-- **Connection Environment Resolution**: In migration contexts (e.g., `src/core/database/migrator.ts`), database connection resolution MUST resolve `MIGRATION_DATABASE_URL ?? DATABASE_URL`.
-- **Runtime Connection Rule**: Runtime application code MUST use `DATABASE_URL` only and NEVER use `MIGRATION_DATABASE_URL`.
-- **Bootstrap Requirements**: For new/empty databases, superuser bootstrap is required to create extensions (see `database/bootstrap.sql`).
+Database & Migration Rules (Workspace default with one explicit Platform Admin exception):
+- **Workspace Migration Location**: Workspace migrations exist only in `database/drizzle/` and MUST be generated via `drizzle-kit generate`. Do not add handwritten Workspace SQL migration folders.
+- **Workspace Schema Source**: Workspace schema modifications MUST start in `database/schema/index.ts` or its modular exports.
+- **Workspace Migration Execution**: `pnpm db:migrate` (`src/core/database/migrator.ts`) is the only migration path for the Workspace database.
+- **Platform Admin Control-Plane Exception (DOC-008 Stage 2)**: The isolated Platform Admin database is an explicit exception to the Workspace-only location and runner. Its schema MUST start in `database/platform-admin/schema/index.ts`; generated migrations MUST live in `database/platform-admin/drizzle/`; generation MUST use `drizzle.platform-admin.config.ts` and `pnpm platform-admin:generate`; application MUST use the guarded `pnpm platform-admin:migrate` command. This exception reuses the repository's Drizzle Kit/Drizzle ORM migration framework and does not permit handwritten SQL migrations or a different migration engine. It has a dedicated `__platform_admin_drizzle_migrations` history table, a separate migration role, and an advisory lock held across the complete migration operation. Never use Workspace `pnpm db:migrate` or `pnpm db:push` for this database.
+- **Platform Admin Connection Boundary**: `PLATFORM_ADMIN_DATABASE_URL` and `PLATFORM_ADMIN_MIGRATION_DATABASE_URL` MUST target the same dedicated Platform Admin database but use different PostgreSQL roles. Neither may fall back to Workspace or authenticator connection variables.
+- **Dev Guarding**: `pnpm db:push` remains strictly Workspace dev-only and MUST be executed behind its safety guard (`scripts/database/db-push-guard.ts`).
+- **Workspace Connection Environment Resolution**: Workspace migration contexts MUST resolve `MIGRATION_DATABASE_URL ?? DATABASE_URL`; Workspace runtime code MUST use `DATABASE_URL` only and NEVER `MIGRATION_DATABASE_URL`.
+- **Workspace Bootstrap Requirements**: For new/empty Workspace databases, superuser bootstrap is required to create extensions (see `database/bootstrap.sql`).
 
 The agent MUST NOT:
 

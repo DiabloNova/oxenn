@@ -47,12 +47,20 @@ describe("Platform Admin persistence boundary", () => {
     expect(poolMock.query.mock.calls[1]?.[1]).not.toContain("203.0.113.10");
   });
 
-  it("pseudonymizes the same external identity consistently for login audit events", () => {
-    vi.stubEnv("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET", "a-test-transaction-secret-with-more-than-32-characters");
+  it("keeps audit pseudonyms stable when the OIDC transaction secret rotates", () => {
+    vi.stubEnv("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET", "transaction-secret-version-one-long-enough");
+    vi.stubEnv("PLATFORM_ADMIN_AUDIT_SUBJECT_SECRET", "separate-audit-subject-secret-long-enough");
+    vi.stubEnv("PLATFORM_ADMIN_AUDIT_SUBJECT_KEY_VERSION", "v1");
     const first = hashPlatformAdminAuditSubject("https://identity.example.test", "immutable-subject");
 
-    expect(first).toMatch(/^[a-f0-9]{64}$/);
-    expect(first).toBe(hashPlatformAdminAuditSubject("https://identity.example.test", "immutable-subject"));
+    vi.stubEnv("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET", "transaction-secret-version-two-long-enough");
+    const afterTransactionSecretRotation = hashPlatformAdminAuditSubject(
+      "https://identity.example.test",
+      "immutable-subject",
+    );
+
+    expect(first).toMatch(/^v1:[a-f0-9]{64}$/);
+    expect(afterTransactionSecretRotation).toBe(first);
     expect(first).not.toBe(hashPlatformAdminAuditSubject("https://other.example.test", "immutable-subject"));
     expect(first).not.toContain("immutable-subject");
   });

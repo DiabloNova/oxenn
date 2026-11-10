@@ -40,6 +40,8 @@ interface PlatformAdminOidcSettings {
   clientSecret: string;
   redirectUri: string;
   transactionSecret: string;
+  auditSubjectSecret: string;
+  auditSubjectKeyVersion: string;
   acceptedMfaAmrValues: string[];
   requiredAcrValues: string[];
 }
@@ -76,6 +78,8 @@ function getSettings(): PlatformAdminOidcSettings {
   const clientSecret = requiredEnvironmentValue("PLATFORM_ADMIN_OIDC_CLIENT_SECRET");
   const redirectUri = requiredEnvironmentValue("PLATFORM_ADMIN_OIDC_REDIRECT_URI");
   const transactionSecret = requiredEnvironmentValue("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET");
+  const auditSubjectSecret = requiredEnvironmentValue("PLATFORM_ADMIN_AUDIT_SUBJECT_SECRET");
+  const auditSubjectKeyVersion = requiredEnvironmentValue("PLATFORM_ADMIN_AUDIT_SUBJECT_KEY_VERSION");
   const acceptedMfaAmrValues = (
     process.env.PLATFORM_ADMIN_OIDC_MFA_AMR_VALUES ?? "mfa"
   ).split(",").map((value) => value.trim()).filter(Boolean);
@@ -90,6 +94,12 @@ function getSettings(): PlatformAdminOidcSettings {
   if (transactionSecret.length < 32) {
     throw new Error("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET must contain at least 32 characters.");
   }
+  if (auditSubjectSecret.length < 32 || auditSubjectSecret === transactionSecret) {
+    throw new Error("PLATFORM_ADMIN_AUDIT_SUBJECT_SECRET must be at least 32 characters and distinct from the transaction secret.");
+  }
+  if (!/^v[1-9][0-9]*$/.test(auditSubjectKeyVersion)) {
+    throw new Error("PLATFORM_ADMIN_AUDIT_SUBJECT_KEY_VERSION must use a version such as v1.");
+  }
 
   return {
     issuer,
@@ -97,6 +107,8 @@ function getSettings(): PlatformAdminOidcSettings {
     clientSecret,
     redirectUri,
     transactionSecret,
+    auditSubjectSecret,
+    auditSubjectKeyVersion,
     acceptedMfaAmrValues,
     requiredAcrValues,
   };

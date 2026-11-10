@@ -72,6 +72,8 @@ function configureEnvironment(): void {
     "https://app.example.test/api/platform-admin/auth/callback",
   );
   vi.stubEnv("PLATFORM_ADMIN_OIDC_TRANSACTION_SECRET", "a-test-transaction-secret-with-more-than-32-characters");
+  vi.stubEnv("PLATFORM_ADMIN_AUDIT_SUBJECT_SECRET", "a-separate-audit-subject-secret-with-more-than-32-characters");
+  vi.stubEnv("PLATFORM_ADMIN_AUDIT_SUBJECT_KEY_VERSION", "v1");
 }
 
 describe("Platform Admin OIDC control plane", () => {

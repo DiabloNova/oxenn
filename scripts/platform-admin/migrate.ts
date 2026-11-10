@@ -1,8 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Pool } from "pg";
+import { Client } from "pg";
 import path from "node:path";
 import { assertDedicatedPlatformAdminDatabaseUrl } from "../../src/features/admin/security/platform-admin-database-guard";
+import { withPlatformAdminMigrationLock } from "./migration-lock";
 
 async function main(): Promise<void> {
   const runtimeUrl = process.env.PLATFORM_ADMIN_DATABASE_URL;
@@ -15,24 +16,26 @@ async function main(): Promise<void> {
   assertDedicatedPlatformAdminDatabaseUrl(runtimeUrl);
   assertDedicatedPlatformAdminDatabaseUrl(migrationUrl);
 
-  const pool = new Pool({
+  const client = new Client({
     connectionString: migrationUrl,
-    max: 1,
     connectionTimeoutMillis: 5_000,
     application_name: "oxenn-platform-admin-migrator",
   });
 
   try {
-    const database = drizzle(pool);
-    const migrationsFolder = path.resolve(process.cwd(), "database/platform-admin/drizzle");
-    await migrate(database, {
-      migrationsFolder,
-      migrationsTable: "__platform_admin_drizzle_migrations",
-      migrationsSchema: "public",
+    await client.connect();
+    await withPlatformAdminMigrationLock(client, async () => {
+      const database = drizzle(client);
+      const migrationsFolder = path.resolve(process.cwd(), "database/platform-admin/drizzle");
+      await migrate(database, {
+        migrationsFolder,
+        migrationsTable: "__platform_admin_drizzle_migrations",
+        migrationsSchema: "public",
+      });
     });
     process.stdout.write("Platform Admin Drizzle migrations applied successfully.\n");
   } finally {
-    await pool.end();
+    await client.end();
   }
 }
 
