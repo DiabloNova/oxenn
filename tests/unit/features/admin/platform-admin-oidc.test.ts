@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const oidcMock = vi.hoisted(() => ({
@@ -36,7 +37,7 @@ import {
 } from "../../../../src/features/admin/security/platform-admin-oidc.server";
 
 const createIdToken = (alg = "RS256") =>
-  `${Buffer.from(JSON.stringify({ alg, typ: "JWT" })).toString("base64url")}.payload.signature`;
+  `${Buffer.from(JSON.stringify({ alg, typ: "JWT" })).toString("base64url")}.${randomBytes(12).toString("base64url")}.${randomBytes(16).toString("base64url")}`;
 
 const configuredMetadata = () => ({
   issuer: "https://identity.example.test",
