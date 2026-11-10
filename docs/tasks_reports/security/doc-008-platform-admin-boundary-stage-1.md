@@ -20,11 +20,11 @@ Created src/features/admin/security/platform-admin.server.ts.
 - Checks exact permission grants. It does not infer permissions from role names, numeric rank, or wildcard grants.
 - Does not accept actorRole, actorId, Workspace session data, or request-body permissions as identity inputs.
 
-Updated tests/unit/features/admin/platform-admin-security.test.ts with 12 cases covering the unconfigured composition root, default denial, caller-provider injection attempts, Workspace/caller-role spoofing, inactive and malformed identities, provider failure, explicit grants, role-name non-inheritance, wildcard rejection, and immutability.
+Updated tests/unit/features/admin/platform-admin-security.test.ts with 13 cases covering the unconfigured composition root, default denial, caller-provider injection attempts, Workspace/caller-role spoofing, inactive and malformed identities, provider failure, explicit grants, role-name non-inheritance, wildcard rejection, and immutability.
 
 ## Verification
 
-- **PENDING** — GitHub CI for the provider-injection hardening revision. Previous check results on the earlier head do not validate this follow-up security change.
+- **PENDING** — GitHub CI for the provider-injection hardening revision. The first run passed Typecheck, Lint, Build, generated-file verification, and Isolation Suite, but one new Unit Test failed because the test invoked a static guard method without preserving its class receiver. The test now binds the class receiver; a fresh run is required.
 - **NOT RUN** — full local repository test/typecheck commands in the remote shell. Installing all 778 repository packages was killed by the constrained shell environment in the earlier verification attempt. The final revision must be validated by GitHub CI before merge.
 
 ## Files changed
@@ -46,7 +46,8 @@ No files were deleted. No DOC-007 paths, Stage 1 security documents, main, CI co
 - Initial report commit: c5bffadc0a0ecd98ae4587008b24dbf790544d2c.
 - Main synchronization commit in the branch: b10ebea96689cef9d2a5f3e44ccf319334d6ed3b.
 - Generated docs index commit: d4e1aecb5f6d296488ef117cfc35eb01c5b1c4e7.
-- The branch head before this follow-up was d4e1aecb5f6d296488ef117cfc35eb01c5b1c4e7. The repository main branch had advanced to 247b27a39607c1b71d7b29ef4249f9a7e1b7bd1e with a GitHub lifecycle-evidence commit; the PR remained mergeable.
+- Provider-boundary hardening commit: 2918aebdd375079ba27fab5a02e73970b9843372.
+- The repository main branch had advanced to 247b27a39607c1b71d7b29ef4249f9a7e1b7bd1e with a GitHub lifecycle-evidence commit; the PR remained mergeable.
 
 ## Remaining limitations
 

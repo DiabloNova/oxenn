@@ -11,7 +11,6 @@ vi.mock(
 );
 
 import {
-  PlatformAdminAuthorizationError,
   PlatformAdminAuthorizationGuard,
   resolvePlatformAdminPrincipal,
   type PlatformAdminPrincipal,
@@ -74,9 +73,9 @@ describe("Platform Admin server-side authorization boundary", () => {
       ...args: unknown[]
     ) => Promise<PlatformAdminPrincipal | null>;
     const guardWithExtraArguments =
-      PlatformAdminAuthorizationGuard.requirePermission as unknown as (
-        ...args: unknown[]
-      ) => Promise<PlatformAdminPrincipal>;
+      PlatformAdminAuthorizationGuard.requirePermission.bind(
+        PlatformAdminAuthorizationGuard,
+      ) as (...args: unknown[]) => Promise<PlatformAdminPrincipal>;
 
     await expect(resolverWithExtraArguments(attackerProvider)).resolves.toBeNull();
     await expect(
