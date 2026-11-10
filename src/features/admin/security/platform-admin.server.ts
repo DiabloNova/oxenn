@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getTrustedPlatformAdminIdentityProvider } from "./platform-admin-identity-provider.server";
 import type { Permission } from "../domain/types";
 
 const PLATFORM_ADMIN_PERMISSIONS: readonly Permission[] = [
@@ -25,31 +26,6 @@ const PLATFORM_ADMIN_PERMISSIONS: readonly Permission[] = [
 
 const knownPermissions = new Set<string>(PLATFORM_ADMIN_PERMISSIONS);
 const platformAdminPrincipalBrand: unique symbol = Symbol("PlatformAdminPrincipal");
-
-/**
- * A trusted server-side adapter must return this shape only after verifying the
- * credential/session and resolving the principal's active status and explicit
- * Platform Admin grants from an authoritative source.
- *
- * The adapter is responsible for cryptographic/session verification, issuer
- * and audience validation, expiry/revocation checks, and grant resolution.
- * Request fields such as actorRole, actorId, or permissions are never inputs.
- */
-export interface VerifiedPlatformAdminIdentity {
-  readonly issuer: string;
-  readonly subject: string;
-  readonly audience: string;
-  readonly isActive: boolean;
-  readonly grantedPermissions: readonly Permission[];
-}
-
-/**
- * Implementations must be trusted server-side identity adapters. Do not build
- * this adapter from request-body fields, Workspace sessions, or Workspace roles.
- */
-export interface PlatformAdminIdentityProvider {
-  authenticatePlatformAdmin(): Promise<VerifiedPlatformAdminIdentity | null>;
-}
 
 export type PlatformAdminPrincipal = Readonly<{
   issuer: string;
@@ -78,15 +54,15 @@ export class PlatformAdminAuthorizationError extends Error {
 }
 
 /**
- * Resolves an opaque Platform Admin principal from a trusted server adapter.
- * Missing adapters, invalid/inactive identities, and provider failures deny access.
+ * Resolves an opaque Platform Admin principal through the trusted server-only
+ * composition root. No caller can supply or replace the identity provider.
+ * Missing providers, invalid identities, and provider failures deny access.
  */
-export async function resolvePlatformAdminPrincipal(
-  provider?: PlatformAdminIdentityProvider | null,
-): Promise<PlatformAdminPrincipal | null> {
-  if (!provider) return null;
-
+export async function resolvePlatformAdminPrincipal(): Promise<PlatformAdminPrincipal | null> {
   try {
+    const provider = getTrustedPlatformAdminIdentityProvider();
+    if (!provider) return null;
+
     const identity = await provider.authenticatePlatformAdmin();
     if (!identity || typeof identity !== "object") return null;
 
@@ -137,10 +113,8 @@ export async function resolvePlatformAdminPrincipal(
 }
 
 export class PlatformAdminAuthorizationGuard {
-  public static async requireAuthenticatedPrincipal(
-    provider?: PlatformAdminIdentityProvider | null,
-  ): Promise<PlatformAdminPrincipal> {
-    const principal = await resolvePlatformAdminPrincipal(provider);
+  public static async requireAuthenticatedPrincipal(): Promise<PlatformAdminPrincipal> {
+    const principal = await resolvePlatformAdminPrincipal();
     if (!principal) {
       throw new PlatformAdminAuthorizationError("PLATFORM_ADMIN_UNAUTHENTICATED");
     }
@@ -151,10 +125,9 @@ export class PlatformAdminAuthorizationGuard {
    * Checks exact permission grants only. No role hierarchy or wildcard inheritance.
    */
   public static async requirePermission(
-    provider: PlatformAdminIdentityProvider | null | undefined,
     requiredPermission: Permission,
   ): Promise<PlatformAdminPrincipal> {
-    const principal = await this.requireAuthenticatedPrincipal(provider);
+    const principal = await this.requireAuthenticatedPrincipal();
     if (!principal.grantedPermissions.includes(requiredPermission)) {
       throw new PlatformAdminAuthorizationError("PLATFORM_ADMIN_FORBIDDEN");
     }
