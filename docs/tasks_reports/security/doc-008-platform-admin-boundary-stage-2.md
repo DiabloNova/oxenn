@@ -18,7 +18,7 @@ Stage 1 was merged through PR #127. The existing `feat/022-doc-008-platform-admi
 
 ## Verification performed locally
 
-- 35 targeted unit tests passed across the Stage 1 authorization boundary, OIDC flow, persistence, rate limiting, and database isolation suites.
+- 36 targeted unit tests passed across the Stage 1 authorization boundary, OIDC flow, persistence, rate limiting, and database isolation suites.
 - Targeted TypeScript checking passed for the Stage 2 source files, route handlers, scripts, and tests.
 - The OIDC tests use mocked discovery, token exchange, and persistence. They verify state/nonce/PKCE construction, browser binding, issuer/audience rejection, endpoint HTTPS enforcement, no JIT provisioning, and default-deny behavior.
 

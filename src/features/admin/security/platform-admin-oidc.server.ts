@@ -127,6 +127,7 @@ async function getOidcConfiguration(
     {
       redirect_uris: [settings.redirectUri],
       token_endpoint_auth_method: "client_secret_basic",
+      // This is a configured RS256/ES256 algorithm identifier, not a credential or bearer token.
       id_token_signed_response_alg: settings.signingAlgorithm,
     },
     oidc.ClientSecretBasic(settings.clientSecret),
@@ -173,7 +174,7 @@ async function getOidcConfiguration(
 function encryptCodeVerifier(value: string, secret: string): string {
   const key = createHash("sha256").update(secret).digest();
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const cipher = createCipheriv("aes-256-gcm", key, iv, { authTagLength: 16 });
   const ciphertext = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return [iv, tag, ciphertext].map((part) => part.toString("base64url")).join(".");
@@ -186,10 +187,16 @@ function decryptCodeVerifier(value: string, secret: string): string {
   }
 
   const key = createHash("sha256").update(secret).digest();
-  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivPart, "base64url"));
-  decipher.setAuthTag(Buffer.from(tagPart, "base64url"));
+  const iv = Buffer.from(ivPart, "base64url");
+  const tag = Buffer.from(tagPart, "base64url");
+  const ciphertext = Buffer.from(ciphertextPart, "base64url");
+  if (iv.length !== 12 || tag.length !== 16 || ciphertext.length === 0) {
+    throw new Error("The stored OIDC transaction has invalid encryption parameters.");
+  }
+  const decipher = createDecipheriv("aes-256-gcm", key, iv, { authTagLength: 16 });
+  decipher.setAuthTag(tag);
   return Buffer.concat([
-    decipher.update(Buffer.from(ciphertextPart, "base64url")),
+    decipher.update(ciphertext),
     decipher.final(),
   ]).toString("utf8");
 }

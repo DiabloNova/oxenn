@@ -248,6 +248,27 @@ describe("Platform Admin OIDC control plane", () => {
     );
   });
 
+  it("rejects a tampered encrypted PKCE verifier before attempting token exchange", async () => {
+    const login = await startPlatformAdminOidcLogin();
+    const transaction = storeMock.createPlatformAdminOidcTransaction.mock.calls[0]?.[0];
+    const parts = transaction.codeVerifierCiphertext.split(".");
+    parts[1] = `${parts[1].startsWith("A") ? "B" : "A"}${parts[1].slice(1)}`;
+    storeMock.consumePlatformAdminOidcTransaction.mockResolvedValue({
+      nonce: "nonce-value",
+      codeVerifierCiphertext: parts.join("."),
+      redirectUri: transaction.redirectUri,
+    });
+
+    await expect(
+      completePlatformAdminOidcLogin(
+        new URL("https://app.example.test/api/platform-admin/auth/callback?state=state-value&code=authorization-code"),
+        login.browserBinding,
+      ),
+    ).rejects.toThrow();
+    expect(oidcMock.authorizationCodeGrant).not.toHaveBeenCalled();
+    expect(storeMock.createPlatformAdminSession).not.toHaveBeenCalled();
+  });
+
   it("rejects an OIDC discovery document whose issuer differs from the configured issuer", async () => {
     oidcMock.discovery.mockResolvedValue({
       serverMetadata: () => ({ ...configuredMetadata(), issuer: "https://untrusted.example.test" }),
