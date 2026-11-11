@@ -136,8 +136,8 @@ function readLatestSnapshot(): TenantTableSnapshot {
 }
 
 /**
- * A table is tenant-owned when it carries organization_id / tenant_id.
- * organizations is the deliberate exception: its primary key is the tenant ID.
+ * Only ORGANIZATION_SCOPED registry entries feed the tenant runtime inventory.
+ * UNRESOLVED entries remain visible and are never inferred as Global.
  * Policy coverage is checked independently so missing policies cannot hide a table.
  */
 export function getTenantTableCoverageFromSnapshot(snapshot: TenantTableSnapshot): {
@@ -276,15 +276,15 @@ if (require.main === module) {
   try {
     const result = verifyTenantTables({ fix });
     if (!result.success) {
-      console.error("\n❌ [Tenant Tables Verification] TENANT COVERAGE OR SCHEMA DRIFT DETECTED!");
-      console.error("Runtime TENANT_SCOPED_TABLES must match ownership columns in the Drizzle snapshot, and every tenant-owned table must have all four tenant policies.\n");
+      console.error("\n❌ [Tenant Tables Verification] OWNERSHIP REGISTRY, TENANT COVERAGE OR SCHEMA DRIFT DETECTED!");
+      console.error("Runtime TENANT_SCOPED_TABLES must match ORGANIZATION_SCOPED registry entries, and every such table must have all four tenant policies.\n");
 
       if (result.missingInRuntime.length > 0) {
-        console.error("Missing in TENANT_SCOPED_TABLES (tenant-owned in schema snapshot):");
+        console.error("Missing in TENANT_SCOPED_TABLES (organization-scoped in ownership registry):");
         for (const t of result.missingInRuntime) console.error(`  + ${t}`);
       }
       if (result.extraInRuntime.length > 0) {
-        console.error("Extra in TENANT_SCOPED_TABLES (not tenant-owned in schema snapshot):");
+        console.error("Extra in TENANT_SCOPED_TABLES (not organization-scoped in ownership registry):");
         for (const t of result.extraInRuntime) console.error(`  - ${t}`);
       }
       if (result.missingPolicyTables.length > 0) {

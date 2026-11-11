@@ -311,7 +311,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Canonical Table Ownership Registry",
     category: "database",
     categoryFa: "Database",
-    snippet: `# Canonical Table Ownership Registry  **Status:** SCR-001 Stage 1   **Workspace source:** database/schema/index.ts and its canonical modular exports   **Platform Admin source:** database/platform-admin/schema/index.ts  ## Purpose and authority  scripts/database/table-ownership-registry.ts is the explicit, reviewed ownership inventory for the application's canonical database tables. Each table has a scope, lifecycle status, rationale, and evidence. Classification is based on repository domain/schema`
+    snippet: `# Canonical Table Ownership Registry  **Status:** SCR-001 Stage 2   **Workspace source:** database/schema/index.ts and its canonical modular exports   **Platform Admin source:** database/platform-admin/schema/index.ts  ## Purpose and authority  scripts/database/table-ownership-registry.ts is the explicit, reviewed ownership inventory for the application's canonical database tables. Each table has a scope, lifecycle status, rationale, and evidence. Classification is based on repository domain/schema`
   },
   {
     slug: "product",
