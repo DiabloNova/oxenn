@@ -16,7 +16,7 @@ While `database/schema/index.ts` is the source, it is compiled into several crit
    - Never edit the JSON metadata or generated SQL manually.
 
 2. **Runtime Tenant-Owned Tables Map** (`src/core/database/tenant-tables.generated.ts`):
-   - A deterministic, generated inventory of tables owned by an organization. Ownership is derived from the canonical Drizzle snapshot: `organizations` is the tenant root, and `organization_id` / `tenant_id` are ownership markers unless a reviewed exception with a non-empty rationale is recorded in `GLOBAL_OWNERSHIP_EXCEPTIONS`.
+   - A deterministic, generated runtime inventory. The reviewed domain ownership decisions are recorded independently in `scripts/database/table-ownership-registry.ts`. SCR-001 Stage 1 does not yet wire that registry into this generated artifact; the existing snapshot-based verifier remains a separate transitional mechanism and is not independent evidence of ownership.
    - Verified in CI via `scripts/database/verify-tenant-tables.ts`. The verifier independently checks that every tenant-owned table has complete tenant-scoped SELECT / INSERT / UPDATE / DELETE policies. A missing policy is a defect on a tenant-owned table; it never changes the table's ownership classification. Static checks do not prove that migrations have been applied to a live database.
 
 3. **Reference Matrix Documentation** (`docs/database/reference-matrix.md`):
@@ -29,20 +29,25 @@ While `database/schema/index.ts` is the source, it is compiled into several crit
 
 Tables have an explicit ownership scope. Tenant ownership, RLS policy coverage, migration state, and runtime enforcement are separate governance dimensions; none is inferred from another.
 
-### 1. Global Tables
-Global tables contain core application configurations, user identities, system metadata, or definitions that apply identically across all tenants.
+### 1. Explicit ownership scopes
 
-- **Ownership classification:** A table is Global when it is not `organizations` and has neither an `organization_id` nor a `tenant_id` ownership marker. A table carrying either marker may be classified Global only through a reviewed entry in `GLOBAL_OWNERSHIP_EXCEPTIONS` with a non-empty rationale. Absence of an RLS policy or absence from the runtime tenant-owned map is never evidence of Global ownership. RLS settings and policies, if any, are reported independently.
-- **Access Rule:** Can be accessed via standard database clients. No special `tenant_id` context injection is needed, though application-level logic must still verify role permissions.
+Ownership is recorded per canonical table in scripts/database/table-ownership-registry.ts. The registry uses ORGANIZATION_SCOPED, USER_OWNED, PLATFORM_OWNED, GLOBAL_SHARED, and UNRESOLVED. A table is never classified as Global merely because it lacks organization_id / tenant_id, and RLS policy presence never establishes ownership.
 
-### 2. Tenant-Scoped Tables
-Tenant-scoped tables contain domain data belonging to a specific workspace or organization.
+UNRESOLVED is an intentional fail-closed review state. A new or unclassified table must receive an evidence-backed registry entry before it can be considered classified. The registry records rationale and source evidence for every Workspace and Platform Admin application table.
 
-- **Ownership classification:** `organizations` is the tenant root. Other tables with `organization_id` or `tenant_id` are Tenant-Owned unless an explicit, reviewed exception with a rationale applies.
-- **Tenant RLS policy coverage:** Every Tenant-Owned table *must* have correctly scoped PostgreSQL policies for SELECT, INSERT, UPDATE, and DELETE, linking access to `current_setting('app.current_tenant_id', true)`. Missing or incomplete policies are security defects; they do not change ownership scope.
-- **Access Rule:** Can only be queried by non-owner roles (e.g., `app_runtime`) when the session has properly set the `app.current_tenant_id` parameter using `set_config`. Attempting to query these without a context will result in empty result sets or RLS constraint violations (42501).
-- **Isolation Enforcement:** Directly validated via `tests/isolation/suite.ts` which provisions a real database and executes assertions proving that cross-tenant read/write/update/delete operations are explicitly blocked by the database layer.
+### 2. Existing organization-scoped schema
 
+The Workspace schema currently contains an organizations root and rows related to it through organization_id or tenant_id. The registry records those rows as ORGANIZATION_SCOPED to preserve the repository's existing schema contract. This is not a product decision to introduce or support a multi-organization product model.
+
+- **RLS policy coverage:** RLS policies are a separate security control. Every row requiring organization isolation must have correctly scoped PostgreSQL policies for SELECT, INSERT, UPDATE, and DELETE, linked to current_setting('app.current_tenant_id', true). Missing or incomplete policies are security defects; they do not change ownership.
+- **Runtime access:** The existing runtime tenant-context mechanism and generated table map are not changed by SCR-001 Stage 1. Their current implementation must not be mistaken for integration of the new ownership registry.
+- **Isolation verification:** tests/isolation/suite.ts exercises database-level isolation when run against its ephemeral PostgreSQL environment. A static registry or unit test does not prove that a live database is isolated.
+
+### 3. User and platform boundaries
+
+User identity, credentials, tokens, and sessions are classified from their direct user relationship. Platform configuration and the Platform Admin control plane are separately classified as platform-owned. The Platform Admin database remains isolated from the Workspace database; its accounts, grants, sessions, OIDC transactions, rate limits, and audit events are not Workspace tables.
+
+Shared reference data is classified only when schema relationships support that interpretation. Legacy or contradictory tables remain UNRESOLVED until their ownership and disposition are established.
 ---
 
 ## Validation Vectors
@@ -62,8 +67,8 @@ The data contract is verified via multiple independent testing paths:
    - **Environment:** Requires a running PostgreSQL instance. Uses explicit role separation (`app_owner` vs `app_runtime`) as defined in `database/bootstrap.sql`.
 
 3. **Schema Policy and Migration Verification** (`verify-tenant-tables.ts` and `verify-rls-migrations.ts`)
-   - `verify-tenant-tables.ts` derives ownership from the canonical snapshot and compares that inventory with `TENANT_SCOPED_TABLES`; it separately checks tenant-policy expressions and operation coverage. It does not inspect a live database.
-   - `verify-rls-migrations.ts` uses the same ownership classifier and checks the checked-in migration history for final `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` state for every Tenant-Owned table. This is a static migration audit, not proof that migrations have been applied to production.
+   - verify-tenant-tables.ts still uses its pre-existing snapshot/column-marker classifier and compares that derived inventory with TENANT_SCOPED_TABLES; SCR-001 Stage 1 has not integrated the explicit registry into this verifier. It separately checks tenant-policy expressions and operation coverage. It does not inspect a live database.
+   - verify-rls-migrations.ts continues to use the existing ownership classifier and checks the checked-in migration history for final ENABLE ROW LEVEL SECURITY and FORCE ROW LEVEL SECURITY state for the tables that classifier currently treats as tenant-owned. This is a static migration audit, not proof that migrations have been applied to production; registry integration is a later stage.
    - The `test:isolation` CI job provisions ephemeral PostgreSQL and exercises tenant isolation. The `test:db` script is not currently invoked by CI; SQL invariants must be included in the isolation suite or the workflow must be updated before claiming those tests run.
 
 ---
