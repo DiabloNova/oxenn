@@ -39,6 +39,7 @@ The focused unit test compares the Workspace registry against all canonical Driz
 | audit_records | Generic actor/resource audit rows have no organization/user foreign key or documented ownership contract. |
 | permissions | Frozen legacy authorization table; current authorization source is organization_members.role. Historical data disposition is unresolved. |
 | roles | Frozen legacy authorization table; current authorization source is organization_members.role. Historical data disposition is unresolved. |
+| system_configurations | Marked ORPHAN-TABLE (LEGACY-CANDIDATE) in the current reference matrix; no verified consumer or ownership contract establishes an owner. |
 
 The schema also contains platform configuration tables and a shared AI-engine catalog. Their entries explain the evidence and any embedded-field caveats. In particular, feature_flags.tenant_overrides is an embedded payload, not a row-level tenant isolation boundary.
 

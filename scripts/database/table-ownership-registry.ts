@@ -179,9 +179,13 @@ const workspaceOwnership = {
     "The required user_id foreign key identifies the session owner. workspace_id is an optional selected-workspace context reference and does not change the session's user ownership.",
     "sessions.userId references users.id; sessions.workspaceId references organizations.id",
   ),
-  system_configurations: platformOwned(
-    "The key/value/category/encryption fields model application-wide system configuration. No per-user or organization owner is represented in the canonical row.",
-    "systemConfigurations",
+  system_configurations: unresolved(
+    "The current reference matrix marks this table ORPHAN-TABLE (LEGACY-CANDIDATE), and no verified consumer or ownership contract establishes its owner. Do not infer PLATFORM_OWNED from the table name or the absence of an organization marker.",
+    "legacy",
+    [
+      "database/schema/index.ts: systemConfigurations",
+      "docs/database/reference-matrix.md: system_configurations is ORPHAN-TABLE (LEGACY-CANDIDATE)",
+    ],
   ),
   technical_audits: organizationScoped("organization_id"),
   tenant_quotas: organizationScoped("tenant_id"),

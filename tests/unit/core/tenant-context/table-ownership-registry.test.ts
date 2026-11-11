@@ -84,6 +84,7 @@ describe("Canonical table ownership registry", () => {
     expect(getTableOwnershipEntry("workspace", "audit_records").scope).toBe("UNRESOLVED");
     expect(getTableOwnershipEntry("workspace", "permissions").scope).toBe("UNRESOLVED");
     expect(getTableOwnershipEntry("workspace", "roles").scope).toBe("UNRESOLVED");
+    expect(getTableOwnershipEntry("workspace", "system_configurations").scope).toBe("UNRESOLVED");
   });
 
   it("keeps user-owned sessions distinct from their optional workspace context", () => {
