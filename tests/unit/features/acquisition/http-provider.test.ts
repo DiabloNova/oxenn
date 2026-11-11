@@ -87,6 +87,90 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
     }
   });
 
+  it("does not count an already-fetched redirect target as a page-limit omission", async () => {
+    let port = 0;
+    const requested: string[] = [];
+    const server = createServer((request, response) => {
+      const host = (request.headers.host ?? "").split(":")[0];
+      const path = request.url ?? "/";
+      requested.push(`${host}${path}`);
+      if (host === "a.test" && path === "/") {
+        response.writeHead(302, { location: `http://www.a.test:${port}/` }).end();
+        return;
+      }
+      response.writeHead(200, { "content-type": "text/html" }).end(
+        `<a href="http://www.a.test:${port}/">self</a>`
+      );
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const request = makeRequest(url, resolveCrawlPolicy({
+        robotsPolicy: "ignore", maxPages: 1, maxDepth: 2, maxConcurrency: 1
+      }));
+      const result = await new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        request, request.policy, new AbortController().signal
+      );
+
+      expect(result.pageCount).toBe(1);
+      expect(result.partial).toBe(false);
+      expect(requested.filter(value => value === "www.a.test/")).toHaveLength(1);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
+  it("does not count robots-disallowed links as page-limit omissions", async () => {
+    let port = 0;
+    const requested: string[] = [];
+    const server = createServer((request, response) => {
+      const host = (request.headers.host ?? "").split(":")[0];
+      const path = request.url ?? "/";
+      requested.push(`${host}${path}`);
+      if (path === "/robots.txt") {
+        response.writeHead(200, { "content-type": "text/plain" })
+          .end("User-agent: *\nDisallow: /admin");
+        return;
+      }
+      if (path === "/") {
+        response.writeHead(200, { "content-type": "text/html" })
+          .end('<a href="/admin">admin</a>');
+        return;
+      }
+      response.writeHead(200, { "content-type": "text/html" }).end("<title>unexpected</title>");
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const request = makeRequest(url, resolveCrawlPolicy({
+        robotsPolicy: "respect", maxPages: 1, maxDepth: 2, maxConcurrency: 1,
+        perHostRequestsPerSecond: 100
+      }));
+      const result = await new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        request, request.policy, new AbortController().signal
+      );
+
+      expect(result.pageCount).toBe(1);
+      expect(result.partial).toBe(false);
+      expect(requested.filter(value => value === "a.test/robots.txt")).toHaveLength(1);
+      expect(requested).not.toContain("a.test/admin");
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
   it("does not mark a page-limit truncation when remaining links are ineligible", async () => {
     let port = 0;
     const server = createServer((_request, response) => {

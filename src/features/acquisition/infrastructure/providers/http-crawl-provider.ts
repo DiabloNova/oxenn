@@ -236,6 +236,9 @@ export class HttpCrawlProvider implements CrawlProvider {
           // The exact boundary becomes the seed's final, validated URL origin.
           allowedOrigin = new URL(response.finalUrl.canonical).origin;
         }
+        // A redirect target is fetched content too; prevent its links from
+        // being re-queued or counted as omitted at the page limit.
+        visited.add(response.finalUrl.canonical);
         const document = documentFromResponse(
           isSeed ? request.normalizedUrl.canonical : normalized.value.canonical,
           response.finalUrl.canonical,
@@ -294,6 +297,16 @@ export class HttpCrawlProvider implements CrawlProvider {
               if (new URL(candidateUrl).origin !== allowedOrigin || visited.has(candidateUrl)) continue;
               if (queue.some(entry => entry.url === candidateUrl)) continue;
               if (queue.length + documents.length + active.size >= policy.maxPages) {
+                if (policy.robotsPolicy === "respect") {
+                  try {
+                    // Reuse the origin's cached robots response; never fetch a
+                    // disallowed page body just to decide partial completion.
+                    await assertRobotsAllowed(normalizedLink.value, false);
+                  } catch (error) {
+                    if (error instanceof RobotsDisallowedError) continue;
+                    throw error;
+                  }
+                }
                 deferredPageLimitUrls.add(candidateUrl);
                 continue;
               }
