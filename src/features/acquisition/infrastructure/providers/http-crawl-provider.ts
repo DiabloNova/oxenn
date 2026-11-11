@@ -10,6 +10,7 @@ import type {
 import type { CrawlPolicy } from "../../domain/policy";
 import { normalizeUrl } from "../../domain/url/normalizer";
 import { safeFetch } from "../http/safe-fetcher";
+import { CrawlByteBudget } from "../http/crawl-byte-budget";
 import { PerHostRateLimiter } from "../http/per-host-rate-limiter";
 import type { HostValidationResult, Resolver } from "../security/ssrf-guard";
 
@@ -44,7 +45,7 @@ function robotsDisallows(robots: string, path: string): boolean {
   return false;
 }
 
-function linksFromHtml(html: string, baseUrl: string): string[] {
+function linksFromHtml(html: string, baseUrl: string, allowedOrigin: string): string[] {
   const $ = cheerio.load(html);
   const links = new Set<string>();
   $("a[href]").each((_, element) => {
@@ -54,7 +55,7 @@ function linksFromHtml(html: string, baseUrl: string): string[] {
     }
     try {
       const resolved = new URL(href, baseUrl);
-      if (resolved.protocol !== "http:" && resolved.protocol !== "https:") {
+      if ((resolved.protocol !== "http:" && resolved.protocol !== "https:") || resolved.origin !== allowedOrigin) {
         return;
       }
       const normalized = normalizeUrl(resolved.toString());
@@ -91,7 +92,7 @@ function documentFromResponse(
       ]
     }),
     html,
-    links: linksFromHtml(html, finalUrl),
+    links: linksFromHtml(html, finalUrl, new URL(requestedUrl).origin),
     metadata: {
       title: cheerio.load(html)("title").first().text() || undefined
     },
@@ -128,21 +129,40 @@ export class HttpCrawlProvider implements CrawlProvider {
     const documents: CrawledDocument[] = [];
     const robotsCache = new Map<string, Promise<string>>();
     const rateLimiter = new PerHostRateLimiter();
-    let bytesProcessed = 0;
+    const allowedOrigin = new URL(request.normalizedUrl.canonical).origin;
+    // Older persisted jobs may not contain maxTotalBytes; use the platform ceiling.
+    const byteBudget = new CrawlByteBudget(policy.maxTotalBytes ?? 100 * 1024 * 1024);
+    const controller = new AbortController();
+    const abortFromCaller = (): void => controller.abort(signal.reason);
+    if (signal.aborted) controller.abort(signal.reason);
+    else signal.addEventListener("abort", abortFromCaller, { once: true });
+    const crawlSignal = controller.signal;
+    let durationExpired = false;
+    const durationTimer = setTimeout(() => {
+      durationExpired = true;
+      controller.abort();
+    }, policy.maxDurationMs);
+    const active = new Set<Promise<CrawledDocument | null>>();
 
     const requestHost = (host: string): Promise<void> =>
-      rateLimiter.waitForSlot(host, policy.perHostRequestsPerSecond, signal);
+      rateLimiter.waitForSlot(host, policy.perHostRequestsPerSecond, crawlSignal);
+    const fetchOptions = {
+      signal: crawlSignal,
+      byteBudget,
+      allowedOrigin,
+      onBudgetExceeded: () => controller.abort(),
+      ...this.fetchOptions
+    };
     const processEntry = async (entry: QueueEntry): Promise<CrawledDocument | null> => {
-      if (signal.aborted) {
+      if (crawlSignal.aborted) {
         throw new CrawlError("CANCELLED", "Crawl was cancelled");
       }
       if (Date.now() - startedAt >= policy.maxDurationMs) {
         throw new CrawlError("TIMEOUT", "Crawl exceeded its duration limit");
       }
       const normalized = normalizeUrl(entry.url, policy.stripTrackingParams);
-      if (!normalized.ok || visited.has(normalized.value.canonical)) {
-        return null;
-      }
+      if (!normalized.ok || visited.has(normalized.value.canonical)) return null;
+      if (new URL(normalized.value.canonical).origin !== allowedOrigin) return null;
       visited.add(normalized.value.canonical);
       const host = normalized.value.asciiHost;
       if (policy.robotsPolicy === "respect") {
@@ -157,22 +177,18 @@ export class HttpCrawlProvider implements CrawlProvider {
                 maxPages: 1,
                 allowedContentTypes: ["text/plain", "text/html"]
               },
-              signal,
-              ...this.fetchOptions
+              ...fetchOptions
             });
             return robotsResponse.body.toString("utf8");
           })();
           robotsCache.set(origin, robots);
         }
-        if (robotsDisallows(await robots, normalized.value.path)) {
-          return null;
-        }
+        if (robotsDisallows(await robots, normalized.value.path)) return null;
       }
       await requestHost(host);
       const response = await safeFetch(normalized.value.canonical, {
         policy,
-        signal,
-        ...this.fetchOptions
+        ...fetchOptions
       });
       return documentFromResponse(
         normalized.value.canonical,
@@ -181,55 +197,70 @@ export class HttpCrawlProvider implements CrawlProvider {
         response
       );
     };
-    const active = new Set<Promise<CrawledDocument | null>>();
-    while (queue.length > 0 || active.size > 0) {
-      if (signal.aborted) {
-        throw new CrawlError("CANCELLED", "Crawl was cancelled");
-      }
-      while (
-        queue.length > 0 &&
-        active.size < policy.maxConcurrency &&
-        documents.length + active.size < policy.maxPages
-      ) {
-        const entry = queue.shift();
-        if (!entry) {
+
+    try {
+      while (queue.length > 0 || active.size > 0) {
+        if (crawlSignal.aborted) {
+          if (byteBudget.isExceeded) break;
+          throw new CrawlError("CANCELLED", "Crawl was cancelled");
+        }
+        while (
+          queue.length > 0 &&
+          active.size < policy.maxConcurrency &&
+          documents.length + active.size < policy.maxPages
+        ) {
+          const entry = queue.shift();
+          if (!entry) break;
+          const task = processEntry(entry);
+          active.add(task);
+          void task.then(
+            () => active.delete(task),
+            () => active.delete(task)
+          );
+        }
+        if (active.size === 0) break;
+        try {
+          const document = await Promise.race(active);
+          if (!document) continue;
+          documents.push(document);
+          if (document.depth < policy.maxDepth) {
+            for (const link of document.links) {
+              if (queue.length + documents.length + active.size >= policy.maxPages) break;
+              queue.push({ url: link, depth: document.depth + 1 });
+            }
+          }
+        } catch (error) {
+          if (!byteBudget.isExceeded) throw error;
           break;
         }
-        const task = processEntry(entry);
-        active.add(task);
-        void task.then(
-          () => active.delete(task),
-          () => active.delete(task)
-        );
       }
-      if (active.size === 0) {
-        break;
+    } catch (error) {
+      controller.abort(error);
+      await Promise.allSettled([...active]);
+      if (durationExpired) {
+        throw new CrawlError("TIMEOUT", "Crawl exceeded its duration limit");
       }
-      const document = await Promise.race(active);
-      if (!document) {
-        continue;
-      }
-      documents.push(document);
-      bytesProcessed += document.bytes;
-      const depth = document.depth;
-      if (depth < policy.maxDepth) {
-        for (const link of document.links) {
-          if (queue.length + documents.length + active.size >= policy.maxPages) {
-            break;
-          }
-          queue.push({ url: link, depth: depth + 1 });
-        }
-      }
+      throw error;
+    } finally {
+      clearTimeout(durationTimer);
+      if (byteBudget.isExceeded) controller.abort();
+      await Promise.allSettled([...active]);
+      signal.removeEventListener("abort", abortFromCaller);
     }
 
+    if (signal.aborted && !byteBudget.isExceeded) {
+      throw new CrawlError("CANCELLED", "Crawl was cancelled");
+    }
+    const budgetError = byteBudget.isExceeded ? byteBudget.createError() : null;
     return {
       documents,
       pageCount: documents.length,
-      bytesProcessed,
-      partial: queue.length > 0,
+      // Includes robots and bytes received for a response that was cancelled mid-stream.
+      bytesProcessed: byteBudget.bytesProcessed,
+      partial: queue.length > 0 || Boolean(budgetError),
       durationMs: Date.now() - startedAt,
       provider: { id: this.id },
-      errors: []
+      errors: budgetError ? [budgetError] : []
     };
   }
 }

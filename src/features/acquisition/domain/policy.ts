@@ -7,6 +7,7 @@ export interface CrawlPolicy {
   maxDepth: number;
   maxDurationMs: number;
   maxResponseBytes: number;
+  maxTotalBytes: number;
   maxRedirects: number | null;
   maxConcurrency: number;
   requestTimeoutMs: number;
@@ -28,6 +29,7 @@ export const CRAWL_POLICY_CEILINGS = {
   maxDepth: 10,
   maxDurationMs: 1_800_000,
   maxResponseBytes: 25 * 1024 * 1024,
+  maxTotalBytes: 100 * 1024 * 1024,
   maxRedirects: 10,
   maxConcurrency: 16,
   requestTimeoutMs: 120_000,
@@ -44,6 +46,7 @@ export const DEFAULT_CRAWL_POLICY: CrawlPolicy = {
   maxDepth: 3,
   maxDurationMs: 300_000,
   maxResponseBytes: 5 * 1024 * 1024,
+  maxTotalBytes: 100 * 1024 * 1024,
   maxRedirects: 5,
   maxConcurrency: 4,
   requestTimeoutMs: 30_000,
@@ -65,6 +68,7 @@ const integerFields = new Set<keyof CrawlPolicy>([
   "maxDepth",
   "maxDurationMs",
   "maxResponseBytes",
+  "maxTotalBytes",
   "maxConcurrency",
   "requestTimeoutMs",
   "connectTimeoutMs",
@@ -122,6 +126,7 @@ export function validateCrawlPolicy(
     "maxPages",
     "maxDurationMs",
     "maxResponseBytes",
+    "maxTotalBytes",
     "maxConcurrency",
     "requestTimeoutMs",
     "connectTimeoutMs",

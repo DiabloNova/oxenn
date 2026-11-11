@@ -7,6 +7,7 @@ import { request as httpsRequest } from "node:https";
 import { CrawlError } from "../../domain/errors";
 import { MAX_REDIRECT_CHAIN_DURATION_MS } from "@/core/network/crawler-redirect-policy";
 import type { CrawlPolicy } from "../../domain/policy";
+import type { CrawlByteBudget } from "./crawl-byte-budget";
 import {
   normalizeUrl,
   type NormalizedUrl
@@ -30,6 +31,9 @@ const DNS_TIMEOUT_MS = 10_000;
 export interface SafeFetcherOptions {
   policy: CrawlPolicy;
   signal?: AbortSignal;
+  byteBudget?: CrawlByteBudget;
+  allowedOrigin?: string;
+  onBudgetExceeded?: (error: CrawlError) => void;
   resolver?: Resolver;
   hostValidator?: (
     host: string,
@@ -85,6 +89,9 @@ export async function safeFetch(
 
   if (!current.ok) {
     throw current.error;
+  }
+  if (options.allowedOrigin && new URL(current.value.canonical).origin !== options.allowedOrigin) {
+    throw new CrawlError("POLICY_VIOLATION", "URL origin is outside the crawl origin boundary");
   }
   if (!options.policy.allowedSchemes.includes(current.value.scheme)) {
     throw new CrawlError(
@@ -190,6 +197,9 @@ export async function safeFetch(
       );
       if (!normalized.ok) {
         throw normalized.error;
+      }
+      if (options.allowedOrigin && new URL(normalized.value.canonical).origin !== options.allowedOrigin) {
+        throw new CrawlError("POLICY_VIOLATION", "Redirect origin is outside the crawl origin boundary");
       }
       if (!options.policy.allowedSchemes.includes(normalized.value.scheme)) {
         throw new CrawlError(
@@ -303,6 +313,12 @@ function requestOnce(
           fail(new CrawlError("RESPONSE_TOO_LARGE", "Response exceeded configured limit"));
           return;
         }
+        if (declaredLength !== null && options.byteBudget && !options.byteBudget.canFit(declaredLength)) {
+          const error = options.byteBudget.createError();
+          fail(error);
+          options.onBudgetExceeded?.(error);
+          return;
+        }
         response.on("data", chunk => {
           const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
           received += data.length;
@@ -313,6 +329,12 @@ function requestOnce(
                 "Response exceeded configured limit"
               )
             );
+            return;
+          }
+          if (options.byteBudget && !options.byteBudget.tryConsume(data.length)) {
+            const error = options.byteBudget.createError();
+            fail(error);
+            options.onBudgetExceeded?.(error);
             return;
           }
           chunks.push(data);
