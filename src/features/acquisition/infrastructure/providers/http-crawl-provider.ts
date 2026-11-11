@@ -229,10 +229,10 @@ export class HttpCrawlProvider implements CrawlProvider {
           ...fetchOptions,
           ...(isSeed ? { allowCanonicalSeedRedirects: true } : { allowedOrigin }),
           beforeRedirect: async target => {
-            await requestHost(target.asciiHost);
             if (policy.robotsPolicy === "respect") {
               await assertRobotsAllowed(target, isSeed);
             }
+            await requestHost(target.asciiHost);
           }
         });
         if (isSeed) {
