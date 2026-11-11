@@ -7,7 +7,9 @@ import type {
   CrawledDocument
 } from "../../../domain/contracts";
 import type { CrawlPolicy } from "../../../domain/policy";
-import { safeFetch } from "../../http/safe-fetcher";
+import { normalizeUrl } from "../../../domain/url/normalizer";
+import { resolveAndValidateHost } from "../../security/ssrf-guard";
+import { isCanonicalSeedRedirect } from "../../http/safe-fetcher";
 
 interface FirecrawlClient {
   crawlUrl(
@@ -94,13 +96,18 @@ export class FirecrawlCrawlProvider implements CrawlProvider {
       apiKey: process.env.FIRECRAWL_API_KEY ?? ""
     }) as unknown as FirecrawlClient);
     this.seedUrlResolver = seedUrlResolver ?? (async (url, policy, signal) => {
-      const resolved = await safeFetch(url, {
-        policy,
-        signal,
-        allowCanonicalSeedRedirects: true,
-        redirectOnly: true
-      });
-      return resolved.finalUrl.canonical;
+      const normalized = normalizeUrl(url, policy.stripTrackingParams);
+      if (!normalized.ok) throw normalized.error;
+      if (!policy.allowedSchemes.includes(normalized.value.scheme)) {
+        throw new CrawlError("POLICY_VIOLATION", "Seed URL uses a disallowed scheme");
+      }
+      const validation = await resolveAndValidateHost(
+        normalized.value.asciiHost,
+        undefined,
+        signal
+      );
+      if (!validation.ok) throw validation.error;
+      return normalized.value.canonical;
     });
   }
 
@@ -143,7 +150,9 @@ export class FirecrawlCrawlProvider implements CrawlProvider {
       if (!policy.allowedSchemes.includes(seedScheme)) {
         throw new CrawlError("POLICY_VIOLATION", "Resolved seed URL uses a disallowed scheme");
       }
-      const seedOrigin = parsedSeedUrl.origin;
+      const originalSeed = normalizeUrl(canonicalSeedUrl, policy.stripTrackingParams);
+      if (!originalSeed.ok) throw originalSeed.error;
+      let seedOrigin = parsedSeedUrl.origin;
       const response = await this.client.crawlUrl(
         canonicalSeedUrl,
         {
@@ -181,6 +190,33 @@ export class FirecrawlCrawlProvider implements CrawlProvider {
       const documents: CrawledDocument[] = [];
       const errors: CrawlError[] = [];
       let retainedBytes = 0;
+
+      // Firecrawl performs the page request itself. Do not issue a second direct GET
+      // that could be blocked by a site's WAF or bypass its own crawl/robots handling.
+      // Accept a canonical seed alias only when the first-party response stays within
+      // the same host or its www-pair, with no scheme downgrade or port change.
+      const canonicalSeedAlias = parsed.find(item => {
+        const candidate = normalizeUrl(item.url, policy.stripTrackingParams);
+        return candidate.ok &&
+          new URL(candidate.value.canonical).origin !== seedOrigin &&
+          isCanonicalSeedRedirect(originalSeed.value, candidate.value);
+      });
+      if (canonicalSeedAlias) {
+        const validatedAliasUrl = await this.seedUrlResolver(
+          canonicalSeedAlias.url,
+          policy,
+          controller.signal
+        );
+        const validatedAlias = normalizeUrl(validatedAliasUrl, policy.stripTrackingParams);
+        if (!validatedAlias.ok || !isCanonicalSeedRedirect(originalSeed.value, validatedAlias.value)) {
+          throw new CrawlError("POLICY_VIOLATION", "Firecrawl seed redirect is outside the canonical seed boundary");
+        }
+        if (!policy.allowedSchemes.includes(validatedAlias.value.scheme)) {
+          throw new CrawlError("POLICY_VIOLATION", "Firecrawl canonical seed uses a disallowed scheme");
+        }
+        seedOrigin = new URL(validatedAlias.value.canonical).origin;
+      }
+
       const reportedTotal = typeof response.total === "number" ? response.total : null;
       const reportedCompleted = typeof response.completed === "number" ? response.completed : null;
       // Hitting the configured cap is conservatively partial: the adapter cannot prove

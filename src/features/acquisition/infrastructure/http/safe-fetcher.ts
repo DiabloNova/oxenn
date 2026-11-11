@@ -35,8 +35,8 @@ export interface SafeFetcherOptions {
   allowedOrigin?: string;
   /** Permit only same-host / www-pair canonical redirects while resolving the seed URL. */
   allowCanonicalSeedRedirects?: boolean;
-  /** Resolve redirects and validate the terminal response without retaining its body. */
-  redirectOnly?: boolean;
+  /** Apply the per-host limiter before issuing each redirected request. */
+  beforeRedirect?: (url: NormalizedUrl) => Promise<void>;
   onBudgetExceeded?: (error: CrawlError) => void;
   resolver?: Resolver;
   hostValidator?: (
@@ -69,7 +69,7 @@ function withTimeout<T>(
   });
 }
 
-function isCanonicalSeedRedirect(from: NormalizedUrl, to: NormalizedUrl): boolean {
+export function isCanonicalSeedRedirect(from: NormalizedUrl, to: NormalizedUrl): boolean {
   const fromHost = from.asciiHost.toLowerCase();
   const toHost = to.asciiHost.toLowerCase();
   const sameHostOrWwwPair =
@@ -249,6 +249,7 @@ export async function safeFetch(
           "Redirect scheme is not allowed by crawl policy"
         );
       }
+      await options.beforeRedirect?.(normalized.value);
       current = normalized;
       redirects += 1;
       continue;
@@ -260,13 +261,6 @@ export async function safeFetch(
         "HTTP request returned an error status",
         { status: response.status }
       );
-    }
-    if (options.redirectOnly) {
-      return {
-        ...response,
-        finalUrl: current.value,
-        redirects
-      };
     }
     const encoding = contentEncoding(response.headers);
     if (encoding && encoding !== "identity") {
@@ -351,21 +345,6 @@ function requestOnce(
           response.destroy();
           resolve({
             status: response.statusCode,
-            headers,
-            body: Buffer.alloc(0)
-          });
-          return;
-        }
-
-        if (options.redirectOnly) {
-          settled = true;
-          cleanup();
-          const headers = Object.fromEntries(
-            Object.entries(response.headers).filter(([key]) => key !== "set-cookie")
-          );
-          response.destroy();
-          resolve({
-            status: response.statusCode ?? 0,
             headers,
             body: Buffer.alloc(0)
           });

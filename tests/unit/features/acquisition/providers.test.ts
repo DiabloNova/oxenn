@@ -131,7 +131,7 @@ describe("FirecrawlCrawlProvider", () => {
           ]
         };
       }
-    }, async url => url.replace("https://example.com/", "https://www.example.com/"));
+    }, identitySeedUrl);
 
     await withApiKey(async () => {
       const crawlRequest = request();
@@ -140,7 +140,7 @@ describe("FirecrawlCrawlProvider", () => {
         { ...crawlRequest, policy }, policy, new AbortController().signal
       );
 
-      expect(crawlUrl).toBe("https://www.example.com/");
+      expect(crawlUrl).toBe("https://example.com/");
       expect(params?.limit).toBe(2);
       expect(result.documents).toHaveLength(2);
       expect(result.errors).toHaveLength(0);

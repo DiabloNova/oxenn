@@ -129,12 +129,14 @@ export class HttpCrawlProvider implements CrawlProvider {
     signal: AbortSignal
   ): Promise<CrawlResult> {
     const startedAt = Date.now();
-    const queue: QueueEntry[] = [];
+    const queue: QueueEntry[] = [
+      { url: request.normalizedUrl.canonical, depth: 0 }
+    ];
     const visited = new Set<string>();
     const documents: CrawledDocument[] = [];
-    const robotsCache = new Map<string, Promise<string>>();
+    const robotsCache = new Map<string, Promise<{ text: string; finalOrigin: string }>>();
     const rateLimiter = new PerHostRateLimiter();
-    let allowedOrigin = "";
+    let allowedOrigin = new URL(request.normalizedUrl.canonical).origin;
     const crawlErrors: CrawlError[] = [];
     // Older persisted jobs may not contain maxTotalBytes; use the platform ceiling.
     const byteBudget = new CrawlByteBudget(policy.maxTotalBytes ?? 100 * 1024 * 1024);
@@ -156,6 +158,7 @@ export class HttpCrawlProvider implements CrawlProvider {
       signal: crawlSignal,
       byteBudget,
       onBudgetExceeded: () => controller.abort(),
+      beforeRedirect: (url: { asciiHost: string }) => requestHost(url.asciiHost),
       ...this.fetchOptions
     };
     const processEntry = async (entry: QueueEntry): Promise<CrawledDocument | null> => {
@@ -170,6 +173,7 @@ export class HttpCrawlProvider implements CrawlProvider {
       if (new URL(normalized.value.canonical).origin !== allowedOrigin) return null;
       visited.add(normalized.value.canonical);
       try {
+        const isSeed = entry.depth === 0;
         const host = normalized.value.asciiHost;
         if (policy.robotsPolicy === "respect") {
           const origin = new URL(normalized.value.canonical).origin;
@@ -184,22 +188,58 @@ export class HttpCrawlProvider implements CrawlProvider {
                   allowedContentTypes: ["text/plain", "text/html"]
                 },
                 ...fetchOptions,
-                allowedOrigin
+                ...(isSeed ? { allowCanonicalSeedRedirects: true } : { allowedOrigin })
               });
-              return robotsResponse.body.toString("utf8");
+              return {
+                text: robotsResponse.body.toString("utf8"),
+                finalOrigin: new URL(robotsResponse.finalUrl.canonical).origin
+              };
             })();
             robotsCache.set(origin, robots);
           }
-          if (robotsDisallows(await robots, normalized.value.path)) return null;
+          const robotsResult = await robots;
+          robotsCache.set(robotsResult.finalOrigin, robots);
+          if (robotsDisallows(robotsResult.text, normalized.value.path)) return null;
         }
         await requestHost(host);
         const response = await safeFetch(normalized.value.canonical, {
           policy,
           ...fetchOptions,
-          allowedOrigin
+          ...(isSeed ? { allowCanonicalSeedRedirects: true } : { allowedOrigin })
         });
+        if (isSeed) {
+          const finalOrigin = new URL(response.finalUrl.canonical).origin;
+          allowedOrigin = finalOrigin;
+          if (policy.robotsPolicy === "respect") {
+            let finalRobots = robotsCache.get(finalOrigin);
+            if (!finalRobots || (await finalRobots).finalOrigin !== finalOrigin) {
+              finalRobots = (async () => {
+                await requestHost(new URL(finalOrigin).hostname);
+                const robotsResponse = await safeFetch(`${finalOrigin}/robots.txt`, {
+                  policy: {
+                    ...policy,
+                    maxPages: 1,
+                    allowedContentTypes: ["text/plain", "text/html"]
+                  },
+                  ...fetchOptions,
+                  allowedOrigin: finalOrigin
+                });
+                return {
+                  text: robotsResponse.body.toString("utf8"),
+                  finalOrigin: new URL(robotsResponse.finalUrl.canonical).origin
+                };
+              })();
+              robotsCache.set(finalOrigin, finalRobots);
+            }
+            const finalRobotsResult = await finalRobots;
+            if (robotsDisallows(
+              finalRobotsResult.text,
+              new URL(response.finalUrl.canonical).pathname
+            )) return null;
+          }
+        }
         const document = documentFromResponse(
-          entry.depth === 0 ? request.normalizedUrl.canonical : normalized.value.canonical,
+          isSeed ? request.normalizedUrl.canonical : normalized.value.canonical,
           response.finalUrl.canonical,
           allowedOrigin,
           entry.depth,
@@ -223,18 +263,6 @@ export class HttpCrawlProvider implements CrawlProvider {
     };
 
     try {
-      // Resolve only canonical same-host/www seed redirects before setting the exact crawl origin.
-      const seedResolution = await safeFetch(request.normalizedUrl.canonical, {
-        policy,
-        signal: crawlSignal,
-        allowCanonicalSeedRedirects: true,
-        redirectOnly: true,
-        ...this.fetchOptions
-      });
-      const canonicalSeedUrl = seedResolution.finalUrl.canonical;
-      allowedOrigin = new URL(canonicalSeedUrl).origin;
-      queue.push({ url: canonicalSeedUrl, depth: 0 });
-
       while (queue.length > 0 || active.size > 0) {
         if (crawlSignal.aborted) {
           if (byteBudget.isExceeded) break;
