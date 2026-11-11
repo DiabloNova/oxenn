@@ -1,1 +1,101 @@
-import { describe, expect, it } from "vitest";\nimport fs from "node:fs";\nimport path from "node:path";\nimport {\n  WORKSPACE_TABLE_OWNERSHIP,\n  PLATFORM_ADMIN_TABLE_OWNERSHIP,\n  getOwnershipRegistryDrift,\n  getTableOwnershipEntry,\n} from "../../../../scripts/database/table-ownership-registry";\n\nconst repositoryRoot = process.cwd();\n\nfunction readTableNames(relativePaths: readonly string[]): string[] {\n  return relativePaths.flatMap((relativePath) => {\n    const source = fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8");\n    return Array.from(\n      source.matchAll(/pgTable[(][^"']*["']([^"']+)["']/g),\n      (match) => match[1],\n    );\n  });\n}\n\ndescribe("Canonical table ownership registry", () => {\n  it("accounts for every canonical Workspace Drizzle table and the latest snapshot", () => {\n    const workspaceSources = [\n      "database/schema/index.ts",\n      "database/schema/organization-table.ts",\n      "database/schema/api-keys.ts",\n    ];\n    const schemaNames = readTableNames(workspaceSources);\n    const journal = JSON.parse(\n      fs.readFileSync(\n        path.join(repositoryRoot, "database/drizzle/meta/_journal.json"),\n        "utf8",\n      ),\n    ) as { entries: Array<{ idx: number }> };\n    const latestEntry = journal.entries[journal.entries.length - 1];\n    const snapshotPath = path.join(\n      repositoryRoot,\n      "database/drizzle/meta",\n      String(latestEntry.idx).padStart(4, "0") + "_snapshot.json",\n    );\n    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8")) as {\n      tables: Record<string, { name: string }>;\n    };\n    const snapshotNames = Object.values(snapshot.tables).map((table) => table.name);\n\n    expect(new Set(schemaNames).size).toBe(schemaNames.length);\n    expect([...schemaNames].sort()).toEqual([...snapshotNames].sort());\n    expect(getOwnershipRegistryDrift("workspace", schemaNames)).toEqual({\n      missingRegistryEntries: [],\n      staleRegistryEntries: [],\n    });\n    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(70);\n  });\n\n  it("accounts for every table in the separate Platform Admin Drizzle schema", () => {\n    const platformAdminNames = readTableNames([\n      "database/platform-admin/schema/index.ts",\n    ]);\n\n    expect(getOwnershipRegistryDrift("platform-admin", platformAdminNames)).toEqual({\n      missingRegistryEntries: [],\n      staleRegistryEntries: [],\n    });\n    expect(Object.keys(PLATFORM_ADMIN_TABLE_OWNERSHIP)).toHaveLength(7);\n    expect(platformAdminNames).toHaveLength(7);\n  });\n\n  it("requires a rationale and evidence for every explicit entry", () => {\n    for (const registry of [\n      WORKSPACE_TABLE_OWNERSHIP,\n      PLATFORM_ADMIN_TABLE_OWNERSHIP,\n    ]) {\n      for (const entry of Object.values(registry)) {\n        expect(entry.rationale.trim().length).toBeGreaterThan(0);\n        expect(entry.evidence.length).toBeGreaterThan(0);\n      }\n    }\n  });\n\n  it("surfaces unresolved legacy ownership instead of defaulting it to Global", () => {\n    expect(getTableOwnershipEntry("workspace", "admin_users").scope).toBe("UNRESOLVED");\n    expect(getTableOwnershipEntry("workspace", "audit_records").scope).toBe("UNRESOLVED");\n    expect(getTableOwnershipEntry("workspace", "permissions").scope).toBe("UNRESOLVED");\n    expect(getTableOwnershipEntry("workspace", "roles").scope).toBe("UNRESOLVED");\n  });\n\n  it("keeps user-owned sessions distinct from their optional workspace context", () => {\n    const session = getTableOwnershipEntry("workspace", "sessions");\n    expect(session.scope).toBe("USER_OWNED");\n    expect(session.rationale).toContain("workspace_id");\n  });\n\n  it("does not infer Global for a table missing from the registry", () => {\n    expect(() => getTableOwnershipEntry("workspace", "new_unclassified_table"))\n      .toThrow(/No explicit ownership entry/);\n    expect(() => getTableOwnershipEntry("platform-admin", "new_unclassified_table"))\n      .toThrow(/No explicit ownership entry/);\n  });\n});\n
+import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  WORKSPACE_TABLE_OWNERSHIP,
+  PLATFORM_ADMIN_TABLE_OWNERSHIP,
+  getOwnershipRegistryDrift,
+  getTableOwnershipEntry,
+} from "../../../../scripts/database/table-ownership-registry";
+
+const repositoryRoot = process.cwd();
+
+function readTableNames(relativePaths: readonly string[]): string[] {
+  return relativePaths.flatMap((relativePath) => {
+    const source = fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8");
+    return Array.from(
+      source.matchAll(/pgTable[(][^"']*["']([^"']+)["']/g),
+      (match) => match[1],
+    );
+  });
+}
+
+describe("Canonical table ownership registry", () => {
+  it("accounts for every canonical Workspace Drizzle table and the latest snapshot", () => {
+    const workspaceSources = [
+      "database/schema/index.ts",
+      "database/schema/organization-table.ts",
+      "database/schema/api-keys.ts",
+    ];
+    const schemaNames = readTableNames(workspaceSources);
+    const journal = JSON.parse(
+      fs.readFileSync(
+        path.join(repositoryRoot, "database/drizzle/meta/_journal.json"),
+        "utf8",
+      ),
+    ) as { entries: Array<{ idx: number }> };
+    const latestEntry = journal.entries[journal.entries.length - 1];
+    const snapshotPath = path.join(
+      repositoryRoot,
+      "database/drizzle/meta",
+      String(latestEntry.idx).padStart(4, "0") + "_snapshot.json",
+    );
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8")) as {
+      tables: Record<string, { name: string }>;
+    };
+    const snapshotNames = Object.values(snapshot.tables).map((table) => table.name);
+
+    expect(new Set(schemaNames).size).toBe(schemaNames.length);
+    expect([...schemaNames].sort()).toEqual([...snapshotNames].sort());
+    expect(getOwnershipRegistryDrift("workspace", schemaNames)).toEqual({
+      missingRegistryEntries: [],
+      staleRegistryEntries: [],
+    });
+    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(70);
+  });
+
+  it("accounts for every table in the separate Platform Admin Drizzle schema", () => {
+    const platformAdminNames = readTableNames([
+      "database/platform-admin/schema/index.ts",
+    ]);
+
+    expect(getOwnershipRegistryDrift("platform-admin", platformAdminNames)).toEqual({
+      missingRegistryEntries: [],
+      staleRegistryEntries: [],
+    });
+    expect(Object.keys(PLATFORM_ADMIN_TABLE_OWNERSHIP)).toHaveLength(7);
+    expect(platformAdminNames).toHaveLength(7);
+  });
+
+  it("requires a rationale and evidence for every explicit entry", () => {
+    for (const registry of [
+      WORKSPACE_TABLE_OWNERSHIP,
+      PLATFORM_ADMIN_TABLE_OWNERSHIP,
+    ]) {
+      for (const entry of Object.values(registry)) {
+        expect(entry.rationale.trim().length).toBeGreaterThan(0);
+        expect(entry.evidence.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("surfaces unresolved legacy ownership instead of defaulting it to Global", () => {
+    expect(getTableOwnershipEntry("workspace", "admin_users").scope).toBe("UNRESOLVED");
+    expect(getTableOwnershipEntry("workspace", "audit_records").scope).toBe("UNRESOLVED");
+    expect(getTableOwnershipEntry("workspace", "permissions").scope).toBe("UNRESOLVED");
+    expect(getTableOwnershipEntry("workspace", "roles").scope).toBe("UNRESOLVED");
+  });
+
+  it("keeps user-owned sessions distinct from their optional workspace context", () => {
+    const session = getTableOwnershipEntry("workspace", "sessions");
+    expect(session.scope).toBe("USER_OWNED");
+    expect(session.rationale).toContain("workspace_id");
+  });
+
+  it("does not infer Global for a table missing from the registry", () => {
+    expect(() => getTableOwnershipEntry("workspace", "new_unclassified_table"))
+      .toThrow(/No explicit ownership entry/);
+    expect(() => getTableOwnershipEntry("platform-admin", "new_unclassified_table"))
+      .toThrow(/No explicit ownership entry/);
+  });
+});
