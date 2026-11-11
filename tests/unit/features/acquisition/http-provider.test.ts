@@ -55,6 +55,68 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
     }
   });
 
+  it("marks the result partial when maxPages prevents an eligible same-origin link from being crawled", async () => {
+    let port = 0;
+    const server = createServer((request, response) => {
+      const body = request.url === "/"
+        ? `<a href="http://a.test:${port}/child">child</a>`
+        : "<title>child</title>";
+      response.writeHead(200, { "content-type": "text/html" }).end(body);
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const request = makeRequest(url, resolveCrawlPolicy({
+        robotsPolicy: "ignore", maxPages: 1, maxDepth: 2, maxConcurrency: 1
+      }));
+      const result = await new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        request, request.policy, new AbortController().signal
+      );
+
+      expect(result.pageCount).toBe(1);
+      expect(result.partial).toBe(true);
+      expect(result.documents[0]?.links).toContain(`http://a.test:${port}/child`);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
+  it("does not mark a page-limit truncation when remaining links are ineligible", async () => {
+    let port = 0;
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "text/html" }).end(
+        `<a href="http://a.test:${port}/">self</a><a href="http://b.test:${port}/outside">outside</a>`
+      );
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const request = makeRequest(url, resolveCrawlPolicy({
+        robotsPolicy: "ignore", maxPages: 1, maxDepth: 2, maxConcurrency: 1
+      }));
+      const result = await new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        request, request.policy, new AbortController().signal
+      );
+
+      expect(result.pageCount).toBe(1);
+      expect(result.partial).toBe(false);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
   it("enforces one aggregate byte budget across concurrent responses and returns actual usage", async () => {
     let port = 0;
     const body = "x".repeat(80);

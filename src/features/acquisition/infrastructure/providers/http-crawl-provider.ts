@@ -140,6 +140,7 @@ export class HttpCrawlProvider implements CrawlProvider {
       { url: request.normalizedUrl.canonical, depth: 0 }
     ];
     const visited = new Set<string>();
+    const deferredPageLimitUrls = new Set<string>();
     const documents: CrawledDocument[] = [];
     // Robots redirects remain authoritative only for the origin that requested them.
     const robotsCache = new Map<string, Promise<string>>();
@@ -287,8 +288,16 @@ export class HttpCrawlProvider implements CrawlProvider {
           documents.push(document);
           if (document.depth < policy.maxDepth) {
             for (const link of document.links) {
-              if (queue.length + documents.length + active.size >= policy.maxPages) break;
-              queue.push({ url: link, depth: document.depth + 1 });
+              const normalizedLink = normalizeUrl(link, policy.stripTrackingParams);
+              if (!normalizedLink.ok) continue;
+              const candidateUrl = normalizedLink.value.canonical;
+              if (new URL(candidateUrl).origin !== allowedOrigin || visited.has(candidateUrl)) continue;
+              if (queue.some(entry => entry.url === candidateUrl)) continue;
+              if (queue.length + documents.length + active.size >= policy.maxPages) {
+                deferredPageLimitUrls.add(candidateUrl);
+                continue;
+              }
+              queue.push({ url: candidateUrl, depth: document.depth + 1 });
             }
           }
         } catch (error) {
@@ -319,7 +328,10 @@ export class HttpCrawlProvider implements CrawlProvider {
       pageCount: documents.length,
       // Includes robots and bytes received for a response that was cancelled mid-stream.
       bytesProcessed: byteBudget.bytesProcessed,
-      partial: queue.length > 0 || crawlErrors.length > 0 || Boolean(budgetError),
+      partial: queue.length > 0 ||
+        [...deferredPageLimitUrls].some(url => !visited.has(url)) ||
+        crawlErrors.length > 0 ||
+        Boolean(budgetError),
       durationMs: Date.now() - startedAt,
       provider: { id: this.id },
       errors: [
