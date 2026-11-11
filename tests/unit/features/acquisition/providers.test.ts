@@ -17,6 +17,8 @@ function request(): CrawlRequest {
   };
 }
 
+const identitySeedUrl = async (url: string): Promise<string> => url;
+
 function withApiKey<T>(operation: () => Promise<T>): Promise<T> {
   const original = process.env.FIRECRAWL_API_KEY;
   process.env.FIRECRAWL_API_KEY = "test-key";
@@ -34,7 +36,7 @@ describe("FirecrawlCrawlProvider", () => {
         params = requestParams;
         return { success: true, status: "completed", data: [{ url: "https://example.com/", markdown: "hello" }] };
       }
-    });
+    }, identitySeedUrl);
     await withApiKey(async () => {
       const crawlRequest = request();
       const result = await provider.execute(crawlRequest, crawlRequest.policy, new AbortController().signal);
@@ -45,7 +47,8 @@ describe("FirecrawlCrawlProvider", () => {
         allowSubdomains: false,
         crawlEntireDomain: true,
         maxConcurrency: crawlRequest.policy.maxConcurrency,
-        scrapeOptions: { formats: ["markdown"] }
+        scrapeOptions: { formats: ["markdown"] },
+        limit: crawlRequest.policy.maxPages
       });
     });
   });
@@ -64,12 +67,12 @@ describe("FirecrawlCrawlProvider", () => {
           ]
         };
       }
-    });
+    }, identitySeedUrl);
     await withApiKey(async () => {
       const crawlRequest = request();
       const policy = resolveCrawlPolicy({ robotsPolicy: "ignore", maxResponseBytes: 8, maxTotalBytes: 10 });
       const result = await provider.execute({ ...crawlRequest, policy }, policy, new AbortController().signal);
-      expect(params?.limit).toBe(1);
+      expect(params?.limit).toBe(policy.maxPages);
       expect(result.partial).toBe(true);
       expect(result.documents).toHaveLength(1);
       expect(result.bytesProcessed).toBe(12);
@@ -88,7 +91,7 @@ describe("FirecrawlCrawlProvider", () => {
           { url: "https://other.example/outside", markdown: "outside" }
         ]
       })
-    });
+    }, identitySeedUrl);
     await withApiKey(async () => {
       const crawlRequest = request();
       const result = await provider.execute(crawlRequest, crawlRequest.policy, new AbortController().signal);
@@ -102,12 +105,47 @@ describe("FirecrawlCrawlProvider", () => {
     await withApiKey(async () => {
       await expect(new FirecrawlCrawlProvider({
         crawlUrl: async () => ({ success: false, error: "401 Unauthorized" })
-      }).execute(request(), request().policy, new AbortController().signal))
+      }, identitySeedUrl).execute(request(), request().policy, new AbortController().signal))
         .rejects.toSatisfy((error: unknown) => error instanceof CrawlError && error.code === "AUTHENTICATION_ERROR");
       await expect(new FirecrawlCrawlProvider({
         crawlUrl: async () => ({ success: true, data: "invalid" })
-      }).execute(request(), request().policy, new AbortController().signal))
+      }, identitySeedUrl).execute(request(), request().policy, new AbortController().signal))
         .rejects.toSatisfy((error: unknown) => error instanceof CrawlError && error.code === "PROVIDER_ERROR");
     });
   });
+  it("uses the resolved canonical seed origin and marks a fully used page cap as partial", async () => {
+    let crawlUrl: string | undefined;
+    let params: Record<string, unknown> | undefined;
+    const provider = new FirecrawlCrawlProvider({
+      crawlUrl: async (url, requestParams) => {
+        crawlUrl = url;
+        params = requestParams;
+        return {
+          success: true,
+          status: "completed",
+          total: 2,
+          completed: 2,
+          data: [
+            { url: "https://www.example.com/one", markdown: "one" },
+            { url: "https://www.example.com/two", markdown: "two" }
+          ]
+        };
+      }
+    }, async url => url.replace("https://example.com/", "https://www.example.com/"));
+
+    await withApiKey(async () => {
+      const crawlRequest = request();
+      const policy = resolveCrawlPolicy({ robotsPolicy: "ignore", maxPages: 2 });
+      const result = await provider.execute(
+        { ...crawlRequest, policy }, policy, new AbortController().signal
+      );
+
+      expect(crawlUrl).toBe("https://www.example.com/");
+      expect(params?.limit).toBe(2);
+      expect(result.documents).toHaveLength(2);
+      expect(result.errors).toHaveLength(0);
+      expect(result.partial).toBe(true);
+    });
+  });
+
 });

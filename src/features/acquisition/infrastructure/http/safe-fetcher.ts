@@ -33,6 +33,10 @@ export interface SafeFetcherOptions {
   signal?: AbortSignal;
   byteBudget?: CrawlByteBudget;
   allowedOrigin?: string;
+  /** Permit only same-host / www-pair canonical redirects while resolving the seed URL. */
+  allowCanonicalSeedRedirects?: boolean;
+  /** Resolve redirects and validate the terminal response without retaining its body. */
+  redirectOnly?: boolean;
   onBudgetExceeded?: (error: CrawlError) => void;
   resolver?: Resolver;
   hostValidator?: (
@@ -65,6 +69,33 @@ function withTimeout<T>(
   });
 }
 
+function isCanonicalSeedRedirect(from: NormalizedUrl, to: NormalizedUrl): boolean {
+  const fromHost = from.asciiHost.toLowerCase();
+  const toHost = to.asciiHost.toLowerCase();
+  const sameHostOrWwwPair =
+    fromHost === toHost ||
+    fromHost === `www.${toHost}` ||
+    toHost === `www.${fromHost}`;
+  const sameScheme = from.scheme === to.scheme;
+  const secureUpgrade = from.scheme === "http" && to.scheme === "https" &&
+    from.port === null && to.port === null;
+  return sameHostOrWwwPair &&
+    (sameScheme || secureUpgrade) &&
+    from.port === to.port;
+}
+
+function originBoundaryError(from: NormalizedUrl, to: NormalizedUrl): CrawlError {
+  return new CrawlError(
+    "POLICY_VIOLATION",
+    "Redirect origin is outside the crawl origin boundary",
+    {
+      boundary: "origin",
+      sourceOrigin: new URL(from.canonical).origin,
+      targetOrigin: new URL(to.canonical).origin
+    }
+  );
+}
+
 function contentLength(headers: IncomingMessage["headers"]): number | null {
   const raw = headers["content-length"];
   if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
@@ -91,7 +122,11 @@ export async function safeFetch(
     throw current.error;
   }
   if (options.allowedOrigin && new URL(current.value.canonical).origin !== options.allowedOrigin) {
-    throw new CrawlError("POLICY_VIOLATION", "URL origin is outside the crawl origin boundary");
+    throw new CrawlError("POLICY_VIOLATION", "URL origin is outside the crawl origin boundary", {
+      boundary: "origin",
+      sourceOrigin: options.allowedOrigin,
+      targetOrigin: new URL(current.value.canonical).origin
+    });
   }
   if (!options.policy.allowedSchemes.includes(current.value.scheme)) {
     throw new CrawlError(
@@ -198,8 +233,15 @@ export async function safeFetch(
       if (!normalized.ok) {
         throw normalized.error;
       }
-      if (options.allowedOrigin && new URL(normalized.value.canonical).origin !== options.allowedOrigin) {
-        throw new CrawlError("POLICY_VIOLATION", "Redirect origin is outside the crawl origin boundary");
+      if (options.allowedOrigin) {
+        if (new URL(normalized.value.canonical).origin !== options.allowedOrigin) {
+          throw originBoundaryError(current.value, normalized.value);
+        }
+      } else if (
+        options.allowCanonicalSeedRedirects &&
+        !isCanonicalSeedRedirect(current.value, normalized.value)
+      ) {
+        throw originBoundaryError(current.value, normalized.value);
       }
       if (!options.policy.allowedSchemes.includes(normalized.value.scheme)) {
         throw new CrawlError(
@@ -218,6 +260,13 @@ export async function safeFetch(
         "HTTP request returned an error status",
         { status: response.status }
       );
+    }
+    if (options.redirectOnly) {
+      return {
+        ...response,
+        finalUrl: current.value,
+        redirects
+      };
     }
     const encoding = contentEncoding(response.headers);
     if (encoding && encoding !== "identity") {
@@ -302,6 +351,21 @@ function requestOnce(
           response.destroy();
           resolve({
             status: response.statusCode,
+            headers,
+            body: Buffer.alloc(0)
+          });
+          return;
+        }
+
+        if (options.redirectOnly) {
+          settled = true;
+          cleanup();
+          const headers = Object.fromEntries(
+            Object.entries(response.headers).filter(([key]) => key !== "set-cookie")
+          );
+          response.destroy();
+          resolve({
+            status: response.statusCode ?? 0,
             headers,
             body: Buffer.alloc(0)
           });

@@ -7,6 +7,7 @@ import type {
   CrawledDocument
 } from "../../../domain/contracts";
 import type { CrawlPolicy } from "../../../domain/policy";
+import { safeFetch } from "../../http/safe-fetcher";
 
 interface FirecrawlClient {
   crawlUrl(
@@ -29,6 +30,9 @@ interface FirecrawlResponse {
   status?: unknown;
   data?: unknown;
   error?: unknown;
+  total?: unknown;
+  completed?: unknown;
+  next?: unknown;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -69,6 +73,12 @@ function readDocument(value: unknown): { url: string; text: string; contentType:
   };
 }
 
+type SeedUrlResolver = (
+  url: string,
+  policy: CrawlPolicy,
+  signal: AbortSignal
+) => Promise<string>;
+
 export class FirecrawlCrawlProvider implements CrawlProvider {
   public readonly id = "firecrawl";
   public readonly capabilities = {
@@ -77,11 +87,21 @@ export class FirecrawlCrawlProvider implements CrawlProvider {
     supportsTraversal: true
   };
   private readonly client: FirecrawlClient;
+  private readonly seedUrlResolver: SeedUrlResolver;
 
-  public constructor(client?: FirecrawlClient) {
+  public constructor(client?: FirecrawlClient, seedUrlResolver?: SeedUrlResolver) {
     this.client = client ?? (new FirecrawlApp({
       apiKey: process.env.FIRECRAWL_API_KEY ?? ""
     }) as unknown as FirecrawlClient);
+    this.seedUrlResolver = seedUrlResolver ?? (async (url, policy, signal) => {
+      const resolved = await safeFetch(url, {
+        policy,
+        signal,
+        allowCanonicalSeedRedirects: true,
+        redirectOnly: true
+      });
+      return resolved.finalUrl.canonical;
+    });
   }
 
   public get isConfigured(): boolean {
@@ -105,18 +125,29 @@ export class FirecrawlCrawlProvider implements CrawlProvider {
       durationExpired = true;
       controller.abort();
     }, policy.maxDurationMs);
-    const seedOrigin = new URL(request.normalizedUrl.canonical).origin;
     const maxTotalBytes = policy.maxTotalBytes ?? 100 * 1024 * 1024;
-    // Without a provider-side byte cap, constrain worst-case page count by the per-page ceiling.
-    const providerPageLimit = Math.min(
-      policy.maxPages,
-      Math.max(1, Math.floor(maxTotalBytes / policy.maxResponseBytes))
-    );
     try {
-      const response = await this.client.crawlUrl(
+      // Use the same validated canonical seed origin as the internal HTTP provider.
+      const canonicalSeedUrl = await this.seedUrlResolver(
         request.normalizedUrl.canonical,
+        policy,
+        controller.signal
+      );
+      let parsedSeedUrl: URL;
+      try {
+        parsedSeedUrl = new URL(canonicalSeedUrl);
+      } catch {
+        throw new CrawlError("INVALID_URL", "Seed URL resolver returned an invalid URL");
+      }
+      const seedScheme = parsedSeedUrl.protocol.slice(0, -1);
+      if (!policy.allowedSchemes.includes(seedScheme)) {
+        throw new CrawlError("POLICY_VIOLATION", "Resolved seed URL uses a disallowed scheme");
+      }
+      const seedOrigin = parsedSeedUrl.origin;
+      const response = await this.client.crawlUrl(
+        canonicalSeedUrl,
         {
-          limit: providerPageLimit,
+          limit: policy.maxPages,
           maxDiscoveryDepth: policy.maxDepth,
           crawlEntireDomain: true,
           // Firecrawl exposes domain-level scope controls; exact URL.origin is checked on every result below.
@@ -150,8 +181,16 @@ export class FirecrawlCrawlProvider implements CrawlProvider {
       const documents: CrawledDocument[] = [];
       const errors: CrawlError[] = [];
       let retainedBytes = 0;
-      let pageLimitReached = data.length > providerPageLimit;
-      for (const item of parsed.slice(0, providerPageLimit)) {
+      const reportedTotal = typeof response.total === "number" ? response.total : null;
+      const reportedCompleted = typeof response.completed === "number" ? response.completed : null;
+      // Hitting the configured cap is conservatively partial: the adapter cannot prove
+      // that Firecrawl had no additional eligible pages to discover.
+      let pageLimitReached =
+        data.length >= policy.maxPages ||
+        (reportedTotal !== null && reportedTotal >= policy.maxPages) ||
+        (reportedCompleted !== null && reportedCompleted >= policy.maxPages) ||
+        (typeof response.next === "string" && response.next.length > 0);
+      for (const item of parsed.slice(0, policy.maxPages)) {
         if (Date.now() - startedAt >= policy.maxDurationMs) {
           throw new CrawlError("TIMEOUT", "Firecrawl result processing exceeded its duration limit");
         }

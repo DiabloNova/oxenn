@@ -19,6 +19,12 @@ interface QueueEntry {
   depth: number;
 }
 
+function isOriginBoundaryViolation(error: unknown): error is CrawlError {
+  return error instanceof CrawlError &&
+    error.code === "POLICY_VIOLATION" &&
+    error.details.boundary === "origin";
+}
+
 function contentType(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value ?? "").split(";")[0];
 }
@@ -72,6 +78,7 @@ function linksFromHtml(html: string, baseUrl: string, allowedOrigin: string): st
 function documentFromResponse(
   requestedUrl: string,
   finalUrl: string,
+  allowedOrigin: string,
   depth: number,
   response: Awaited<ReturnType<typeof safeFetch>>
 ): CrawledDocument {
@@ -92,7 +99,7 @@ function documentFromResponse(
       ]
     }),
     html,
-    links: linksFromHtml(html, finalUrl, new URL(requestedUrl).origin),
+    links: linksFromHtml(html, finalUrl, allowedOrigin),
     metadata: {
       title: cheerio.load(html)("title").first().text() || undefined
     },
@@ -122,14 +129,13 @@ export class HttpCrawlProvider implements CrawlProvider {
     signal: AbortSignal
   ): Promise<CrawlResult> {
     const startedAt = Date.now();
-    const queue: QueueEntry[] = [
-      { url: request.normalizedUrl.canonical, depth: 0 }
-    ];
+    const queue: QueueEntry[] = [];
     const visited = new Set<string>();
     const documents: CrawledDocument[] = [];
     const robotsCache = new Map<string, Promise<string>>();
     const rateLimiter = new PerHostRateLimiter();
-    const allowedOrigin = new URL(request.normalizedUrl.canonical).origin;
+    let allowedOrigin = "";
+    const crawlErrors: CrawlError[] = [];
     // Older persisted jobs may not contain maxTotalBytes; use the platform ceiling.
     const byteBudget = new CrawlByteBudget(policy.maxTotalBytes ?? 100 * 1024 * 1024);
     const controller = new AbortController();
@@ -149,7 +155,6 @@ export class HttpCrawlProvider implements CrawlProvider {
     const fetchOptions = {
       signal: crawlSignal,
       byteBudget,
-      allowedOrigin,
       onBudgetExceeded: () => controller.abort(),
       ...this.fetchOptions
     };
@@ -164,45 +169,72 @@ export class HttpCrawlProvider implements CrawlProvider {
       if (!normalized.ok || visited.has(normalized.value.canonical)) return null;
       if (new URL(normalized.value.canonical).origin !== allowedOrigin) return null;
       visited.add(normalized.value.canonical);
-      const host = normalized.value.asciiHost;
-      if (policy.robotsPolicy === "respect") {
-        const origin = new URL(normalized.value.canonical).origin;
-        let robots = robotsCache.get(origin);
-        if (!robots) {
-          robots = (async () => {
-            await requestHost(host);
-            const robotsResponse = await safeFetch(`${origin}/robots.txt`, {
-              policy: {
-                ...policy,
-                maxPages: 1,
-                allowedContentTypes: ["text/plain", "text/html"]
-              },
-              ...fetchOptions
-            });
-            return robotsResponse.body.toString("utf8");
-          })();
-          robotsCache.set(origin, robots);
+      try {
+        const host = normalized.value.asciiHost;
+        if (policy.robotsPolicy === "respect") {
+          const origin = new URL(normalized.value.canonical).origin;
+          let robots = robotsCache.get(origin);
+          if (!robots) {
+            robots = (async () => {
+              await requestHost(host);
+              const robotsResponse = await safeFetch(`${origin}/robots.txt`, {
+                policy: {
+                  ...policy,
+                  maxPages: 1,
+                  allowedContentTypes: ["text/plain", "text/html"]
+                },
+                ...fetchOptions,
+                allowedOrigin
+              });
+              return robotsResponse.body.toString("utf8");
+            })();
+            robotsCache.set(origin, robots);
+          }
+          if (robotsDisallows(await robots, normalized.value.path)) return null;
         }
-        if (robotsDisallows(await robots, normalized.value.path)) return null;
+        await requestHost(host);
+        const response = await safeFetch(normalized.value.canonical, {
+          policy,
+          ...fetchOptions,
+          allowedOrigin
+        });
+        const document = documentFromResponse(
+          entry.depth === 0 ? request.normalizedUrl.canonical : normalized.value.canonical,
+          response.finalUrl.canonical,
+          allowedOrigin,
+          entry.depth,
+          response
+        );
+        if (Date.now() - startedAt >= policy.maxDurationMs) {
+          throw new CrawlError("TIMEOUT", "Crawl exceeded its duration limit");
+        }
+        return document;
+      } catch (error) {
+        if (entry.depth > 0 && isOriginBoundaryViolation(error)) {
+          crawlErrors.push(new CrawlError(
+            "POLICY_VIOLATION",
+            "Skipped a crawl entry because it redirected outside the seed origin",
+            { ...error.details, requestedUrl: normalized.value.canonical }
+          ));
+          return null;
+        }
+        throw error;
       }
-      await requestHost(host);
-      const response = await safeFetch(normalized.value.canonical, {
-        policy,
-        ...fetchOptions
-      });
-      const document = documentFromResponse(
-        normalized.value.canonical,
-        response.finalUrl.canonical,
-        entry.depth,
-        response
-      );
-      if (Date.now() - startedAt >= policy.maxDurationMs) {
-        throw new CrawlError("TIMEOUT", "Crawl exceeded its duration limit");
-      }
-      return document;
     };
 
     try {
+      // Resolve only canonical same-host/www seed redirects before setting the exact crawl origin.
+      const seedResolution = await safeFetch(request.normalizedUrl.canonical, {
+        policy,
+        signal: crawlSignal,
+        allowCanonicalSeedRedirects: true,
+        redirectOnly: true,
+        ...this.fetchOptions
+      });
+      const canonicalSeedUrl = seedResolution.finalUrl.canonical;
+      allowedOrigin = new URL(canonicalSeedUrl).origin;
+      queue.push({ url: canonicalSeedUrl, depth: 0 });
+
       while (queue.length > 0 || active.size > 0) {
         if (crawlSignal.aborted) {
           if (byteBudget.isExceeded) break;
@@ -261,10 +293,13 @@ export class HttpCrawlProvider implements CrawlProvider {
       pageCount: documents.length,
       // Includes robots and bytes received for a response that was cancelled mid-stream.
       bytesProcessed: byteBudget.bytesProcessed,
-      partial: queue.length > 0 || Boolean(budgetError),
+      partial: queue.length > 0 || crawlErrors.length > 0 || Boolean(budgetError),
       durationMs: Date.now() - startedAt,
       provider: { id: this.id },
-      errors: budgetError ? [budgetError] : []
+      errors: [
+        ...crawlErrors,
+        ...(budgetError ? [budgetError] : [])
+      ]
     };
   }
 }

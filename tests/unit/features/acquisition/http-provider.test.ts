@@ -117,4 +117,108 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
     }
   });
 
+  it("resolves a canonical www seed before enforcing the crawl origin and skips redirected child pages", async () => {
+    let port = 0;
+    const requested: string[] = [];
+    const server = createServer((request, response) => {
+      const host = (request.headers.host ?? "").split(":")[0];
+      const path = request.url ?? "/";
+      requested.push(`${host}${path}`);
+
+      if (host === "a.test" && path === "/") {
+        response.writeHead(302, { location: `http://www.a.test:${port}/` }).end();
+        return;
+      }
+      if (path === "/robots.txt") {
+        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *");
+        return;
+      }
+      if (path === "/") {
+        response.writeHead(200, { "content-type": "text/html" })
+          .end('<a href="/redirect-child">redirect</a><a href="/good">good</a>');
+        return;
+      }
+      if (path === "/redirect-child") {
+        response.writeHead(302, { location: `http://login.test:${port}/sso` }).end();
+        return;
+      }
+      if (path === "/good") {
+        response.writeHead(200, { "content-type": "text/html" }).end("<title>good</title>");
+        return;
+      }
+      response.writeHead(404).end();
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const request = makeRequest(url, resolveCrawlPolicy({
+        maxPages: 10, maxDepth: 2, maxConcurrency: 2,
+        perHostRequestsPerSecond: 100, robotsPolicy: "respect"
+      }));
+      const result = await new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        request, request.policy, new AbortController().signal
+      );
+
+      expect(result.documents.map(document => document.finalUrl)).toEqual([
+        `http://www.a.test:${port}/`,
+        `http://www.a.test:${port}/good`
+      ]);
+      expect(result.documents[0]?.requestedUrl).toBe(url);
+      expect(result.partial).toBe(true);
+      expect(result.errors).toEqual([
+        expect.objectContaining({
+          code: "POLICY_VIOLATION",
+          details: expect.objectContaining({
+            boundary: "origin",
+            requestedUrl: `http://www.a.test:${port}/redirect-child`
+          })
+        })
+      ]);
+      expect(requested).toContain("www.a.test/robots.txt");
+      expect(requested.some(value => value.startsWith("login.test"))).toBe(false);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
+  it("rejects a seed redirect that is not a same-host or www canonical transition", async () => {
+    let port = 0;
+    const requested: string[] = [];
+    const server = createServer((request, response) => {
+      const host = (request.headers.host ?? "").split(":")[0];
+      requested.push(`${host}${request.url ?? "/"}`);
+      if (host === "a.test") {
+        response.writeHead(302, { location: `http://evil.test:${port}/` }).end();
+        return;
+      }
+      response.writeHead(200, { "content-type": "text/html" }).end("<title>unexpected</title>");
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const request = makeRequest(url, resolveCrawlPolicy({ robotsPolicy: "ignore" }));
+      await expect(new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        request, request.policy, new AbortController().signal
+      )).rejects.toMatchObject({
+        code: "POLICY_VIOLATION",
+        details: expect.objectContaining({ boundary: "origin" })
+      });
+      expect(requested.some(value => value.startsWith("evil.test"))).toBe(false);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
 });
