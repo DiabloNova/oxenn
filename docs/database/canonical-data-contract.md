@@ -68,7 +68,7 @@ The data contract is verified via multiple independent testing paths:
 
 3. **Schema Policy and Migration Verification** (`verify-tenant-tables.ts` and `verify-rls-migrations.ts`)
    - verify-tenant-tables.ts uses the explicit ownership registry, rejects unknown tables, checks registry/schema parity, derives only ORGANIZATION_SCOPED tables for TENANT_SCOPED_TABLES, and separately checks tenant-policy expressions and operation coverage. Explicit UNRESOLVED entries are reported distinctly. It does not inspect a live database.
-   - verify-rls-migrations.ts uses the same registry-backed ORGANIZATION_SCOPED classification and checks the checked-in migration history for final ENABLE ROW LEVEL SECURITY and FORCE ROW LEVEL SECURITY state for the tables that classifier currently treats as tenant-owned. This is a static migration audit, not proof that migrations have been applied to production; registry integration is a later stage.
+   - verify-rls-migrations.ts uses the same registry-backed ORGANIZATION_SCOPED classification and checks the checked-in migration history for final ENABLE ROW LEVEL SECURITY and FORCE ROW LEVEL SECURITY state for those tables. This is a static migration audit, not proof that migrations have been applied to production.
    - The `test:isolation` CI job provisions ephemeral PostgreSQL and exercises tenant isolation. The `test:db` script is not currently invoked by CI; SQL invariants must be included in the isolation suite or the workflow must be updated before claiming those tests run.
 
 ---
