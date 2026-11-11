@@ -1,139 +1,270 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
+import * as cheerio from "cheerio";
+import { convert } from "html-to-text";
+import { CrawlError } from "../../domain/errors";
+import type {
+  CrawlProvider,
+  CrawlRequest,
+  CrawlResult,
+  CrawledDocument
+} from "../../domain/contracts";
+import type { CrawlPolicy } from "../../domain/policy";
+import { normalizeUrl } from "../../domain/url/normalizer";
+import { safeFetch } from "../http/safe-fetcher";
+import { CrawlByteBudget } from "../http/crawl-byte-budget";
+import { PerHostRateLimiter } from "../http/per-host-rate-limiter";
+import type { HostValidationResult, Resolver } from "../security/ssrf-guard";
 
-const { getSessionMock, submitMock, runWithTenantContextMock, getEffectiveSubscriptionMock } = vi.hoisted(() => ({
-  getSessionMock: vi.fn(),
-  submitMock: vi.fn(),
-  runWithTenantContextMock: vi.fn(),
-  getEffectiveSubscriptionMock: vi.fn(),
-}));
+interface QueueEntry {
+  url: string;
+  depth: number;
+}
 
-vi.mock("@/services/auth/session", () => ({ getSession: getSessionMock }));
-vi.mock("@/features/acquisition/application/orchestrator", () => ({
-  CrawlOrchestrator: class {
-    submit = submitMock;
-  },
-}));
-vi.mock("@/features/billing/services/subscription-service", () => ({
-  subscriptionService: { getEffectiveSubscription: getEffectiveSubscriptionMock },
-}));
-vi.mock("@/core/database/tenant-context", () => ({
-  TenantContextManager: { runWithTenantContext: runWithTenantContextMock },
-}));
+function contentType(value: string | string[] | undefined): string {
+  return (Array.isArray(value) ? value[0] : value ?? "").split(";")[0];
+}
 
-import { POST } from "@/app/api/v1/crawl/route";
-import { CRAWL_POLICY_CEILINGS } from "@/features/acquisition/domain/policy";
-
-describe("Crawl API policy bounds", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getSessionMock.mockResolvedValue({ user: { id: "user-test", workspaceId: "tenant-test" } });
-    getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "free" } });
-    runWithTenantContextMock.mockImplementation((
-      _tenantId: string,
-      _userId: string,
-      _requestId: string,
-      callback: () => unknown
-    ) => callback());
-    submitMock.mockResolvedValue({ job: { id: "job-test", status: "queued" }, cacheOutcome: "MISS", result: null });
-  });
-
-  async function post(policy: Record<string, unknown>) {
-    return POST(new NextRequest("http://localhost/api/v1/crawl", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ requestedUrl: "https://example.com", policy }),
-    }));
+function robotsDisallows(robots: string, path: string): boolean {
+  let applies = false;
+  for (const rawLine of robots.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+    const separator = line.indexOf(":");
+    if (separator < 0) {
+      continue;
+    }
+    const name = line.slice(0, separator).trim().toLowerCase();
+    const value = line.slice(separator + 1).trim();
+    if (name === "user-agent") {
+      applies = value === "*" || value.toLowerCase() === "seorchable-crawler";
+    } else if (applies && name === "disallow" && value && path.startsWith(value)) {
+      return true;
+    }
   }
+  return false;
+}
 
-  it("rejects forged identity headers when no real session exists", async () => {
-    getSessionMock.mockResolvedValue(null);
-    const response = await POST(new NextRequest("http://localhost/api/v1/crawl", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-tenant-id": "attacker-tenant",
-        "x-user-id": "attacker-user",
-      },
-      body: JSON.stringify({ requestedUrl: "https://example.com" }),
-    }));
-
-    expect(response.status).toBe(401);
-    expect(submitMock).not.toHaveBeenCalled();
+function linksFromHtml(html: string, baseUrl: string, allowedOrigin: string): string[] {
+  const $ = cheerio.load(html);
+  const links = new Set<string>();
+  $("a[href]").each((_, element) => {
+    const href = $(element).attr("href");
+    if (!href) {
+      return;
+    }
+    try {
+      const resolved = new URL(href, baseUrl);
+      if ((resolved.protocol !== "http:" && resolved.protocol !== "https:") || resolved.origin !== allowedOrigin) {
+        return;
+      }
+      const normalized = normalizeUrl(resolved.toString());
+      if (normalized.ok) {
+        links.add(normalized.value.canonical);
+      }
+    } catch {
+      return;
+    }
   });
+  return [...links];
+}
 
-  it.each([
-    ["more than eight allowed schemes", { allowedSchemes: Array.from({ length: 9 }, () => "https") }],
-    ["an allowed scheme longer than 16 characters", { allowedSchemes: ["s".repeat(17)] }],
-    ["more than 64 allowed content types", { allowedContentTypes: Array.from({ length: 65 }, () => "text/html") }],
-    ["an allowed content type longer than 128 characters", { allowedContentTypes: ["t".repeat(129)] }],
-    ["a negative redirect count", { maxRedirects: -1 }],
-    ["a zero aggregate byte budget", { maxTotalBytes: 0 }],
-  ])("rejects %s before submitting a crawl", async (_label, policy) => {
-    const response = await post(policy);
-    expect(response.status).toBe(400);
-    expect(submitMock).not.toHaveBeenCalled();
-  });
+function documentFromResponse(
+  requestedUrl: string,
+  finalUrl: string,
+  depth: number,
+  response: Awaited<ReturnType<typeof safeFetch>>
+): CrawledDocument {
+  const html = response.body.toString("utf8");
+  return {
+    canonicalUrl: response.finalUrl.canonical,
+    requestedUrl,
+    finalUrl,
+    httpStatus: response.status,
+    contentType: contentType(response.headers["content-type"]),
+    text: convert(html, {
+      wordwrap: false,
+      selectors: [
+        { selector: "script", format: "skip" },
+        { selector: "style", format: "skip" },
+        { selector: "nav", format: "skip" },
+        { selector: "footer", format: "skip" }
+      ]
+    }),
+    html,
+    links: linksFromHtml(html, finalUrl, new URL(requestedUrl).origin),
+    metadata: {
+      title: cheerio.load(html)("title").first().text() || undefined
+    },
+    fetchedAt: new Date().toISOString(),
+    bytes: response.body.byteLength,
+    depth
+  };
+}
 
-  it("accepts every policy field exactly at its configured limit", async () => {
-    const policy = {
-      allowedSchemes: ["s".repeat(16), ...Array.from({ length: 7 }, () => "https")],
-      allowedContentTypes: Array.from({ length: 64 }, () => "t".repeat(128)),
-      maxRedirects: 10,
-      maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes,
+export class HttpCrawlProvider implements CrawlProvider {
+  public constructor(
+    private readonly fetchOptions: {
+      resolver?: Resolver;
+      hostValidator?: (host: string) => Promise<HostValidationResult>;
+    } = {}
+  ) {}
+  public readonly id = "internal-http";
+  public readonly capabilities = {
+    supportsJavaScript: false,
+    supportsRobots: true,
+    supportsTraversal: true
+  };
+
+  public async execute(
+    request: CrawlRequest,
+    policy: CrawlPolicy,
+    signal: AbortSignal
+  ): Promise<CrawlResult> {
+    const startedAt = Date.now();
+    const queue: QueueEntry[] = [
+      { url: request.normalizedUrl.canonical, depth: 0 }
+    ];
+    const visited = new Set<string>();
+    const documents: CrawledDocument[] = [];
+    const robotsCache = new Map<string, Promise<string>>();
+    const rateLimiter = new PerHostRateLimiter();
+    const allowedOrigin = new URL(request.normalizedUrl.canonical).origin;
+    // Older persisted jobs may not contain maxTotalBytes; use the platform ceiling.
+    const byteBudget = new CrawlByteBudget(policy.maxTotalBytes ?? 100 * 1024 * 1024);
+    const controller = new AbortController();
+    const abortFromCaller = (): void => controller.abort(signal.reason);
+    if (signal.aborted) controller.abort(signal.reason);
+    else signal.addEventListener("abort", abortFromCaller, { once: true });
+    const crawlSignal = controller.signal;
+    let durationExpired = false;
+    const durationTimer = setTimeout(() => {
+      durationExpired = true;
+      controller.abort();
+    }, policy.maxDurationMs);
+    const active = new Set<Promise<CrawledDocument | null>>();
+
+    const requestHost = (host: string): Promise<void> =>
+      rateLimiter.waitForSlot(host, policy.perHostRequestsPerSecond, crawlSignal);
+    const fetchOptions = {
+      signal: crawlSignal,
+      byteBudget,
+      allowedOrigin,
+      onBudgetExceeded: () => controller.abort(),
+      ...this.fetchOptions
     };
-    const response = await post(policy);
-    expect(response.status).toBe(202);
-    expect(runWithTenantContextMock).toHaveBeenCalledWith("tenant-test", "user-test", expect.any(String), expect.any(Function));
-    expect(submitMock).toHaveBeenCalledWith(
-      "tenant-test",
-      "https://example.com",
-      { ...policy, maxRedirects: 5, maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes },
-      0,
-      expect.any(String),
-      undefined,
-      undefined,
-      false
-    );
-  });
+    const processEntry = async (entry: QueueEntry): Promise<CrawledDocument | null> => {
+      if (crawlSignal.aborted) {
+        throw new CrawlError("CANCELLED", "Crawl was cancelled");
+      }
+      if (Date.now() - startedAt >= policy.maxDurationMs) {
+        throw new CrawlError("TIMEOUT", "Crawl exceeded its duration limit");
+      }
+      const normalized = normalizeUrl(entry.url, policy.stripTrackingParams);
+      if (!normalized.ok || visited.has(normalized.value.canonical)) return null;
+      if (new URL(normalized.value.canonical).origin !== allowedOrigin) return null;
+      visited.add(normalized.value.canonical);
+      const host = normalized.value.asciiHost;
+      if (policy.robotsPolicy === "respect") {
+        const origin = new URL(normalized.value.canonical).origin;
+        let robots = robotsCache.get(origin);
+        if (!robots) {
+          robots = (async () => {
+            await requestHost(host);
+            const robotsResponse = await safeFetch(`${origin}/robots.txt`, {
+              policy: {
+                ...policy,
+                maxPages: 1,
+                allowedContentTypes: ["text/plain", "text/html"]
+              },
+              ...fetchOptions
+            });
+            return robotsResponse.body.toString("utf8");
+          })();
+          robotsCache.set(origin, robots);
+        }
+        if (robotsDisallows(await robots, normalized.value.path)) return null;
+      }
+      await requestHost(host);
+      const response = await safeFetch(normalized.value.canonical, {
+        policy,
+        ...fetchOptions
+      });
+      const document = documentFromResponse(
+        normalized.value.canonical,
+        response.finalUrl.canonical,
+        entry.depth,
+        response
+      );
+      if (Date.now() - startedAt >= policy.maxDurationMs) {
+        throw new CrawlError("TIMEOUT", "Crawl exceeded its duration limit");
+      }
+      return document;
+    };
 
-  it("preserves a lower caller redirect limit under the paid plan ceiling", async () => {
-    getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "professional" } });
-    const response = await post({ maxRedirects: 0 });
-    expect(response.status).toBe(202);
-    expect(submitMock).toHaveBeenCalledWith(
-      "tenant-test",
-      "https://example.com",
-      { maxRedirects: 0, maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes },
-      0,
-      expect.any(String),
-      undefined,
-      undefined,
-      false
-    );
-  });
+    try {
+      while (queue.length > 0 || active.size > 0) {
+        if (crawlSignal.aborted) {
+          if (byteBudget.isExceeded) break;
+          throw new CrawlError("CANCELLED", "Crawl was cancelled");
+        }
+        while (
+          queue.length > 0 &&
+          active.size < policy.maxConcurrency &&
+          documents.length + active.size < policy.maxPages
+        ) {
+          const entry = queue.shift();
+          if (!entry) break;
+          const task = processEntry(entry);
+          active.add(task);
+          void task.then(
+            () => active.delete(task),
+            () => active.delete(task)
+          );
+        }
+        if (active.size === 0) break;
+        try {
+          const document = await Promise.race(active);
+          if (!document) continue;
+          documents.push(document);
+          if (document.depth < policy.maxDepth) {
+            for (const link of document.links) {
+              if (queue.length + documents.length + active.size >= policy.maxPages) break;
+              queue.push({ url: link, depth: document.depth + 1 });
+            }
+          }
+        } catch (error) {
+          if (!byteBudget.isExceeded) throw error;
+          break;
+        }
+      }
+    } catch (error) {
+      controller.abort(error);
+      await Promise.allSettled([...active]);
+      if (durationExpired) {
+        throw new CrawlError("TIMEOUT", "Crawl exceeded its duration limit");
+      }
+      throw error;
+    } finally {
+      clearTimeout(durationTimer);
+      if (byteBudget.isExceeded) controller.abort();
+      await Promise.allSettled([...active]);
+      signal.removeEventListener("abort", abortFromCaller);
+    }
 
-  it("caps caller redirect requests at the paid plan maximum", async () => {
-    getEffectiveSubscriptionMock.mockResolvedValue({ effectivePlan: { id: "professional" } });
-    const response = await post({ maxRedirects: 15 });
-    expect(response.status).toBe(202);
-    expect(submitMock).toHaveBeenCalledWith(
-      "tenant-test",
-      "https://example.com",
-      { maxRedirects: 10, maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes },
-      0,
-      expect.any(String),
-      undefined,
-      undefined,
-      false
-    );
-  });
-  it("clamps caller aggregate byte budgets to the platform hard ceiling", async () => {
-    const response = await post({ maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes * 2 });
-    expect(response.status).toBe(202);
-    expect(submitMock.mock.calls[0]?.[2]).toMatchObject({
-      maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes,
-    });
-  });
-
-});
+    if (signal.aborted && !byteBudget.isExceeded) {
+      throw new CrawlError("CANCELLED", "Crawl was cancelled");
+    }
+    const budgetError = byteBudget.isExceeded ? byteBudget.createError() : null;
+    return {
+      documents,
+      pageCount: documents.length,
+      // Includes robots and bytes received for a response that was cancelled mid-stream.
+      bytesProcessed: byteBudget.bytesProcessed,
+      partial: queue.length > 0 || Boolean(budgetError),
+      durationMs: Date.now() - startedAt,
+      provider: { id: this.id },
+      errors: budgetError ? [budgetError] : []
+    };
+  }
+}
