@@ -1,6 +1,6 @@
 # Canonical Table Ownership Registry
 
-**Status:** SCR-001 Stage 1  
+**Status:** SCR-001 Stage 2  
 **Workspace source:** database/schema/index.ts and its canonical modular exports  
 **Platform Admin source:** database/platform-admin/schema/index.ts
 
@@ -17,6 +17,7 @@ The registry distinguishes the Workspace database from the isolated Platform Adm
 | ORGANIZATION_SCOPED | The current Workspace schema explicitly relates the row to organizations through organization_id or tenant_id, or the table is the organization root. This records existing schema semantics only; it does not create or promise a multi-organization product model. |
 | USER_OWNED | The row belongs to a user identity through a direct user identity contract. A session's optional workspace_id is context, not its owner. |
 | PLATFORM_OWNED | The row is platform control/configuration state, including the isolated Platform Admin control plane. |
+| WORKSPACE_GLOBAL | Shared or legacy records owned at the Workspace application boundary, but not by an organization or user. This is distinct from Platform Admin control-plane ownership. |
 | GLOBAL_SHARED | Shared reference/catalog data consumed by multiple domain records and not owned by a user or organization. |
 | UNRESOLVED | Current evidence does not establish a safe owner. This is an explicit review state, never a synonym for Global. |
 
@@ -25,6 +26,7 @@ status distinguishes current schema contracts from legacy records and unresolved
 ## Inventory coverage
 
 - Workspace schema: 70 tables, all declared in database/schema/index.ts or its canonical organization-table.ts and api-keys.ts exports.
+- Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 5 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
 - Platform Admin schema: 7 tables in database/platform-admin/schema/index.ts, backed by its own database, configuration, migration directory, and migration history.
 - The Platform Admin Drizzle migration ledger is infrastructure metadata, not an application table, and is not included in the seven-table application inventory.
 - database/schema/_legacy/ is quarantined and is not an authoritative schema source.
@@ -35,16 +37,17 @@ The focused unit test compares the Workspace registry against all canonical Driz
 
 | Table | Why unresolved |
 |---|---|
-| admin_users | Legacy Workspace admin identity table. Platform Admin authentication explicitly does not read it; its data disposition is not established. |
-| audit_records | Generic actor/resource audit rows have no organization/user foreign key or documented ownership contract. |
-| permissions | Frozen legacy authorization table; current authorization source is organization_members.role. Historical data disposition is unresolved. |
-| roles | Frozen legacy authorization table; current authorization source is organization_members.role. Historical data disposition is unresolved. |
-| system_configurations | Marked ORPHAN-TABLE (LEGACY-CANDIDATE) in the current reference matrix; no verified consumer or ownership contract establishes an owner. |
+| system_configurations | Marked ORPHAN-TABLE (LEGACY-CANDIDATE) in the generated reference matrix, with no verified active consumer or ownership contract. Its name and columns are insufficient evidence to classify it as platform-owned. |
+
+The other four Stage 1 review entries now have evidence-backed Workspace-global classifications:
+- admin_users is consumed by the existing Workspace admin persistence adapter and is explicitly not the Platform Admin identity source.
+- audit_records is the Workspace privileged audit stream written through system context and read by the Workspace admin persistence adapter; it is distinct from platform_admin_audit_events.
+- roles and permissions are frozen legacy Workspace-global catalogs; the schema explicitly identifies organization_members.role as the current authorization source.
 
 The schema also contains platform configuration tables and a shared AI-engine catalog. Their entries explain the evidence and any embedded-field caveats. In particular, feature_flags.tenant_overrides is an embedded payload, not a row-level tenant isolation boundary.
 
 ## Stage boundary
 
-SCR-001 Stage 1 establishes and tests the explicit inventory only. It does not integrate the registry into verify-tenant-tables.ts, verify-rls-migrations.ts, build-reference-matrix.ts, or runtime authorization. Those existing mechanisms retain their current behavior until a separately scoped follow-up stage. Consequently, this stage does not claim that runtime enforcement or generated ownership inventories have changed.
+SCR-001 Stage 2 integrates the explicit registry into verify-tenant-tables.ts, verify-rls-migrations.ts, and build-reference-matrix.ts. Unknown tables now fail closed instead of falling back to a column-marker classifier. Only ORGANIZATION_SCOPED entries feed the generated TENANT_SCOPED_TABLES runtime inventory and tenant RLS/migration checks. Other explicit scopes remain distinct in the Reference Matrix. UNRESOLVED is reported as unresolved and is not presented as Global or as having verified RLS applicability.
 
-No RLS policies, migrations, database connections, runtime authorization, or Platform Admin activation are changed by this registry.
+Runtime authorization code and its tenant-context enforcement are not changed. The generated tenant table list is still the organization-scoped subset only. No RLS policies, migrations, database connections, or Platform Admin activation are changed by this stage.

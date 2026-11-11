@@ -120,13 +120,15 @@ The intended model is multi-tenant PostgreSQL with explicit Row-Level Security:
 - For authorization, `organization_members.role` is the authoritative role source; do not authorize using a potentially stale `session.user.role` snapshot.
 - `super_admin` is operator-only and must be granted only through the dedicated CLI flow described in `AGENTS.md`, not ordinary registration or API flows.
 
-### 5.2.1 Explicit table ownership inventory (SCR-001 Stage 1)
+### 5.2.1 Explicit table ownership inventory (SCR-001 Stages 1–2)
 
 - The reviewed inventory is scripts/database/table-ownership-registry.ts, with its scope definitions and rationale/evidence documented in docs/database/table-ownership-registry.md. It explicitly covers 70 Workspace application tables and 7 separate Platform Admin application tables.
 - ORGANIZATION_SCOPED records existing organization_id / tenant_id relationships in the Workspace schema. It preserves those schema semantics; it does not add a new tenant abstraction or revise the product's organization model.
-- UNRESOLVED is an explicit review state for admin_users, audit_records, permissions, roles, and system_configurations. Unknown tables do not fall back to Global in registry lookups.
-- SCR-001 Stage 1 is an inventory/test/documentation change only. The registry is not yet integrated into verify-tenant-tables.ts, verify-rls-migrations.ts, build-reference-matrix.ts, or runtime authorization. Existing runtime and generated artifacts retain their prior behavior.
-- The repository's existing product/security documents still describe a multi-tenant model, while the owner has clarified that this task must not introduce a multi-organization product model. Stage 1 preserves the current schema relationships without resolving or rewriting that product-level contract; any change to that direction requires a separately scoped architecture decision.
+- The registry includes ORGANIZATION_SCOPED, USER_OWNED, PLATFORM_OWNED, WORKSPACE_GLOBAL, GLOBAL_SHARED, and UNRESOLVED. WORKSPACE_GLOBAL is distinct from the isolated Platform Admin database; it records legacy Workspace admin data, the privileged Workspace audit stream, and frozen legacy role/permission catalogs.
+- Current Workspace counts: 56 ORGANIZATION_SCOPED, 5 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED (system_configurations).
+- The registry is integrated into verify-tenant-tables.ts, verify-rls-migrations.ts, and build-reference-matrix.ts. Unknown tables fail closed; only ORGANIZATION_SCOPED entries feed tenant runtime inventory and RLS/migration checks. UNRESOLVED is displayed distinctly and is not inferred as Global.
+- Runtime authorization and tenant-context enforcement are unchanged by this inventory/verifier integration. No RLS policies or migrations were changed.
+- The repository's existing product/security documents still describe a multi-tenant model, while the owner has clarified that this task must not introduce a multi-organization product model. Stages 1–2 preserve current schema relationships without resolving or rewriting that product-level contract; any change requires a separately scoped architecture decision.
 
 ### 5.3 Simulator, CI PostgreSQL, and production connectivity are not interchangeable
 

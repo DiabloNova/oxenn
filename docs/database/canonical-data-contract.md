@@ -16,7 +16,7 @@ While `database/schema/index.ts` is the source, it is compiled into several crit
    - Never edit the JSON metadata or generated SQL manually.
 
 2. **Runtime Tenant-Owned Tables Map** (`src/core/database/tenant-tables.generated.ts`):
-   - A deterministic, generated runtime inventory. The reviewed domain ownership decisions are recorded independently in `scripts/database/table-ownership-registry.ts`. SCR-001 Stage 1 does not yet wire that registry into this generated artifact; the existing snapshot-based verifier remains a separate transitional mechanism and is not independent evidence of ownership.
+   - A deterministic, generated runtime inventory containing only ORGANIZATION_SCOPED tables. The reviewed domain ownership decisions are recorded in `scripts/database/table-ownership-registry.ts`; verify-tenant-tables.ts derives this inventory from that registry and validates registry/schema parity. Unknown tables fail closed.
    - Verified in CI via `scripts/database/verify-tenant-tables.ts`. The verifier independently checks that every tenant-owned table has complete tenant-scoped SELECT / INSERT / UPDATE / DELETE policies. A missing policy is a defect on a tenant-owned table; it never changes the table's ownership classification. Static checks do not prove that migrations have been applied to a live database.
 
 3. **Reference Matrix Documentation** (`docs/database/reference-matrix.md`):
@@ -31,7 +31,7 @@ Tables have an explicit ownership scope. Tenant ownership, RLS policy coverage, 
 
 ### 1. Explicit ownership scopes
 
-Ownership is recorded per canonical table in scripts/database/table-ownership-registry.ts. The registry uses ORGANIZATION_SCOPED, USER_OWNED, PLATFORM_OWNED, GLOBAL_SHARED, and UNRESOLVED. A table is never classified as Global merely because it lacks organization_id / tenant_id, and RLS policy presence never establishes ownership.
+Ownership is recorded per canonical table in scripts/database/table-ownership-registry.ts. The registry uses ORGANIZATION_SCOPED, USER_OWNED, PLATFORM_OWNED, WORKSPACE_GLOBAL, GLOBAL_SHARED, and UNRESOLVED. A table is never classified as Global merely because it lacks organization_id / tenant_id, and RLS policy presence never establishes ownership. Unknown tables fail closed; explicit UNRESOLVED entries remain a distinct review state.
 
 UNRESOLVED is an intentional fail-closed review state. A new or unclassified table must receive an evidence-backed registry entry before it can be considered classified. The registry records rationale and source evidence for every Workspace and Platform Admin application table.
 
@@ -40,7 +40,7 @@ UNRESOLVED is an intentional fail-closed review state. A new or unclassified tab
 The Workspace schema currently contains an organizations root and rows related to it through organization_id or tenant_id. The registry records those rows as ORGANIZATION_SCOPED to preserve the repository's existing schema contract. This is not a product decision to introduce or support a multi-organization product model.
 
 - **RLS policy coverage:** RLS policies are a separate security control. Every row requiring organization isolation must have correctly scoped PostgreSQL policies for SELECT, INSERT, UPDATE, and DELETE, linked to current_setting('app.current_tenant_id', true). Missing or incomplete policies are security defects; they do not change ownership.
-- **Runtime access:** The existing runtime tenant-context mechanism and generated table map are not changed by SCR-001 Stage 1. Their current implementation must not be mistaken for integration of the new ownership registry.
+- **Runtime access:** The generated tenant table map is derived from ORGANIZATION_SCOPED registry entries. The runtime tenant-context implementation itself is unchanged; inventory integration does not by itself change authorization behavior.
 - **Isolation verification:** tests/isolation/suite.ts exercises database-level isolation when run against its ephemeral PostgreSQL environment. A static registry or unit test does not prove that a live database is isolated.
 
 ### 3. User and platform boundaries
@@ -67,8 +67,8 @@ The data contract is verified via multiple independent testing paths:
    - **Environment:** Requires a running PostgreSQL instance. Uses explicit role separation (`app_owner` vs `app_runtime`) as defined in `database/bootstrap.sql`.
 
 3. **Schema Policy and Migration Verification** (`verify-tenant-tables.ts` and `verify-rls-migrations.ts`)
-   - verify-tenant-tables.ts still uses its pre-existing snapshot/column-marker classifier and compares that derived inventory with TENANT_SCOPED_TABLES; SCR-001 Stage 1 has not integrated the explicit registry into this verifier. It separately checks tenant-policy expressions and operation coverage. It does not inspect a live database.
-   - verify-rls-migrations.ts continues to use the existing ownership classifier and checks the checked-in migration history for final ENABLE ROW LEVEL SECURITY and FORCE ROW LEVEL SECURITY state for the tables that classifier currently treats as tenant-owned. This is a static migration audit, not proof that migrations have been applied to production; registry integration is a later stage.
+   - verify-tenant-tables.ts uses the explicit ownership registry, rejects unknown tables, checks registry/schema parity, derives only ORGANIZATION_SCOPED tables for TENANT_SCOPED_TABLES, and separately checks tenant-policy expressions and operation coverage. Explicit UNRESOLVED entries are reported distinctly. It does not inspect a live database.
+   - verify-rls-migrations.ts uses the same registry-backed ORGANIZATION_SCOPED classification and checks the checked-in migration history for final ENABLE ROW LEVEL SECURITY and FORCE ROW LEVEL SECURITY state for the tables that classifier currently treats as tenant-owned. This is a static migration audit, not proof that migrations have been applied to production; registry integration is a later stage.
    - The `test:isolation` CI job provisions ephemeral PostgreSQL and exercises tenant isolation. The `test:db` script is not currently invoked by CI; SQL invariants must be included in the isolation suite or the workflow must be updated before claiming those tests run.
 
 ---

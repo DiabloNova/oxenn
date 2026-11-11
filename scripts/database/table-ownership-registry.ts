@@ -8,6 +8,7 @@ export type TableOwnershipScope =
   | "ORGANIZATION_SCOPED"
   | "USER_OWNED"
   | "PLATFORM_OWNED"
+  | "WORKSPACE_GLOBAL"
   | "GLOBAL_SHARED"
   | "UNRESOLVED";
 
@@ -61,6 +62,20 @@ function platformOwned(rationale: string, schemaObject: string): TableOwnershipE
   };
 }
 
+function workspaceGlobal(
+  rationale: string,
+  schemaObject: string,
+  evidence: readonly string[],
+  status: "current" | "legacy" = "current",
+): TableOwnershipEntry {
+  return {
+    scope: "WORKSPACE_GLOBAL",
+    status,
+    rationale,
+    evidence: ["database/schema/index.ts: " + schemaObject, ...evidence, "database/drizzle/meta/0015_snapshot.json: canonical Workspace snapshot"],
+  };
+}
+
 function unresolved(
   rationale: string,
   status: "legacy" | "unresolved",
@@ -71,10 +86,11 @@ function unresolved(
 
 /** The 70 Workspace tables in the canonical Drizzle schema and modular exports. */
 const workspaceOwnership = {
-  admin_users: unresolved(
-    "Legacy Workspace admin identity table. Platform Admin authentication explicitly does not read this table; it must not be conflated with platform_admin_accounts. Its present data owner and retirement/migration disposition are not established.",
+  admin_users: workspaceGlobal(
+    "Legacy Workspace-database administrator records are consumed by the existing Workspace admin Postgres adapter. They are not Platform Admin identities: the isolated Platform Admin authentication boundary explicitly does not read this table.",
+    "adminUsers",
+    ["src/features/admin/infrastructure/persistence/postgres/index.ts: active admin_users SELECT/INSERT/UPDATE operations", "docs/security/PLATFORM_ADMIN_AUTHENTICATION.md: Platform Admin authentication does not read admin_users"],
     "legacy",
-    ["database/schema/index.ts: adminUsers", "docs/security/PLATFORM_ADMIN_AUTHENTICATION.md: Platform Admin does not read admin_users"],
   ),
   aeo_analyses: organizationScoped("tenant_id"),
   ai_engines: {
@@ -95,10 +111,10 @@ const workspaceOwnership = {
   ai_visibility_audits: organizationScoped("organization_id"),
   api_keys: organizationScoped("organization_id", "database/schema/api-keys.ts"),
   audit_prompts: organizationScoped("organization_id"),
-  audit_records: unresolved(
-    "The row records actor and resource identifiers but has no organization/user foreign key or documented actor/resource ownership contract. Platform-wide versus organization-associated audit ownership remains unresolved.",
-    "unresolved",
-    ["database/schema/index.ts: auditRecords", "database/drizzle/meta/0015_snapshot.json: audit_records has no ownership foreign key"],
+  audit_records: workspaceGlobal(
+    "The Workspace database shared privileged audit stream is written through explicit system context and read by the Workspace admin persistence adapter. It is distinct from platform_admin_audit_events in the isolated Platform Admin database.",
+    "auditRecords",
+    ["src/core/database/tenant-context/index.ts: doAuditLog inserts through privileged system client", "src/features/admin/infrastructure/persistence/postgres/index.ts: audit_records read/write adapter", "database/platform-admin/schema/index.ts: separate platform_admin_audit_events table"],
   ),
   auth_rate_limits: platformOwned(
     "Rate-limit buckets are keyed by endpoint and bucket key with attempt/expiry counters; the schema models shared authentication-abuse control state, not user-owned business data.",
@@ -157,10 +173,11 @@ const workspaceOwnership = {
     "Each reset token belongs to one user through its required user_id foreign key and is scoped to that identity's credential recovery.",
     "passwordResetTokens.userId references users.id",
   ),
-  permissions: unresolved(
-    "The schema explicitly marks roles and permissions as frozen legacy and says organization_members.role is the authorization source. This table is not an active ownership authority; its historical data disposition is unresolved.",
+  permissions: workspaceGlobal(
+    "Frozen legacy Workspace-global permission catalog. The schema states it is no longer used for authorization decisions; organization_members.role is the current authorization source.",
+    "permissions",
+    ["database/schema/index.ts: FROZEN-LEGACY declaration and permissions.role_id foreign key", "database/schema/index.ts: organizationMembers.role is current authorization source"],
     "legacy",
-    ["database/schema/index.ts: FROZEN-LEGACY permissions declaration", "database/schema/index.ts: organizationMembers.role is the stated authorization source"],
   ),
   position_observations: organizationScoped("organization_id"),
   premium_audits: organizationScoped("organization_id"),
@@ -170,10 +187,11 @@ const workspaceOwnership = {
   prompts: organizationScoped("organization_id"),
   recommendation_observations: organizationScoped("organization_id"),
   recommendations: organizationScoped("organization_id"),
-  roles: unresolved(
-    "The schema explicitly marks roles and permissions as frozen legacy and says organization_members.role is the authorization source. This table is not an active authorization authority; its historical data disposition is unresolved.",
+  roles: workspaceGlobal(
+    "Frozen legacy Workspace-global role catalog. The schema states roles and permissions are no longer used for authorization decisions; organization_members.role is current. admin_users.role_id is a legacy schema relationship, not a current authorization decision path.",
+    "roles",
+    ["database/schema/index.ts: FROZEN-LEGACY declaration", "database/schema/index.ts: adminUsers.roleId and permissions.roleId foreign keys", "database/schema/index.ts: organizationMembers.role is current authorization source"],
     "legacy",
-    ["database/schema/index.ts: FROZEN-LEGACY roles declaration", "database/schema/index.ts: organizationMembers.role is the stated authorization source"],
   ),
   sessions: userOwned(
     "The required user_id foreign key identifies the session owner. workspace_id is an optional selected-workspace context reference and does not change the session's user ownership.",

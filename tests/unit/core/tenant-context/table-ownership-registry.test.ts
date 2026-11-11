@@ -80,11 +80,19 @@ describe("Canonical table ownership registry", () => {
   });
 
   it("surfaces unresolved legacy ownership instead of defaulting it to Global", () => {
-    expect(getTableOwnershipEntry("workspace", "admin_users").scope).toBe("UNRESOLVED");
-    expect(getTableOwnershipEntry("workspace", "audit_records").scope).toBe("UNRESOLVED");
-    expect(getTableOwnershipEntry("workspace", "permissions").scope).toBe("UNRESOLVED");
-    expect(getTableOwnershipEntry("workspace", "roles").scope).toBe("UNRESOLVED");
     expect(getTableOwnershipEntry("workspace", "system_configurations").scope).toBe("UNRESOLVED");
+    expect(getTableOwnershipEntry("workspace", "admin_users").scope).toBe("WORKSPACE_GLOBAL");
+    expect(getTableOwnershipEntry("workspace", "audit_records").scope).toBe("WORKSPACE_GLOBAL");
+    expect(getTableOwnershipEntry("workspace", "permissions").scope).toBe("WORKSPACE_GLOBAL");
+    expect(getTableOwnershipEntry("workspace", "roles").scope).toBe("WORKSPACE_GLOBAL");
+  });
+
+  it("keeps Workspace-global legacy data distinct from the isolated Platform Admin database", () => {
+    expect(getTableOwnershipEntry("workspace", "admin_users").status).toBe("legacy");
+    expect(getTableOwnershipEntry("workspace", "audit_records").scope).toBe("WORKSPACE_GLOBAL");
+    expect(getTableOwnershipEntry("workspace", "roles").status).toBe("legacy");
+    expect(getTableOwnershipEntry("workspace", "permissions").status).toBe("legacy");
+    expect(getTableOwnershipEntry("platform-admin", "platform_admin_accounts").scope).toBe("PLATFORM_OWNED");
   });
 
   it("keeps user-owned sessions distinct from their optional workspace context", () => {

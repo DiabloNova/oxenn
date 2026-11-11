@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-context";
+import { getOwnershipRegistryDrift, getTableOwnershipEntry, type TableOwnershipScope } from "./table-ownership-registry";
+export type { TableOwnershipScope } from "./table-ownership-registry";
 
 interface SnapshotPolicy {
   as?: string;
@@ -21,41 +23,11 @@ export interface TenantTableSnapshot {
 }
 
 /**
- * Explicit, reviewed exceptions for tables that carry a tenant ownership column
- * but are intentionally global. Every entry must include a non-empty rationale.
- * No current table is exempt from marker-based ownership.
+ * Ownership is read only from the reviewed registry. Missing entries throw;
+ * no column-marker or RLS-policy fallback is permitted.
  */
-export const GLOBAL_OWNERSHIP_EXCEPTIONS: Readonly<Record<string, string>> = Object.freeze({});
-
-export type TableOwnershipScope = "Tenant-Owned" | "Global";
-
-/**
- * Ownership is a schema/domain fact, not a consequence of RLS policy presence.
- * organizations is the tenant root; organization_id and tenant_id are explicit
- * ownership markers. RLS is checked independently.
- */
-export function getTableOwnershipScope(
-  table: Pick<SnapshotTable, "name" | "columns">,
-): TableOwnershipScope {
-  // The organization table is the tenant root and can never be a Global exception.
-  if (table.name === "organizations") return "Tenant-Owned";
-
-  if (Object.hasOwn(GLOBAL_OWNERSHIP_EXCEPTIONS, table.name)) {
-    const rationale = GLOBAL_OWNERSHIP_EXCEPTIONS[table.name];
-    if (!rationale?.trim()) {
-      throw new Error(
-        "[verify-tenant-tables] Global ownership exception for " + table.name +
-        " requires a non-empty rationale.",
-      );
-    }
-    return "Global";
-  }
-
-  const columns = table.columns ?? {};
-  return Object.hasOwn(columns, "organization_id") ||
-    Object.hasOwn(columns, "tenant_id")
-    ? "Tenant-Owned"
-    : "Global";
+export function getTableOwnershipScope(table: Pick<SnapshotTable, "name" | "columns">): TableOwnershipScope {
+  return getTableOwnershipEntry("workspace", table.name).scope;
 }
 
 function getCanonicalMetadataDirectory(rootDir: string): string {
@@ -171,12 +143,18 @@ function readLatestSnapshot(): TenantTableSnapshot {
 export function getTenantTableCoverageFromSnapshot(snapshot: TenantTableSnapshot): {
   tenantTables: string[];
   missingPolicyTables: string[];
+  unresolvedOwnershipTables: string[];
 } {
   const tables = Object.values(snapshot.tables);
-  const tenantTables = tables
-    .filter((table) => getTableOwnershipScope(table) === "Tenant-Owned")
-    .map((table) => table.name)
-    .sort();
+  const tenantTables: string[] = [];
+  const unresolvedOwnershipTables: string[] = [];
+  for (const table of tables) {
+    const scope = getTableOwnershipScope(table);
+    if (scope === "ORGANIZATION_SCOPED") tenantTables.push(table.name);
+    if (scope === "UNRESOLVED") unresolvedOwnershipTables.push(table.name);
+  }
+  tenantTables.sort();
+  unresolvedOwnershipTables.sort();
 
   const hasTenantPredicate = (expression: unknown, tenantColumn: string): boolean => {
     if (typeof expression !== "string") return false;
@@ -219,7 +197,7 @@ export function getTenantTableCoverageFromSnapshot(snapshot: TenantTableSnapshot
     .map((table) => table.name)
     .sort();
 
-  return { tenantTables, missingPolicyTables };
+  return { tenantTables, missingPolicyTables, unresolvedOwnershipTables };
 }
 
 export function getDerivedTenantTablesFromSnapshot(): string[] {
@@ -249,14 +227,20 @@ export function verifyTenantTables(options?: { fix?: boolean }): {
   missingInRuntime: string[];
   extraInRuntime: string[];
   missingPolicyTables: string[];
+  unresolvedOwnershipTables: string[];
+  missingRegistryEntries: string[];
+  staleRegistryEntries: string[];
 } {
-  const coverage = getTenantTableCoverageFromSnapshot(readLatestSnapshot());
+  const snapshot = readLatestSnapshot();
+  const coverage = getTenantTableCoverageFromSnapshot(snapshot);
   const derivedTables = coverage.tenantTables;
   const runtimeTables: string[] = Array.from(TENANT_SCOPED_TABLES).sort();
-
+  const registryDrift = getOwnershipRegistryDrift("workspace", Object.values(snapshot.tables).map((table) => table.name));
   const missingInRuntime = derivedTables.filter((t) => !runtimeTables.includes(t));
   const extraInRuntime = runtimeTables.filter((t) => !derivedTables.includes(t));
   const isDrifted = missingInRuntime.length > 0 || extraInRuntime.length > 0;
+  const hasRegistryDrift = registryDrift.missingRegistryEntries.length > 0 || registryDrift.staleRegistryEntries.length > 0;
+  if (hasRegistryDrift && options?.fix) throw new Error("[verify-tenant-tables] Registry/schema drift must be reviewed in the canonical registry before regeneration.");
 
   if (isDrifted && options?.fix) {
     const targetFile = path.join(process.cwd(), "src/core/database/tenant-tables.generated.ts");
@@ -269,16 +253,19 @@ export function verifyTenantTables(options?: { fix?: boolean }): {
       missingInRuntime: [],
       extraInRuntime: [],
       missingPolicyTables: coverage.missingPolicyTables,
+      unresolvedOwnershipTables: coverage.unresolvedOwnershipTables,
+      missingRegistryEntries: registryDrift.missingRegistryEntries,
+      staleRegistryEntries: registryDrift.staleRegistryEntries,
     };
   }
 
   return {
-    success: !isDrifted && coverage.missingPolicyTables.length === 0,
-    derivedTables,
-    runtimeTables,
-    missingInRuntime,
-    extraInRuntime,
+    success: !isDrifted && !hasRegistryDrift && coverage.missingPolicyTables.length === 0,
+    derivedTables, runtimeTables, missingInRuntime, extraInRuntime,
     missingPolicyTables: coverage.missingPolicyTables,
+    unresolvedOwnershipTables: coverage.unresolvedOwnershipTables,
+    missingRegistryEntries: registryDrift.missingRegistryEntries,
+    staleRegistryEntries: registryDrift.staleRegistryEntries,
   };
 }
 
