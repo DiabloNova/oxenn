@@ -296,17 +296,18 @@ export class HttpCrawlProvider implements CrawlProvider {
               const candidateUrl = normalizedLink.value.canonical;
               if (new URL(candidateUrl).origin !== allowedOrigin || visited.has(candidateUrl)) continue;
               if (queue.some(entry => entry.url === candidateUrl)) continue;
-              if (queue.length + documents.length + active.size >= policy.maxPages) {
-                if (policy.robotsPolicy === "respect") {
-                  try {
-                    // Reuse the origin's cached robots response; never fetch a
-                    // disallowed page body just to decide partial completion.
-                    await assertRobotsAllowed(normalizedLink.value, false);
-                  } catch (error) {
-                    if (error instanceof RobotsDisallowedError) continue;
-                    throw error;
-                  }
+              if (policy.robotsPolicy === "respect") {
+                try {
+                  // Filter disallowed links before they reserve queue capacity
+                  // or count as page-limit omissions. The origin cache avoids
+                  // another robots.txt request for each discovered URL.
+                  await assertRobotsAllowed(normalizedLink.value, false);
+                } catch (error) {
+                  if (error instanceof RobotsDisallowedError) continue;
+                  throw error;
                 }
+              }
+              if (queue.length + documents.length + active.size >= policy.maxPages) {
                 deferredPageLimitUrls.add(candidateUrl);
                 continue;
               }

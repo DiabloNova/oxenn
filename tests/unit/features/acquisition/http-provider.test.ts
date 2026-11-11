@@ -171,6 +171,52 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
     }
   });
 
+  it("does not let a robots-disallowed link reserve capacity ahead of a permitted sibling", async () => {
+    let port = 0;
+    const requested: string[] = [];
+    const server = createServer((request, response) => {
+      const host = (request.headers.host ?? "").split(":")[0];
+      const path = request.url ?? "/";
+      requested.push(`${host}${path}`);
+      if (path === "/robots.txt") {
+        response.writeHead(200, { "content-type": "text/plain" })
+          .end("User-agent: *\nDisallow: /admin");
+        return;
+      }
+      if (path === "/") {
+        response.writeHead(200, { "content-type": "text/html" })
+          .end('<a href="/admin">admin</a><a href="/public">public</a>');
+        return;
+      }
+      response.writeHead(200, { "content-type": "text/html" }).end("<title>public</title>");
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const request = makeRequest(url, resolveCrawlPolicy({
+        robotsPolicy: "respect", maxPages: 2, maxDepth: 2, maxConcurrency: 1,
+        perHostRequestsPerSecond: 100
+      }));
+      const result = await new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        request, request.policy, new AbortController().signal
+      );
+
+      expect(result.pageCount).toBe(2);
+      expect(result.partial).toBe(false);
+      expect(requested).toContain("a.test/public");
+      expect(requested).not.toContain("a.test/admin");
+      expect(requested.filter(value => value === "a.test/robots.txt")).toHaveLength(1);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
   it("does not mark a page-limit truncation when remaining links are ineligible", async () => {
     let port = 0;
     const server = createServer((_request, response) => {
