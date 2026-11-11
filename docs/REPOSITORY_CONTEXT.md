@@ -120,6 +120,14 @@ The intended model is multi-tenant PostgreSQL with explicit Row-Level Security:
 - For authorization, `organization_members.role` is the authoritative role source; do not authorize using a potentially stale `session.user.role` snapshot.
 - `super_admin` is operator-only and must be granted only through the dedicated CLI flow described in `AGENTS.md`, not ordinary registration or API flows.
 
+### 5.2.1 Explicit table ownership inventory (SCR-001 Stage 1)
+
+- The reviewed inventory is scripts/database/table-ownership-registry.ts, with its scope definitions and rationale/evidence documented in docs/database/table-ownership-registry.md. It explicitly covers 70 Workspace application tables and 7 separate Platform Admin application tables.
+- ORGANIZATION_SCOPED records existing organization_id / tenant_id relationships in the Workspace schema. It preserves those schema semantics; it does not add a new tenant abstraction or revise the product's organization model.
+- UNRESOLVED is an explicit review state for admin_users, audit_records, permissions, and roles. Unknown tables do not fall back to Global in registry lookups.
+- SCR-001 Stage 1 is an inventory/test/documentation change only. The registry is not yet integrated into verify-tenant-tables.ts, verify-rls-migrations.ts, build-reference-matrix.ts, or runtime authorization. Existing runtime and generated artifacts retain their prior behavior.
+- The repository's existing product/security documents still describe a multi-tenant model, while the owner has clarified that this task must not introduce a multi-organization product model. Stage 1 preserves the current schema relationships without resolving or rewriting that product-level contract; any change to that direction requires a separately scoped architecture decision.
+
 ### 5.3 Simulator, CI PostgreSQL, and production connectivity are not interchangeable
 
 This distinction is critical:
