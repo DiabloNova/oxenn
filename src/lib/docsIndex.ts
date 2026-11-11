@@ -9,7 +9,6 @@ export interface DocMeta {
 }
 
 export const DOCS_INDEX: DocMeta[] = [
-
   {
     slug: "product",
     titleEn: "Seorchable Documentation Architecture",
