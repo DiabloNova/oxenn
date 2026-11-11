@@ -230,7 +230,7 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
       const path = request.url ?? "/";
       requested.push(`${host}${path}`);
       if (host === "a.test" && path === "/robots.txt") {
-        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *\\nAllow: /");
+        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *\nAllow: /");
         return;
       }
       if (host === "a.test" && path === "/") {
@@ -238,7 +238,7 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
         return;
       }
       if (host === "www.a.test" && path === "/robots.txt") {
-        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *\\nDisallow: /private");
+        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *\nDisallow: /private");
         return;
       }
       if (host === "www.a.test" && path === "/private") {
