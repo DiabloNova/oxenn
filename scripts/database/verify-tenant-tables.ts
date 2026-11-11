@@ -292,10 +292,25 @@ if (require.main === module) {
         for (const t of result.missingPolicyTables) console.error(`  ! ${t}`);
       }
 
+      if (result.missingRegistryEntries.length > 0) {
+        console.error("Tables missing from the explicit ownership registry:");
+        for (const table of result.missingRegistryEntries) console.error("  ! " + table);
+      }
+      if (result.staleRegistryEntries.length > 0) {
+        console.error("Stale ownership registry entries:");
+        for (const table of result.staleRegistryEntries) console.error("  ! " + table);
+      }
+      if (result.unresolvedOwnershipTables.length > 0) {
+        console.warn("Explicit UNRESOLVED ownership entries (not classified as Global or organization-scoped):");
+        for (const table of result.unresolvedOwnershipTables) console.warn("  ? " + table);
+      }
       console.error("\nRun 'pnpm tsx scripts/database/verify-tenant-tables.ts --fix' to regenerate the runtime table inventory; missing policies must be fixed in the canonical schema.");
       process.exit(1);
     } else {
-      console.log(`✅ [Tenant Tables Verification] SUCCESS: ${result.derivedTables.length} tenant-owned tables have complete policies and match runtime inventory.`);
+      console.log("[Tenant Tables Verification] SUCCESS: " + result.derivedTables.length + " organization-scoped tables have complete policies and match runtime inventory.");
+      if (result.unresolvedOwnershipTables.length > 0) {
+        console.warn("[Tenant Tables Verification] Explicit UNRESOLVED ownership entries remain visible for architecture review: " + result.unresolvedOwnershipTables.join(", ") + ".");
+      }
       process.exit(0);
     }
   } catch (err) {
