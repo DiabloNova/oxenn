@@ -10,7 +10,7 @@ visibility: internal
 **Pull request:** #130  
 **Branch:** audit/040-scr-001-tenant-ownership-review-20261109  
 **Stage 1 code commit:** 5ccf1e2d4f83f8bc3226c00123a611eccd87cd94
-**Stage 2 validation:** Pending CI on the Stage 2 commit.
+**Stage 2 validation:** CI run #751 passed on code commit 88b6df55ea9e691e16efa2e7f720987956ccd4f3.
 
 ## Outcome
 
@@ -51,7 +51,11 @@ All 7 Platform Admin tables are PLATFORM_OWNED and are registered separately fro
 6. Integrated the explicit registry into verify-tenant-tables.ts, verify-rls-migrations.ts, and build-reference-matrix.ts. Unknown tables fail closed; only ORGANIZATION_SCOPED tables feed the generated tenant runtime inventory and tenant RLS/migration checks.
 7. Updated the tracked Reference Matrix to show all six ownership scopes and to mark system_configurations RLS applicability as not evaluated while ownership remains unresolved.
 
-## Validation
+## Stage 2 validation
+
+CI workflow run #751 (workflow run ID 43024728474) passed on code commit 88b6df55ea9e691e16efa2e7f720987956ccd4f3. All jobs and steps passed: Unit Tests, UI Tests, Isolation Suite, Typecheck, Lint, tenant schema alignment, RLS migration coverage, Phase 0 and documentation checks, Drizzle migration chain, Build, Reference Matrix generation, and generated tracked-file no-drift verification.
+
+## Stage 1 validation
 
 Final CI workflow run: 42994650847 (run number 739), on code commit 5ccf1e2d4f83f8bc3226c00123a611eccd87cd94.
 
