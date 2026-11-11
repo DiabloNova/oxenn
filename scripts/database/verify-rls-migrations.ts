@@ -355,7 +355,7 @@ export function getRlsMigrationCoverage(rootDir = process.cwd()): RlsMigrationCo
   );
   const snapshot: Snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
   const tenantTables = Object.values(snapshot.tables)
-    .filter((table) => getTableOwnershipScope(table) === "Tenant-Owned")
+    .filter((table) => getTableOwnershipScope(table) === "ORGANIZATION_SCOPED")
     .map((table) => normalizeTableName(table.name))
     .sort();
 
