@@ -141,7 +141,8 @@ export class HttpCrawlProvider implements CrawlProvider {
     ];
     const visited = new Set<string>();
     const documents: CrawledDocument[] = [];
-    const robotsCache = new Map<string, Promise<{ text: string; finalOrigin: string }>>();
+    // Robots redirects remain authoritative only for the origin that requested them.
+    const robotsCache = new Map<string, Promise<string>>();
     const rateLimiter = new PerHostRateLimiter();
     let allowedOrigin = new URL(request.normalizedUrl.canonical).origin;
     const crawlErrors: CrawlError[] = [];
@@ -170,7 +171,7 @@ export class HttpCrawlProvider implements CrawlProvider {
     const getRobots = async (
       url: { canonical: string; asciiHost: string },
       isSeed: boolean
-    ): Promise<{ text: string; finalOrigin: string }> => {
+    ): Promise<string> => {
       const origin = new URL(url.canonical).origin;
       let robots = robotsCache.get(origin);
       if (!robots) {
@@ -188,23 +189,18 @@ export class HttpCrawlProvider implements CrawlProvider {
               : { allowedOrigin }),
             beforeRedirect: target => requestHost(target.asciiHost)
           });
-          return {
-            text: response.body.toString("utf8"),
-            finalOrigin: new URL(response.finalUrl.canonical).origin
-          };
+          return response.body.toString("utf8");
         })();
         robotsCache.set(origin, robots);
       }
-      const result = await robots;
-      robotsCache.set(result.finalOrigin, robots);
-      return result;
+      return robots;
     };
     const assertRobotsAllowed = async (
       url: { canonical: string; asciiHost: string; path: string },
       isSeed: boolean
     ): Promise<void> => {
-      const result = await getRobots(url, isSeed);
-      if (robotsDisallows(result.text, url.path)) throw new RobotsDisallowedError();
+      const robots = await getRobots(url, isSeed);
+      if (robotsDisallows(robots, url.path)) throw new RobotsDisallowedError();
     };
     const processEntry = async (entry: QueueEntry): Promise<CrawledDocument | null> => {
       if (crawlSignal.aborted) {

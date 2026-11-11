@@ -276,4 +276,63 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
     }
   });
 
+  it("does not reuse a redirected robots.txt response as another origin's robots policy", async () => {
+    let port = 0;
+    const requested: string[] = [];
+    const server = createServer((request, response) => {
+      const host = (request.headers.host ?? "").split(":")[0];
+      const path = request.url ?? "/";
+      requested.push(`${host}${path}`);
+
+      if (host === "a.test" && path === "/robots.txt") {
+        response.writeHead(302, { location: `http://www.a.test:${port}/rules` }).end();
+        return;
+      }
+      if (host === "www.a.test" && path === "/rules") {
+        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *\nAllow: /");
+        return;
+      }
+      if (host === "www.a.test" && path === "/robots.txt") {
+        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *\nDisallow: /private");
+        return;
+      }
+      if (host === "a.test" && path === "/") {
+        response.writeHead(302, { location: `http://www.a.test:${port}/private` }).end();
+        return;
+      }
+      if (host === "www.a.test" && path === "/private") {
+        response.writeHead(200, { "content-type": "text/html" }).end("<title>must not be fetched</title>");
+        return;
+      }
+      response.writeHead(404).end();
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const crawlRequest = makeRequest(url, resolveCrawlPolicy({
+        robotsPolicy: "respect",
+        perHostRequestsPerSecond: 100,
+        maxPages: 5,
+        maxConcurrency: 1
+      }));
+      const result = await new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        crawlRequest, crawlRequest.policy, new AbortController().signal
+      );
+
+      expect(requested).toContain("www.a.test/rules");
+      expect(requested).toContain("www.a.test/robots.txt");
+      expect(requested).not.toContain("www.a.test/private");
+      expect(result.documents).toHaveLength(0);
+      expect(result.errors).toHaveLength(0);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
 });
