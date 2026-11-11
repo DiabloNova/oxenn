@@ -24,6 +24,7 @@ interface FirecrawlDocument {
   url?: unknown;
   markdown?: unknown;
   html?: unknown;
+  metadata?: Record<string, unknown>;
 }
 
 interface FirecrawlResponse {
@@ -54,7 +55,7 @@ function mapProviderError(error: unknown): CrawlError {
   return new CrawlError("PROVIDER_ERROR", "Firecrawl request failed", { transient: true });
 }
 
-function readDocument(value: unknown): { url: string; text: string; contentType: string; bytes: number } {
+function readDocument(value: unknown): { url: string; sourceUrl?: string; text: string; contentType: string; bytes: number } {
   if (!isRecord(value)) throw new CrawlError("PROVIDER_ERROR", "Firecrawl returned malformed data");
   const item = value as FirecrawlDocument;
   const url = typeof item.url === "string" ? item.url : "";
@@ -69,6 +70,7 @@ function readDocument(value: unknown): { url: string; text: string; contentType:
   }
   return {
     url,
+    sourceUrl: typeof item.metadata?.sourceURL === "string" ? item.metadata.sourceURL : undefined,
     text,
     contentType: markdown ? "text/markdown" : "text/html",
     bytes: Buffer.byteLength(text)
@@ -195,12 +197,21 @@ export class FirecrawlCrawlProvider implements CrawlProvider {
       // that could be blocked by a site's WAF or bypass its own crawl/robots handling.
       // Accept a canonical seed alias only when the first-party response stays within
       // the same host or its www-pair, with no scheme downgrade or port change.
-      const canonicalSeedAlias = parsed.find(item => {
-        const candidate = normalizeUrl(item.url, policy.stripTrackingParams);
-        return candidate.ok &&
-          new URL(candidate.value.canonical).origin !== seedOrigin &&
-          isCanonicalSeedRedirect(originalSeed.value, candidate.value);
-      });
+      const hasOriginalOriginDocument = parsed.some(
+        item => new URL(item.url).origin === seedOrigin
+      );
+      const canonicalSeedAlias = hasOriginalOriginDocument
+        ? undefined
+        : parsed.find(item => {
+            if (!item.sourceUrl) return false;
+            const source = normalizeUrl(item.sourceUrl, policy.stripTrackingParams);
+            const candidate = normalizeUrl(item.url, policy.stripTrackingParams);
+            return source.ok &&
+              candidate.ok &&
+              source.value.canonical === originalSeed.value.canonical &&
+              new URL(candidate.value.canonical).origin !== seedOrigin &&
+              isCanonicalSeedRedirect(originalSeed.value, candidate.value);
+          });
       if (canonicalSeedAlias) {
         const validatedAliasUrl = await this.seedUrlResolver(
           canonicalSeedAlias.url,

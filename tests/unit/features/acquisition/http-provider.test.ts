@@ -180,6 +180,7 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
           })
         })
       ]);
+      expect(requested.indexOf("a.test/robots.txt")).toBeLessThan(requested.indexOf("a.test/"));
       expect(requested).toContain("www.a.test/robots.txt");
       expect(requested.some(value => value.startsWith("login.test"))).toBe(false);
     } finally {
@@ -216,6 +217,60 @@ describe("HttpCrawlProvider resource and origin boundaries", () => {
         details: expect.objectContaining({ boundary: "origin" })
       });
       expect(requested.some(value => value.startsWith("evil.test"))).toBe(false);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
+  it("checks robots.txt for a canonical redirect target before requesting its page body", async () => {
+    let port = 0;
+    const requested: string[] = [];
+    const server = createServer((request, response) => {
+      const host = (request.headers.host ?? "").split(":")[0];
+      const path = request.url ?? "/";
+      requested.push(`${host}${path}`);
+      if (host === "a.test" && path === "/robots.txt") {
+        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *\\nAllow: /");
+        return;
+      }
+      if (host === "a.test" && path === "/") {
+        response.writeHead(302, { location: `http://www.a.test:${port}/private` }).end();
+        return;
+      }
+      if (host === "www.a.test" && path === "/robots.txt") {
+        response.writeHead(200, { "content-type": "text/plain" }).end("User-agent: *\\nDisallow: /private");
+        return;
+      }
+      if (host === "www.a.test" && path === "/private") {
+        response.writeHead(200, { "content-type": "text/html" }).end("<title>must not be fetched</title>");
+        return;
+      }
+      response.writeHead(404).end();
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("server did not bind");
+    port = address.port;
+    try {
+      const url = `http://a.test:${port}/`;
+      const crawlRequest = makeRequest(url, resolveCrawlPolicy({
+        robotsPolicy: "respect",
+        perHostRequestsPerSecond: 100,
+        maxPages: 5,
+        maxConcurrency: 1
+      }));
+      const result = await new HttpCrawlProvider({ resolver, hostValidator }).execute(
+        crawlRequest, crawlRequest.policy, new AbortController().signal
+      );
+
+      expect(requested.indexOf("a.test/robots.txt")).toBeLessThan(requested.indexOf("a.test/"));
+      expect(requested).toContain("www.a.test/robots.txt");
+      expect(requested).not.toContain("www.a.test/private");
+      expect(result.documents).toHaveLength(0);
+      expect(result.errors).toHaveLength(0);
     } finally {
       await new Promise<void>(resolve => server.close(() => resolve()));
     }

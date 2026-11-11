@@ -19,6 +19,13 @@ interface QueueEntry {
   depth: number;
 }
 
+class RobotsDisallowedError extends Error {
+  public constructor() {
+    super("Robots policy disallows this crawl URL");
+    this.name = "RobotsDisallowedError";
+  }
+}
+
 function isOriginBoundaryViolation(error: unknown): error is CrawlError {
   return error instanceof CrawlError &&
     error.code === "POLICY_VIOLATION" &&
@@ -158,8 +165,46 @@ export class HttpCrawlProvider implements CrawlProvider {
       signal: crawlSignal,
       byteBudget,
       onBudgetExceeded: () => controller.abort(),
-      beforeRedirect: (url: { asciiHost: string }) => requestHost(url.asciiHost),
       ...this.fetchOptions
+    };
+    const getRobots = async (
+      url: { canonical: string; asciiHost: string },
+      isSeed: boolean
+    ): Promise<{ text: string; finalOrigin: string }> => {
+      const origin = new URL(url.canonical).origin;
+      let robots = robotsCache.get(origin);
+      if (!robots) {
+        robots = (async () => {
+          await requestHost(url.asciiHost);
+          const response = await safeFetch(`${origin}/robots.txt`, {
+            policy: {
+              ...policy,
+              maxPages: 1,
+              allowedContentTypes: ["text/plain", "text/html"]
+            },
+            ...fetchOptions,
+            ...(isSeed
+              ? { allowCanonicalSeedRedirects: true }
+              : { allowedOrigin }),
+            beforeRedirect: target => requestHost(target.asciiHost)
+          });
+          return {
+            text: response.body.toString("utf8"),
+            finalOrigin: new URL(response.finalUrl.canonical).origin
+          };
+        })();
+        robotsCache.set(origin, robots);
+      }
+      const result = await robots;
+      robotsCache.set(result.finalOrigin, robots);
+      return result;
+    };
+    const assertRobotsAllowed = async (
+      url: { canonical: string; asciiHost: string; path: string },
+      isSeed: boolean
+    ): Promise<void> => {
+      const result = await getRobots(url, isSeed);
+      if (robotsDisallows(result.text, url.path)) throw new RobotsDisallowedError();
     };
     const processEntry = async (entry: QueueEntry): Promise<CrawledDocument | null> => {
       if (crawlSignal.aborted) {
@@ -176,67 +221,23 @@ export class HttpCrawlProvider implements CrawlProvider {
         const isSeed = entry.depth === 0;
         const host = normalized.value.asciiHost;
         if (policy.robotsPolicy === "respect") {
-          const origin = new URL(normalized.value.canonical).origin;
-          let robots = robotsCache.get(origin);
-          if (!robots) {
-            robots = (async () => {
-              await requestHost(host);
-              const robotsResponse = await safeFetch(`${origin}/robots.txt`, {
-                policy: {
-                  ...policy,
-                  maxPages: 1,
-                  allowedContentTypes: ["text/plain", "text/html"]
-                },
-                ...fetchOptions,
-                ...(isSeed ? { allowCanonicalSeedRedirects: true } : { allowedOrigin })
-              });
-              return {
-                text: robotsResponse.body.toString("utf8"),
-                finalOrigin: new URL(robotsResponse.finalUrl.canonical).origin
-              };
-            })();
-            robotsCache.set(origin, robots);
-          }
-          const robotsResult = await robots;
-          robotsCache.set(robotsResult.finalOrigin, robots);
-          if (robotsDisallows(robotsResult.text, normalized.value.path)) return null;
+          await assertRobotsAllowed(normalized.value, isSeed);
         }
         await requestHost(host);
         const response = await safeFetch(normalized.value.canonical, {
           policy,
           ...fetchOptions,
-          ...(isSeed ? { allowCanonicalSeedRedirects: true } : { allowedOrigin })
+          ...(isSeed ? { allowCanonicalSeedRedirects: true } : { allowedOrigin }),
+          beforeRedirect: async target => {
+            await requestHost(target.asciiHost);
+            if (policy.robotsPolicy === "respect") {
+              await assertRobotsAllowed(target, isSeed);
+            }
+          }
         });
         if (isSeed) {
-          const finalOrigin = new URL(response.finalUrl.canonical).origin;
-          allowedOrigin = finalOrigin;
-          if (policy.robotsPolicy === "respect") {
-            let finalRobots = robotsCache.get(finalOrigin);
-            if (!finalRobots || (await finalRobots).finalOrigin !== finalOrigin) {
-              finalRobots = (async () => {
-                await requestHost(new URL(finalOrigin).hostname);
-                const robotsResponse = await safeFetch(`${finalOrigin}/robots.txt`, {
-                  policy: {
-                    ...policy,
-                    maxPages: 1,
-                    allowedContentTypes: ["text/plain", "text/html"]
-                  },
-                  ...fetchOptions,
-                  allowedOrigin: finalOrigin
-                });
-                return {
-                  text: robotsResponse.body.toString("utf8"),
-                  finalOrigin: new URL(robotsResponse.finalUrl.canonical).origin
-                };
-              })();
-              robotsCache.set(finalOrigin, finalRobots);
-            }
-            const finalRobotsResult = await finalRobots;
-            if (robotsDisallows(
-              finalRobotsResult.text,
-              new URL(response.finalUrl.canonical).pathname
-            )) return null;
-          }
+          // The exact boundary becomes the seed's final, validated URL origin.
+          allowedOrigin = new URL(response.finalUrl.canonical).origin;
         }
         const document = documentFromResponse(
           isSeed ? request.normalizedUrl.canonical : normalized.value.canonical,
@@ -250,6 +251,7 @@ export class HttpCrawlProvider implements CrawlProvider {
         }
         return document;
       } catch (error) {
+        if (error instanceof RobotsDisallowedError) return null;
         if (entry.depth > 0 && isOriginBoundaryViolation(error)) {
           crawlErrors.push(new CrawlError(
             "POLICY_VIOLATION",

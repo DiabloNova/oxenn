@@ -126,8 +126,12 @@ describe("FirecrawlCrawlProvider", () => {
           total: 2,
           completed: 2,
           data: [
-            { url: "https://www.example.com/one", markdown: "one" },
-            { url: "https://www.example.com/two", markdown: "two" }
+            {
+              url: "https://www.example.com/",
+              markdown: "one",
+              metadata: { sourceURL: "https://example.com/" }
+            },
+            { url: "https://www.example.com/two", markdown: "two", metadata: { sourceURL: "https://example.com/two" } }
           ]
         };
       }
@@ -144,6 +148,29 @@ describe("FirecrawlCrawlProvider", () => {
       expect(params?.limit).toBe(2);
       expect(result.documents).toHaveLength(2);
       expect(result.errors).toHaveLength(0);
+      expect(result.partial).toBe(true);
+    });
+  });
+
+  it("does not switch the Firecrawl origin because a non-seed page uses the www host", async () => {
+    const provider = new FirecrawlCrawlProvider({
+      crawlUrl: async () => ({
+        success: true,
+        status: "completed",
+        data: [
+          { url: "https://example.com/", markdown: "seed", metadata: { sourceURL: "https://example.com/" } },
+          { url: "https://www.example.com/about", markdown: "www page", metadata: { sourceURL: "https://www.example.com/about" } }
+        ]
+      })
+    }, identitySeedUrl);
+
+    await withApiKey(async () => {
+      const crawlRequest = request();
+      const result = await provider.execute(
+        crawlRequest, crawlRequest.policy, new AbortController().signal
+      );
+      expect(result.documents.map(document => document.finalUrl)).toEqual(["https://example.com/"]);
+      expect(result.errors.some(error => error.code === "POLICY_VIOLATION")).toBe(true);
       expect(result.partial).toBe(true);
     });
   });
