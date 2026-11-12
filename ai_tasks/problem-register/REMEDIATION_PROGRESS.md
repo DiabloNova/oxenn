@@ -576,6 +576,15 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Tests: not run locally. CI for the resulting PR commit is pending; no passing result is claimed in this entry.
 - Scope: documentation, Finding Ledger, and the focused Ledger contract test only. No application route, service, schema, SQL migration, generated artifact, database, Redis, provider, deployment, production resource, or `main` branch was changed or accessed.
 
+### Post-commit CI verification — 2026-11-12
+
+- Remediation commit: [`541c3ecac7abd29e434824cd05cc7cb29c2c52e5`](https://github.com/DiabloNova/oxenn/commit/541c3ecac7abd29e434824cd05cc7cb29c2c52e5) on `wave0-revalidate`.
+- GitHub Actions run [#43192940144](https://github.com/DiabloNova/oxenn/actions/runs/43192940144): **Unit Tests — success; Build and Test — success; Isolation Suite — success** on the exact remediation commit.
+- Vercel Preview Comments and Gitar checks also completed successfully. HeyDeer was skipped because it had already reviewed this PR once. Cubic's external review was still in progress at the last status check and is not represented as a pass.
+- Build annotations contained warnings about Node.js 20 deprecation and unused declarations in unrelated existing files; the successful checks reported no annotations in the changed test or documentation files. The Ubuntu runner notice is informational.
+- CI validates repository tests/build and the disposable isolation suite only. It does not prove production/staging database state or implement the still-open Free Audit route authorization gap.
+- PR #133 remains open and unmerged. `main` was not modified. The final commit that records this CI result will itself receive a fresh CI run; its result must be checked separately.
+
 ## 6. Wave-level gates
 
 | Stage | Entry condition | Exit condition |
