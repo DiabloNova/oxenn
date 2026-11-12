@@ -166,11 +166,61 @@ describe("remediation finding coverage contract", () => {
     }
   });
 
+  it("uses only canonical primary statuses for all 97 Finding Ledger rows", () => {
+    const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
+    const ledgerStart = progress.indexOf("## 4. Finding ledger");
+    const ledgerEnd = progress.indexOf("## 5. Execution log", ledgerStart);
+
+    expect(ledgerStart).toBeGreaterThanOrEqual(0);
+    expect(ledgerEnd).toBeGreaterThan(ledgerStart);
+
+    const ledgerRows = progress
+      .slice(ledgerStart, ledgerEnd)
+      .split(/\r?\n/)
+      .filter((line) => /^\|\s*\[[A-Z0-9-]+\]\(\.\/findings\//.test(line));
+    const allowedStatuses = [
+      "Not started",
+      "Revalidation in progress",
+      "Confirmed",
+      "Already fixed",
+      "Superseded",
+      "Needs decision",
+      "Approved",
+      "In progress",
+      "Blocked",
+      "Implemented — verification pending",
+      "Verified complete",
+      "Integrated — verification pending",
+      "Integrated — verification failed",
+      "Closed without merge",
+      "Deferred / out of scope",
+    ];
+
+    expect(ledgerRows).toHaveLength(expectedFindingCount);
+    const ids = ledgerRows.map((line) => line.match(/^\|\s*\[([A-Z0-9-]+)\]/)?.[1]);
+    expect(new Set(ids).size).toBe(expectedFindingCount);
+
+    for (const line of ledgerRows) {
+      const status = line.match(/^\|\s*\[[A-Z0-9-]+\]\([^)]*\)\s*\|[^|]+\|\s*([^|]+)\s*\|/)?.[1]?.trim();
+      expect(allowedStatuses).toContain(status);
+    }
+  });
+
   it("preserves the Blocked status and DO NOT RUN safety annotation for VER-005 and VER-006", () => {
     const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
+    const ledgerStart = progress.indexOf("## 4. Finding ledger");
+    const ledgerEnd = progress.indexOf("## 5. Execution log", ledgerStart);
+
+    expect(ledgerStart).toBeGreaterThanOrEqual(0);
+    expect(ledgerEnd).toBeGreaterThan(ledgerStart);
+    const ledger = progress.slice(ledgerStart, ledgerEnd);
 
     for (const finding of historicalFindings) {
-      const rows = progress.split(/\r?\n/).filter((line) => line.includes(`[${finding.id}]`));
+      const rows = ledger
+        .split(/\r?\n/)
+        .filter((line) =>
+          line.startsWith("| [" + finding.id + "](./findings/" + finding.filename + ")"),
+        );
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatch(/\|\s*Blocked\s*\|/);
       expect(rows[0]).toContain("DO NOT RUN");

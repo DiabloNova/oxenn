@@ -37,6 +37,10 @@ The server-side authorization helpers in `src/services/auth/authorization.ts` re
 
 These helpers provide repository-level server-side enforcement primitives. Their presence does not prove that every route or every operation uses them correctly, nor does static inspection establish the state of a deployed database.
 
+### Free-service access
+
+All Oxenn services, including free Fred Audit / Free Audit, require a registered account and an authenticated session. Free-tier access is available only after registration and sign-in; anonymous service execution is not permitted. This is the owner-approved product access rule. It does not establish that every current API route enforces the rule. Route-level authentication, rate limiting, quota metering, and SSRF-safe fetching remain separate enforcement requirements.
+
 ## 3. Platform Admin authorization
 
 ### Separate intended context
