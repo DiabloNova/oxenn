@@ -58,7 +58,7 @@ function robotsDisallows(robots: string, path: string): boolean {
   return false;
 }
 
-function linksFromHtml(html: string, baseUrl: string, allowedOrigin: string): string[] {
+function linksFromHtml(html: string, baseUrl: string, allowedOrigin: string, stripTrackingParams: boolean): string[] {
   const $ = cheerio.load(html);
   const links = new Set<string>();
   $("a[href]").each((_, element) => {
@@ -71,7 +71,7 @@ function linksFromHtml(html: string, baseUrl: string, allowedOrigin: string): st
       if ((resolved.protocol !== "http:" && resolved.protocol !== "https:") || resolved.origin !== allowedOrigin) {
         return;
       }
-      const normalized = normalizeUrl(resolved.toString());
+      const normalized = normalizeUrl(resolved.toString(), stripTrackingParams);
       if (normalized.ok) {
         links.add(normalized.value.canonical);
       }
@@ -87,6 +87,7 @@ function documentFromResponse(
   finalUrl: string,
   allowedOrigin: string,
   depth: number,
+  stripTrackingParams: boolean,
   response: Awaited<ReturnType<typeof safeFetch>>
 ): CrawledDocument {
   const html = response.body.toString("utf8");
@@ -106,7 +107,7 @@ function documentFromResponse(
       ]
     }),
     html,
-    links: linksFromHtml(html, finalUrl, allowedOrigin),
+    links: linksFromHtml(html, finalUrl, allowedOrigin, stripTrackingParams),
     metadata: {
       title: cheerio.load(html)("title").first().text() || undefined
     },
@@ -139,7 +140,13 @@ export class HttpCrawlProvider implements CrawlProvider {
     const queue: QueueEntry[] = [
       { url: request.normalizedUrl.canonical, depth: 0 }
     ];
+    // Mirrors queue membership so duplicate checks stay O(1).
+    const queuedUrls = new Set<string>(queue.map(entry => entry.url));
     const visited = new Set<string>();
+    const deferredPageLimitUrls = new Set<string>();
+    const deferredQueue: QueueEntry[] = [];
+    let deferredQueueIndex = 0;
+    const deferredUrls = new Set<string>();
     const documents: CrawledDocument[] = [];
     // Robots redirects remain authoritative only for the origin that requested them.
     const robotsCache = new Map<string, Promise<string>>();
@@ -158,6 +165,7 @@ export class HttpCrawlProvider implements CrawlProvider {
       durationExpired = true;
       controller.abort();
     }, policy.maxDurationMs);
+    // Settled tasks retain their page slot until the main loop accounts for the result.
     const active = new Set<Promise<CrawledDocument | null>>();
 
     const requestHost = (host: string): Promise<void> =>
@@ -235,11 +243,15 @@ export class HttpCrawlProvider implements CrawlProvider {
           // The exact boundary becomes the seed's final, validated URL origin.
           allowedOrigin = new URL(response.finalUrl.canonical).origin;
         }
+        // A redirect target is fetched content too; prevent its links from
+        // being re-queued or counted as omitted at the page limit.
+        visited.add(response.finalUrl.canonical);
         const document = documentFromResponse(
           isSeed ? request.normalizedUrl.canonical : normalized.value.canonical,
           response.finalUrl.canonical,
           allowedOrigin,
           entry.depth,
+          policy.stripTrackingParams,
           response
         );
         if (Date.now() - startedAt >= policy.maxDurationMs) {
@@ -260,6 +272,60 @@ export class HttpCrawlProvider implements CrawlProvider {
       }
     };
 
+    const promoteDeferred = async (): Promise<void> => {
+      while (
+        deferredQueueIndex < deferredQueue.length &&
+        queue.length + documents.length + active.size < policy.maxPages
+      ) {
+        const entry = deferredQueue[deferredQueueIndex++];
+        if (!entry) break;
+        deferredUrls.delete(entry.url);
+
+        const normalized = normalizeUrl(entry.url, policy.stripTrackingParams);
+        if (!normalized.ok) {
+          deferredPageLimitUrls.delete(entry.url);
+          continue;
+        }
+        const candidateUrl = normalized.value.canonical;
+        if (
+          new URL(candidateUrl).origin !== allowedOrigin ||
+          visited.has(candidateUrl) ||
+          queuedUrls.has(candidateUrl)
+        ) {
+          deferredPageLimitUrls.delete(entry.url);
+          continue;
+        }
+        if (policy.robotsPolicy === "respect") {
+          try {
+            await assertRobotsAllowed(normalized.value, false);
+          } catch (error) {
+            if (error instanceof RobotsDisallowedError) {
+              deferredPageLimitUrls.delete(entry.url);
+              continue;
+            }
+            throw error;
+          }
+        }
+
+        // Recheck after the asynchronous robots lookup before reserving a slot.
+        if (
+          new URL(candidateUrl).origin !== allowedOrigin ||
+          visited.has(candidateUrl) ||
+          queuedUrls.has(candidateUrl)
+        ) {
+          deferredPageLimitUrls.delete(entry.url);
+          continue;
+        }
+        if (queue.length + documents.length + active.size >= policy.maxPages) {
+          deferredQueueIndex--;
+          deferredUrls.add(entry.url);
+          break;
+        }
+        queue.push({ url: candidateUrl, depth: entry.depth });
+        queuedUrls.add(candidateUrl);
+      }
+    };
+
     try {
       while (queue.length > 0 || active.size > 0) {
         if (crawlSignal.aborted) {
@@ -273,22 +339,48 @@ export class HttpCrawlProvider implements CrawlProvider {
         ) {
           const entry = queue.shift();
           if (!entry) break;
+          queuedUrls.delete(entry.url);
           const task = processEntry(entry);
           active.add(task);
-          void task.then(
-            () => active.delete(task),
-            () => active.delete(task)
-          );
         }
         if (active.size === 0) break;
         try {
-          const document = await Promise.race(active);
-          if (!document) continue;
+          const completed = await Promise.race(
+            [...active].map(async task => ({ task, document: await task }))
+          );
+          active.delete(completed.task);
+          const document = completed.document;
+          if (!document) {
+            await promoteDeferred();
+            continue;
+          }
           documents.push(document);
           if (document.depth < policy.maxDepth) {
             for (const link of document.links) {
-              if (queue.length + documents.length + active.size >= policy.maxPages) break;
-              queue.push({ url: link, depth: document.depth + 1 });
+              const normalizedLink = normalizeUrl(link, policy.stripTrackingParams);
+              if (!normalizedLink.ok) continue;
+              const candidateUrl = normalizedLink.value.canonical;
+              if (new URL(candidateUrl).origin !== allowedOrigin || visited.has(candidateUrl)) continue;
+              if (queuedUrls.has(candidateUrl) || deferredUrls.has(candidateUrl)) continue;
+              if (policy.robotsPolicy === "respect") {
+                try {
+                  // Filter disallowed links before they reserve queue capacity
+                  // or count as page-limit omissions. The origin cache avoids
+                  // another robots.txt request for each discovered URL.
+                  await assertRobotsAllowed(normalizedLink.value, false);
+                } catch (error) {
+                  if (error instanceof RobotsDisallowedError) continue;
+                  throw error;
+                }
+              }
+              if (queue.length + documents.length + active.size >= policy.maxPages) {
+                deferredPageLimitUrls.add(candidateUrl);
+                deferredQueue.push({ url: candidateUrl, depth: document.depth + 1 });
+                deferredUrls.add(candidateUrl);
+                continue;
+              }
+              queue.push({ url: candidateUrl, depth: document.depth + 1 });
+              queuedUrls.add(candidateUrl);
             }
           }
         } catch (error) {
@@ -319,7 +411,10 @@ export class HttpCrawlProvider implements CrawlProvider {
       pageCount: documents.length,
       // Includes robots and bytes received for a response that was cancelled mid-stream.
       bytesProcessed: byteBudget.bytesProcessed,
-      partial: queue.length > 0 || crawlErrors.length > 0 || Boolean(budgetError),
+      partial: queue.length > 0 ||
+        [...deferredPageLimitUrls].some(url => !visited.has(url)) ||
+        crawlErrors.length > 0 ||
+        Boolean(budgetError),
       durationMs: Date.now() - startedAt,
       provider: { id: this.id },
       errors: [
