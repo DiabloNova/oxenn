@@ -5,7 +5,6 @@ import { useTheme } from "@/components/ThemeProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
-import { ingestDocumentAction } from "@/app/actions/ingestion";
 import {
   Database,
   UploadCloud,
@@ -31,7 +30,7 @@ export default function DocumentIngestionPage() {
   const { language, direction } = useTheme();
   const isRtl = language === "fa";
   const maxUploadBytes = 3 * 1024 * 1024;
-  const maxActionPayloadBytes = 3.5 * 1024 * 1024;
+  const maxRequestPayloadBytes = 3.5 * 1024 * 1024;
 
   const [text, setText] = useState("");
   const [fileText, setFileText] = useState("");
@@ -106,8 +105,8 @@ export default function DocumentIngestionPage() {
     if (file.size > maxUploadBytes) {
       setActionError(
         isRtl
-          ? "حجم فایل بیشتر از ۵ مگابایت است."
-          : "File exceeds maximum size limit of 5MB."
+          ? "حجم فایل بیشتر از ۳ مگابایت است."
+          : "File exceeds maximum size limit of 3MB."
       );
       return;
     }
@@ -190,7 +189,7 @@ export default function DocumentIngestionPage() {
       };
 
       const payloadBytes = new TextEncoder().encode(JSON.stringify(payload)).byteLength;
-      if (payloadBytes > maxActionPayloadBytes) {
+      if (payloadBytes > maxRequestPayloadBytes) {
         setActionError(
           isRtl
             ? "حجم داده ارسالی پس از کدگذاری از سقف مجاز ۳٫۵ مگابایت بیشتر است."
@@ -199,15 +198,31 @@ export default function DocumentIngestionPage() {
         return;
       }
 
-      const response = await ingestDocumentAction(payload);
+      try {
+        const response = await fetch("/api/v1/ingest/document", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json().catch(() => null);
 
-      if (!response.success) {
-        setActionError(response.error || strings.errorTitle);
-      } else if (response.result) {
-        setSuccessResult(response.result);
-        // Clear forms on success
+        if (!response.ok) {
+          setActionError(
+            typeof result?.error === "string" ? result.error : strings.errorTitle
+          );
+          return;
+        }
+
+        setSuccessResult(result as IngestionStats);
         setText("");
         clearSelectedFile();
+      } catch {
+        setActionError(
+          isRtl
+            ? "ارتباط با سرویس ورود اسناد برقرار نشد. دوباره تلاش کنید."
+            : "Could not reach the document ingestion service. Please try again."
+        );
       }
     });
   };
