@@ -92,7 +92,7 @@ const metadataSchema = z
 
 const chunkingOptionsSchema = z
   .object({
-    maxChunkSize: z.number().int().min(1).max(MAX_CHUNK_SIZE).optional(),
+    maxChunkSize: z.number().int().min(2).max(MAX_CHUNK_SIZE).optional(),
     overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional(),
   })
   .superRefine((options, context) => {
@@ -121,7 +121,7 @@ export const ingestionRequestSchema = z.object({
 
 export const chunkRequestSchema = z.object({
   text: boundedText(MAX_CHUNK_TEXT_BYTES, "Text to chunk"),
-  maxChunkSize: z.number().int().min(1).max(MAX_CHUNK_SIZE).optional().default(DEFAULT_CHUNK_SIZE),
+  maxChunkSize: z.number().int().min(2).max(MAX_CHUNK_SIZE).optional().default(DEFAULT_CHUNK_SIZE),
   overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional().default(DEFAULT_CHUNK_OVERLAP),
 }).superRefine((data, context) => {
   if (data.overlap >= data.maxChunkSize) {
@@ -137,9 +137,15 @@ export const sentimentRequestSchema = z.object({
   text: boundedText(MAX_SENTIMENT_TEXT_BYTES, "Text to analyze"),
 });
 
+export const ragResultLimitSchema = z.number().int().min(1).max(MAX_RAG_RETRIEVAL_RESULTS);
+
+export function validateRagResultLimit(limit: number): number {
+  return ragResultLimitSchema.parse(limit);
+}
+
 export const ragQueryRequestSchema = z.object({
   question: boundedText(MAX_RAG_QUESTION_BYTES, "Question"),
-  limit: z.number().int().min(1).max(MAX_RAG_RETRIEVAL_RESULTS).optional().default(5),
+  limit: ragResultLimitSchema.optional().default(5),
 });
 
 export type ChunkingOptions = {
