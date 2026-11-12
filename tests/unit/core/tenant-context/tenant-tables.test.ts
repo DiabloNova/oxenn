@@ -19,6 +19,9 @@ describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
     expect(result.missingInRuntime).toEqual([]);
     expect(result.extraInRuntime).toEqual([]);
     expect(result.missingPolicyTables).toEqual([]);
+    expect(result.unresolvedOwnershipTables).toEqual(["system_configurations"]);
+    expect(result.missingRegistryEntries).toEqual([]);
+    expect(result.staleRegistryEntries).toEqual([]);
   });
 
   it("includes all Audit APP-04 missing tables in TENANT_SCOPED_TABLES", () => {
@@ -64,13 +67,22 @@ describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
     expect(coverage.tenantTables).toEqual(junctionTables.slice().sort());
     expect(coverage.missingPolicyTables).toEqual(junctionTables.slice().sort());
     for (const name of junctionTables) {
-      expect(getTableOwnershipScope({ name, columns: { organization_id: {} } })).toBe("Tenant-Owned");
+      expect(getTableOwnershipScope({ name, columns: { organization_id: {} } })).toBe("ORGANIZATION_SCOPED");
     }
   });
 
-  it("classifies tables without tenant ownership markers as Global, independently of policies", () => {
-    expect(getTableOwnershipScope({ name: "system_settings", columns: { id: {} } })).toBe("Global");
-    expect(getTableOwnershipScope({ name: "organizations", columns: { id: {} } })).toBe("Tenant-Owned");
+  it("uses explicit registry scopes rather than inferring ownership from column absence", () => {
+    expect(getTableOwnershipScope({ name: "users", columns: { id: {} } })).toBe("USER_OWNED");
+    expect(getTableOwnershipScope({ name: "ai_engines", columns: { id: {} } })).toBe("GLOBAL_SHARED");
+    expect(getTableOwnershipScope({ name: "organizations", columns: { id: {} } })).toBe("ORGANIZATION_SCOPED");
+    expect(() => getTableOwnershipScope({ name: "system_settings", columns: { id: {} } })).toThrow(/No explicit ownership entry/);
+  });
+
+  it("keeps explicitly unresolved tables out of tenant inventory without classifying them as Global", () => {
+    const coverage = getTenantTableCoverageFromSnapshot({ tables: { audit: { name: "system_configurations", columns: { id: {} }, policies: {} } } });
+    expect(coverage.tenantTables).toEqual([]);
+    expect(coverage.unresolvedOwnershipTables).toEqual(["system_configurations"]);
+    expect(getTableOwnershipScope({ name: "system_configurations", columns: { id: {} } })).toBe("UNRESOLVED");
   });
 
 

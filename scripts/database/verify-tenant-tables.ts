@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-context";
+import { getOwnershipRegistryDrift, getTableOwnershipEntry, type TableOwnershipScope } from "./table-ownership-registry";
+export type { TableOwnershipScope } from "./table-ownership-registry";
 
 interface SnapshotPolicy {
   as?: string;
@@ -21,41 +23,11 @@ export interface TenantTableSnapshot {
 }
 
 /**
- * Explicit, reviewed exceptions for tables that carry a tenant ownership column
- * but are intentionally global. Every entry must include a non-empty rationale.
- * No current table is exempt from marker-based ownership.
+ * Ownership is read only from the reviewed registry. Missing entries throw;
+ * no column-marker or RLS-policy fallback is permitted.
  */
-export const GLOBAL_OWNERSHIP_EXCEPTIONS: Readonly<Record<string, string>> = Object.freeze({});
-
-export type TableOwnershipScope = "Tenant-Owned" | "Global";
-
-/**
- * Ownership is a schema/domain fact, not a consequence of RLS policy presence.
- * organizations is the tenant root; organization_id and tenant_id are explicit
- * ownership markers. RLS is checked independently.
- */
-export function getTableOwnershipScope(
-  table: Pick<SnapshotTable, "name" | "columns">,
-): TableOwnershipScope {
-  // The organization table is the tenant root and can never be a Global exception.
-  if (table.name === "organizations") return "Tenant-Owned";
-
-  if (Object.hasOwn(GLOBAL_OWNERSHIP_EXCEPTIONS, table.name)) {
-    const rationale = GLOBAL_OWNERSHIP_EXCEPTIONS[table.name];
-    if (!rationale?.trim()) {
-      throw new Error(
-        "[verify-tenant-tables] Global ownership exception for " + table.name +
-        " requires a non-empty rationale.",
-      );
-    }
-    return "Global";
-  }
-
-  const columns = table.columns ?? {};
-  return Object.hasOwn(columns, "organization_id") ||
-    Object.hasOwn(columns, "tenant_id")
-    ? "Tenant-Owned"
-    : "Global";
+export function getTableOwnershipScope(table: Pick<SnapshotTable, "name" | "columns">): TableOwnershipScope {
+  return getTableOwnershipEntry("workspace", table.name).scope;
 }
 
 function getCanonicalMetadataDirectory(rootDir: string): string {
@@ -164,19 +136,25 @@ function readLatestSnapshot(): TenantTableSnapshot {
 }
 
 /**
- * A table is tenant-owned when it carries organization_id / tenant_id.
- * organizations is the deliberate exception: its primary key is the tenant ID.
+ * Only ORGANIZATION_SCOPED registry entries feed the tenant runtime inventory.
+ * UNRESOLVED entries remain visible and are never inferred as Global.
  * Policy coverage is checked independently so missing policies cannot hide a table.
  */
 export function getTenantTableCoverageFromSnapshot(snapshot: TenantTableSnapshot): {
   tenantTables: string[];
   missingPolicyTables: string[];
+  unresolvedOwnershipTables: string[];
 } {
   const tables = Object.values(snapshot.tables);
-  const tenantTables = tables
-    .filter((table) => getTableOwnershipScope(table) === "Tenant-Owned")
-    .map((table) => table.name)
-    .sort();
+  const tenantTables: string[] = [];
+  const unresolvedOwnershipTables: string[] = [];
+  for (const table of tables) {
+    const scope = getTableOwnershipScope(table);
+    if (scope === "ORGANIZATION_SCOPED") tenantTables.push(table.name);
+    if (scope === "UNRESOLVED") unresolvedOwnershipTables.push(table.name);
+  }
+  tenantTables.sort();
+  unresolvedOwnershipTables.sort();
 
   const hasTenantPredicate = (expression: unknown, tenantColumn: string): boolean => {
     if (typeof expression !== "string") return false;
@@ -219,7 +197,7 @@ export function getTenantTableCoverageFromSnapshot(snapshot: TenantTableSnapshot
     .map((table) => table.name)
     .sort();
 
-  return { tenantTables, missingPolicyTables };
+  return { tenantTables, missingPolicyTables, unresolvedOwnershipTables };
 }
 
 export function getDerivedTenantTablesFromSnapshot(): string[] {
@@ -249,14 +227,20 @@ export function verifyTenantTables(options?: { fix?: boolean }): {
   missingInRuntime: string[];
   extraInRuntime: string[];
   missingPolicyTables: string[];
+  unresolvedOwnershipTables: string[];
+  missingRegistryEntries: string[];
+  staleRegistryEntries: string[];
 } {
-  const coverage = getTenantTableCoverageFromSnapshot(readLatestSnapshot());
+  const snapshot = readLatestSnapshot();
+  const coverage = getTenantTableCoverageFromSnapshot(snapshot);
   const derivedTables = coverage.tenantTables;
   const runtimeTables: string[] = Array.from(TENANT_SCOPED_TABLES).sort();
-
+  const registryDrift = getOwnershipRegistryDrift("workspace", Object.values(snapshot.tables).map((table) => table.name));
   const missingInRuntime = derivedTables.filter((t) => !runtimeTables.includes(t));
   const extraInRuntime = runtimeTables.filter((t) => !derivedTables.includes(t));
   const isDrifted = missingInRuntime.length > 0 || extraInRuntime.length > 0;
+  const hasRegistryDrift = registryDrift.missingRegistryEntries.length > 0 || registryDrift.staleRegistryEntries.length > 0;
+  if (hasRegistryDrift && options?.fix) throw new Error("[verify-tenant-tables] Registry/schema drift must be reviewed in the canonical registry before regeneration.");
 
   if (isDrifted && options?.fix) {
     const targetFile = path.join(process.cwd(), "src/core/database/tenant-tables.generated.ts");
@@ -269,16 +253,19 @@ export function verifyTenantTables(options?: { fix?: boolean }): {
       missingInRuntime: [],
       extraInRuntime: [],
       missingPolicyTables: coverage.missingPolicyTables,
+      unresolvedOwnershipTables: coverage.unresolvedOwnershipTables,
+      missingRegistryEntries: registryDrift.missingRegistryEntries,
+      staleRegistryEntries: registryDrift.staleRegistryEntries,
     };
   }
 
   return {
-    success: !isDrifted && coverage.missingPolicyTables.length === 0,
-    derivedTables,
-    runtimeTables,
-    missingInRuntime,
-    extraInRuntime,
+    success: !isDrifted && !hasRegistryDrift && coverage.missingPolicyTables.length === 0,
+    derivedTables, runtimeTables, missingInRuntime, extraInRuntime,
     missingPolicyTables: coverage.missingPolicyTables,
+    unresolvedOwnershipTables: coverage.unresolvedOwnershipTables,
+    missingRegistryEntries: registryDrift.missingRegistryEntries,
+    staleRegistryEntries: registryDrift.staleRegistryEntries,
   };
 }
 
@@ -289,15 +276,15 @@ if (require.main === module) {
   try {
     const result = verifyTenantTables({ fix });
     if (!result.success) {
-      console.error("\n❌ [Tenant Tables Verification] TENANT COVERAGE OR SCHEMA DRIFT DETECTED!");
-      console.error("Runtime TENANT_SCOPED_TABLES must match ownership columns in the Drizzle snapshot, and every tenant-owned table must have all four tenant policies.\n");
+      console.error("\n❌ [Tenant Tables Verification] OWNERSHIP REGISTRY, TENANT COVERAGE OR SCHEMA DRIFT DETECTED!");
+      console.error("Runtime TENANT_SCOPED_TABLES must match ORGANIZATION_SCOPED registry entries, and every such table must have all four tenant policies.\n");
 
       if (result.missingInRuntime.length > 0) {
-        console.error("Missing in TENANT_SCOPED_TABLES (tenant-owned in schema snapshot):");
+        console.error("Missing in TENANT_SCOPED_TABLES (organization-scoped in ownership registry):");
         for (const t of result.missingInRuntime) console.error(`  + ${t}`);
       }
       if (result.extraInRuntime.length > 0) {
-        console.error("Extra in TENANT_SCOPED_TABLES (not tenant-owned in schema snapshot):");
+        console.error("Extra in TENANT_SCOPED_TABLES (not organization-scoped in ownership registry):");
         for (const t of result.extraInRuntime) console.error(`  - ${t}`);
       }
       if (result.missingPolicyTables.length > 0) {
@@ -305,10 +292,25 @@ if (require.main === module) {
         for (const t of result.missingPolicyTables) console.error(`  ! ${t}`);
       }
 
+      if (result.missingRegistryEntries.length > 0) {
+        console.error("Tables missing from the explicit ownership registry:");
+        for (const table of result.missingRegistryEntries) console.error("  ! " + table);
+      }
+      if (result.staleRegistryEntries.length > 0) {
+        console.error("Stale ownership registry entries:");
+        for (const table of result.staleRegistryEntries) console.error("  ! " + table);
+      }
+      if (result.unresolvedOwnershipTables.length > 0) {
+        console.warn("Explicit UNRESOLVED ownership entries (not classified as Global or organization-scoped):");
+        for (const table of result.unresolvedOwnershipTables) console.warn("  ? " + table);
+      }
       console.error("\nRun 'pnpm tsx scripts/database/verify-tenant-tables.ts --fix' to regenerate the runtime table inventory; missing policies must be fixed in the canonical schema.");
       process.exit(1);
     } else {
-      console.log(`✅ [Tenant Tables Verification] SUCCESS: ${result.derivedTables.length} tenant-owned tables have complete policies and match runtime inventory.`);
+      console.log("[Tenant Tables Verification] SUCCESS: " + result.derivedTables.length + " organization-scoped tables have complete policies and match runtime inventory.");
+      if (result.unresolvedOwnershipTables.length > 0) {
+        console.warn("[Tenant Tables Verification] Explicit UNRESOLVED ownership entries remain visible for architecture review: " + result.unresolvedOwnershipTables.join(", ") + ".");
+      }
       process.exit(0);
     }
   } catch (err) {
