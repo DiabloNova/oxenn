@@ -1,28 +1,28 @@
-# Seorchable Documentation Architecture
+# OXENN Documentation
 
-Welcome to the Seorchable documentation. This documentation accurately reflects the implemented state of the repository, separating currently available capabilities from future plans.
+This documentation describes the OXENN product, its target architecture, user-facing behavior, APIs, services, security boundaries, and the implementation evidence available in the repository.
 
-## Documentation Domains
+## Canonical product and MVP authorities
 
-To find what you are looking for, navigate to one of our six documentation domains:
+- [MVP Product Specification](./product/OXENN_MVP_PRODUCT_SPECIFICATION.md): current owner-approved product scope and acceptance criteria.
+- [MVP Engineering Baseline](./project/MVP_ENGINEERING_BASELINE.md): code-level implementation mapping, known gaps, delivery dependencies, and verification boundaries.
+- [Product Architecture](./architecture/OXENN_PRODUCT_ARCHITECTURE.md): the nine-domain product architecture and cross-cutting platform capabilities.
+- [Product Documentation Index](./product/README.md): product specifications and related product decisions.
 
-### 1. [Product Documentation](./product/README.md)
-Explains what Seorchable is and what capabilities it provides. Useful for understanding core features like AI Visibility, Content Intelligence, and Competitive Intelligence.
+The Product Specification is the authority for what OXENN is expected to deliver. The Engineering Baseline is the authority for the inspected repository implementation state. A planned or documented capability must not be described as implemented or live without corresponding code and verification evidence.
 
-### 2. [User Guides](./user-guides/README.md)
-Documentation intended for end-users. Covers getting started, workspaces, workflows, running analyses, and interpreting results.
+## Documentation domains
 
-### 3. [Service Documentation](./services/README.md)
-Documentation for internal/application services and their boundaries. Details background processing, service dependencies, processing flows, caching, and integrations.
+1. [Product](./product/README.md) — product definition, MVP scope, target users, and capabilities.
+2. [Architecture](./architecture/README.md) — system boundaries, domain architecture, database and service design.
+3. [API](./api/README.md) — API entry points, contracts, authentication, and rate limits where implemented.
+4. [Security](./security/README.md) — authentication, authorization, tenant isolation, data access, and API security.
+5. User and service documentation — user workflows, internal service boundaries, integrations, and operational behavior.
+6. [Project records](./project/README.md) — engineering baseline, historical audits, roadmaps, task instructions, and reports.
 
-### 4. [API Documentation](./api/README.md)
-Documents the application's API surface. Details entry points, request/response contracts, authentication requirements, and rate limiting where implemented.
+## Documentation truth rules
 
-### 5. [Architecture Documentation](./architecture/README.md)
-Technical architecture documentation. Covers system overview, domain boundaries, database architecture (migrations, tenant isolation, RLS), and major design patterns.
-
-### 6. [Security Documentation](./security/README.md)
-Documents the security model. Covers authentication, authorization (server-side, PostgreSQL RLS), data access boundaries, and API security.
-
----
-*Note: Any project management documents such as task files, execution roadmaps, and audits are stored under [`docs/project`](./project/).*
+- Distinguish product requirements from implemented behavior.
+- Distinguish PLANNED, IN_PROGRESS, IMPLEMENTED, VERIFIED, and LIVE.
+- Label MOCK, HYBRID, PARTIAL, FAILED, and UNKNOWN states accurately.
+- Do not infer live provider connectivity, durable persistence, or deployed security from a page, schema, migration, or passing unit test alone.
