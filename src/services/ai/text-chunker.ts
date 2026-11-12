@@ -109,7 +109,7 @@ export function chunkText(
   }
 
   // Reserve room for both the overlap and the joining space in every subsequent chunk.
-  const actualOverlap = Math.min(overlap, Math.max(0, maxChunkSize - 2));
+  const actualOverlap = overlap;
   const chunkCapacity = maxChunkSize - actualOverlap - (actualOverlap > 0 ? 1 : 0);
   const sentenceBoundaryRegex = /([.؟؛!\n\r]+)/g;
   const parts = text.split(sentenceBoundaryRegex);
