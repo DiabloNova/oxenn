@@ -127,10 +127,10 @@ Do not model a customer's Offer as an OXENN Service SKU, and do not model social
 
 ## 10. References
 
-- [Approved MVP Product Specification](../../../../../docs/product/OXENN_MVP_PRODUCT_SPECIFICATION.md)
-- [MVP Engineering Baseline](../../../../../docs/project/MVP_ENGINEERING_BASELINE.md)
-- [Project Map](../../../../architecture_map/project_map.md)
-- [MVP Map](../../../../architecture_map/MVP_map.md)
+- [Approved MVP Product Specification](../../../../docs/product/OXENN_MVP_PRODUCT_SPECIFICATION.md)
+- [MVP Engineering Baseline](../../../../docs/project/MVP_ENGINEERING_BASELINE.md)
+- [Project Map](../../../architecture_map/project_map.md)
+- [MVP Map](../../../architecture_map/MVP_map.md)
 - [MVP Baseline](../MVP_baseline.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
