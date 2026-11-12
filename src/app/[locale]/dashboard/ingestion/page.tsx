@@ -30,6 +30,8 @@ interface IngestionStats {
 export default function DocumentIngestionPage() {
   const { language, direction } = useTheme();
   const isRtl = language === "fa";
+  const maxUploadBytes = 3 * 1024 * 1024;
+  const maxActionPayloadBytes = 3.5 * 1024 * 1024;
 
   const [text, setText] = useState("");
   const [fileText, setFileText] = useState("");
@@ -54,7 +56,7 @@ export default function DocumentIngestionPage() {
     uploadZoneDesc: isRtl
       ? "فایل خود با فرمت .txt، .md یا .json را به اینجا بکشید یا برای مرور کلیک کنید"
       : "Drag and drop your .txt, .md, or .json file here, or click to browse",
-    uploadLimit: isRtl ? "حداکثر حجم قابل پذیرش: ۵ مگابایت" : "Maximum supported size: 5MB",
+    uploadLimit: isRtl ? "حداکثر حجم قابل پذیرش: ۳ مگابایت" : "Maximum supported size: 3MB",
     textInputTitle: isRtl ? "ورودی متنی جایگزین" : "Alternative Direct Text Input",
     textInputPlaceholder: isRtl
       ? "در صورتی که فایل ندارید، متن خام گزارش یا سند خود را مستقیماً در این بخش کپی و پیست کنید..."
@@ -101,7 +103,7 @@ export default function DocumentIngestionPage() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > maxUploadBytes) {
       setActionError(
         isRtl
           ? "حجم فایل بیشتر از ۵ مگابایت است."
@@ -186,6 +188,16 @@ export default function DocumentIngestionPage() {
           overlap: 50
         }
       };
+
+      const payloadBytes = new TextEncoder().encode(JSON.stringify(payload)).byteLength;
+      if (payloadBytes > maxActionPayloadBytes) {
+        setActionError(
+          isRtl
+            ? "حجم داده ارسالی پس از کدگذاری از سقف مجاز ۳٫۵ مگابایت بیشتر است."
+            : "The encoded request exceeds the 3.5MB upload limit."
+        );
+        return;
+      }
 
       const response = await ingestDocumentAction(payload);
 
