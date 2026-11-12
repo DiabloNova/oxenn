@@ -98,7 +98,7 @@ const chunkingOptionsSchema = z
   .superRefine((options, context) => {
     const maxChunkSize = options.maxChunkSize ?? DEFAULT_CHUNK_SIZE;
     const overlap = options.overlap ?? DEFAULT_CHUNK_OVERLAP;
-    if (overlap > maxChunkSize - 4) {
+    if (overlap > 0 && overlap > maxChunkSize - 4) {
       context.addIssue({
         code: "custom",
         path: ["overlap"],
