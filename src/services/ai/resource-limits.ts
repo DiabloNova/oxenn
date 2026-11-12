@@ -1,15 +1,15 @@
 import { z } from "zod";
 
-export const MAX_INGESTION_REQUEST_BYTES = 6 * 1024 * 1024;
+export const MAX_INGESTION_REQUEST_BYTES = 4 * 1024 * 1024;
 export const MAX_AI_REQUEST_BYTES = 256 * 1024;
 export const MAX_RAG_REQUEST_BYTES = 16 * 1024;
 
-export const MAX_INGESTION_TEXT_BYTES = 5 * 1024 * 1024;
+export const MAX_INGESTION_TEXT_BYTES = 3 * 1024 * 1024;
 export const MAX_CHUNK_TEXT_BYTES = 256 * 1024;
 export const MAX_SENTIMENT_TEXT_BYTES = 32 * 1024;
 export const MAX_RAG_QUESTION_BYTES = 8 * 1024;
 
-export const MAX_METADATA_BYTES = 16 * 1024;
+export const MAX_METADATA_BYTES = 12 * 1024;
 export const MAX_METADATA_DEPTH = 5;
 export const MAX_METADATA_KEYS = 100;
 export const MAX_METADATA_NODES = 1_000;
