@@ -4,8 +4,107 @@ import os from "node:os";
 import path from "node:path";
 import { TENANT_SCOPED_TABLES } from "@/core/database/tenant-context";
 import { getTableOwnershipScope, getTenantTableCoverageFromSnapshot, resolveLatestSnapshotPath, verifyTenantTables } from "../../../../scripts/database/verify-tenant-tables";
+import { WORKSPACE_TABLE_OWNERSHIP } from "../../../../scripts/database/table-ownership-registry";
+
+const expectedOrganizationScopedTables = [
+  "aeo_analyses",
+  "ai_observations",
+  "ai_visibility_audits",
+  "api_keys",
+  "audit_prompts",
+  "brand_associations",
+  "brand_mentions",
+  "brands",
+  "citation_occurrences",
+  "citation_sources",
+  "citations",
+  "competitive_analyses",
+  "competitive_seo_findings",
+  "competitor_changes",
+  "competitors",
+  "crawl_cache",
+  "crawl_jobs",
+  "crawl_results",
+  "crawl_snapshots",
+  "credit_transactions",
+  "diagnostic_finding_relationships",
+  "diagnostic_findings",
+  "document_embeddings",
+  "entities",
+  "entity_relationships",
+  "faq_opportunities",
+  "historical_metrics",
+  "keywords",
+  "keywords_topics",
+  "kg_alignments",
+  "kg_entities",
+  "kg_relationships",
+  "monitoring_alerts",
+  "monitoring_configs",
+  "organization_invitations",
+  "organization_members",
+  "organizations",
+  "pages",
+  "pages_entities",
+  "pages_keywords",
+  "pages_topics",
+  "position_observations",
+  "premium_audits",
+  "prompt_definitions",
+  "prompt_executions",
+  "prompt_schedules",
+  "prompts",
+  "recommendation_observations",
+  "recommendations",
+  "technical_audits",
+  "tenant_quotas",
+  "tenant_subscriptions",
+  "topics",
+  "topics_entities",
+  "visibility_scores",
+  "websites",
+] as const;
+
+function organizationScopedNames(registry: Readonly<Record<string, { scope: string }>>): string[] {
+  return Object.entries(registry)
+    .filter(([, entry]) => entry.scope === "ORGANIZATION_SCOPED")
+    .map(([name]) => name)
+    .sort();
+}
+
+function assertExactOrganizationScopedInventory(
+  registry: Readonly<Record<string, { scope: string }>>,
+  runtimeTables: readonly string[],
+): void {
+  const expected = [...expectedOrganizationScopedTables].sort();
+  expect(organizationScopedNames(registry)).toEqual(expected);
+  expect([...runtimeTables].sort()).toEqual(expected);
+}
 
 describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
+  it("matches an independent 56-table organization ownership inventory and generated runtime list", () => {
+    expect(expectedOrganizationScopedTables).toHaveLength(56);
+    expect(new Set(expectedOrganizationScopedTables).size).toBe(56);
+    assertExactOrganizationScopedInventory(WORKSPACE_TABLE_OWNERSHIP, TENANT_SCOPED_TABLES);
+  });
+
+  it("detects a registry scope misclassification against the independent inventory", () => {
+    const mutatedRegistry = {
+      ...WORKSPACE_TABLE_OWNERSHIP,
+      pages_keywords: {
+        ...WORKSPACE_TABLE_OWNERSHIP.pages_keywords,
+        scope: "WORKSPACE_GLOBAL" as const,
+      },
+    };
+
+    expect(() => assertExactOrganizationScopedInventory(mutatedRegistry, TENANT_SCOPED_TABLES)).toThrow();
+  });
+
+  it("detects a missing generated runtime ownership entry against the independent inventory", () => {
+    const mutatedRuntimeTables = TENANT_SCOPED_TABLES.filter(table => table !== "pages_keywords");
+    expect(() => assertExactOrganizationScopedInventory(WORKSPACE_TABLE_OWNERSHIP, mutatedRuntimeTables)).toThrow();
+  });
+
   it("TENANT_SCOPED_TABLES is an Object.frozen immutable array", () => {
     expect(Object.isFrozen(TENANT_SCOPED_TABLES)).toBe(true);
     expect(() => {

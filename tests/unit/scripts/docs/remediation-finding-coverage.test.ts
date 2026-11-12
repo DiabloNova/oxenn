@@ -251,6 +251,16 @@ describe("remediation finding coverage contract", () => {
     }
   });
 
+  it("keeps at most one main SHA evidence pointer in each Finding Ledger row", () => {
+    const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
+    const rows = readLedgerRows(progress).map(parseLedgerRow);
+
+    for (const row of rows) {
+      const mainShaPointers = row.evidence.match(/\bmain@[0-9a-f]{7,40}\b/g) ?? [];
+      expect(mainShaPointers.length, row.id + " must not repeat a main SHA evidence pointer").toBeLessThanOrEqual(1);
+    }
+  });
+
   it("allows at most one Wave 0 evidence pointer and requires its exact numeric Finding batch", () => {
     const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
     const rows = readLedgerRows(progress).map(parseLedgerRow);
