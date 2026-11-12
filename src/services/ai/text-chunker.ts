@@ -52,9 +52,7 @@ function findSafeEnd(text: string, start: number, requestedEnd: number): number 
   if (openingQuote !== -1 && openingQuote < requestedEnd) {
     const closingQuote = text.indexOf("»", openingQuote + 1);
     if (closingQuote !== -1 && requestedEnd <= closingQuote) {
-      const quotedLength = closingQuote + 1 - openingQuote;
-      const availableLength = requestedEnd - start;
-      if (quotedLength <= availableLength) {
+      if (closingQuote + 1 <= requestedEnd) {
         end = closingQuote + 1;
       } else if (openingQuote > start) {
         end = openingQuote;
