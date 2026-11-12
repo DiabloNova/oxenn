@@ -1,16 +1,16 @@
 # Database Reference Matrix
 
-**Ownership rule:** `organizations` is the tenant root. A table is Tenant-Owned when its canonical schema declares `organization_id` or `tenant_id`, unless a reviewed exception with a rationale is recorded in `GLOBAL_OWNERSHIP_EXCEPTIONS`. Ownership is never inferred from whether an RLS policy exists.
+**Ownership rule:** Every table is classified by the explicit reviewed registry in scripts/database/table-ownership-registry.ts. Unknown tables fail closed; UNRESOLVED entries remain visibly unresolved and are never treated as Global. Only ORGANIZATION_SCOPED tables feed the generated tenant runtime inventory. RLS policy and migration coverage are evaluated independently.
 
 **Verification boundary:** policy declarations and ENABLE/FORCE migration coverage are static checks against the Drizzle snapshot and checked-in migration journal. Runtime enforcement is not inferred here; it requires the PostgreSQL isolation suite.
 
 ## Table: `admin_users`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** WORKSPACE_GLOBAL
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (WORKSPACE_GLOBAL)
+- **Migration Coverage:** Not applicable (WORKSPACE_GLOBAL)
+- **Runtime Enforcement Verification:** Not applicable (WORKSPACE_GLOBAL)
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
@@ -51,7 +51,7 @@
 
 ## Table: `aeo_analyses`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -95,11 +95,11 @@
 
 ## Table: `ai_engines`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** GLOBAL_SHARED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (GLOBAL_SHARED)
+- **Migration Coverage:** Not applicable (GLOBAL_SHARED)
+- **Runtime Enforcement Verification:** Not applicable (GLOBAL_SHARED)
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -124,7 +124,7 @@
 
 ## Table: `ai_observations`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -171,11 +171,11 @@
 
 ## Table: `ai_provider_configs`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** PLATFORM_OWNED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (PLATFORM_OWNED)
+- **Migration Coverage:** Not applicable (PLATFORM_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (PLATFORM_OWNED)
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
@@ -202,7 +202,7 @@
 
 ## Table: `ai_visibility_audits`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -250,7 +250,7 @@
 
 ## Table: `api_keys`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -297,7 +297,7 @@
 
 ## Table: `audit_prompts`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -335,11 +335,11 @@
 
 ## Table: `audit_records`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** WORKSPACE_GLOBAL
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (WORKSPACE_GLOBAL)
+- **Migration Coverage:** Not applicable (WORKSPACE_GLOBAL)
+- **Runtime Enforcement Verification:** Not applicable (WORKSPACE_GLOBAL)
 - **Status:** `WIRED`
 - **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/core/database/tenant-context/index.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
@@ -374,11 +374,11 @@
 
 ## Table: `auth_rate_limits`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** PLATFORM_OWNED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (PLATFORM_OWNED)
+- **Migration Coverage:** Not applicable (PLATFORM_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (PLATFORM_OWNED)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`
 
@@ -407,7 +407,7 @@
 
 ## Table: `brand_associations`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -447,7 +447,7 @@
 
 ## Table: `brand_mentions`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -492,7 +492,7 @@
 
 ## Table: `brands`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -535,7 +535,7 @@
 
 ## Table: `citation_occurrences`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -577,7 +577,7 @@
 
 ## Table: `citation_sources`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -618,7 +618,7 @@
 
 ## Table: `citations`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -663,7 +663,7 @@
 
 ## Table: `competitive_analyses`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -697,7 +697,7 @@
 
 ## Table: `competitive_seo_findings`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -746,7 +746,7 @@
 
 ## Table: `competitor_changes`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -787,7 +787,7 @@
 
 ## Table: `competitors`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -830,7 +830,7 @@
 
 ## Table: `crawl_cache`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -873,7 +873,7 @@
 
 ## Table: `crawl_jobs`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -951,7 +951,7 @@
 
 ## Table: `crawl_results`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -987,7 +987,7 @@
 
 ## Table: `crawl_snapshots`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1028,7 +1028,7 @@
 
 ## Table: `credit_transactions`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1064,7 +1064,7 @@
 
 ## Table: `diagnostic_finding_relationships`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1103,7 +1103,7 @@
 
 ## Table: `diagnostic_findings`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1148,7 +1148,7 @@
 
 ## Table: `document_embeddings`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1184,11 +1184,11 @@
 
 ## Table: `email_verification_tokens`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** USER_OWNED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (USER_OWNED)
+- **Migration Coverage:** Not applicable (USER_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`
 
@@ -1219,7 +1219,7 @@
 
 ## Table: `entities`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1262,7 +1262,7 @@
 
 ## Table: `entity_relationships`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1307,7 +1307,7 @@
 
 ## Table: `faq_opportunities`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1346,11 +1346,11 @@
 
 ## Table: `feature_flags`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** PLATFORM_OWNED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (PLATFORM_OWNED)
+- **Migration Coverage:** Not applicable (PLATFORM_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (PLATFORM_OWNED)
 - **Status:** `WIRED`
 - **Consumers:** `src/features/admin/infrastructure/persistence/postgres/index.ts`
 
@@ -1383,7 +1383,7 @@
 
 ## Table: `historical_metrics`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1422,7 +1422,7 @@
 
 ## Table: `keywords`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1467,7 +1467,7 @@
 
 ## Table: `keywords_topics`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1510,7 +1510,7 @@
 
 ## Table: `kg_alignments`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1550,7 +1550,7 @@
 
 ## Table: `kg_entities`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1587,7 +1587,7 @@
 
 ## Table: `kg_relationships`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1628,7 +1628,7 @@
 
 ## Table: `monitoring_alerts`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1671,7 +1671,7 @@
 
 ## Table: `monitoring_configs`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1710,7 +1710,7 @@
 
 ## Table: `organization_invitations`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1749,7 +1749,7 @@
 
 ## Table: `organization_members`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1786,7 +1786,7 @@
 
 ## Table: `organizations`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1825,7 +1825,7 @@
 
 ## Table: `pages`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1881,7 +1881,7 @@
 
 ## Table: `pages_entities`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1925,7 +1925,7 @@
 
 ## Table: `pages_keywords`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -1969,7 +1969,7 @@
 
 ## Table: `pages_topics`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2013,11 +2013,11 @@
 
 ## Table: `password_reset_tokens`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** USER_OWNED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (USER_OWNED)
+- **Migration Coverage:** Not applicable (USER_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/auth.ts`
 
@@ -2048,11 +2048,11 @@
 
 ## Table: `permissions`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** WORKSPACE_GLOBAL
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (WORKSPACE_GLOBAL)
+- **Migration Coverage:** Not applicable (WORKSPACE_GLOBAL)
+- **Runtime Enforcement Verification:** Not applicable (WORKSPACE_GLOBAL)
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -2081,7 +2081,7 @@
 
 ## Table: `position_observations`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2122,7 +2122,7 @@
 
 ## Table: `premium_audits`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2161,7 +2161,7 @@
 
 ## Table: `prompt_definitions`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2211,7 +2211,7 @@
 
 ## Table: `prompt_executions`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2267,7 +2267,7 @@
 
 ## Table: `prompt_schedules`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2310,7 +2310,7 @@
 
 ## Table: `prompts`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2354,7 +2354,7 @@
 
 ## Table: `recommendation_observations`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2396,7 +2396,7 @@
 
 ## Table: `recommendations`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2443,11 +2443,11 @@
 
 ## Table: `roles`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** WORKSPACE_GLOBAL
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (WORKSPACE_GLOBAL)
+- **Migration Coverage:** Not applicable (WORKSPACE_GLOBAL)
+- **Runtime Enforcement Verification:** Not applicable (WORKSPACE_GLOBAL)
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -2476,11 +2476,11 @@
 
 ## Table: `sessions`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** USER_OWNED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (USER_OWNED)
+- **Migration Coverage:** Not applicable (USER_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
 
@@ -2518,11 +2518,11 @@
 
 ## Table: `system_configurations`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** UNRESOLVED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not evaluated (ownership unresolved)
+- **Migration Coverage:** Not evaluated (ownership unresolved)
+- **Runtime Enforcement Verification:** Blocked: ownership unresolved; no Global/tenant inference
 - **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
 - **Consumers:** -
 
@@ -2554,7 +2554,7 @@
 
 ## Table: `technical_audits`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2588,7 +2588,7 @@
 
 ## Table: `tenant_quotas`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2632,7 +2632,7 @@
 
 ## Table: `tenant_subscriptions`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2672,7 +2672,7 @@
 
 ## Table: `topics`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2716,7 +2716,7 @@
 
 ## Table: `topics_entities`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2759,11 +2759,11 @@
 
 ## Table: `user_credentials`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** USER_OWNED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (USER_OWNED)
+- **Migration Coverage:** Not applicable (USER_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`
 
@@ -2797,11 +2797,11 @@
 
 ## Table: `users`
 
-- **Ownership Scope:** Global
+- **Ownership Scope:** USER_OWNED
 - **RLS Policies Declared:** None
-- **Tenant RLS Policy Coverage:** Not applicable (Global)
-- **Migration Coverage:** Not applicable (Global)
-- **Runtime Enforcement Verification:** Not applicable (Global)
+- **Tenant RLS Policy Coverage:** Not applicable (USER_OWNED)
+- **Migration Coverage:** Not applicable (USER_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
 - **Status:** `WIRED`
 - **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
 
@@ -2833,7 +2833,7 @@
 
 ## Table: `visibility_scores`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
@@ -2880,7 +2880,7 @@
 
 ## Table: `websites`
 
-- **Ownership Scope:** Tenant-Owned
+- **Ownership Scope:** ORGANIZATION_SCOPED
 - **RLS Policies Declared:** 4 policy objects
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)

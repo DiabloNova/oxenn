@@ -8,6 +8,7 @@ const materialFields = [
   "maxPages",
   "maxDepth",
   "maxResponseBytes",
+  "maxTotalBytes",
   "allowedContentTypes",
   "allowedSchemes",
   "robotsPolicy",

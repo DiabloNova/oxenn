@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { findTableReferences as detectTableReferences } from "./reference-matrix-consumers";
 import { getTableOwnershipScope, getTenantTableCoverageFromSnapshot } from "./verify-tenant-tables";
+import type { TableOwnershipScope } from "./table-ownership-registry";
 import { getRlsMigrationCoverage, type RlsMigrationCoverage } from "./verify-rls-migrations";
 
 interface Journal {
@@ -108,7 +109,7 @@ function getIndexColumnName(column: IndexColumn): string {
 }
 
 export interface TableGovernanceMetadata {
-  ownershipScope: "Tenant-Owned" | "Global";
+  ownershipScope: TableOwnershipScope;
   rlsPoliciesDeclared: string;
   tenantRlsPolicyCoverage: string;
   migrationCoverage: string;
@@ -127,13 +128,14 @@ export function getTableGovernanceMetadata(
     ? "None"
     : String(policyCount) + " policy object" + (policyCount === 1 ? "" : "s");
 
-  if (ownershipScope === "Global") {
+  if (ownershipScope !== "ORGANIZATION_SCOPED") {
+    const unresolved = ownershipScope === "UNRESOLVED";
+    const notApplicable = "Not applicable (" + ownershipScope + ")";
     return {
-      ownershipScope,
-      rlsPoliciesDeclared,
-      tenantRlsPolicyCoverage: "Not applicable (Global)",
-      migrationCoverage: "Not applicable (Global)",
-      runtimeEnforcementVerification: "Not applicable (Global)",
+      ownershipScope, rlsPoliciesDeclared,
+      tenantRlsPolicyCoverage: unresolved ? "Not evaluated (ownership unresolved)" : notApplicable,
+      migrationCoverage: unresolved ? "Not evaluated (ownership unresolved)" : notApplicable,
+      runtimeEnforcementVerification: unresolved ? "Blocked: ownership unresolved; no Global/tenant inference" : notApplicable,
     };
   }
 
@@ -166,7 +168,7 @@ function generateMarkdown(): void {
   const migrationCoverage = getRlsMigrationCoverage(process.cwd());
 
   let md = "# Database Reference Matrix\n\n";
-  md += "**Ownership rule:** `organizations` is the tenant root. A table is Tenant-Owned when its canonical schema declares `organization_id` or `tenant_id`, unless a reviewed exception with a rationale is recorded in `GLOBAL_OWNERSHIP_EXCEPTIONS`. Ownership is never inferred from whether an RLS policy exists.\n\n";
+  md += "**Ownership rule:** Every table is classified by the explicit reviewed registry in scripts/database/table-ownership-registry.ts. Unknown tables fail closed; UNRESOLVED entries remain visibly unresolved and are never treated as Global. Only ORGANIZATION_SCOPED tables feed the generated tenant runtime inventory. RLS policy and migration coverage are evaluated independently.\n\n";
   md += "**Verification boundary:** policy declarations and ENABLE/FORCE migration coverage are static checks against the Drizzle snapshot and checked-in migration journal. Runtime enforcement is not inferred here; it requires the PostgreSQL isolation suite.\n\n";
   let orphanTablesCount = 0;
   let wiredTablesCount = 0;

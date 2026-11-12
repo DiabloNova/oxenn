@@ -22,6 +22,7 @@ vi.mock("@/core/database/tenant-context", () => ({
 }));
 
 import { POST } from "@/app/api/v1/crawl/route";
+import { CRAWL_POLICY_CEILINGS } from "@/features/acquisition/domain/policy";
 
 describe("Crawl API policy bounds", () => {
   beforeEach(() => {
@@ -67,6 +68,7 @@ describe("Crawl API policy bounds", () => {
     ["more than 64 allowed content types", { allowedContentTypes: Array.from({ length: 65 }, () => "text/html") }],
     ["an allowed content type longer than 128 characters", { allowedContentTypes: ["t".repeat(129)] }],
     ["a negative redirect count", { maxRedirects: -1 }],
+    ["a zero aggregate byte budget", { maxTotalBytes: 0 }],
   ])("rejects %s before submitting a crawl", async (_label, policy) => {
     const response = await post(policy);
     expect(response.status).toBe(400);
@@ -78,6 +80,7 @@ describe("Crawl API policy bounds", () => {
       allowedSchemes: ["s".repeat(16), ...Array.from({ length: 7 }, () => "https")],
       allowedContentTypes: Array.from({ length: 64 }, () => "t".repeat(128)),
       maxRedirects: 10,
+      maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes,
     };
     const response = await post(policy);
     expect(response.status).toBe(202);
@@ -85,7 +88,7 @@ describe("Crawl API policy bounds", () => {
     expect(submitMock).toHaveBeenCalledWith(
       "tenant-test",
       "https://example.com",
-      { ...policy, maxRedirects: 5 },
+      { ...policy, maxRedirects: 5, maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes },
       0,
       expect.any(String),
       undefined,
@@ -101,7 +104,7 @@ describe("Crawl API policy bounds", () => {
     expect(submitMock).toHaveBeenCalledWith(
       "tenant-test",
       "https://example.com",
-      { maxRedirects: 0 },
+      { maxRedirects: 0, maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes },
       0,
       expect.any(String),
       undefined,
@@ -117,7 +120,7 @@ describe("Crawl API policy bounds", () => {
     expect(submitMock).toHaveBeenCalledWith(
       "tenant-test",
       "https://example.com",
-      { maxRedirects: 10 },
+      { maxRedirects: 10, maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes },
       0,
       expect.any(String),
       undefined,
@@ -125,4 +128,12 @@ describe("Crawl API policy bounds", () => {
       false
     );
   });
+  it("clamps caller aggregate byte budgets to the platform hard ceiling", async () => {
+    const response = await post({ maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes * 2 });
+    expect(response.status).toBe(202);
+    expect(submitMock.mock.calls[0]?.[2]).toMatchObject({
+      maxTotalBytes: CRAWL_POLICY_CEILINGS.maxTotalBytes,
+    });
+  });
+
 });
