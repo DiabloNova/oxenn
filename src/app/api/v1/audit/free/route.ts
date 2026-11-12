@@ -247,7 +247,7 @@ function buildResponse(html: string, requestedUrl: string, crawl: {
   return {
     mode: "LIVE",
     scope: "single-page",
-    crawl,
+    crawl: { provider: "internal-http", ...crawl },
     score,
     grade,
     checks: { hasTitle, titleLength, hasMetaDescription, metaDescriptionLength, hasH1, isHttps, hasLanguage, isIndexable },
