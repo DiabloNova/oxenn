@@ -229,4 +229,33 @@ describe("remediation finding coverage contract", () => {
       expect(finding.content).toMatch(/Do not (?:execute|run)/i);
     }
   });
+
+  it("points each reviewed Finding to the Wave 0 log batch for its numeric record", () => {
+    const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
+    const ledgerStart = progress.indexOf("## 4. Finding ledger");
+    const ledgerEnd = progress.indexOf("## 5. Execution log", ledgerStart);
+
+    expect(ledgerStart).toBeGreaterThanOrEqual(0);
+    expect(ledgerEnd).toBeGreaterThan(ledgerStart);
+
+    const rows = progress
+      .slice(ledgerStart, ledgerEnd)
+      .split(/\r?\n/)
+      .filter((line) => /^\|\s*\[[A-Z0-9-]+\]\(\.\/findings\//.test(line));
+
+    for (const line of rows) {
+      const match = line.match(/^\|\s*\[([A-Z0-9-]+)\]\(\.\/findings\/(\d{3})-[^)]+\)\s*\|[^|]+\|\s*([^|]+)\s*\|[^|]*\|\s*([^|]+)\s*\|$/);
+      expect(match).toBeTruthy();
+      if (!match) continue;
+
+      const status = match[3].trim();
+      const evidence = match[4].trim();
+      if (status === "Not started" || !evidence.includes("Wave 0 log")) continue;
+
+      const findingNumber = Number(match[2]);
+      const expectedBatch = findingNumber <= 20 ? "001–020" : findingNumber <= 60 ? "040–060" : "062–097";
+      expect(evidence).toContain("Wave 0 log " + expectedBatch);
+    }
+  });
+
 });

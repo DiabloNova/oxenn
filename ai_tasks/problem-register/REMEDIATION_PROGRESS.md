@@ -119,63 +119,63 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [PUB-005](./findings/038-PUB-005.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [PUB-006](./findings/039-PUB-006.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [SCR-001](./findings/040-SCR-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; registry/verifier/matrix tests; live enforcement unknown |
-| [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SCR-003](./findings/042-SCR-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SCR-004](./findings/043-SCR-004.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SCR-005](./findings/044-SCR-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SCR-006](./findings/045-SCR-006.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SCR-007](./findings/046-SCR-007.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-001](./findings/047-SRC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-002](./findings/048-SRC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
+| [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SCR-003](./findings/042-SCR-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SCR-004](./findings/043-SCR-004.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SCR-005](./findings/044-SCR-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SCR-006](./findings/045-SCR-006.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SCR-007](./findings/046-SCR-007.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-001](./findings/047-SRC-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-002](./findings/048-SRC-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
 | [SRC-003](./findings/049-SRC-003.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; checked-in repository evidence; live DB unknown |
-| [SRC-004](./findings/050-SRC-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-005](./findings/051-SRC-005.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-006](./findings/052-SRC-006.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-007](./findings/053-SRC-007.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-008](./findings/054-SRC-008.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-009](./findings/055-SRC-009.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-010](./findings/056-SRC-010.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-011](./findings/057-SRC-011.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-012](./findings/058-SRC-012.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
+| [SRC-004](./findings/050-SRC-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-005](./findings/051-SRC-005.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-006](./findings/052-SRC-006.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-007](./findings/053-SRC-007.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-008](./findings/054-SRC-008.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-009](./findings/055-SRC-009.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-010](./findings/056-SRC-010.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-011](./findings/057-SRC-011.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
+| [SRC-012](./findings/058-SRC-012.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
 | [SRC-013](./findings/059-SRC-013.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | Owner policy: registered + signed-in; SECURITY_MODEL.md; route auth gap remains |
-| [SRC-014](./findings/060-SRC-014.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
+| [SRC-014](./findings/060-SRC-014.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 040–060 |
 | [SRC-015](./findings/061-SRC-015.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started | — | — |
-| [SRC-016](./findings/062-SRC-016.md) | Wave 2 (persistence/expiry) + Wave 4 (localized UI/email workflow) | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-017](./findings/063-SRC-017.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-018](./findings/064-SRC-018.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Needs decision | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-019](./findings/065-SRC-019.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-020](./findings/066-SRC-020.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [SRC-021](./findings/067-SRC-021.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060 |
-| [SRC-022](./findings/068-SRC-022.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060 |
-| [SRC-023](./findings/069-SRC-023.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060 |
-| [SRC-024](./findings/070-SRC-024.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060 |
-| [SRC-025](./findings/071-SRC-025.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060 |
-| [SRC-026](./findings/072-SRC-026.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060 |
-| [TST-001](./findings/073-TST-001.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
+| [SRC-016](./findings/062-SRC-016.md) | Wave 2 (persistence/expiry) + Wave 4 (localized UI/email workflow) | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-017](./findings/063-SRC-017.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-018](./findings/064-SRC-018.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Needs decision | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-019](./findings/065-SRC-019.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-020](./findings/066-SRC-020.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-021](./findings/067-SRC-021.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-022](./findings/068-SRC-022.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-023](./findings/069-SRC-023.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-024](./findings/070-SRC-024.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-025](./findings/071-SRC-025.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060  main@9ac5fe0; Wave 0 log 062–097 |
+| [SRC-026](./findings/072-SRC-026.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060  main@9ac5fe0; Wave 0 log 062–097 |
+| [TST-001](./findings/073-TST-001.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
 | [TST-002](./findings/074-TST-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; migration 0014 + isolation CI; live DB unknown |
 | [TST-003](./findings/075-TST-003.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; explicit registry + verifier + independent tests |
-| [TST-004](./findings/076-TST-004.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [TST-005](./findings/077-TST-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [TST-006](./findings/078-TST-006.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [TST-007](./findings/079-TST-007.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [TST-008](./findings/080-TST-008.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [TST-009](./findings/081-TST-009.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-001](./findings/082-VER-001.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-002](./findings/083-VER-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-003](./findings/084-VER-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-004](./findings/085-VER-004.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
+| [TST-004](./findings/076-TST-004.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [TST-005](./findings/077-TST-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [TST-006](./findings/078-TST-006.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [TST-007](./findings/079-TST-007.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [TST-008](./findings/080-TST-008.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [TST-009](./findings/081-TST-009.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-001](./findings/082-VER-001.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-002](./findings/083-VER-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-003](./findings/084-VER-003.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-004](./findings/085-VER-004.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
 | [VER-005](./findings/086-VER-005.md) | Wave 0 — Historical-only safety review (DO NOT RUN) | Blocked | — | Historical artifact; DO NOT RUN |
 | [VER-006](./findings/087-VER-006.md) | Wave 0 — Historical-only safety review (DO NOT RUN) | Blocked | — | Historical artifact; DO NOT RUN |
-| [VER-007](./findings/088-VER-007.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-008](./findings/089-VER-008.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-009](./findings/090-VER-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-010](./findings/091-VER-010.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-011](./findings/092-VER-011.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [VER-012](./findings/093-VER-012.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
+| [VER-007](./findings/088-VER-007.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-008](./findings/089-VER-008.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-009](./findings/090-VER-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-010](./findings/091-VER-010.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-011](./findings/092-VER-011.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [VER-012](./findings/093-VER-012.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
 | [VER-013](./findings/094-VER-013.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Blocked | — | Time-bounded advisory recheck due 2026-11-19; resolution not established |
-| [ARCH-001](./findings/095-ARCH-001.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [ARCH-002](./findings/096-ARCH-002.md) | Wave 7 — LangChain interim adapter | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
-| [ARCH-003](./findings/097-ARCH-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020 |
+| [ARCH-001](./findings/095-ARCH-001.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [ARCH-002](./findings/096-ARCH-002.md) | Wave 7 — LangChain interim adapter | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
+| [ARCH-003](./findings/097-ARCH-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020  main@9ac5fe0; Wave 0 log 062–097 |
  
 ## 5. Execution log
 
@@ -555,6 +555,16 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Files changed: ai_tasks/problem-register/REMEDIATION_PROGRESS.md; tests/unit/scripts/docs/remediation-finding-coverage.test.ts; docs/security/SECURITY_MODEL.md; ai_tasks/problem-register/findings/016-DOC-002.md; 059-SRC-013.md; 074-TST-002.md; 075-TST-003.md; and 083-VER-002.md.
 - Tests: focused test not run locally; CI pending for the resulting commit. No test result is claimed here.
 - No application route, source service, schema, SQL migration, generated artifact, database, Redis, provider, deployment, or production resource was changed or accessed. main was not modified; no new branch or PR was created; PR #133 remains open and unmerged.
+
+### Ledger evidence-pointer correction — 2026-11-12
+
+- Root cause: the first Ledger reconciliation selected a Wave 0 batch from the Finding ID suffix (for example, SCR-002) instead of the Finding record's numeric filename prefix (041-SCR-002.md). The ID suffix is a category-local sequence and does not identify the reviewed batch.
+- Corrected all 49 incorrect generic Evidence/log pointers using the numeric Finding file prefix. Of the 66 rows with generic Wave 0 log pointers, 17 were already correct and 49 were corrected to the matching 001–020, 040–060, or 062–097 batch.
+- Finding statuses and the 77/20 reviewed/unreviewed counts did not change.
+- Added a regression test that derives the expected batch from the Finding filename and checks every generic Wave 0 log pointer.
+- Files changed: only this progress log and tests/unit/scripts/docs/remediation-finding-coverage.test.ts.
+- CI run #764 passed the previous status/DO NOT RUN test changes, but it predates this pointer correction. The new evidence-pointer assertion is pending CI on the next commit.
+- No source, schema, migration, database, runtime, or deployment action occurred. main remains unchanged and PR #133 remains open.
 
 ## 6. Wave-level gates
 
