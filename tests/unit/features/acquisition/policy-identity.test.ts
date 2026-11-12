@@ -20,6 +20,7 @@ describe("testPolicyIdentity", () => {
     for (const field of [
       "maxPages",
       "maxDurationMs",
+      "maxTotalBytes",
       "maxResponseBytes",
       "maxConcurrency",
       "requestTimeoutMs",
@@ -42,6 +43,7 @@ describe("testPolicyIdentity", () => {
     }
     expect(computeDedupKey("tenant", url.value, { ...policy, maxPages: 10 })).not.toBe(computeDedupKey("tenant", url.value, { ...policy, maxPages: 100 }));
     expect(computeDedupKey("tenant", url.value, { ...policy, maxAttempts: 1 })).toBe(computeDedupKey("tenant", url.value, { ...policy, maxAttempts: 5 }));
+    expect(computeDedupKey("tenant", url.value, { ...policy, maxTotalBytes: 1024 })).not.toBe(computeDedupKey("tenant", url.value, { ...policy, maxTotalBytes: 2048 }));
     expect(computeCacheKey("tenant", url.value, policy)).not.toBe(computeCacheKey("other", url.value, policy));
     expect(computeCacheKey("tenant", url.value, policy, "global")).toBe(computeCacheKey("other", url.value, policy, "global"));
     expect(computeCacheKey("tenant", url.value, policy)).toMatch(/^[a-f0-9]{64}$/);

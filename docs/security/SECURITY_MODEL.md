@@ -37,7 +37,15 @@ The server-side authorization helpers in `src/services/auth/authorization.ts` re
 
 These helpers provide repository-level server-side enforcement primitives. Their presence does not prove that every route or every operation uses them correctly, nor does static inspection establish the state of a deployed database.
 
-## 3. Platform Admin authorization
+## 3. Product-wide free-service access policy
+
+All Oxenn services, including free Fred Audit / Free Audit, require a registered account and a server-authenticated session. Free-tier access is available only after registration and sign-in; anonymous service execution is not permitted. This is the owner-approved product access rule and applies across product areas, not only to Workspace authorization roles.
+
+**Current enforcement gap:** the current `src/app/api/v1/audit/free/route.ts` POST handler validates the submitted URL and proceeds to the Firecrawl/mock execution path, but it does not invoke a server-side session or registration authorization helper and does not apply a route-level rate-limit gate. The documented product rule is therefore **not enforced by this route in the current repository snapshot**. Do not describe Free Audit as access-controlled until the route is separately remediated and verified. This documentation change does not modify or secure the route.
+
+Quota metering and SSRF-safe fetching remain separate enforcement requirements. No implementation or production enforcement is claimed here.
+
+## 4. Platform Admin authorization
 
 ### Separate intended context
 
@@ -57,7 +65,7 @@ Stage 2 adds a separate Platform Admin Drizzle schema in `database/platform-admi
 
 No real OIDC provider is configured, no dedicated database has been provisioned or connected, and no migration or first-admin bootstrap has been run. The code remains fail-closed until deployment configuration and controlled provisioning are complete. The older `admin_users`, `roles`, and `permissions` schema remains frozen legacy data and is not used by the new boundary.
 
-## 4. Cross-context security rules
+## 5. Cross-context security rules
 
 1. Workspace roles never imply Platform Admin roles or permissions.
 2. Platform Admin role definitions never create or imply customer workspace membership.
@@ -65,7 +73,7 @@ No real OIDC provider is configured, no dedicated database has been provisioned 
 4. Platform Admin actions require a separately authenticated server-side administrative principal, explicit scope checks, and permission evaluation at the actual route/handler boundary before that context can be described as enforced.
 5. Keep the Workspace `super_admin` operator override distinct from the Platform Admin `Super Admin` role. Any future mapping would require a deliberate, audited design and separate approval.
 
-## 5. Related specifications
+## 6. Related specifications
 
 - [Security Documentation](./README.md)
 - [RBAC Model](./RBAC_MODEL.md)

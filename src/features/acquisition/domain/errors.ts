@@ -8,6 +8,7 @@ export const CRAWL_ERROR_CLASSIFICATION = {
   HTTP_ERROR: { retryable: false, fallbackEligible: false },
   REDIRECT_LIMIT: { retryable: false, fallbackEligible: false },
   RESPONSE_TOO_LARGE: { retryable: false, fallbackEligible: false },
+  BYTE_BUDGET_EXCEEDED: { retryable: false, fallbackEligible: false },
   CONTENT_TYPE_UNSUPPORTED: { retryable: false, fallbackEligible: false },
   RATE_LIMITED: { retryable: true, fallbackEligible: true },
   PROVIDER_ERROR: { retryable: true, fallbackEligible: true },

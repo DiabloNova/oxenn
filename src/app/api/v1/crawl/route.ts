@@ -8,6 +8,7 @@ import { CrawlJobRepository } from "@/features/acquisition/infrastructure/persis
 import { getSession } from "@/services/auth/session";
 import { subscriptionService } from "@/features/billing/services/subscription-service";
 import { getCrawlerRedirectPolicy } from "@/services/crawler/redirect-policy";
+import { CRAWL_POLICY_CEILINGS } from "@/features/acquisition/domain/policy";
 
 const requestSchema = z.object({
   requestedUrl: z.string().min(1),
@@ -17,6 +18,7 @@ const requestSchema = z.object({
       maxDepth: z.number().int().optional(),
       maxDurationMs: z.number().int().optional(),
       maxResponseBytes: z.number().int().optional(),
+      maxTotalBytes: z.number().int().positive().optional(),
       maxRedirects: z.number().int().min(0).optional(),
       maxConcurrency: z.number().int().optional(),
       requestTimeoutMs: z.number().int().optional(),
@@ -107,6 +109,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           body.data.requestedUrl,
           {
             ...(body.data.policy ?? {}),
+            // A caller may lower the job budget but cannot raise the platform ceiling.
+            maxTotalBytes: Math.min(
+              body.data.policy?.maxTotalBytes ?? CRAWL_POLICY_CEILINGS.maxTotalBytes,
+              CRAWL_POLICY_CEILINGS.maxTotalBytes
+            ),
             // The plan limit is a ceiling; a caller may request fewer redirects.
             maxRedirects: redirectPolicy.maxRedirects === null
               ? body.data.policy?.maxRedirects ?? null

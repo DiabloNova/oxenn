@@ -35,6 +35,63 @@ type ColumnMetadata = { column_name: string; data_type: string; is_nullable: str
 const testDbUrl = "postgresql://postgres:postgres@localhost:5432/isolation_test_db";
 const MOCK_VECTOR = '[' + Array.from({length: 768}, () => (Math.random() * 0.1).toFixed(4)).join(',') + ']';
 
+async function runCrossTenantUpdateProbe(
+  client: PoolClient,
+  tableName: string,
+  predicate: string,
+  values: readonly unknown[],
+  mutableColumn: string,
+): Promise<{ denied: boolean; unchanged: boolean; rowCount: number | null; errorCode: string | null }> {
+  await client.query("RESET ROLE");
+  const before = await client.query<{ value: string | null }>(
+    "SELECT " + mutableColumn + "::text AS value FROM " + tableName + " WHERE " + predicate,
+    [...values],
+  );
+  if (before.rowCount !== 1) {
+    await client.query("SET ROLE app_runtime");
+    throw new Error("Expected exactly one privileged baseline row for " + tableName + ".");
+  }
+
+  await client.query("SET ROLE app_runtime");
+  let rowCount: number | null = null;
+  let errorCode: string | null = null;
+
+  await client.query("BEGIN");
+  try {
+    await client.query("SAVEPOINT cross_tenant_update");
+    try {
+      const result = await client.query(
+        "UPDATE " + tableName + " SET " + mutableColumn +
+          " = COALESCE(" + mutableColumn + ", NOW()) + INTERVAL '1 second' WHERE " + predicate,
+        [...values],
+      );
+      rowCount = result.rowCount;
+    } catch (error: unknown) {
+      errorCode = (error as { code?: string }).code ?? "UNKNOWN";
+    }
+    await client.query("ROLLBACK TO SAVEPOINT cross_tenant_update");
+    await client.query("RELEASE SAVEPOINT cross_tenant_update");
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  }
+
+  await client.query("RESET ROLE");
+  const after = await client.query<{ value: string | null }>(
+    "SELECT " + mutableColumn + "::text AS value FROM " + tableName + " WHERE " + predicate,
+    [...values],
+  );
+  await client.query("SET ROLE app_runtime");
+
+  return {
+    denied: errorCode === "42501" || rowCount === 0,
+    unchanged: after.rowCount === 1 && before.rows[0]?.value === after.rows[0]?.value,
+    rowCount,
+    errorCode,
+  };
+}
+
 async function setupTestDb() {
   const adminDbUrl = "postgresql://postgres:postgres@localhost:5432/postgres";
   const pool = new Pool({ connectionString: adminDbUrl });
@@ -426,11 +483,28 @@ async function runTest() {
         success = false;
       }
 
-      if (tablesMetadata[tableName].some(c => c.column_name === 'updated_at')) {
-        const updateB = await client.query(`UPDATE ${tableName} SET updated_at = NOW() WHERE ${tenantCol} = '${orgBId}'`);
-        assertionsCount++;
-        if (updateB.rowCount !== 0) {
-          console.error(`❌ Table ${tableName}: Tenant A context updated Tenant B rows!`);
+      const mutableColumn = ["updated_at", "created_at", "captured_at"].find(column =>
+        tablesMetadata[tableName].some(c => c.column_name === column),
+      );
+      if (!mutableColumn) {
+        console.error("❌ Table " + tableName + ": no supported mutable timestamp column for cross-tenant UPDATE test.");
+        success = false;
+      } else {
+        const crossTenantUpdate = await runCrossTenantUpdateProbe(
+          client,
+          tableName,
+          "id = $1",
+          [idB],
+          mutableColumn,
+        );
+        assertionsCount += 3;
+        if (!crossTenantUpdate.denied) {
+          console.error("❌ Table " + tableName + ": cross-tenant UPDATE was not denied (rowCount=" +
+            crossTenantUpdate.rowCount + ", error=" + crossTenantUpdate.errorCode + ").");
+          success = false;
+        }
+        if (!crossTenantUpdate.unchanged) {
+          console.error("❌ Table " + tableName + ": Tenant B row changed after Tenant A's UPDATE attempt.");
           success = false;
         }
       }
@@ -667,6 +741,24 @@ async function runTest() {
       assertionsCount++;
       if (updateA.rowCount !== 1) {
         console.error(`❌ ${tableName}: tenant A could not update its own relationship.`);
+        success = false;
+      }
+
+      const junctionCrossTenantUpdate = await runCrossTenantUpdateProbe(
+        client,
+        tableName,
+        keyPredicate,
+        valuesB,
+        "created_at",
+      );
+      assertionsCount += 3;
+      if (!junctionCrossTenantUpdate.denied) {
+        console.error("❌ " + tableName + ": cross-tenant relationship UPDATE was not denied (rowCount=" +
+          junctionCrossTenantUpdate.rowCount + ", error=" + junctionCrossTenantUpdate.errorCode + ").");
+        success = false;
+      }
+      if (!junctionCrossTenantUpdate.unchanged) {
+        console.error("❌ " + tableName + ": Tenant B relationship changed after Tenant A's UPDATE attempt.");
         success = false;
       }
 
