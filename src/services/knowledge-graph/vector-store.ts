@@ -5,7 +5,7 @@
 
 import { PostgresClient } from "../../features/admin/infrastructure/persistence/postgres";
 import { DocumentEmbedding } from "../../features/ai-intelligence/domain/types";
-import { validateMetadata, validateRagResultLimit } from "../ai/resource-limits";
+import { MAX_CHUNK_SIZE, validateMetadata, validateRagResultLimit } from "../ai/resource-limits";
 
 export class VectorStoreService {
   private pg: PostgresClient;
@@ -21,7 +21,7 @@ export class VectorStoreService {
     metadata: Record<string, unknown>
   ): Promise<DocumentEmbedding> {
     const safeMetadata = validateMetadata(metadata);
-    if (!Number.isInteger(contentChunk.length) || contentChunk.length > 4_000) {
+    if (contentChunk.length > MAX_CHUNK_SIZE) {
       throw new RangeError("Content chunk exceeds the maximum allowed size.");
     }
 
