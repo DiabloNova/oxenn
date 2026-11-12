@@ -74,6 +74,34 @@ function findingFiles(): string[] {
   return files;
 }
 
+function readLedgerRows(progress: string): string[] {
+  const ledgerStart = progress.indexOf("## 4. Finding ledger");
+  const ledgerEnd = progress.indexOf("## 5. Execution log", ledgerStart);
+
+  expect(ledgerStart).toBeGreaterThanOrEqual(0);
+  expect(ledgerEnd).toBeGreaterThan(ledgerStart);
+
+  const sectionLines = progress.slice(ledgerStart, ledgerEnd).split(/\r?\n/);
+  const tableLines = sectionLines.filter((line) => line.startsWith("|"));
+  const headerLines = tableLines.filter((line) => /^\|\s*Finding\s*\|/.test(line));
+  const separatorLines = tableLines.filter((line) => /^\|\s*:?-{3,}:?\s*\|/.test(line));
+  const dataRows = tableLines.filter((line) => /^\|\s*\[[A-Z0-9-]+\]\(\.\/findings\//.test(line));
+
+  // Every pipe-delimited line in this section must be either the one header,
+  // the one separator, or a fully identifiable Finding row.
+  expect(headerLines).toHaveLength(1);
+  expect(separatorLines).toHaveLength(1);
+  expect(tableLines).toHaveLength(dataRows.length + 2);
+  return dataRows;
+}
+
+function parseLedgerRow(line: string): { id: string; filename: string; status: string; evidence: string } {
+  const match = line.match(/^\|\s*\[([A-Z0-9-]+)\]\(\.\/findings\/(\d{3}-[A-Z0-9-]+\.md)\)\s*\|([^|]+)\|([^|]+)\|([^|]*)\|([^|]+)\|$/);
+  expect(match, `Malformed Finding Ledger row: ${line}`).toBeTruthy();
+  if (!match) throw new Error(`Malformed Finding Ledger row: ${line}`);
+  return { id: match[1], filename: match[2], status: match[4].trim(), evidence: match[6].trim() };
+}
+
 describe("remediation finding coverage contract", () => {
   it("keeps exactly 97 numbered, unique finding records", () => {
     const files = findingFiles();
@@ -166,18 +194,11 @@ describe("remediation finding coverage contract", () => {
     }
   });
 
-  it("uses only canonical primary statuses for all 97 Finding Ledger rows", () => {
+  it("validates every Finding Ledger row, its identity, and its canonical status", () => {
     const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
-    const ledgerStart = progress.indexOf("## 4. Finding ledger");
-    const ledgerEnd = progress.indexOf("## 5. Execution log", ledgerStart);
-
-    expect(ledgerStart).toBeGreaterThanOrEqual(0);
-    expect(ledgerEnd).toBeGreaterThan(ledgerStart);
-
-    const ledgerRows = progress
-      .slice(ledgerStart, ledgerEnd)
-      .split(/\r?\n/)
-      .filter((line) => /^\|\s*\[[A-Z0-9-]+\]\(\.\/findings\//.test(line));
+    const rows = readLedgerRows(progress);
+    const files = findingFiles();
+    const parsed = rows.map(parseLedgerRow);
     const allowedStatuses = [
       "Not started",
       "Revalidation in progress",
@@ -196,13 +217,13 @@ describe("remediation finding coverage contract", () => {
       "Deferred / out of scope",
     ];
 
-    expect(ledgerRows).toHaveLength(expectedFindingCount);
-    const ids = ledgerRows.map((line) => line.match(/^\|\s*\[([A-Z0-9-]+)\]/)?.[1]);
-    expect(new Set(ids).size).toBe(expectedFindingCount);
+    expect(rows).toHaveLength(expectedFindingCount);
+    assertExactlyOnce(parsed.map((row) => row.filename), files);
+    expect(new Set(parsed.map((row) => row.id)).size).toBe(expectedFindingCount);
 
-    for (const line of ledgerRows) {
-      const status = line.match(/^\|\s*\[[A-Z0-9-]+\]\([^)]*\)\s*\|[^|]+\|\s*([^|]+)\s*\|/)?.[1]?.trim();
-      expect(allowedStatuses).toContain(status);
+    for (const row of parsed) {
+      expect(row.filename.replace(/^\d{3}-/, "").replace(/\.md$/, "")).toBe(row.id);
+      expect(allowedStatuses).toContain(row.status);
     }
   });
 
@@ -230,31 +251,22 @@ describe("remediation finding coverage contract", () => {
     }
   });
 
-  it("points each reviewed Finding to the Wave 0 log batch for its numeric record", () => {
+  it("allows at most one Wave 0 evidence pointer and requires its exact numeric Finding batch", () => {
     const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
-    const ledgerStart = progress.indexOf("## 4. Finding ledger");
-    const ledgerEnd = progress.indexOf("## 5. Execution log", ledgerStart);
+    const rows = readLedgerRows(progress).map(parseLedgerRow);
 
-    expect(ledgerStart).toBeGreaterThanOrEqual(0);
-    expect(ledgerEnd).toBeGreaterThan(ledgerStart);
+    for (const row of rows) {
+      const hasWave0Pointer = row.evidence.includes("Wave 0 log");
+      const batchMatches = Array.from(
+        row.evidence.matchAll(/Wave 0 log ([0-9]{3}[–-][0-9]{3})/g),
+        (match) => match[1],
+      );
 
-    const rows = progress
-      .slice(ledgerStart, ledgerEnd)
-      .split(/\r?\n/)
-      .filter((line) => /^\|\s*\[[A-Z0-9-]+\]\(\.\/findings\//.test(line));
+      if (!hasWave0Pointer) continue;
 
-    for (const line of rows) {
-      const match = line.match(/^\|\s*\[([A-Z0-9-]+)\]\(\.\/findings\/(\d{3})-[^)]+\)\s*\|[^|]+\|\s*([^|]+)\s*\|[^|]*\|\s*([^|]+)\s*\|$/);
-      expect(match).toBeTruthy();
-      if (!match) continue;
-
-      const status = match[3].trim();
-      const evidence = match[4].trim();
-      if (status === "Not started" || !evidence.includes("Wave 0 log")) continue;
-
-      const findingNumber = Number(match[2]);
+      const findingNumber = Number(row.filename.slice(0, 3));
       const expectedBatch = findingNumber <= 20 ? "001–020" : findingNumber <= 60 ? "040–060" : "062–097";
-      expect(evidence).toContain("Wave 0 log " + expectedBatch);
+      expect(batchMatches).toEqual([expectedBatch]);
     }
   });
 
