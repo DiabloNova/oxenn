@@ -74,6 +74,34 @@ function findingFiles(): string[] {
   return files;
 }
 
+function readLedgerRows(progress: string): string[] {
+  const ledgerStart = progress.indexOf("## 4. Finding ledger");
+  const ledgerEnd = progress.indexOf("## 5. Execution log", ledgerStart);
+
+  expect(ledgerStart).toBeGreaterThanOrEqual(0);
+  expect(ledgerEnd).toBeGreaterThan(ledgerStart);
+
+  const sectionLines = progress.slice(ledgerStart, ledgerEnd).split(/\r?\n/);
+  const tableLines = sectionLines.filter((line) => line.startsWith("|"));
+  const headerLines = tableLines.filter((line) => /^\|\s*Finding\s*\|/.test(line));
+  const separatorLines = tableLines.filter((line) => /^\|\s*:?-{3,}:?\s*\|/.test(line));
+  const dataRows = tableLines.filter((line) => /^\|\s*\[[A-Z0-9-]+\]\(\.\/findings\//.test(line));
+
+  // Every pipe-delimited line in this section must be either the one header,
+  // the one separator, or a fully identifiable Finding row.
+  expect(headerLines).toHaveLength(1);
+  expect(separatorLines).toHaveLength(1);
+  expect(tableLines).toHaveLength(dataRows.length + 2);
+  return dataRows;
+}
+
+function parseLedgerRow(line: string): { id: string; filename: string; status: string; evidence: string } {
+  const match = line.match(/^\|\s*\[([A-Z0-9-]+)\]\(\.\/findings\/(\d{3}-[A-Z0-9-]+\.md)\)\s*\|([^|]+)\|([^|]+)\|([^|]*)\|([^|]+)\|$/);
+  expect(match, `Malformed Finding Ledger row: ${line}`).toBeTruthy();
+  if (!match) throw new Error(`Malformed Finding Ledger row: ${line}`);
+  return { id: match[1], filename: match[2], status: match[4].trim(), evidence: match[6].trim() };
+}
+
 describe("remediation finding coverage contract", () => {
   it("keeps exactly 97 numbered, unique finding records", () => {
     const files = findingFiles();
@@ -166,11 +194,54 @@ describe("remediation finding coverage contract", () => {
     }
   });
 
+  it("validates every Finding Ledger row, its identity, and its canonical status", () => {
+    const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
+    const rows = readLedgerRows(progress);
+    const files = findingFiles();
+    const parsed = rows.map(parseLedgerRow);
+    const allowedStatuses = [
+      "Not started",
+      "Revalidation in progress",
+      "Confirmed",
+      "Already fixed",
+      "Superseded",
+      "Needs decision",
+      "Approved",
+      "In progress",
+      "Blocked",
+      "Implemented — verification pending",
+      "Verified complete",
+      "Integrated — verification pending",
+      "Integrated — verification failed",
+      "Closed without merge",
+      "Deferred / out of scope",
+    ];
+
+    expect(rows).toHaveLength(expectedFindingCount);
+    assertExactlyOnce(parsed.map((row) => row.filename), files);
+    expect(new Set(parsed.map((row) => row.id)).size).toBe(expectedFindingCount);
+
+    for (const row of parsed) {
+      expect(row.filename.replace(/^\d{3}-/, "").replace(/\.md$/, "")).toBe(row.id);
+      expect(allowedStatuses).toContain(row.status);
+    }
+  });
+
   it("preserves the Blocked status and DO NOT RUN safety annotation for VER-005 and VER-006", () => {
     const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
+    const ledgerStart = progress.indexOf("## 4. Finding ledger");
+    const ledgerEnd = progress.indexOf("## 5. Execution log", ledgerStart);
+
+    expect(ledgerStart).toBeGreaterThanOrEqual(0);
+    expect(ledgerEnd).toBeGreaterThan(ledgerStart);
+    const ledger = progress.slice(ledgerStart, ledgerEnd);
 
     for (const finding of historicalFindings) {
-      const rows = progress.split(/\r?\n/).filter((line) => line.includes(`[${finding.id}]`));
+      const rows = ledger
+        .split(/\r?\n/)
+        .filter((line) =>
+          line.startsWith("| [" + finding.id + "](./findings/" + finding.filename + ")"),
+        );
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatch(/\|\s*Blocked\s*\|/);
       expect(rows[0]).toContain("DO NOT RUN");
@@ -179,4 +250,34 @@ describe("remediation finding coverage contract", () => {
       expect(finding.content).toMatch(/Do not (?:execute|run)/i);
     }
   });
+
+  it("keeps at most one main SHA evidence pointer in each Finding Ledger row", () => {
+    const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
+    const rows = readLedgerRows(progress).map(parseLedgerRow);
+
+    for (const row of rows) {
+      const mainShaPointers = row.evidence.match(/\bmain@[0-9a-f]{7,40}\b/g) ?? [];
+      expect(mainShaPointers.length, row.id + " must not repeat a main SHA evidence pointer").toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("allows at most one Wave 0 evidence pointer and requires its exact numeric Finding batch", () => {
+    const progress = fs.readFileSync("ai_tasks/problem-register/REMEDIATION_PROGRESS.md", "utf8");
+    const rows = readLedgerRows(progress).map(parseLedgerRow);
+
+    for (const row of rows) {
+      const hasWave0Pointer = row.evidence.includes("Wave 0 log");
+      const batchMatches = Array.from(
+        row.evidence.matchAll(/Wave 0 log ([0-9]{3}[–-][0-9]{3})/g),
+        (match) => match[1],
+      );
+
+      if (!hasWave0Pointer) continue;
+
+      const findingNumber = Number(row.filename.slice(0, 3));
+      const expectedBatch = findingNumber <= 20 ? "001–020" : findingNumber <= 60 ? "040–060" : "062–097";
+      expect(batchMatches).toEqual([expectedBatch]);
+    }
+  });
+
 });
