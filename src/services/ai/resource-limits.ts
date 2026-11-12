@@ -92,17 +92,17 @@ const metadataSchema = z
 
 const chunkingOptionsSchema = z
   .object({
-    maxChunkSize: z.number().int().min(2).max(MAX_CHUNK_SIZE).optional(),
+    maxChunkSize: z.number().int().min(3).max(MAX_CHUNK_SIZE).optional(),
     overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional(),
   })
   .superRefine((options, context) => {
     const maxChunkSize = options.maxChunkSize ?? DEFAULT_CHUNK_SIZE;
     const overlap = options.overlap ?? DEFAULT_CHUNK_OVERLAP;
-    if (overlap >= maxChunkSize) {
+    if (overlap > maxChunkSize - 4) {
       context.addIssue({
         code: "custom",
         path: ["overlap"],
-        message: "Overlap must be smaller than maxChunkSize.",
+        message: "Overlap must leave at least three characters for chunk content and a joining separator.",
       });
     }
   });
@@ -121,7 +121,7 @@ export const ingestionRequestSchema = z.object({
 
 export const chunkRequestSchema = z.object({
   text: boundedText(MAX_CHUNK_TEXT_BYTES, "Text to chunk"),
-  maxChunkSize: z.number().int().min(2).max(MAX_CHUNK_SIZE).optional().default(DEFAULT_CHUNK_SIZE),
+  maxChunkSize: z.number().int().min(3).max(MAX_CHUNK_SIZE).optional().default(DEFAULT_CHUNK_SIZE),
   overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional().default(DEFAULT_CHUNK_OVERLAP),
 }).superRefine((data, context) => {
   if (data.overlap >= data.maxChunkSize) {
