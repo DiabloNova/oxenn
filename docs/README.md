@@ -8,8 +8,16 @@ This documentation describes the OXENN product, its target architecture, user-fa
 - [MVP Engineering Baseline](./project/MVP_ENGINEERING_BASELINE.md): code-level implementation mapping, known gaps, delivery dependencies, and verification boundaries.
 - [Product Architecture](./architecture/OXENN_PRODUCT_ARCHITECTURE.md): the nine-domain product architecture and cross-cutting platform capabilities.
 - [Product Documentation Index](./product/README.md): product specifications and related product decisions.
+- [MVP Delivery Documentation Hub](../MVP/README.md): complete product map, MVP map, master delivery baseline, and self-contained stage-by-stage roadmap.
 
-The Product Specification is the authority for what OXENN is expected to deliver. The Engineering Baseline is the authority for the inspected repository implementation state. A planned or documented capability must not be described as implemented or live without corresponding code and verification evidence.
+The Product Specification is the authority for what OXENN is expected to deliver. The Engineering Baseline is the authority for the inspected repository implementation state. The MVP directory is the navigation and delivery-plan authority for decomposing approved scope into stages. A planned or documented capability must not be described as implemented or live without corresponding code and verification evidence.
+
+## MVP delivery structure
+
+- [Project Map](../MVP/architecture_map/project_map.md): all product lines, pillars, standalone services, optional packages, shared platform capabilities, future extensions, and product boundaries.
+- [MVP Map](../MVP/architecture_map/MVP_map.md): only the approved MVP products, services, scope, journeys, requirements and exclusions.
+- [MVP Baseline](../MVP/roadmap_plan/MVP/MVP_baseline.md): dependency-ordered programme and cross-stage acceptance gates.
+- [Stage Roadmap](../MVP/roadmap_plan/MVP/roadmap/README.md): fifteen standalone stage execution briefs, MVP-00 through MVP-14.
 
 ## Documentation domains
 
