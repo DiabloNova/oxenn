@@ -48,9 +48,19 @@ describe("chunkText resource boundaries", () => {
     expect(() => chunkText(source, 10, 0)).toThrow(/chunk count/i);
   });
 
-  it("rejects chunk options that cannot make forward progress", () => {
+  it("rejects chunk options that cannot make forward progress or preserve a code point", () => {
     expect(() => chunkText("some text", 10, 10)).toThrow(RangeError);
+    expect(() => chunkText("some text", 2, 0)).toThrow(RangeError);
+    expect(() => chunkText("some text", 50, 47)).toThrow(RangeError);
     expect(() => chunkText("some text", 1, 0)).toThrow(RangeError);
+  });
+
+  it("keeps emoji code points intact at the minimum supported chunk size", () => {
+    const chunks = chunkText("😀".repeat(100), 3, 0);
+
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((chunk) => !hasUnpairedSurrogate(chunk))).toBe(true);
+    expect(chunks.every((chunk) => chunk.length <= 3)).toBe(true);
   });
 
   it("never emits chunks larger than the global maximum", () => {
