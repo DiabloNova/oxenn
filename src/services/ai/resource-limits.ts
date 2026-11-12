@@ -148,6 +148,14 @@ export const ragQueryRequestSchema = z.object({
   limit: ragResultLimitSchema.optional().default(5),
 });
 
+export function validateMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const parsed = metadataSchema.safeParse(metadata);
+  if (!parsed.success) {
+    throw new RangeError("Invalid metadata: metadata exceeds the allowed JSON structure or size.");
+  }
+  return parsed.data;
+}
+
 export type ChunkingOptions = {
   maxChunkSize?: number;
   overlap?: number;
