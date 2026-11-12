@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { TenantContextManager, TenantContextViolationException } from "../../../../src/core/database/tenant-context";
+import { PRIVILEGED_PATHS_REGISTRY } from "../../../../src/core/database/privileged-paths";
 
 // Ensure DATABASE_URL is set before importing PostgresClient
 if (!process.env.DATABASE_URL) {
@@ -15,6 +16,14 @@ describe("Privileged Paths Registry Test Suite", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("registers free audit with only its rate-limit and audit-log tables", () => {
+    expect(PRIVILEGED_PATHS_REGISTRY["sys-free-audit"]).toMatchObject({
+      allowedTables: ["auth_rate_limits", "audit_records"],
+      callerModules: ["src/app/api/v1/audit/free/route.ts"],
+      status: "in-use"
+    });
   });
 
   it("throws TenantContextViolationException for unregistered purpose tag", async () => {

@@ -9,6 +9,7 @@ export type PrivilegedPurposeTag =
   | "sys-accept-invitation"
   | "sys-switch-workspace"
   | "sys-api-key-auth"
+  | "sys-free-audit"
   | "api-key-issue"
   | "api-key-revoke"
   | "sys-admin-run"
@@ -97,6 +98,11 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     ["api_keys"],
     ["src/features/public-api/services/api-service.ts"],
     "Looks up an API key by prefix before switching to its organization-scoped context."
+  ),
+  "sys-free-audit": definePath(
+    ["auth_rate_limits", "audit_records"],
+    ["src/app/api/v1/audit/free/route.ts"],
+    "Authenticated single-page free audit: persists hashed user, trusted ingress IP, global, and idempotency counters; the crawler runs outside system database context."
   ),
   "api-key-issue": definePath(
     ["api_keys"],

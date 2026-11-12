@@ -1,99 +1,158 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { POST, FreeAuditResponse } from "@/app/api/v1/audit/free/route";
-import { firecrawlApp } from "@/lib/firecrawl";
+import { getSession } from "@/services/auth/session";
+import { CrawlError } from "@/features/acquisition/domain/errors";
+import { POST, type FreeAuditResponse } from "@/app/api/v1/audit/free/route";
 
-import type { Document } from "@mendable/firecrawl-js";
+const mocks = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  query: vi.fn(),
+  execute: vi.fn(),
+  runWithSystemContext: vi.fn()
+}));
 
-describe("Free SEO Audit (Firecrawl Lead Magnet Module)", () => {
-  const originalScrapeUrl = firecrawlApp.scrapeUrl;
+vi.mock("@/services/auth/session", () => ({ getSession: mocks.getSession }));
+vi.mock("@/core/database/tenant-context", () => ({
+  TenantContextManager: {
+    runWithSystemContext: mocks.runWithSystemContext,
+    getDbClient: () => ({ query: mocks.query })
+  }
+}));
+vi.mock("@/features/acquisition/infrastructure/providers/http-crawl-provider", () => ({
+  HttpCrawlProvider: class {
+    execute = mocks.execute;
+  }
+}));
 
-  afterEach(() => {
-    firecrawlApp.scrapeUrl = originalScrapeUrl;
-    vi.restoreAllMocks();
+const html = `<!doctype html><html lang="en"><head>
+  <title>Example company technical services and solutions for modern teams</title>
+  <meta name="description" content="${"A detailed description of the services, products, and technical capabilities offered by this example company for modern enterprise teams. ".repeat(2).slice(0, 155)}">
+  <meta name="robots" content="index,follow">
+</head><body><h1>Example company</h1></body></html>`;
+
+function makeRequest(url = "https://example.com/", headers: Record<string, string> = {}) {
+  return new NextRequest("http://localhost/api/v1/audit/free", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...headers },
+    body: JSON.stringify({ url })
+  });
+}
+
+function crawlResult() {
+  return {
+    documents: [{ html, finalUrl: "https://example.com/" }],
+    pageCount: 1,
+    bytesProcessed: Buffer.byteLength(html),
+    partial: false,
+    durationMs: 35,
+    provider: { id: "internal-http" },
+    errors: []
+  };
+}
+
+describe("Free audit API", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: "user-1", workspaceId: "workspace-1" } });
+    mocks.runWithSystemContext.mockImplementation(async (_userId: string, _purpose: string, work: () => Promise<unknown>) => work());
+    mocks.query.mockResolvedValue({ rows: [{ attempts: 1 }] });
+    mocks.execute.mockResolvedValue(crawlResult());
   });
 
-  it("Scenario A: Testing Perfect Score (100) & Grade A", async () => {
-    vi.spyOn(firecrawlApp, "scrapeUrl").mockImplementation(async (url: string, options?: unknown) => {
-      if (!url || !options) return {};
-      return {
-        markdown: "# Welcome to Optimus AI\nThis is a beautiful page content.",
-        metadata: {
-          title: "تحلیل پیشرفته سئو معنایی و هوشمندسازی کسب‌وکار آنلاین",
-          description: "تحلیل جامع ساختار سئو معنایی، پایش سلامت احساسات برند، استخراج تخصصی گراف دانش و بررسی بهینه‌سازی موتورهای پاسخ‌دهی هوشمند به زبان فارسی انجام می‌گردد.",
-          language: "fa",
-          robots: "index, follow",
-        },
-      } satisfies Document;
-    });
+  afterEach(() => vi.restoreAllMocks());
 
-    const reqA = new NextRequest("http://localhost/api/v1/audit/free", {
-      method: "POST",
-      body: JSON.stringify({ url: "https://optimus.ai" }),
-    });
-
-    const resA = await POST(reqA);
-    const perfectPayload = (await resA.json()) as FreeAuditResponse;
-
-    expect(resA.status).toBe(200);
-    expect(perfectPayload.score).toBe(100);
-    expect(perfectPayload.grade).toBe("A");
-    expect(perfectPayload.quickTips.length).toBeGreaterThanOrEqual(2);
+  it("rejects anonymous requests before quota or crawling", async () => {
+    mocks.getSession.mockResolvedValue(null);
+    const response = await POST(makeRequest());
+    expect(response.status).toBe(401);
+    expect(mocks.runWithSystemContext).not.toHaveBeenCalled();
+    expect(mocks.execute).not.toHaveBeenCalled();
   });
 
-  it("Scenario B: Testing Poor Score & Grade F", async () => {
-    vi.spyOn(firecrawlApp, "scrapeUrl").mockImplementation(async (url: string, options?: unknown) => {
-      if (!url || !options) return {};
-      return {
-        markdown: "No header content at all.",
-        metadata: {
-          title: "",
-          description: "",
-          language: "",
-          robots: "noindex, nofollow",
-        },
-      } satisfies Document;
-    });
-
-    const reqB = new NextRequest("http://localhost/api/v1/audit/free", {
-      method: "POST",
-      body: JSON.stringify({ url: "http://poor-site.com" }),
-    });
-
-    const resB = await POST(reqB);
-    const poorPayload = (await resB.json()) as FreeAuditResponse;
-
-    expect(resB.status).toBe(200);
-    expect(poorPayload.score).toBe(0);
-    expect(poorPayload.grade).toBe("F");
-
-    const { checks } = poorPayload;
-    expect(checks.hasTitle).toBe(false);
-    expect(checks.hasMetaDescription).toBe(false);
-    expect(checks.hasH1).toBe(false);
-    expect(checks.isHttps).toBe(false);
-    expect(checks.hasLanguage).toBe(false);
-    expect(checks.isIndexable).toBe(false);
-
-    const hasTitleTip = (poorPayload.quickTips as Array<{ issue: string; recommendation: string }>).some((tip) => tip.issue.includes("عنوان"));
-    const hasMetaTip = (poorPayload.quickTips as Array<{ issue: string; recommendation: string }>).some((tip) => tip.issue.includes("توضیحات"));
-    const hasH1Tip = (poorPayload.quickTips as Array<{ issue: string; recommendation: string }>).some((tip) => tip.issue.includes("H1"));
-
-    expect(hasTitleTip).toBe(true);
-    expect(hasMetaTip).toBe(true);
-    expect(hasH1Tip).toBe(true);
+  it("runs one live internal page audit for an authenticated user", async () => {
+    const response = await POST(makeRequest());
+    const payload = await response.json() as FreeAuditResponse;
+    expect(response.status).toBe(200);
+    expect(payload.mode).toBe("LIVE");
+    expect(payload.scope).toBe("single-page");
+    expect(payload.crawl.provider).toBe("internal-http");
+    expect(payload.crawl.pages).toBe(1);
+    expect(payload.score).toBeGreaterThanOrEqual(0);
+    expect(payload.score).toBeLessThanOrEqual(100);
+    expect(mocks.runWithSystemContext).toHaveBeenCalledWith("user-1", "sys-free-audit", expect.any(Function));
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
+    const endpoints = mocks.query.mock.calls.map((call) => call[1]?.[0]);
+    expect(endpoints).toContain("free-audit-global");
+    expect(endpoints).toContain("free-audit-user");
   });
 
-  it("Scenario C: Testing Invalid URL rejection", async () => {
-    const reqC = new NextRequest("http://localhost/api/v1/audit/free", {
+  it("blocks users after the monthly attempt quota without invoking the crawler", async () => {
+    mocks.query.mockImplementation(async (_sql: string, params: unknown[]) => ({
+      rows: [{ attempts: params[0] === "free-audit-user" ? 4 : 1 }]
+    }));
+    const response = await POST(makeRequest());
+    expect(response.status).toBe(429);
+    expect(mocks.execute).not.toHaveBeenCalled();
+  });
+
+  it("rejects a repeated idempotency key before consuming another user quota slot", async () => {
+    mocks.query.mockImplementation(async (_sql: string, params: unknown[]) => ({
+      rows: [{ attempts: params[0] === "free-audit-idempotency" ? 2 : 1 }]
+    }));
+    const response = await POST(makeRequest("https://example.com/", { "idempotency-key": "same-request-key-001" }));
+    expect(response.status).toBe(409);
+    expect(mocks.execute).not.toHaveBeenCalled();
+    expect(mocks.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies the trusted ingress IP limit without storing the raw address", async () => {
+    const previousVercel = process.env.VERCEL;
+    process.env.VERCEL = "1";
+    mocks.query.mockImplementation(async (_sql: string, params: unknown[]) => ({
+      rows: [{ attempts: params[0] === "free-audit-ip" ? 11 : 1 }]
+    }));
+    const response = await POST(makeRequest("https://example.com/", { "x-real-ip": "203.0.113.10" }));
+    expect(response.status).toBe(429);
+    expect(mocks.execute).not.toHaveBeenCalled();
+    const ipCall = mocks.query.mock.calls.find((call) => call[1]?.[0] === "free-audit-ip");
+    expect(ipCall?.[1]?.[1]).not.toBe("203.0.113.10");
+    if (previousVercel === undefined) delete process.env.VERCEL;
+    else process.env.VERCEL = previousVercel;
+  });
+
+  it("fails closed when the global daily limit is exhausted", async () => {
+    mocks.query.mockImplementation(async (_sql: string, params: unknown[]) => ({
+      rows: [{ attempts: params[0] === "free-audit-global" ? 501 : 1 }]
+    }));
+    const response = await POST(makeRequest());
+    expect(response.status).toBe(503);
+    expect(mocks.execute).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized request bodies before quota reservation", async () => {
+    const response = await POST(new NextRequest("http://localhost/api/v1/audit/free", {
       method: "POST",
-      body: JSON.stringify({ url: "not-a-valid-url" }),
-    });
+      headers: { "content-type": "application/json", "content-length": "5000" },
+      body: JSON.stringify({ url: `https://example.com/${"a".repeat(5000)}` })
+    }));
+    expect(response.status).toBe(413);
+    expect(mocks.runWithSystemContext).not.toHaveBeenCalled();
+    expect(mocks.execute).not.toHaveBeenCalled();
+  });
 
-    const resC = await POST(reqC);
-    const badUrlPayload = (await resC.json()) as { error: string; message: string };
+  it("rejects malformed URLs before quota reservation", async () => {
+    const response = await POST(makeRequest("not-a-url"));
+    expect(response.status).toBe(400);
+    expect(mocks.runWithSystemContext).not.toHaveBeenCalled();
+    expect(mocks.execute).not.toHaveBeenCalled();
+  });
 
-    expect(resC.status).toBe(400);
-    expect(badUrlPayload.message).toContain("لطفاً");
+  it("does not expose crawler diagnostics when SSRF policy rejects a target", async () => {
+    mocks.execute.mockRejectedValue(new CrawlError("SSRF_BLOCKED", "private address rejected", { rule: "private-rfc1918" }));
+    const response = await POST(makeRequest("http://127.0.0.1/"));
+    const payload = await response.json();
+    expect(response.status).toBe(400);
+    expect(payload.message).not.toContain("private-rfc1918");
+    expect(mocks.query.mock.calls.some((call) => String(call[0]).startsWith("UPDATE auth_rate_limits"))).toBe(true);
   });
 });

@@ -120,55 +120,55 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
   }, [session.status, auditState.status, runAudit]);
 
   const strings = {
-    title: isRtl ? "موتور بهینه‌سازی و تحلیل رایگان برند" : "Free AI Visibility Ingestion Funnel",
+    title: isRtl ? "نسخه نمایشی ممیزی فنی" : "Free Audit Demo",
     desc: isRtl
-      ? "پایش حضور برند در چت‌بات‌ها و مدل‌های زبانی به کمک خزش Firecrawl و تحلیل زبانی گوگل جمنی."
-      : "Verify your brand footprint in ChatGPT, Claude and Gemini with active web crawler ingestion.",
+      ? "این نسخه فقط یک شبیه‌سازی نمایشی با داده‌های ساختگی است؛ هیچ وب‌سایتی خزش نمی‌شود و هیچ سرویس هوش مصنوعی فراخوانی نمی‌شود."
+      : "Synthetic demo only: no website is crawled and no AI provider is called.",
     placeholder: isRtl ? "آدرس وب‌سایت خود را وارد کنید (مثلاً: example.com)" : "Enter website URL (e.g. company.com)",
-    btnAnalyze: isRtl ? "شروع تحلیل هوشمند" : "Analyze Brand Visibility",
+    btnAnalyze: isRtl ? "اجرای نسخه نمایشی" : "Run Demo",
     invalidUrl: isRtl ? "لطفاً یک آدرس وب‌سایت معتبر (مانند example.com) وارد کنید." : "Please enter a valid domain address (e.g. company.com).",
 
     // Auth Required Strings
-    authRequiredTitle: isRtl ? "🔒 تایید هویت سازمانی الزامی است" : "🔒 Identity Verification Required",
+    authRequiredTitle: isRtl ? "🔒 ورود به حساب کاربری الزامی است" : "🔒 Sign-in Required",
     authRequiredDesc: isRtl
-      ? "برای پایش و خزش کامل صفحات توسط Firecrawl و تولید گزارش جمنی، لطفاً یک حساب کاربری موقت ایجاد کنید یا وارد شوید."
-      : "To run active crawling instances and generate structured AI report sheets, please authenticate.",
+      ? "برای استفاده از نسخه نمایشی، لطفاً وارد حساب کاربری خود شوید یا ثبت‌نام کنید. داده‌های نمایش‌داده‌شده ساختگی هستند."
+      : "Sign in or register to use this demo. All displayed crawl and AI data is synthetic.",
     loginTab: isRtl ? "ورود کاربران" : "Sign In",
     registerTab: isRtl ? "ایجاد حساب کاربری جدید" : "Register Workspace",
     authNameLabel: isRtl ? "نام و نام خانوادگی" : "Full Name",
     authEmailLabel: isRtl ? "ایمیل سازمانی" : "Enterprise Email Address",
     authPasswordLabel: isRtl ? "رمز عبور" : "Password",
-    authBtnLogin: isRtl ? "ورود و شروع تحلیل" : "Authenticate & Run Audit",
-    authBtnRegister: isRtl ? "ثبت‌نام و شروع تحلیل" : "Create Account & Run Audit",
+    authBtnLogin: isRtl ? "ورود و اجرای دمو" : "Sign In & Run Demo",
+    authBtnRegister: isRtl ? "ثبت‌نام و اجرای دمو" : "Register & Run Demo",
 
     // Processing Strings
-    processingTitle: isRtl ? "در حال اجرای فرآیند خزش معنایی..." : "Ingesting and Auditing Brand Footprint...",
-    processingProgress: isRtl ? "این فرآیند حدود ۴ ثانیه زمان می‌برد." : "This multi-stage process takes approximately 4 seconds.",
-    terminalTitle: isRtl ? "کنسول خزش Firecrawl و جمنی" : "Firecrawl & Gemini Core Telemetry Stream",
+    processingTitle: isRtl ? "در حال اجرای شبیه‌سازی نمایشی..." : "Running Demo Simulation...",
+    processingProgress: isRtl ? "این شبیه‌سازی از داده‌های ساختگی استفاده می‌کند و هیچ درخواست شبکه‌ای ارسال نمی‌کند." : "Synthetic demo data only; no network requests or provider calls are made.",
+    terminalTitle: isRtl ? "گزارش شبیه‌سازی (بدون فراخوانی سرویس بیرونی)" : "Demo Log (No External Provider Calls)",
 
     // Report UI Strings
     overviewTab: isRtl ? "خلاصه وضعیت دیده‌شدن" : "Visibility Summary",
-    engineTab: isRtl ? "تحلیل موتورهای پاسخگو" : "LLM Crawl & Engine Logs",
-    recommendationsTab: isRtl ? "راهکارهای بهبود و GEO" : "GEO Copy Recommendations",
-    scoreTitle: isRtl ? "شاخص دیده‌شدن برند" : "AI Visibility Score",
-    scoreDesc: isRtl ? "سهم صدای برند شما در پاسخ مدل‌های زبانی" : "Your brand's share of voice inside LLM databases",
-    presenceTitle: isRtl ? "امتیاز حضور برند" : "Brand Presence Score",
-    mentionTitle: isRtl ? "فرکانس استناد" : "Mention Frequency Score",
-    authorityTitle: isRtl ? "اعتبار معنایی محتوا" : "Content Authority Score",
+    engineTab: isRtl ? "خروجی‌های نمونهٔ نمایشی" : "Demo Sample Outputs",
+    recommendationsTab: isRtl ? "پیشنهادهای نمایشی" : "Illustrative Demo Recommendations",
+    scoreTitle: isRtl ? "امتیاز نمایشی برند" : "Demo Brand Score",
+    scoreDesc: isRtl ? "امتیاز ساختگی برای نمایش رابط کاربری؛ نتیجهٔ اندازه‌گیری واقعی نیست." : "Synthetic UI sample; not a measured brand or LLM visibility result.",
+    presenceTitle: isRtl ? "نمونهٔ امتیاز حضور برند" : "Sample Brand Presence Score",
+    mentionTitle: isRtl ? "نمونهٔ فراوانی استناد" : "Sample Mention Frequency",
+    authorityTitle: isRtl ? "نمونهٔ اعتبار محتوایی" : "Sample Content Authority",
 
-    geminiTitle: isRtl ? "تحلیل شناختی گوگل جمنی (Google Gemini)" : "Google Gemini Cognitive Assessment",
-    firecrawlStats: isRtl ? "آمار خزش کراولر Firecrawl" : "Firecrawl Ingestion Statistics",
-    crawledPages: isRtl ? "صفحات خزش شده:" : "Crawled Pages:",
-    providerTitle: isRtl ? "تحلیل رفتار موتورهای پاسخگوی پیشرو" : "Conversational Search Engine Performance Matrix",
+    geminiTitle: isRtl ? "نمونهٔ ساختگی تحلیل هوش مصنوعی" : "Synthetic AI Analysis Sample",
+    firecrawlStats: isRtl ? "آمار نمونهٔ خزش (بدون خزش واقعی)" : "Sample Crawl Statistics (No Actual Crawl)",
+    crawledPages: isRtl ? "صفحات نمونه:" : "Sample Pages:",
+    providerTitle: isRtl ? "نمونهٔ نمایشی موتورهای پاسخ‌گو (بدون پرس‌وجوی واقعی)" : "Illustrative Model Samples (Not Queried)",
     providerColName: isRtl ? "موتور پاسخگو" : "Generative Model",
     providerColSentiment: isRtl ? "لحن استناد" : "Sentiment Score",
     providerColVisibility: isRtl ? "شاخص دیده‌شدن" : "Visibility index",
     providerColRec: isRtl ? "توصیه اختصاصی موتور" : "Model-specific suggestion",
 
-    gapsTitle: isRtl ? "شکاف‌های معنایی محتوا (Content Gaps)" : "Identified Content Gaps",
-    entitiesTitle: isRtl ? "موجودیت‌های مفقود در پایگاه دانش" : "Missing Entity relationship triples",
-    positioningTitle: isRtl ? "بهبود موقعیت‌یابی برند" : "Brand Positioning Improvements",
-    discoverTitle: isRtl ? "راهکارهای عمومی ارتقای دیده‌شدن (AEO / GEO)" : "General AI Discoverability Proposed Fixes",
+    gapsTitle: isRtl ? "شکاف‌های محتوایی نمونه" : "Sample Content Gaps",
+    entitiesTitle: isRtl ? "موجودیت‌های نمونه (ساختگی)" : "Synthetic Missing-Entity Samples",
+    positioningTitle: isRtl ? "نمونهٔ پیشنهادهای موقعیت‌یابی برند" : "Sample Brand Positioning Suggestions",
+    discoverTitle: isRtl ? "پیشنهادهای نمایشی AEO/GEO" : "Illustrative AEO/GEO Suggestions",
     priorityHigh: isRtl ? "اولویت بالا" : "High Priority",
     priorityMedium: isRtl ? "اولویت متوسط" : "Medium Priority",
     priorityLow: isRtl ? "اولویت کم" : "Low Priority",
