@@ -1,7 +1,7 @@
 /**
  * Persian Text Chunking Utility
  * - Preserves sentence boundaries where practical.
- * - Avoids splitting Persian zero-width non-joiners at preferred boundaries.
+ * - Avoids splitting Persian zero-width non-joiners and short Persian quotes at boundaries.
  * - Includes overlap inside the configured maximum chunk size.
  */
 
@@ -47,9 +47,24 @@ function findSafeEnd(text: string, start: number, requestedEnd: number): number 
     }
   }
 
+  // Keep a quoted Persian phrase intact when it fits in one bounded chunk.
+  const openingQuote = text.indexOf("«", start);
+  if (openingQuote !== -1 && openingQuote < requestedEnd) {
+    const closingQuote = text.indexOf("»", openingQuote + 1);
+    if (closingQuote !== -1 && requestedEnd <= closingQuote) {
+      const quotedLength = closingQuote + 1 - openingQuote;
+      const availableLength = requestedEnd - start;
+      if (quotedLength <= availableLength) {
+        end = closingQuote + 1;
+      } else if (openingQuote > start) {
+        end = openingQuote;
+      }
+    }
+  }
+
   if (end > start && end < text.length) {
     const lastSpace = text.lastIndexOf(" ", end);
-    if (lastSpace > start) end = lastSpace;
+    if (lastSpace > start && lastSpace < end) end = lastSpace;
   }
 
   // Always advance, including when a single long word has no safe space boundary.
