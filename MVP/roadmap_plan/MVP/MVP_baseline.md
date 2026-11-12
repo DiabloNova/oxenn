@@ -92,7 +92,7 @@ Stages may be split into smaller implementation tasks. Stages must not be silent
 
 ## 4. Detailed stage specifications
 
-Every stage has a standalone execution brief under [roadmap/](./roadmap/). Each file repeats the product context, relevant constraints, implementation sequence, test expectations, exit criteria and handoff requirements so an AI agent can use it without needing the entire portfolio narrative.
+Every stage has a standalone execution brief under [roadmap/](./roadmap/README.md). Each file repeats the product context, relevant constraints, implementation sequence, test expectations, exit criteria and handoff requirements so an AI agent can use it without needing the entire portfolio narrative.
 
 - [MVP-00 — Product decisions and delivery governance](./roadmap/00-product-decisions-and-delivery-governance.md)
 - [MVP-01 — Identity, workspace and security foundation](./roadmap/01-identity-workspace-and-security-foundation.md)
