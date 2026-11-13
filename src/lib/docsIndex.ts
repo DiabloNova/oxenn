@@ -315,8 +315,8 @@ export const DOCS_INDEX: DocMeta[] = [
   },
   {
     slug: "OXENN_MVP_PRODUCT_SPECIFICATION",
-    titleEn: "OXENN MVP Product Specification",
-    titleFa: "OXENN MVP Product Specification",
+    titleEn: "OXENN — MVP Product Specification",
+    titleFa: "OXENN — MVP Product Specification",
     category: "product",
     categoryFa: "Product",
     snippet: `# OXENN — MVP Product Specification  **Document status:** Owner-approved product scope   **Specification version:** 1.0   **Effective date:** 2026-11-12   **Product:** OXENN — Product & Market Improvement Intelligence Platform   **Repository:** \`DiabloNova/oxenn\`   **Authority:** Owner approval recorded in Stele \`KNOW-66\`, together with the independent-service decision \`KNOW-25\` (version 2), authenticated-access decision \`KNOW-64\`, and the product-to-engineering mapping in \`DOC-67\` (version 4). `
@@ -488,5 +488,13 @@ export const DOCS_INDEX: DocMeta[] = [
     category: "tasks_reports",
     categoryFa: "tasks_reports",
     snippet: `# Conductor PR #57 review fixes  - **Status:** SUCCESS (documentation correction; controller review and writeback pending). - **Invariant:** retries require reconciliation; authority and confidentiality stay explicit;   evidence fits the medium; physical safety is context-specific; dependency arithmetic includes   relationship and lag; whole-project startup and applicable commercial gates remain intact. - **Implementation:** issues 1–20 applied separately, in order, to the eight guidance files u`
+  },
+  {
+    slug: "user-guides",
+    titleEn: "User Guides",
+    titleFa: "User Guides",
+    category: "user-guides",
+    categoryFa: "User Guides",
+    snippet: `# User Guides  This section provides user-facing documentation for navigating and operating Seorchable.  ## Status Dictionary - **Implemented**: Verified user workflows supported by the UI/backend. - **Partial**: Workflow is accessible but missing edge cases or polished UI. - **Planned**: Not currently implemented.  ## Core Concepts & Workflows  ### Dashboard Navigation The platform offers an authenticated unified Dashboard Shell with collapsible responsive sidebars, directional support (RTL/LTR),`
   },
 ];
