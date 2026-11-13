@@ -150,7 +150,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
                     <p>{submitError}</p>
                     {emailNotVerified && (
                       <Link
-                        href={`/${locale}/verify-email?email=${encodeURIComponent(email.trim())}&resend=1`}
+                        href={`/${locale}/verify-email?resend=1`}
                         className="mt-2 inline-flex items-center gap-1 underline underline-offset-2"
                       >
                         {strings.resendVerification}

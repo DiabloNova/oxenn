@@ -31,7 +31,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [showResendFlow, setShowResendFlow] = useState(
     searchParams?.get("delivery") === "failed" || searchParams?.get("resend") === "1"
   );
-  const [resendEmail, setResendEmail] = useState(searchParams?.get("email") || "");
+  const [resendEmail, setResendEmail] = useState("");
   const [resendSuccess, setResendSuccess] = useState(false);
 
   // Fill token from URL if available, but only if it changed to prevent overwriting manual input unexpectedly
@@ -171,7 +171,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                   <CheckCircle2 size={36} className="animate-pulse" />
                 </div>
-                <div className="text-sm font-semibold text-[var(--text-primary)]">{isFa ? "درحال ورود به محیط داشبورد..." : "Loading Workspace Dashboard..."}</div>
+                <div className="text-sm font-semibold text-[var(--text-primary)]">{isFa ? "در حال انتقال به صفحه ورود..." : "Redirecting to sign in..."}</div>
               </div>
             ) : showResendFlow ? (
               resendSuccess ? (

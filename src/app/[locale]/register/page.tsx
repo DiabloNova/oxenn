@@ -59,7 +59,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
           : "Your account and workspace are ready. Open the verification link sent to your email before signing in.")
       : (isFa
           ? "حساب ایجاد شد، اما ارسال ایمیل تأیید ناموفق بود. از صفحه تأیید ایمیل برای تلاش مجدد استفاده کنید."
-          : "Your account was created, but the verification email could not be sent. Use the verification page to retry.");
+          : "Your account was created, but the verification email could not be sent. Use the verification page to retry."),
     successBtn: isFa ? "ورود به پیشخوان کاربری" : "Proceed to Dashboard",
   };
 
@@ -120,7 +120,6 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
       setIsSuccess(true);
       setTimeout(() => {
         const query = new URLSearchParams({
-          email: email.trim(),
           delivery: registration.verificationEmailSent ? "sent" : "failed",
         });
         router.push(`/${locale}/verify-email?${query.toString()}`);

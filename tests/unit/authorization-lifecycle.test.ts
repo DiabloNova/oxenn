@@ -1,3 +1,7 @@
+vi.mock("next/headers", () => ({
+  headers: vi.fn(async () => new Headers({ "x-real-ip": "203.0.113.11" })),
+}));
+
 vi.mock("pg");
 vi.mock("../../src/services/auth/session", async (importOriginal) => {
     const mod = await importOriginal<typeof import("../../src/services/auth/session")>();
@@ -56,7 +60,7 @@ describe("Auth Lifecycle Tests", () => {
            capturedParams = params[4] as string;
            return { rowCount: 1 };
         }
-        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
+        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com", email_verified_at: new Date("2026-01-01T00:00:00.000Z") }], rowCount: 1 }; // Login: verified account
         if (sql.includes("SELECT * FROM user_credentials WHERE user_id")) {
            return { rows: [{
               user_id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",

@@ -11,6 +11,7 @@ import { revokeAllForUser } from "@/services/auth/session";
 import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/services/auth/passwords";
 
 import { PoolClient } from "pg";
+import { headers } from "next/headers";
 
 async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey: string, maxAttempts: number, windowMs: number): Promise<void> {
     const expiresAt = new Date(Date.now() + windowMs);
@@ -48,7 +49,7 @@ const LOCKOUT_DURATION_MINS = 15;
 /**
  * Authenticates user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function loginAction(email: string, password: string): Promise<User> {
+export async function loginAction(email: string, password: string): Promise<User | { errorCode: "EMAIL_NOT_VERIFIED" }> {
   if (!password) {
      throw new Error("Password is required");
   }
@@ -171,11 +172,10 @@ export async function loginAction(email: string, password: string): Promise<User
   });
 
   if (result && "error" in result) {
-      const error = new Error(result.error as string);
-      if ("errorCode" in result) {
-          Object.assign(error, { code: result.errorCode });
+      if ("errorCode" in result && result.errorCode === "EMAIL_NOT_VERIFIED") {
+          return { errorCode: "EMAIL_NOT_VERIFIED" };
       }
-      throw error;
+      throw new Error(result.error as string);
   }
 
   await createSession(result as User);
@@ -265,26 +265,35 @@ export async function registerAction(name: string, email: string, password: stri
   // distinguish account creation from an email that could not be sent.
   if ("errorCode" in result) return result;
 
-  const verification = await requestVerification(normalizedEmail);
+  // Account creation is already committed. A follow-up verification failure must
+  // not make registration appear to fail and encourage a duplicate-account retry.
+  const verification = await requestVerification(normalizedEmail).catch(() => ({ success: false }));
   return { ...result, verificationEmailSent: verification.success };
 }
 
 export async function requestVerification(email: string): Promise<{ success: boolean, error?: string }> {
   const normalizedEmail = email.toLowerCase().trim();
 
-  // Enforce resend limits on the server; client-side cooldowns are not an authorization boundary.
-  const rateLimitResult = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+  // Limit each requester before looking up the supplied address. Unknown addresses
+  // must never consume another person's per-address delivery allowance.
+  const requestHeaders = await headers();
+  const requesterIp = requestHeaders.get("x-real-ip")?.trim();
+  if (!requesterIp) {
+    throw new Error("Unable to determine verification requester");
+  }
+  const requesterBucket = `verification-requester:${crypto.createHash("sha256").update(requesterIp).digest("hex")}`;
+  const requesterLimit = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
     try {
-      await enforceRateLimit(client, "email-verification", `verification:${normalizedEmail}`, 5, 60 * 60 * 1000);
+      await enforceRateLimit(client, "email-verification-requester", requesterBucket, 10, 60 * 60 * 1000);
       return null;
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "TooManyRequests") return "TooManyRequests";
       throw error;
     }
   });
-  if (rateLimitResult === "TooManyRequests") {
+  if (requesterLimit === "TooManyRequests") {
     return { success: false, error: "TooManyRequests" };
   }
 
@@ -302,13 +311,23 @@ export async function requestVerification(email: string): Promise<{ success: boo
       return { success: true, rawToken: undefined, email: undefined };
     }
 
+    // Apply the delivery quota only after confirming that the address belongs to
+    // an unverified account. The requester quota above protects this lookup path.
+    try {
+      await enforceRateLimit(client, "email-verification", `verification:${normalizedEmail}`, 5, 60 * 60 * 1000);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "TooManyRequests") {
+        return { success: false, error: "TooManyRequests", rawToken: undefined, email: undefined };
+      }
+      throw error;
+    }
+
     // Bind the opaque token to the address that receives it, without a schema migration.
     const emailFingerprint = crypto.createHash("sha256").update(String(userRecord.email).toLowerCase()).digest("hex");
     const rawToken = `${crypto.randomBytes(32).toString("hex")}.${emailFingerprint}`;
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
 
-    // Invalidate previous unconsumed verification tokens
     await client.query(`
       UPDATE email_verification_tokens
       SET consumed_at = NOW()
@@ -322,6 +341,8 @@ export async function requestVerification(email: string): Promise<{ success: boo
 
     return { success: true, rawToken, email: String(userRecord.email) };
   });
+
+  if (result?.error) return { success: false, error: result.error };
 
   if (result?.rawToken && result.email) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

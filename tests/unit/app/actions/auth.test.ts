@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import crypto from "node:crypto";
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn(async () => new Headers({ "x-real-ip": "203.0.113.10" })),
+}));
 
 import { registerAction, loginAction, requestVerification, verifyEmailAction, requestPasswordReset, confirmPasswordReset } from "@/app/actions/auth";
 
@@ -87,8 +92,12 @@ describe("Authentication Actions", () => {
 
   describe("requestVerification", () => {
     it("returns success without error if user not found (enumeration safe)", async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // requester rate limit
+        .mockResolvedValueOnce({ rows: [] }); // user lookup
       await expect(requestVerification("missing@test.com")).resolves.toEqual({ success: true });
+      expect(mockQuery).toHaveBeenCalledTimes(2);
+      expect(mockQuery.mock.calls[0][0]).toContain("email-verification-requester");
+      expect(mockQuery.mock.calls[1][0]).toContain("SELECT id, email, email_verified_at FROM users");
     });
   });
 
@@ -103,12 +112,22 @@ describe("Authentication Actions", () => {
 
   describe("Token consumption & Reset atomicity", () => {
     it("verifyEmailAction updates user and consumes token", async () => {
+       const emailFingerprint = crypto.createHash("sha256").update("user@example.com").digest("hex");
+       const validToken = `${"a".repeat(64)}.${emailFingerprint}`;
        mockQuery.mockResolvedValueOnce({ rows: [] }); // BEGIN
-       mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'usr-1' }] }); // UPDATE token
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // UPDATE user
+       mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'usr-1' }] }); // consume token
+       mockQuery.mockResolvedValueOnce({ rows: [{ email: "user@example.com", emailVerifiedAt: null }] }); // lock user
+       mockQuery.mockResolvedValueOnce({ rows: [{ id: "usr-1" }] }); // UPDATE user
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // consume other tokens
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // revoke sessions
        mockQuery.mockResolvedValueOnce({ rows: [] }); // COMMIT
-       await expect(verifyEmailAction("token123")).resolves.toEqual({ success: true });
+       await expect(verifyEmailAction(validToken)).resolves.toEqual({ success: true });
        expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), expect.any(Array));
+    });
+
+    it("rejects legacy verification tokens without an email fingerprint", async () => {
+       await expect(verifyEmailAction("token123")).rejects.toThrow("Invalid or expired token");
+       expect(mockQuery).not.toHaveBeenCalled();
     });
 
     it("confirmPasswordReset updates credentials and consumes token", async () => {

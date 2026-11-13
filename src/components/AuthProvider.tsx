@@ -62,7 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       // Secure server-side login strictly on the server to prevent client-controlled spoofing
-      const user = await loginAction(email, password);
+      const result = await loginAction(email, password);
+      if ("errorCode" in result) {
+        throw Object.assign(new Error("Email must be verified before logging in."), { code: result.errorCode });
+      }
+      const user = result;
 
       localStorage.setItem("auth_session_user", JSON.stringify(user));
 
