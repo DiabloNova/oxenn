@@ -67,7 +67,7 @@ describe("inviteUserAction", () => {
   });
 
   it("does not expose the raw token in the response", async () => {
-    const res = await inviteUserAction("org-1", "test@test.com", "member");
+    const res = await inviteUserAction("org-1", "test@test.com", "viewer");
     expect(res).toEqual({ success: true });
     // Token is completely absent
     expect(res).not.toHaveProperty("token");
@@ -75,7 +75,7 @@ describe("inviteUserAction", () => {
   });
 
   it("delivers the raw token via EmailSender adapter", async () => {
-    await inviteUserAction("org-1", "test@test.com", "member");
+    await inviteUserAction("org-1", "test@test.com", "viewer");
 
     // Wait for unhandled promise of email to settle (microtasks)
     await new Promise(process.nextTick);
