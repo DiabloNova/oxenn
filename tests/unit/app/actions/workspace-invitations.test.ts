@@ -6,10 +6,14 @@ vi.mock("@/services/auth/session", () => ({
   requireSession: vi.fn().mockResolvedValue({ user: { id: "user-1", name: "Alice" } }),
 }));
 
-vi.mock("@/services/auth/authorization", () => ({
-  requireWorkspaceMembership: vi.fn(),
-  requireRole: vi.fn(),
-}));
+vi.mock("@/services/auth/authorization", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/auth/authorization")>();
+  return {
+    ...actual,
+    requireWorkspaceMembership: vi.fn(),
+    requireRole: vi.fn(),
+  };
+});
 
 const { queryMock } = vi.hoisted(() => ({ queryMock: vi.fn() }));
 
