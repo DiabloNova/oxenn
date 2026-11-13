@@ -101,8 +101,11 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
   ),
   "sys-free-audit": definePath(
     ["auth_rate_limits", "audit_records"],
-    ["src/app/api/v1/audit/free/route.ts"],
-    "Authenticated single-page free audit: persists hashed user, trusted ingress IP, global, and idempotency counters; the crawler runs outside system database context."
+    [
+      "src/app/api/v1/audit/free/route.ts",
+      "src/services/audit/free-audit-rate-limit-cleanup.ts"
+    ],
+    "Authenticated single-page free audit route and bounded scheduled cleanup: persist and remove hashed user, trusted ingress IP, global, and idempotency counters; the framework also writes privileged audit metadata; the crawler runs outside system database context."
   ),
   "api-key-issue": definePath(
     ["api_keys"],
