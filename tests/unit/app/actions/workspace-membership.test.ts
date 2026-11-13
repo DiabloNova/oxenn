@@ -33,11 +33,13 @@ vi.mock("@/core/database/tenant-context", () => ({
 describe("workspace final-administrator invariant", () => {
   let activeAdminCount = 1;
   let actorTargetRole = "workspace_admin";
+  let targetMembershipExists = true;
 
   beforeEach(() => {
     vi.clearAllMocks();
     activeAdminCount = 1;
     actorTargetRole = "workspace_admin";
+    targetMembershipExists = true;
     vi.mocked(requireRole).mockResolvedValue("workspace_admin");
 
     vi.mocked(requireSession).mockResolvedValue({
@@ -55,6 +57,9 @@ describe("workspace final-administrator invariant", () => {
     tenantRunner.mockImplementation(async (_workspaceId, _userId, _purpose, work) => work());
     systemRunner.mockImplementation(async (_userId, _purpose, work) => work());
     queryMock.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM users") && sql.includes("FOR UPDATE")) {
+        return { rows: [{ id: "admin-1" }], rowCount: 1 };
+      }
       if (sql.includes("FROM organizations") && sql.includes("FOR UPDATE")) {
         return { rows: [{ id: "org-1" }], rowCount: 1 };
       }
@@ -62,7 +67,9 @@ describe("workspace final-administrator invariant", () => {
         return { rows: [{ role: actorTargetRole }], rowCount: 1 };
       }
       if (sql.includes("SELECT m.role") && sql.includes("FOR UPDATE OF m")) {
-        return { rows: [{ role: "workspace_admin", user_active: true }], rowCount: 1 };
+        return targetMembershipExists
+          ? { rows: [{ role: "workspace_admin", user_active: true }], rowCount: 1 }
+          : { rows: [], rowCount: 0 };
       }
       if (sql.includes("COUNT(*)::int AS admin_count")) {
         return { rows: [{ admin_count: activeAdminCount }], rowCount: 1 };
@@ -76,9 +83,11 @@ describe("workspace final-administrator invariant", () => {
 
     expect(result).toEqual({ success: false, errorCode: "LAST_WORKSPACE_ADMIN" });
     const sqlCalls = queryMock.mock.calls.map(([sql]) => String(sql));
+    const userLockIndex = sqlCalls.findIndex((sql) => sql.includes("FROM users") && sql.includes("FOR UPDATE"));
     const lockIndex = sqlCalls.findIndex((sql) => sql.includes("FROM organizations") && sql.includes("FOR UPDATE"));
     const countIndex = sqlCalls.findIndex((sql) => sql.includes("COUNT(*)::int AS admin_count"));
-    expect(lockIndex).toBeGreaterThanOrEqual(0);
+    expect(userLockIndex).toBeGreaterThanOrEqual(0);
+    expect(lockIndex).toBeGreaterThan(userLockIndex);
     expect(countIndex).toBeGreaterThan(lockIndex);
     expect(sqlCalls.some((sql) => sql.includes("DELETE FROM organization_members"))).toBe(false);
     expect(sqlCalls.some((sql) => sql.includes("UPDATE sessions"))).toBe(false);
@@ -127,6 +136,24 @@ describe("workspace final-administrator invariant", () => {
 
     await expect(removeMemberAction("org-1", "admin-2")).rejects.toMatchObject({ statusCode: 403 });
     expect(queryMock.mock.calls.some(([sql]) => String(sql).includes("DELETE FROM organization_members"))).toBe(false);
+  });
+
+  it("returns MEMBER_NOT_FOUND instead of succeeding when removal target is absent", async () => {
+    targetMembershipExists = false;
+
+    const result = await removeMemberAction("org-1", "missing-member");
+
+    expect(result).toEqual({ success: false, errorCode: "MEMBER_NOT_FOUND" });
+    expect(queryMock.mock.calls.some(([sql]) => String(sql).includes("DELETE FROM organization_members"))).toBe(false);
+  });
+
+  it("returns MEMBER_NOT_FOUND instead of succeeding when role-change target is absent", async () => {
+    targetMembershipExists = false;
+
+    const result = await updateMemberRoleAction("org-1", "missing-member", "viewer");
+
+    expect(result).toEqual({ success: false, errorCode: "MEMBER_NOT_FOUND" });
+    expect(queryMock.mock.calls.some(([sql]) => String(sql).includes("UPDATE organization_members"))).toBe(false);
   });
 
   it("fails closed when the target workspace is already inactive", async () => {
