@@ -48,7 +48,7 @@ The 20 records previously marked Not started were read and their principal curre
 - On exact current main `a9f22b6f794ee9ff6640fad78b581e51b9e385cf`, GitHub reports **Build and Test — success**, **Unit Tests — success**, and **Isolation Suite — success**.
 - The same ref also has an auxiliary `record-remediation-event` check failure in its check history. It is separate from the three core CI jobs and requires its own triage; it is not silently counted as a core test pass.
 - VER-005 and VER-006 remain `HISTORICAL_ONLY / DO NOT RUN`; neither prohibited script was executed.
-- No database was connected or accessed. No migration, database test, production operation, external provider call, payment-provider action, deployment, issue/PR closure, or merge was performed.
+- This review did not connect to or access any persistent repository/user database and did not run migrations. The already-existing main CI Isolation Suite uses its own ephemeral PostgreSQL service defined in `.github/workflows/ci.yml`; that CI-owned test service is not a persistent database connection to the repository or the user's separate database. No production operation, external provider call, payment-provider action, deployment, issue/PR closure, or merge was performed.
 
 ## Remaining Wave 0 work
 
