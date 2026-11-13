@@ -34,12 +34,14 @@ describe("workspace final-administrator invariant", () => {
   let activeAdminCount = 1;
   let actorTargetRole = "workspace_admin";
   let targetMembershipExists = true;
+  let actorUserActive = true;
 
   beforeEach(() => {
     vi.clearAllMocks();
     activeAdminCount = 1;
     actorTargetRole = "workspace_admin";
     targetMembershipExists = true;
+    actorUserActive = true;
     vi.mocked(requireRole).mockResolvedValue("workspace_admin");
 
     vi.mocked(requireSession).mockResolvedValue({
@@ -58,7 +60,9 @@ describe("workspace final-administrator invariant", () => {
     systemRunner.mockImplementation(async (_userId, _purpose, work) => work());
     queryMock.mockImplementation(async (sql: string) => {
       if (sql.includes("FROM users") && sql.includes("FOR UPDATE")) {
-        return { rows: [{ id: "admin-1" }], rowCount: 1 };
+        return actorUserActive
+          ? { rows: [{ id: "admin-1" }], rowCount: 1 }
+          : { rows: [], rowCount: 0 };
       }
       if (sql.includes("FROM organizations") && sql.includes("FOR UPDATE")) {
         return { rows: [{ id: "org-1" }], rowCount: 1 };
@@ -136,6 +140,19 @@ describe("workspace final-administrator invariant", () => {
 
     await expect(removeMemberAction("org-1", "admin-2")).rejects.toMatchObject({ statusCode: 403 });
     expect(queryMock.mock.calls.some(([sql]) => String(sql).includes("DELETE FROM organization_members"))).toBe(false);
+  });
+
+  it("rejects a stale super_admin role after the actor account is deactivated", async () => {
+    actorUserActive = false;
+    vi.mocked(requireRole).mockResolvedValue("super_admin");
+
+    await expect(removeMemberAction("org-1", "admin-2")).rejects.toMatchObject({ statusCode: 401 });
+
+    const sqlCalls = queryMock.mock.calls.map(([sql]) => String(sql));
+    const userLockIndex = sqlCalls.findIndex((sql) => sql.includes("FROM users") && sql.includes("FOR UPDATE"));
+    expect(userLockIndex).toBe(0);
+    expect(sqlCalls.some((sql) => sql.includes("FROM organizations") && sql.includes("FOR UPDATE"))).toBe(false);
+    expect(sqlCalls.some((sql) => sql.includes("DELETE FROM organization_members"))).toBe(false);
   });
 
   it("returns MEMBER_NOT_FOUND instead of succeeding when removal target is absent", async () => {
