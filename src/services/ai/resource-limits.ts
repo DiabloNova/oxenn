@@ -92,9 +92,13 @@ const metadataSchema = z
   });
 
 function getDefaultChunkOverlap(maxChunkSize: number): number {
-  // Preserve the established 1,000-character default where possible, while
-  // ensuring a smaller custom chunk still has room for new content and a separator.
-  return Math.min(DEFAULT_CHUNK_OVERLAP, Math.max(0, maxChunkSize - 4));
+  // Scale overlap with custom chunk sizes to avoid repeating nearly the entire
+  // chunk. Preserve the established 1,000/4,000 ratio and leave room for content.
+  return Math.min(
+    DEFAULT_CHUNK_OVERLAP,
+    Math.floor(maxChunkSize * 0.25),
+    Math.max(0, maxChunkSize - 4),
+  );
 }
 
 const validateOverlap = (

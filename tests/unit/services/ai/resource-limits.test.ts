@@ -57,41 +57,43 @@ describe("shared AI request resource limits", () => {
     expect(result.success).toBe(false);
   });
 
-  it("derives a compatible default overlap for smaller custom chunk sizes", () => {
-    const chunkRequest = chunkRequestSchema.safeParse({
-      text: "content",
-      maxChunkSize: 100,
-    });
-    const ingestionRequest = ingestionRequestSchema.safeParse({
-      text: "document",
-      chunkingOptions: { maxChunkSize: 100 },
-    });
+  it("derives a proportional default overlap for custom chunk sizes", () => {
+    const cases = [
+      { maxChunkSize: 3, overlap: 0 },
+      { maxChunkSize: 100, overlap: 25 },
+      { maxChunkSize: 500, overlap: 125 },
+      { maxChunkSize: 1_000, overlap: 250 },
+      { maxChunkSize: 4_000, overlap: 1_000 },
+    ];
 
-    expect(chunkRequest.success).toBe(true);
-    if (chunkRequest.success) {
-      expect(chunkRequest.data).toMatchObject({ maxChunkSize: 100, overlap: 96 });
-    }
+    for (const { maxChunkSize, overlap } of cases) {
+      const chunkRequest = chunkRequestSchema.safeParse({
+        text: "content",
+        maxChunkSize,
+      });
+      const ingestionRequest = ingestionRequestSchema.safeParse({
+        text: "document",
+        chunkingOptions: { maxChunkSize },
+      });
 
-    expect(ingestionRequest.success).toBe(true);
-    if (ingestionRequest.success) {
-      expect(ingestionRequest.data.chunkingOptions).toEqual({
-        maxChunkSize: 100,
-        overlap: 96,
+      expect(chunkRequest.success).toBe(true);
+      if (chunkRequest.success) {
+        expect(chunkRequest.data).toMatchObject({ maxChunkSize, overlap });
+      }
+
+      expect(ingestionRequest.success).toBe(true);
+      if (ingestionRequest.success) {
+        expect(ingestionRequest.data.chunkingOptions).toEqual({
+          maxChunkSize,
+          overlap,
+        });
+      }
+
+      expect(validateChunkingOptions(maxChunkSize)).toEqual({
+        maxChunkSize,
+        overlap,
       });
     }
-
-    expect(validateChunkingOptions(100)).toEqual({
-      maxChunkSize: 100,
-      overlap: 96,
-    });
-    expect(validateChunkingOptions(4_000)).toEqual({
-      maxChunkSize: 4_000,
-      overlap: 1_000,
-    });
-    expect(validateChunkingOptions(3)).toEqual({
-      maxChunkSize: 3,
-      overlap: 0,
-    });
   });
 
   it("rejects chunk parameters outside the shared contract", () => {

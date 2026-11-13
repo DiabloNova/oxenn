@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chunkText } from "@/services/ai/text-chunker";
-import { MAX_CHUNK_COUNT, MAX_CHUNK_SIZE, MAX_INGESTION_TEXT_BYTES } from "@/services/ai/resource-limits";
+import { MAX_CHUNK_COUNT, MAX_CHUNK_SIZE, MAX_INGESTION_TEXT_BYTES, validateChunkingOptions } from "@/services/ai/resource-limits";
 
 function hasUnpairedSurrogate(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
@@ -54,6 +54,17 @@ describe("chunkText resource boundaries", () => {
     const chunks = chunkText("x".repeat(MAX_INGESTION_TEXT_BYTES), 4_000, 1_000);
 
     expect(chunks.length).toBeLessThanOrEqual(MAX_CHUNK_COUNT);
+  });
+
+  it("chunks long documents efficiently with the derived overlap for a custom size", () => {
+    const source = "X".repeat(20_000);
+    const options = validateChunkingOptions(500);
+    const chunks = chunkText(source, options.maxChunkSize, options.overlap);
+
+    expect(options.overlap).toBe(125);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.length).toBeLessThan(100);
+    expect(chunks.every((chunk) => chunk.length <= 500)).toBe(true);
   });
 
   it("rejects documents that exceed the configured chunk count before downstream processing", () => {
