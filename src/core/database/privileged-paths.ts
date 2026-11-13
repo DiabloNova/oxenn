@@ -81,7 +81,7 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
   ),
   "sys-list-workspaces": definePath(
     ["organizations", "organization_members"],
-    ["src/app/actions/workspace.ts", "src/app/actions/account.ts"],
+    ["src/app/actions/workspace.ts"],
     "Lists a user's workspace memberships and associated organization details."
   ),
   "sys-accept-invitation": definePath(
