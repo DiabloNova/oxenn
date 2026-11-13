@@ -438,7 +438,7 @@ export async function validateDbPushGuard(
 
 // CLI Execution Wrapper
 /* eslint-disable-next-line @typescript-eslint/no-require-imports -- CLI execution wrapper */
-if (require.main === module) {
+if (typeof require !== "undefined" && require.main === module) {
   validateDbPushGuard()
     .then((result) => {
       if (!result.allowed) {
