@@ -14,7 +14,7 @@ The table names below use the canonical Drizzle schema names. Workspace membersh
 | **sys-create-workspace** | In use | `organizations`, `organization_members` | `src/app/actions/workspace.ts` | Creates a workspace (`organizations`) and its initial membership (`organization_members`). |
 | **sys-list-workspaces** | In use | `organizations`, `organization_members` | `src/app/actions/workspace.ts`, `src/app/actions/account.ts` | Lists a user's workspace memberships and associated organization details. |
 | **sys-accept-invitation** | In use | `organization_invitations`, `organization_members` | `src/app/actions/workspace.ts` | Resolves a pending organization invitation and creates the accepted user's membership. |
-| **sys-switch-workspace** | In use | `organization_members`, `sessions` | `src/app/actions/workspace.ts` | Re-reads the target workspace role, creates the replacement session, and revokes the previous session. |
+| **sys-switch-workspace** | In use | `users`, `organizations`, `organization_members`, `sessions` | `src/app/actions/workspace.ts` | Locks and revalidates the active user and target organization, re-reads the workspace role, creates the replacement session, and revokes the previous session. |
 | **sys-api-key-auth** | In use | `api_keys` | `src/features/public-api/services/api-service.ts` | Looks up an API key by prefix before switching to its organization-scoped context. |
 | **api-key-issue** | In use | `api_keys` | `scripts/api/issue-key.ts` | CLI operation that inserts a new API key for the supplied organization. |
 | **api-key-revoke** | In use | `api_keys` | `scripts/api/revoke-key.ts` | CLI operation that revokes an API key by its identifier. |
