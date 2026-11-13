@@ -613,6 +613,18 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Open verification/risk: review the complete diff, validate TypeScript/Vitest behavior in GitHub CI, and inspect any CI failures before treating the finding as fixed. Drizzle Kit supports explicit CLI URL options; a user who already possesses another database credential can bypass a repository wrapper by manually invoking the vendor CLI with those credentials. This cannot be fully enforced by the wrapper alone; runtime/production credentials must remain unavailable to developer/test command environments, and the future disposable push role must be restricted at the database/network layer.
 - Status transition: SCR-002 `Confirmed` → `In progress`. Wave 0 remains **PARTIAL**. Next permitted action: complete diff review and run branch CI; do not merge or run db:push against a live target.
 
+
+### SCR-002 implementation review follow-up — 2026-11-13
+
+- Date/time: 2026-11-13T15:45:10.555Z (UTC); repository: `DiabloNova/oxenn`; branch: `investigation/041-scr-002-review-2026-11-13`.
+- Base remains `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`; branch head before this tracker entry: `fc88315754cd5a9733844d1cf662e8ce04d558c0`. Compare confirms the branch is not behind `main`; `main` remains unchanged.
+- Review refinements since the preceding SCR-002 log: the guard's CLI entry point now checks that CommonJS `require` exists before referencing it, so importing the module from Vitest or the Drizzle config remains safe in ESM; all non-development/non-test deployment markers (including Vercel preview and staging) are rejected; the dedicated push URL format rule was corrected; the remote TLS test now uses an explicit URL; and `.env.example` explains that Workspace runtime credentials and controlled migration credentials have different purposes.
+- The progress metric table's line break was corrected; Finding Ledger counts and the incomplete Wave 0 status remain unchanged.
+- Files changed in this follow-up: `scripts/database/db-push-guard.ts`, `scripts/env-check.ts`, `tests/unit/scripts/database/db-push-guard.test.ts`, and `.env.example`.
+- Verification: no local TypeScript, lint, or Vitest command has run. The container still cannot resolve `github.com`; GitHub CI is pending creation of the draft PR. No result is represented as passing.
+- Database and architecture boundary: no database connection or mutation occurred. Platform Admin configuration and migration files remain untouched; Workspace and Platform Admin URL aliases are both rejected by the Workspace push guard.
+- Status remains **In progress**. Wave 0 remains **PARTIAL** under the user's one-finding SCR-002 exception; this does not authorize any other finding or merge.
+
 ## 6. Wave-level gates
 
 | Stage | Entry condition | Exit condition |
