@@ -266,7 +266,7 @@ function main() {
 
   assert.match(baseline, /^# OXENN.*MVP Engineering Baseline/m, "Current MVP engineering baseline heading is missing");
   assert.match(baseline, /Repository snapshot|Repository implementation snapshot/i, "Engineering baseline must identify its repository snapshot");
-  assert.match(baseline, /known gaps|implementation gaps/i, "Engineering baseline must retain implementation-gap reporting");
+  assert.match(baseline, /High-priority implementation and trust gaps/i, "Engineering baseline must retain implementation-gap reporting");
 
   const projectIndexLinks = checkLinks(indexPath);
   const baselineLinks = checkLinks(baselinePath);
