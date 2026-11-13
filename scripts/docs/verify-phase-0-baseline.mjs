@@ -268,6 +268,27 @@ function main() {
   assert.match(baseline, /Repository snapshot|Repository implementation snapshot/i, "Engineering baseline must identify its repository snapshot");
   assert.match(baseline, /High-priority implementation and trust gaps/i, "Engineering baseline must retain implementation-gap reporting");
 
+  const baselineMetrics = [
+    ["Schema index pgTable declarations", localCount],
+    ["Additional modular schema declarations", organizationTables.length + apiKeyTables.length],
+    ["Effective schema table declarations", totalTables],
+    ["Latest Drizzle snapshot tables", snapshotTables.length],
+    ["Ordered migration journal entries", migrationCount],
+    ["Unique migration-created tables", migrationTableCount],
+    ["Policy-bearing tables in latest snapshot", rlsCount],
+    ["Generated runtime tenant-table entries", runtimeTables.length],
+    ["Cumulative migration RLS ENABLE coverage", unique(migrationRls.enabled).length],
+    ["Cumulative migration RLS FORCE coverage", unique(migrationRls.forced).length],
+  ];
+  for (const [label, expected] of baselineMetrics) {
+    const metricLine = baseline.split(/\r?\n/).find((line) => line.startsWith("| " + label + " |"));
+    assert.equal(
+      metricLine,
+      "| " + label + " | " + expected + " |",
+      "MVP engineering baseline has a stale or missing repository inventory metric: " + label,
+    );
+  }
+
   const projectIndexLinks = checkLinks(indexPath);
   const baselineLinks = checkLinks(baselinePath);
   const expectedBaselinePath = path.resolve(root, baselinePath);

@@ -54,6 +54,23 @@ Use these terms consistently:
 - **Live:** the relevant production-connected service/provider/data path was directly verified.
 - **Unknown / Not verified:** evidence is insufficient. Do not infer success from code presence.
 
+### 2.3 Machine-checked repository database inventory
+
+The following static inventory is tied to the recorded repository baseline commit `5a28d6a88f2579ebc253ec697ec7a26be8f0ba4f`. These values describe checked-in schema, snapshot, migration and RLS declarations only; they do not establish that migrations were applied to, or that RLS is effective in, any live database. CI recomputes each value from the repository and fails if this table becomes stale.
+
+| Inventory metric | Recorded value |
+|---|---:|
+| Schema index pgTable declarations | 68 |
+| Additional modular schema declarations | 2 |
+| Effective schema table declarations | 70 |
+| Latest Drizzle snapshot tables | 70 |
+| Ordered migration journal entries | 16 |
+| Unique migration-created tables | 70 |
+| Policy-bearing tables in latest snapshot | 56 |
+| Generated runtime tenant-table entries | 56 |
+| Cumulative migration RLS ENABLE coverage | 56 |
+| Cumulative migration RLS FORCE coverage | 56 |
+
 ## 3. Product and commercial invariants for engineering
 
 ### 3.1 Customer Offer vs OXENN service

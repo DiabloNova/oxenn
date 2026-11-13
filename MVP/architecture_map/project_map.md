@@ -3,7 +3,7 @@
 **Document role:** Portfolio-level map of all OXENN product lines and their boundaries  
 **Product identity:** OXENN — Product & Market Improvement Intelligence Platform  
 **Version:** 1.0  
-**Product scope authority:** Owner-approved MVP Product Specification (2026-11-12), Product Strategy v2 (DOC-18), KNOW-25, KNOW-22, and the current Product Architecture.
+**Product scope authority:** Owner-approved MVP Product Specification (2026-11-12), Product Strategy v2 (DOC-18), KNOW-25, KNOW-22, KNOW-64, and the current Product Architecture.
 
 > This is a product map, not an implementation-status report. Inclusion here means that a product/capability belongs to the defined portfolio or strategic direction; it does not prove that it is implemented, commercially available, or live. The current MVP subset is defined separately in [MVP_map.md](./MVP_map.md).
 
