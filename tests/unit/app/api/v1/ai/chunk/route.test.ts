@@ -60,6 +60,16 @@ describe("POST /api/v1/ai/chunk resource limits", () => {
     expect(mocks.chunkText).not.toHaveBeenCalled();
   });
 
+  it("derives a compatible default overlap for a smaller requested chunk size", async () => {
+    const response = await POST(makeRequest({
+      text: "valid text",
+      maxChunkSize: 100,
+    }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.chunkText).toHaveBeenCalledWith("valid text", 100, 96);
+  });
+
   it("accepts the maximum text size with worst-case JSON escaping", async () => {
     const response = await POST(makeRequest({ text: "\u0000".repeat(MAX_CHUNK_TEXT_BYTES) }));
 
