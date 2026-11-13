@@ -61,6 +61,12 @@ SELECT
   role_record.rolcreaterole AS role_can_create_role,
   role_record.rolreplication AS role_can_replicate,
   role_record.rolbypassrls AS role_bypasses_rls,
+  COALESCE((
+    SELECT jsonb_agg(member_role.rolname ORDER BY member_role.rolname)
+    FROM pg_roles member_role
+    WHERE member_role.oid <> role_record.oid
+      AND pg_has_role(current_user, member_role.oid, 'MEMBER')
+  ), '[]'::jsonb) AS role_memberships,
   jsonb_build_object(
     'schemas', (
       SELECT count(*)::int
@@ -336,6 +342,20 @@ function parseExtensions(value: unknown): string[] | null {
   return [...parsed].sort();
 }
 
+function parseStringArray(value: unknown): string[] | null {
+  let parsed = value;
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value) as unknown;
+    } catch {
+      return null;
+    }
+  }
+
+  if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== "string")) return null;
+  return parsed;
+}
+
 function validateCatalogIdentity(
   rows: Array<Record<string, unknown>>,
   target: DisposableDbPushTarget,
@@ -365,6 +385,11 @@ function validateCatalogIdentity(
     row.role_bypasses_rls !== false
   ) {
     return "The target login role or database ownership grants privileges that are not permitted for db:push.";
+  }
+
+  const roleMemberships = parseStringArray(row.role_memberships);
+  if (!roleMemberships || roleMemberships.length > 0) {
+    return "The db:push login role must not inherit or be able to assume any other PostgreSQL role.";
   }
 
   const inventory = parseObjectInventory(row.object_inventory);
