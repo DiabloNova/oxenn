@@ -60,3 +60,30 @@ The 20 records previously marked Not started were read and their principal curre
 6. Triage the auxiliary `record-remediation-event` failure and retain exact CI-run evidence.
 
 **Wave 0 status: IN PROGRESS — NOT COMPLETE.** The 97-row Ledger's historical counts and statuses have intentionally not been rewritten in this partial batch. Update individual records and aggregate counts only after their current-main evidence and dispositions are complete.
+
+
+## 52-commit delta: direct finding-to-path reconciliation
+
+A path-to-record scan of all 97 current-main finding files against all 66 changed paths identified 17 findings with direct path references in the delta. This narrows the substantive re-review set; it does not mean the other 80 findings were automatically marked complete. Their cited paths must be confirmed unchanged before carrying their prior dispositions forward.
+
+| Finding | Current-main delta result |
+|---|---|
+| DOC-001 | `src/lib/docsIndex.ts` and documentation navigation changed. Current docs index is generated from the canonical documentation set; verify the index contract and link inventory before final closure. |
+| DOC-002 | Current reference matrix and docs verifier changed. The verifier explicitly distinguishes current canonical docs from historical RLS snapshots; historical 70/51 figures are not presented as current RLS truth. Prior Verified-complete disposition remains valid for documentation scope only. |
+| DOC-003 | `docs/README.md` now names the current product specification, engineering baseline, architecture, and roadmap authorities; `docs/project/README.md` explicitly retires the former Phase 0 two-journey scope and keeps old audit work historical. The old roadmap-authority claim is superseded. |
+| DOC-005 | Current documentation index and product README distinguish intended product behavior from implementation evidence and prohibit describing planned/documented capability as implemented or live without code and verification. The original overstatement concern is materially addressed; implementation claims remain evidence-gated. |
+| DOC-006 | Current product specification and MVP baseline describe Current-State Baseline, context-specific Benchmark, Gap Analysis, planning, and outcomes, but do not name or define a canonical Digital Twin model. Owner decision is still required: intentional product reframing (supersede DBT/DTGA) or an omitted first-class contract. |
+| DOC-007 | Current privileged-path documentation uses canonical `organization_members`, identifies `roles` as frozen legacy schema, and lists direct callers. It explicitly says the registry is audit metadata, not SQL enforcement. The stale-table/source-path documentation claim is superseded; the separate SRC-002 enforcement finding remains valid. |
+| DOC-008 | Current Security Model explicitly separates Workspace RBAC and Platform Admin RBAC, forbids implicit role mapping, and documents that a Workspace `super_admin` is not a Platform Admin principal. Platform Admin OIDC/schema work is described separately; no live database or deployed admin identity is inferred. Documentation separation is now explicit. |
+| DOC-009 | `docs/api/README.md` was not changed in this delta and still lists `/api/v1/analytics/llm/route.ts`. Confirmed. |
+| SRC-002 | The current registry comment says `allowedTables` is audit metadata only. The underlying `runWithSystemContext` still validates a purpose key rather than enforcing caller/table/operation capabilities at the SQL boundary. Confirmed; documentation updates do not fix this runtime authorization gap. |
+| SRC-006 | `auditService.ts` remains a `MockAiAuditService` with synthetic progress/scores, while the Free Audit API now performs a bounded internal crawl. The broad finding is partially valid: the Free Audit route was materially changed, but other synthetic analysis paths still require endpoint-by-endpoint provenance review. |
+| SRC-013 | PR #135 added server-side session authorization before body/quota/crawl work and per-user/IP/global limits; current main CI passed on the exact merge commit. Repository-level authentication/rate-limit gap is resolved; deployed behavior is not claimed. |
+| TST-002 | PR #133 merged at `5a28d6a88f2579ebc253ec697ec7a26be8f0ba4f`; Build and Test, Unit Tests, and Isolation Suite all succeeded on that exact merge commit. Verified in repository/ephemeral CI only. |
+| TST-003 | Same exact PR #133 merge and three successful core CI jobs. Independent expected ownership inventory and mutation tests are present. Verified in repository/ephemeral CI only. |
+| VER-002 | The historical Phase 1 report remains a historical snapshot and is explicitly qualified/superseded; this is not evidence of a current RLS enforcement gap. Preserve its historical-only interpretation. |
+| PUB-001 | Homepage source still does not import/render `PlatformsSection`; the component exists but is not mounted on the localized homepage. Confirmed. |
+| GHA-001 | Current CI still uses `actions/checkout@v4` and `actions/setup-node@v4` (Node 22 setup); action-runtime deprecation must be confirmed from current-run logs rather than inferred from a green CI result. Partially valid pending current warning evidence. |
+| GHA-003 | Current `ci.yml` still lacks an explicit workflow-level `permissions:` block. Confirmed least-privilege permissions gap. |
+
+The 66-path change set also includes the hardened HTTP crawl provider and its tests. Issue #115's required complete inventory is not satisfied by one changed provider or an incomplete GitHub code-search response; keep the issue open pending a complete repository-wide call-site and redirect-hop review.

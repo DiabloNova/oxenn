@@ -647,3 +647,10 @@ The project is complete only when every in-scope finding is either verified comp
 - Detailed evidence and provisional dispositions are recorded in [WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md](./WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md).
 - The 9ac5fe0 ledger snapshot is historical; 52 commits and 66 changed paths separate it from current main.
 - This batch is partial. No canonical 97-row status transitions are made until all 97 current-main reviews are complete. Wave 0 remains IN PROGRESS; Wave 1 entry criteria are not met.
+
+### 52-commit path-delta mapping — 2026-11-13
+
+- Compared all 66 changed paths from `9ac5fe016f11bddad789153efcaaa3f3fef93b44` to `a9f22b6f794ee9ff6640fad78b581e51b9e385cf` against all 97 finding records. Seventeen records have direct path references in the delta: DOC-001, DOC-002, DOC-003, DOC-005, DOC-006, DOC-007, DOC-008, DOC-009, SRC-002, SRC-006, SRC-013, TST-002, TST-003, VER-002, PUB-001, GHA-001, and GHA-003.
+- The current-main dispositions and exact caveats are recorded in [WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md](./WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md). The other 80 findings are not automatically closed: their cited paths must be confirmed unchanged before their prior dispositions can be carried forward.
+- DOC-006 remains an owner decision; DOC-009, SRC-002, PUB-001, and GHA-003 remain confirmed; SRC-006 and GHA-001 are partially valid; SRC-013 and TST-002/TST-003 have repository/CI evidence of resolution; VER-002 remains historical-only.
+- Wave 0 remains IN PROGRESS. No aggregate status counts or canonical Finding Ledger statuses were changed in this partial path-mapping batch.
