@@ -120,7 +120,13 @@ describe("deactivateAccountAction", () => {
       .filter(([sql]) => typeof sql === "string" && sql.includes("UPDATE organizations") && sql.includes("deleted_at = NOW()"))
       .map(([, params]) => String((params as unknown[])[0]));
     expect(closedWorkspaceIds).toEqual(["org-sole-admin"]);
-    expect(sqlCalls.some((sql) => sql.includes("UPDATE sessions") && sql.includes("WHERE workspace_id = $1"))).toBe(true);
+    const revokedWorkspaceSessionScopes = queryMock.mock.calls
+      .filter(([sql]) =>
+        typeof sql === "string" &&
+        /UPDATE\\s+sessions\\s+SET\\s+revoked_at\\s*=\\s*NOW\\(\\)\\s+WHERE\\s+workspace_id\\s*=\\s*\\$1/.test(sql)
+      )
+      .map(([, params]) => String((params as unknown[])[0]));
+    expect(revokedWorkspaceSessionScopes).toEqual(["org-sole-admin"]);
     expect(sqlCalls.some((sql) => sql.includes("UPDATE users") && sql.includes("SET deleted_at = NOW()"))).toBe(true);
     expect(sqlCalls.some((sql) => sql.includes("UPDATE sessions") && sql.includes("WHERE user_id = $1"))).toBe(true);
 
