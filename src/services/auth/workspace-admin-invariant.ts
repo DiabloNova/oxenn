@@ -23,3 +23,43 @@ export async function hasAnotherActiveWorkspaceAdmin(
 
   return Number(rows[0]?.admin_count ?? 0) > 1;
 }
+
+
+export type WorkspaceMembershipChange =
+  | { kind: "remove" }
+  | { kind: "role"; newRole: string };
+
+/**
+ * Check whether a member removal or role change preserves an active
+ * workspace_admin. The caller must already hold the parent organizations
+ * row FOR UPDATE lock; this function locks and re-reads the target membership
+ * before counting the remaining active administrators.
+ */
+export async function canChangeWorkspaceMember(
+  client: WorkspaceAdminClient,
+  workspaceId: string,
+  memberId: string,
+  change: WorkspaceMembershipChange,
+): Promise<boolean> {
+  const { rows: targetRows } = await client.query<{
+    role: string;
+    user_active: boolean;
+  }>(
+    `SELECT m.role, (u.deleted_at IS NULL) AS user_active
+     FROM organization_members m
+     INNER JOIN users u ON u.id = m.user_id
+     WHERE m.organization_id = $1 AND m.user_id = $2
+     FOR UPDATE OF m`,
+    [workspaceId, memberId],
+  );
+
+  const target = targetRows[0];
+  const changeReducesAdminCount =
+    target?.role === "workspace_admin" &&
+    target.user_active &&
+    (change.kind === "remove" || change.newRole !== "workspace_admin");
+
+  if (!changeReducesAdminCount) return true;
+
+  return hasAnotherActiveWorkspaceAdmin(client, workspaceId);
+}
