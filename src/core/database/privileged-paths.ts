@@ -90,7 +90,7 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     "Resolves a pending organization invitation and creates the accepted user's membership."
   ),
   "sys-switch-workspace": definePath(
-    ["users", "organization_members", "sessions"],
+    ["users", "organizations", "organization_members", "sessions"],
     ["src/app/actions/workspace.ts"],
     "Re-reads the target workspace role, creates the replacement session, and revokes the previous session."
   ),
@@ -122,7 +122,7 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
       "tests/features/ai-intelligence/run-all.ts",
       "tests/features/admin/run-all.ts"
     ],
-    "Broad system-context purpose used by test runners and the explicit super-admin grant CLI; the existing runtime test/verification gate remains authoritative."
+    "Broad system-context purpose used by legacy test runners; the existing runtime test/verification gate remains authoritative."
   ),
   "test-req": definePath(
     ["*"],
