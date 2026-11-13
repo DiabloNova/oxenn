@@ -146,7 +146,7 @@ describe("db:push target resolution", () => {
 
     expect(() =>
       resolveConfiguredDbPushTarget(
-        { ...remoteEnv, DB_PUSH_DATABASE_URL: remoteEnv.DB_PUSH_DATABASE_URL + "?sslmode=verify-full" },
+        { ...remoteEnv, DB_PUSH_DATABASE_URL: "postgresql://oxenn_db_push:secret@db.example.test:5432/oxenn_throwaway?sslmode=verify-full" },
         [remoteTarget],
       ),
     ).not.toThrow();
