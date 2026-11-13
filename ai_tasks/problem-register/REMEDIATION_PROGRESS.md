@@ -662,3 +662,12 @@ The project is complete only when every in-scope finding is either verified comp
 - The implementation files, Finding record, and progress tracker were reapplied to a clean work branch based on current `main@ec86cfccd02abcea31be07782a56416529c08b2d`; the canonical working branch `review/063-src-017-20261113` was then moved with an expected-head check to that synchronized history.
 - Current branch comparison: `main...review/063-src-017-20261113` is 11 commits ahead and 0 commits behind. Changed paths remain limited to the SRC-017 source, tests, finding record, and tracker.
 - This correction supersedes only the inaccurate pre-sync SHA in the earlier entry; no implementation outcome, status, or test claim is changed.
+
+
+### SRC-017 operator-only role-grant path — 2026-11-13
+
+- Additional path found during final security review: `scripts/auth/grant-super-admin.ts` is the sole supported operator path for assigning Workspace `super_admin`. It previously updated the membership directly, which could convert the final active `workspace_admin` to `super_admin` and bypass the same invariant. It also issued nested manual `BEGIN/COMMIT/ROLLBACK` inside `runWithSystemContext`'s already-managed transaction.
+- Updated the CLI operation to lock the active parent organization, verify that the user and membership are active, count active workspace administrators before role conversion, reject conversion of the final active administrator, update the role, and write its audit event within the manager-owned transaction. No nested manual transaction commands remain in that CLI operation.
+- Exported the grant operation for focused unit tests while guarding CLI execution so importing the operation in Vitest does not run the command-line entrypoint.
+- Added `tests/unit/scripts/auth/grant-super-admin.test.ts` covering last-admin rejection, successful grant when another admin remains, inactive workspace, inactive/missing membership, and lock/update/audit ordering.
+- Additional changed paths: `scripts/auth/grant-super-admin.ts` and `tests/unit/scripts/auth/grant-super-admin.test.ts`. SRC-017 remains `Implemented — verification pending`; no tests or CI result are claimed as passing yet.
