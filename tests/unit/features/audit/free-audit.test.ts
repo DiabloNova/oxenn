@@ -59,7 +59,10 @@ describe("Free audit API", () => {
     mocks.execute.mockResolvedValue(crawlResult());
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
 
   it("rejects anonymous requests before quota or crawling", async () => {
     mocks.getSession.mockResolvedValue(null);
@@ -84,15 +87,17 @@ describe("Free audit API", () => {
     const endpoints = mocks.query.mock.calls.map((call) => call[1]?.[0]);
     expect(endpoints).toContain("free-audit-global");
     expect(endpoints).toContain("free-audit-user");
+    expect(endpoints.indexOf("free-audit-user")).toBeLessThan(endpoints.indexOf("free-audit-global"));
   });
 
-  it("blocks users after the monthly attempt quota without invoking the crawler", async () => {
+  it("blocks over-quota users before consuming the shared daily cap", async () => {
     mocks.query.mockImplementation(async (_sql: string, params: unknown[]) => ({
       rows: [{ attempts: params[0] === "free-audit-user" ? 4 : 1 }]
     }));
     const response = await POST(makeRequest());
     expect(response.status).toBe(429);
     expect(mocks.execute).not.toHaveBeenCalled();
+    expect(mocks.query.mock.calls.some((call) => call[1]?.[0] === "free-audit-global")).toBe(false);
   });
 
   it("rejects a repeated idempotency key before consuming another user quota slot", async () => {
@@ -105,9 +110,17 @@ describe("Free audit API", () => {
     expect(mocks.query).toHaveBeenCalledTimes(1);
   });
 
+  it("releases an idempotency key when the monthly quota rejects the request", async () => {
+    mocks.query.mockImplementation(async (_sql: string, params: unknown[] = []) => ({
+      rows: [{ attempts: params[0] === "free-audit-user" ? 4 : 1 }]
+    }));
+    const response = await POST(makeRequest("https://example.com/", { "idempotency-key": "retry-after-quota-001" }));
+    expect(response.status).toBe(429);
+    expect(mocks.query.mock.calls.some((call) => String(call[0]).startsWith("DELETE FROM auth_rate_limits") && call[1]?.[0] === "free-audit-idempotency")).toBe(true);
+    expect(mocks.query.mock.calls.some((call) => call[1]?.[0] === "free-audit-global")).toBe(false);
+  });
   it("applies the trusted ingress IP limit without storing the raw address", async () => {
-    const previousVercel = process.env.VERCEL;
-    process.env.VERCEL = "1";
+    vi.stubEnv("VERCEL", "1");
     mocks.query.mockImplementation(async (_sql: string, params: unknown[]) => ({
       rows: [{ attempts: params[0] === "free-audit-ip" ? 11 : 1 }]
     }));
@@ -115,9 +128,7 @@ describe("Free audit API", () => {
     expect(response.status).toBe(429);
     expect(mocks.execute).not.toHaveBeenCalled();
     const ipCall = mocks.query.mock.calls.find((call) => call[1]?.[0] === "free-audit-ip");
-    expect(ipCall?.[1]?.[1]).not.toBe("203.0.113.10");
-    if (previousVercel === undefined) delete process.env.VERCEL;
-    else process.env.VERCEL = previousVercel;
+    expect(ipCall?.[1]?.[1]).toBe("631f08140b24b7274d12df3c37a1a80ce5876dafd7007d772e0114fddf88b682");
   });
 
   it("fails closed when the global daily limit is exhausted", async () => {
@@ -127,6 +138,7 @@ describe("Free audit API", () => {
     const response = await POST(makeRequest());
     expect(response.status).toBe(503);
     expect(mocks.execute).not.toHaveBeenCalled();
+    expect(mocks.query.mock.calls.some((call) => String(call[0]).includes("GREATEST(attempts - 1, 0)"))).toBe(true);
   });
 
   it("rejects oversized request bodies before quota reservation", async () => {
@@ -149,10 +161,27 @@ describe("Free audit API", () => {
 
   it("does not expose crawler diagnostics when SSRF policy rejects a target", async () => {
     mocks.execute.mockRejectedValue(new CrawlError("SSRF_BLOCKED", "private address rejected", { rule: "private-rfc1918" }));
-    const response = await POST(makeRequest("http://127.0.0.1/"));
+    const response = await POST(makeRequest("http://127.0.0.1/", { "idempotency-key": "retry-after-crawl-001" }));
     const payload = await response.json();
     expect(response.status).toBe(400);
     expect(payload.message).not.toContain("private-rfc1918");
     expect(mocks.query.mock.calls.some((call) => String(call[0]).startsWith("UPDATE auth_rate_limits"))).toBe(true);
+    expect(mocks.query.mock.calls.some((call) => String(call[0]).startsWith("DELETE FROM auth_rate_limits") && call[1]?.[0] === "free-audit-idempotency")).toBe(true);
+  });
+  it("preserves the no-document response and attempts reservation release only once", async () => {
+    mocks.execute.mockResolvedValue({ ...crawlResult(), documents: [], pageCount: 0 });
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (sql.startsWith("UPDATE auth_rate_limits")) throw new Error("simulated release failure");
+      return { rows: [{ attempts: 1 }] };
+    });
+    const response = await POST(makeRequest());
+    expect(response.status).toBe(422);
+    expect(mocks.query.mock.calls.filter((call) => String(call[0]).startsWith("UPDATE auth_rate_limits"))).toHaveLength(1);
+  });
+
+  it("passes the incoming request AbortSignal to the crawler", async () => {
+    const request = makeRequest();
+    await POST(request);
+    expect(mocks.execute.mock.calls[0]?.[2]).toBe(request.signal);
   });
 });
