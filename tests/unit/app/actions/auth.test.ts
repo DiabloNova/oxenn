@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import crypto from "node:crypto";
 
-vi.mock("next/headers", () => ({
-  headers: vi.fn(async () => new Headers({ "x-real-ip": "203.0.113.10" })),
-}));
+vi.mock("next/headers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/headers")>();
+  return {
+    ...actual,
+    headers: vi.fn(async () => new Headers({ "x-real-ip": "203.0.113.10" })),
+  };
+});
 
 import { registerAction, loginAction, requestVerification, verifyEmailAction, requestPasswordReset, confirmPasswordReset } from "@/app/actions/auth";
 
@@ -96,7 +100,7 @@ describe("Authentication Actions", () => {
         .mockResolvedValueOnce({ rows: [] }); // user lookup
       await expect(requestVerification("missing@test.com")).resolves.toEqual({ success: true });
       expect(mockQuery).toHaveBeenCalledTimes(2);
-      expect(mockQuery.mock.calls[0][0]).toContain("email-verification-requester");
+      expect(mockQuery.mock.calls[0][1]).toContain("email-verification-requester");
       expect(mockQuery.mock.calls[1][0]).toContain("SELECT id, email, email_verified_at FROM users");
     });
   });

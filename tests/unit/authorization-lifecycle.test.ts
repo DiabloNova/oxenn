@@ -91,7 +91,11 @@ describe("Auth Lifecycle Tests", () => {
     expect((registeredUser as { id: string }).id).toBeDefined();
 
     // 2. Login
-    const loggedInUser = await loginAction("probe@example.com", "Password123");
+    const loginResult = await loginAction("probe@example.com", "Password123");
+    if ("errorCode" in loginResult) {
+      throw new Error(`Unexpected login result: ${loginResult.errorCode}`);
+    }
+    const loggedInUser = loginResult;
     expect(loggedInUser.email).toBe("probe@example.com");
 
     // 3. requireWorkspaceMembership (pass)

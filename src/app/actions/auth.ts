@@ -263,12 +263,14 @@ export async function registerAction(name: string, email: string, password: stri
 
   // Registration never creates a session. Await delivery so the UI can
   // distinguish account creation from an email that could not be sent.
-  if ("errorCode" in result) return result;
+  if ("errorCode" in result && result.errorCode === "USER_EXISTS") {
+    return { errorCode: "USER_EXISTS" };
+  }
 
   // Account creation is already committed. A follow-up verification failure must
   // not make registration appear to fail and encourage a duplicate-account retry.
   const verification = await requestVerification(normalizedEmail).catch(() => ({ success: false }));
-  return { ...result, verificationEmailSent: verification.success };
+  return { ...(result as User), verificationEmailSent: verification.success };
 }
 
 export async function requestVerification(email: string): Promise<{ success: boolean, error?: string }> {
