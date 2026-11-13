@@ -35,6 +35,36 @@ export async function createSession(user: User): Promise<void> {
     if (!client) {
       throw new Error("Failed to get DB client in system context");
     }
+
+    // Serialize session creation with account deactivation so no new usable
+    // session can be committed after the account has been soft-deleted.
+    const { rows: activeUsers } = await client.query(
+      `SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+      [user.id]
+    );
+    if (activeUsers.length === 0) {
+      throw new Error("Cannot create a session for an inactive account.");
+    }
+
+    const { rows: activeWorkspaces } = await client.query(
+      `SELECT id FROM organizations WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+      [user.workspaceId]
+    );
+    if (activeWorkspaces.length === 0) {
+      throw new Error("Cannot create a session for an inactive workspace.");
+    }
+
+    const { rows: memberships } = await client.query(
+      `SELECT 1
+       FROM organization_members
+       WHERE organization_id = $1 AND user_id = $2
+       LIMIT 1`,
+      [user.workspaceId, user.id]
+    );
+    if (memberships.length === 0) {
+      throw new Error("Cannot create a session without an active workspace membership.");
+    }
+
     await client.query(`
       INSERT INTO sessions (
         user_id, token_hash, workspace_id, role_snapshot, expires_at
