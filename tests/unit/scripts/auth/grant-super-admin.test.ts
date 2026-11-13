@@ -74,7 +74,7 @@ describe("grantSuperAdmin", () => {
     expect(updateIndex).toBeGreaterThan(countIndex);
     expect(auditIndex).toBeGreaterThan(updateIndex);
     expect(sqlCalls.some((sql) => sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK")).toBe(false);
-    expect(systemRunner).toHaveBeenCalledWith(null, "sys-admin-run", expect.any(Function));
+    expect(systemRunner).toHaveBeenCalledWith(null, "sys-grant-super-admin", expect.any(Function));
   });
 
   it("rejects a closed workspace before reading or changing membership", async () => {
