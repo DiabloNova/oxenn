@@ -1,6 +1,10 @@
-vi.mock("next/headers", () => ({
-  headers: vi.fn(async () => new Headers({ "x-real-ip": "203.0.113.11" })),
-}));
+vi.mock("next/headers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/headers")>();
+  return {
+    ...actual,
+    headers: vi.fn(async () => new Headers({ "x-real-ip": "203.0.113.11" })),
+  };
+});
 
 vi.mock("pg");
 vi.mock("../../src/services/auth/session", async (importOriginal) => {
