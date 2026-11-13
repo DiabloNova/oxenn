@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 findings were revalidated against `main@9ac5fe0`; SCR-002 was revalidated separately against `main@a9f22b6` on 2026-11-13. 20 findings remain Not started. The current ledger records 63 Confirmed, 1 In progress, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. Wave 0 remains incomplete. The user explicitly authorized a scoped SCR-002 implementation exception; this does not complete Wave 0 or authorize other Wave 1 findings.
+**Current overall status:** PARTIAL — 77 of 97 findings were revalidated against `main@9ac5fe0`; SCR-002 was revalidated separately against `main@a9f22b6` on 2026-11-13. 20 findings remain Not started. The current ledger records 63 Confirmed, 3 Implemented — verification pending, 4 Verified complete, 1 Already fixed, 3 Needs decision, and 3 Blocked. Wave 0 remains incomplete. The user explicitly authorized a scoped SCR-002 implementation exception; this does not complete Wave 0 or authorize other Wave 1 findings.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -18,9 +18,9 @@
 | Findings revalidated against current `main` | 77 |
 | Findings approved for implementation (cumulative) | 3 |
 | Findings with implementation started (cumulative) | 3 |
-| Findings currently in progress | 1 |
+| Findings currently in progress | 0 |
 | Findings with verified implementation complete | 4 |
-| Findings implemented — verification pending | 2 |
+| Findings implemented — verification pending | 3 |
 | Findings blocked / historical-only | 3 |
 | Findings with confirmed issues | 63 |
 | Findings already fixed in repository | 1 |
@@ -121,7 +121,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [PUB-005](./findings/038-PUB-005.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [PUB-006](./findings/039-PUB-006.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [SCR-001](./findings/040-SCR-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; registry/verifier/matrix tests; live enforcement unknown |
-| [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | In progress | — | main@a9f22b6; user-authorized scoped exception; SCR-002 log 2026-11-13|
+| [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | — | main@a9f22b6; branch CI 2026-11-13; post-merge CI pending|
 | [SCR-003](./findings/042-SCR-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SCR-004](./findings/043-SCR-004.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SCR-005](./findings/044-SCR-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
@@ -624,6 +624,20 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Verification: no local TypeScript, lint, or Vitest command has run. The container still cannot resolve `github.com`; GitHub CI is pending creation of the draft PR. No result is represented as passing.
 - Database and architecture boundary: no database connection or mutation occurred. Platform Admin configuration and migration files remain untouched; Workspace and Platform Admin URL aliases are both rejected by the Workspace push guard.
 - Status remains **In progress**. Wave 0 remains **PARTIAL** under the user's one-finding SCR-002 exception; this does not authorize any other finding or merge.
+
+
+### SCR-002 branch CI verification — 2026-11-13
+
+- Date/time: 2026-11-13T15:49:07.396Z (UTC); repository: `DiabloNova/oxenn`; branch: `investigation/041-scr-002-review-2026-11-13`; tested head: `a94514f3bcaab058136d613c4280410f863528bf`.
+- GitHub Actions run [#43455799422](https://github.com/DiabloNova/oxenn/actions/runs/43455799422) completed with conclusion **success**. The Isolation Suite, Unit Tests, and Build and Test jobs all succeeded.
+- The new focused guard suite was discovered and executed: `tests/unit/scripts/database/db-push-guard.test.ts` — 34 tests passed. Unit project summary: 75 test files passed, 1 skipped; 570 tests passed and 1 todo. UI project: 4 test files, 33 tests passed.
+- Build and Test completed successfully through dependency audit, audit-gate regression tests, typecheck, lint, tenant-table verifier, RLS migration verifier, baseline/documentation verification, Drizzle migration-chain check, app build, Reference Matrix build, and generated-file no-drift check.
+- DeepSource Secrets check succeeded. Vercel check failed with its explicit `build-rate-limit` status URL; no code compilation failure was reported by the successful GitHub Build job. The Vercel status remains an external outstanding PR check.
+- Database qualification: the new SCR-002 tests use mocked catalog responses and did not connect to PostgreSQL. The repository's pre-existing CI Isolation Suite started a temporary PostgreSQL 16 service container, applied the normal Workspace migration chain, then passed 677 assertions across 56 tenant tables; this service was scoped to that CI job and removed afterward. No persistent, production, or Platform Admin database was provisioned, attached, or accessed. The CI run did not execute `db:push`.
+- No test validates a real, registered disposable target because the repository's reviewed target registry is intentionally empty and no such Workspace database has been provisioned. The command remains blocked by default.
+- Status transition: SCR-002 `In progress` → **`Implemented — verification pending`**. This is branch CI evidence only; no post-merge CI has run, the Vercel quota status remains outstanding, and the PR remains draft/open/unmerged. Wave 0 remains **PARTIAL** under the single-finding user authorization.
+- Next safe action: retain the draft PR for review and resolve the Vercel quota or explicitly accept the external check limitation; do not merge or provision/connect a database as part of this change.
+
 
 ## 6. Wave-level gates
 
