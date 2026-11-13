@@ -27,6 +27,12 @@ async function lockWorkspaceAndVerifyAdmin(
   actorUserId: string,
   actorRole: UserRole
 ): Promise<boolean> {
+  // Match account deactivation's user → workspace lock order. This makes a
+  // previously verified super_admin override unusable after account closure.
+  if (!(await lockActiveUser(client, actorUserId))) {
+    throw new AuthorizationError(401, "Unauthorized: Account is no longer active.");
+  }
+
   const workspaceIsActive = await lockActiveWorkspace(client, workspaceId);
 
   if (!workspaceIsActive) return false;
@@ -282,7 +288,11 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
     );
     if (!workspaceIsActive) return { success: false, errorCode: "WORKSPACE_INACTIVE" as const };
 
-    if (!(await canChangeWorkspaceMember(client, workspaceId, memberId, { kind: "remove" }))) {
+    const changeDecision = await canChangeWorkspaceMember(client, workspaceId, memberId, { kind: "remove" });
+    if (changeDecision === "target_not_found") {
+      return { success: false, errorCode: "MEMBER_NOT_FOUND" as const };
+    }
+    if (changeDecision === "last_admin") {
       return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
     }
 
@@ -325,7 +335,11 @@ export async function updateMemberRoleAction(workspaceId: string, memberId: stri
     );
     if (!workspaceIsActive) return { success: false, errorCode: "WORKSPACE_INACTIVE" as const };
 
-    if (!(await canChangeWorkspaceMember(client, workspaceId, memberId, { kind: "role", newRole: role }))) {
+    const changeDecision = await canChangeWorkspaceMember(client, workspaceId, memberId, { kind: "role", newRole: role });
+    if (changeDecision === "target_not_found") {
+      return { success: false, errorCode: "MEMBER_NOT_FOUND" as const };
+    }
+    if (changeDecision === "last_admin") {
       return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
     }
 
