@@ -654,3 +654,11 @@ The project is complete only when every in-scope finding is either verified comp
 - Concurrency/rollback: the organization row is the shared serialization point; deactivation locks the user first and organizations in sorted ID order; workspace/session-creation paths also lock the user to prevent sessions or memberships racing account deactivation. Account mutations and audit writes are within one system-context transaction; a failed final user update throws to force rollback.
 - Safety decision: the user explicitly authorized bypassing Wave 0 for this SRC-017 implementation. The recorded project-wide Wave 0 state remains PARTIAL (77/97 previously revalidated); this action does not claim Wave 0 completion and does not change unrelated finding dispositions.
 - Status transition: SRC-017 `Confirmed` → `Implemented — verification pending`. Next permitted action: synchronize the working branch with current main, run focused and repository CI checks, review any failures, and update this record with exact outcomes.
+
+
+### Correction — SRC-017 branch-head and synchronization metadata — 2026-11-13
+
+- Correction to the `SRC-017 implementation` entry above: the recorded pre-sync working/head SHA `0550095616c3801fd3e053b9ef881515b3ca1d96` was an intermediate commit, not the final pre-sync branch head. The exact pre-sync head was `cc77c750551b69c98d474b2a1429da0a4b339e77`, the commit that appended the initial SRC-017 execution log.
+- The implementation files, Finding record, and progress tracker were reapplied to a clean work branch based on current `main@ec86cfccd02abcea31be07782a56416529c08b2d`; the canonical working branch `review/063-src-017-20261113` was then moved with an expected-head check to that synchronized history.
+- Current branch comparison: `main...review/063-src-017-20261113` is 11 commits ahead and 0 commits behind. Changed paths remain limited to the SRC-017 source, tests, finding record, and tracker.
+- This correction supersedes only the inaccurate pre-sync SHA in the earlier entry; no implementation outcome, status, or test claim is changed.
