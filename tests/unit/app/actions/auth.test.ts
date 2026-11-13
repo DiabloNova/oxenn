@@ -53,6 +53,7 @@ vi.mock("@/services/auth/passwords", async (importOriginal) => {
 describe("Authentication Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SESSION_SECRET = "unit-test-session-secret";
   });
 
   describe("registerAction", () => {
@@ -100,8 +101,18 @@ describe("Authentication Actions", () => {
         .mockResolvedValueOnce({ rows: [] }); // user lookup
       await expect(requestVerification("missing@test.com")).resolves.toEqual({ success: true });
       expect(mockQuery).toHaveBeenCalledTimes(2);
-      expect(mockQuery.mock.calls[0][1]).toContain("email-verification-requester");
+      const expectedRequesterBucket = `verification-requester:${crypto.createHmac("sha256", "unit-test-session-secret").update("203.0.113.10").digest("hex")}`;
+      expect(mockQuery.mock.calls[0][1]).toContain(expectedRequesterBucket);
       expect(mockQuery.mock.calls[1][0]).toContain("SELECT id, email, email_verified_at FROM users");
+    });
+
+    it("returns the same success response when an existing address reaches its delivery quota", async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // requester rate limit
+        .mockResolvedValueOnce({ rows: [{ id: "usr-1", email: "user@example.com", email_verified_at: null }] }) // unverified user lookup
+        .mockResolvedValueOnce({ rows: [{ attempts: 6 }] }); // per-address quota exceeded
+
+      await expect(requestVerification("user@example.com")).resolves.toEqual({ success: true });
+      expect(mockQuery).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -127,6 +138,19 @@ describe("Authentication Actions", () => {
        mockQuery.mockResolvedValueOnce({ rows: [] }); // COMMIT
        await expect(verifyEmailAction(validToken)).resolves.toEqual({ success: true });
        expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), expect.any(Array));
+    });
+
+    it("consumes a verification token without verifying an account whose email has changed", async () => {
+       const oldEmailFingerprint = crypto.createHash("sha256").update("old@example.com").digest("hex");
+       const staleToken = `${"b".repeat(64)}.${oldEmailFingerprint}`;
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // BEGIN
+       mockQuery.mockResolvedValueOnce({ rows: [{ user_id: "usr-1" }] }); // consume presented token
+       mockQuery.mockResolvedValueOnce({ rows: [{ email: "new@example.com", emailVerifiedAt: null }] }); // lock current user
+       mockQuery.mockResolvedValueOnce({ rows: [] }); // COMMIT stale-token consumption
+
+       await expect(verifyEmailAction(staleToken)).resolves.toEqual({ success: false });
+       expect(mockQuery.mock.calls.some(([sql]) => String(sql).includes("UPDATE users"))).toBe(false);
+       expect(mockQuery).toHaveBeenLastCalledWith("COMMIT");
     });
 
     it("rejects legacy verification tokens without an email fingerprint", async () => {

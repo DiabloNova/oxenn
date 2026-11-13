@@ -1,33 +1,33 @@
 # PR #138 authentication remediation report
 
 ## Status
-INCOMPLETE — the auth code, unit tests, isolation suite, and Vercel preview now pass on the current head; the remaining CI failure is generated tracked-file drift, which is being corrected. Production email delivery remains a separate release blocker because the repository's `ProductionEmailSender` is intentionally unimplemented.
+INCOMPLETE — PR #138 enforces verified-email access immediately. At the reviewed head (`36d282b`), Unit Tests and Isolation Suite passed, but Build and Test failed its generated-file consistency check because `src/lib/docsIndex.ts` was one character out of sync with the report-derived snippet. The production email sender is unimplemented, making this a deployment blocker until a real provider is selected, implemented, and configured.
 
 ## Invariant
-Only users who have verified control of their email address may establish or retain an authenticated workspace session. Verification recovery must not expose email addresses in URLs, allow unknown-address requests to exhaust a victim's delivery quota, or make a committed registration appear to have failed.
+Only users who have verified control of their email address may establish or retain an authenticated workspace session. Verification recovery must not expose email addresses in URLs, allow unknown-address requests to exhaust a victim's delivery quota, or make a committed registration appear to have failed. Resend responses must not reveal whether an address belongs to an unverified account.
 
 ## Implementation
 - Return `EMAIL_NOT_VERIFIED` as serializable data from the login Server Action and reconstruct the coded error in `AuthProvider` on the client.
-- Revoke sessions for unverified users and cover both the authenticated and revocation paths in unit tests.
-- Apply requester-based verification throttling before lookup, and apply the per-address delivery quota only after finding an existing unverified account.
+- Revoke sessions for unverified users and cover authenticated, unverified, revoked, and replaced-session paths in tests.
+- Apply requester-based verification throttling before lookup using an HMAC of the requester IP keyed by `SESSION_SECRET`; apply the per-address delivery quota only after finding an existing unverified account, while keeping quota-exhaustion responses enumeration-safe.
 - Treat post-commit verification-request exceptions as delivery failure while preserving the created account result.
 - Remove email addresses from registration and resend query strings; users enter the address in the resend form.
+- Bind verification tokens to the recipient email fingerprint and consume stale links when the account email has changed.
 - Correct the verification success redirect copy and malformed registration object separator.
-- Update fixtures for verified users and fingerprint-bound verification tokens; add legacy-token rejection coverage.
+- Keep the generated docs index and database reference matrix synchronized with their source documents.
 
 ## Verification
-- The prior `Build and Test` CI log reported `TS1005: ',' expected` in `src/app/[locale]/register/page.tsx:62`.
-- The prior `Unit Tests` log reported failures in `tests/unit/authorization-lifecycle.test.ts`, `tests/unit/services/auth/session.test.ts`, and `tests/unit/app/actions/auth.test.ts` (unknown-address resend fixture and legacy token fixture among them).
-- Current head `dc8e1ce630925d2c1fdc888f99b7a6e87f523e3e`: Unit Tests passed (including UI tests) and Isolation Suite passed in CI run `43436952088`.
-- The Vercel preview for the same head reached `READY` and its alias was assigned; the Next.js compile, TypeScript, and production build completed successfully.
-- `Build and Test` reached the final tracked-generated-files check, then failed because the report adds one `src/lib/docsIndex.ts` entry and `auth.ts` adds a consumer to `docs/database/reference-matrix.md`. Those generated outputs are now being synchronized; CI must rerun after they are committed.
+- The earlier `Build and Test` syntax failure (`TS1005: ',' expected`) in `src/app/[locale]/register/page.tsx` was fixed in commit `4912128`.
+- At reviewed head `36d282b`, CI run `43437871644`: Unit Tests passed; Isolation Suite passed; Vercel Preview Comments passed; Build and Test failed only at the final generated tracked-file check. Its diff identified the PR report's `src/lib/docsIndex.ts` snippet as stale by one character.
+- The generated docs-index entry is being regenerated from the report source in this remediation commit. CI must rerun on the resulting head; no successful Build and Test result is claimed yet.
 
-## Negative-path checks added
+## Negative-path checks
 - An unverified database-backed session is revoked and returns `null`.
-- Unknown email addresses consume only the requester bucket, not the address delivery bucket.
+- Unknown addresses and addresses whose delivery quota is exhausted receive the same success-shaped resend response.
+- Requester IP rate-limit keys are derived with HMAC using the server-side `SESSION_SECRET`, not a reversible unkeyed hash.
 - Legacy verification tokens without the recipient fingerprint are rejected before database access.
+- A token bound to a previous email address is consumed without verifying the changed address.
 - Verification delivery exceptions after account commit are converted to `verificationEmailSent: false`.
 
-## Known limitations
-- `src/services/email/adapters.ts` currently throws from `ProductionEmailSender.send()` even when `EMAIL_PROVIDER` is configured. Production users cannot receive verification messages until a real provider adapter and its deployment configuration are supplied. This task does not invent a provider or credentials; the deployment owner must choose and configure one before enforcing verification in production.
-- The first Vercel deployment after the initial remediation commit failed TypeScript checks in `registerAction` and the lifecycle test. Those type errors were corrected; the current PR #138 head deployment is `READY` with its preview alias assigned.
+## Known limitations and deployment gate
+- **Do not deploy this enforcement until production email delivery is implemented and configured.** `ProductionEmailSender.send()` currently throws even when `EMAIL_PROVIDER` is set. Because this PR already blocks login for unverified users and revokes their existing sessions, new production registrations cannot receive verification links and existing unverified accounts cannot recover access. This is an active consequence of the PR, not a future enforcement step. This change does not choose an email provider, add provider credentials, or silently weaken the verified-email invariant; the deployment owner must approve and supply the provider integration and rollout plan before deployment.

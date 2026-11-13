@@ -233,7 +233,7 @@ describe("Auth Lifecycle Tests", () => {
             bucketCleared = true;
             return { rowCount: 1 };
           }
-          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com" }], rowCount: 1 };
+          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com", email_verified_at: new Date("2026-01-01T00:00:00.000Z") }], rowCount: 1 };
           if (sql.includes("SELECT * FROM user_credentials")) {
              return { rows: [{
                 user_id: "usr-1",
@@ -254,14 +254,14 @@ describe("Auth Lifecycle Tests", () => {
       for (let i = 0; i < 10; i++) {
           const res = await loginAction("trip@example.com", "Password123");
           expect(res).toBeDefined();
-          if (res && typeof res === 'object' && 'error' in res) {
+          if (res && typeof res === 'object' && 'errorCode' in res) {
              throw new Error("Unexpected error");
           }
       }
       // 11th should still succeed because the bucket is cleared every time
       const res = await loginAction("trip@example.com", "Password123");
       expect(res).toBeDefined();
-      if (res && typeof res === 'object' && 'error' in res) {
+      if (res && typeof res === 'object' && 'errorCode' in res) {
          throw new Error("Unexpected error");
       }
       expect(bucketCleared).toBe(true);

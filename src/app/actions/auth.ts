@@ -283,7 +283,11 @@ export async function requestVerification(email: string): Promise<{ success: boo
   if (!requesterIp) {
     throw new Error("Unable to determine verification requester");
   }
-  const requesterBucket = `verification-requester:${crypto.createHash("sha256").update(requesterIp).digest("hex")}`;
+  const requesterSecret = process.env.SESSION_SECRET;
+  if (!requesterSecret) {
+    throw new Error("SESSION_SECRET must be configured for verification rate limiting");
+  }
+  const requesterBucket = `verification-requester:${crypto.createHmac("sha256", requesterSecret).update(requesterIp).digest("hex")}`;
   const requesterLimit = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
@@ -319,7 +323,8 @@ export async function requestVerification(email: string): Promise<{ success: boo
       await enforceRateLimit(client, "email-verification", `verification:${normalizedEmail}`, 5, 60 * 60 * 1000);
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "TooManyRequests") {
-        return { success: false, error: "TooManyRequests", rawToken: undefined, email: undefined };
+        // Keep the response indistinguishable from an unknown or already-verified address.
+        return { success: true, rawToken: undefined, email: undefined };
       }
       throw error;
     }

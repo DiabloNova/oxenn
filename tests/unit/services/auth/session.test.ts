@@ -169,6 +169,7 @@ describe("server session lifecycle and error handling", () => {
         workspaceId: "workspace-1",
         expiresAt: new Date("2027-01-01T00:00:00.000Z"),
         email: "user@example.com",
+        emailVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
         name: "Test User",
         role: "workspace_admin",
         ...state

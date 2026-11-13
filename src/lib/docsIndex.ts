@@ -399,7 +399,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "PR #138 authentication remediation report",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# PR #138 authentication remediation report  ## Status INCOMPLETE — the auth code, unit tests, isolation suite, and Vercel preview now pass on the current head; the remaining CI failure is generated tracked-file drift, which is being corrected. Production email delivery remains a separate release blocker because the repository's \`ProductionEmailSender\` is intentionally unimplemented.  ## Invariant Only users who have verified control of their email address may establish or retain an authenticated`
+    snippet: `# PR #138 authentication remediation report  ## Status INCOMPLETE — PR #138 enforces verified-email access immediately. At the reviewed head (\`36d282b\`), Unit Tests and Isolation Suite passed, but Build and Test failed its generated-file consistency check because \`src/lib/docsIndex.ts\` was one character out of sync with the report-derived snippet. The production email sender is unimplemented, making this a deployment blocker until a real provider is selected, implemented, and configured.  ## Inv`
   },
   {
     slug: "api-keys-prefix-index-reconciliation",
