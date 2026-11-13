@@ -175,6 +175,9 @@ describe("workspace final-administrator invariant", () => {
 
   it("fails closed when the target workspace is already inactive", async () => {
     queryMock.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM users") && sql.includes("FOR UPDATE")) {
+        return { rows: [{ id: "admin-1" }], rowCount: 1 };
+      }
       if (sql.includes("FROM organizations") && sql.includes("FOR UPDATE")) {
         return { rows: [], rowCount: 0 };
       }
