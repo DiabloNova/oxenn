@@ -52,7 +52,7 @@ describe("deactivateAccountAction", () => {
 
     const result = await deactivateAccountAction("wrongpass");
     expect(result).toEqual({ success: false, errorCode: "INVALID_PASSWORD" });
-    expect(queryMock.mock.calls.some(([sql]) => typeof sql === "string" && sql.includes("UPDATE users SET deleted_at"))).toBe(false);
+    expect(queryMock.mock.calls.some(([sql]) => typeof sql === "string" && /UPDATE\\s+users\\s+SET\\s+deleted_at/.test(sql))).toBe(false);
   });
 
   it("closes a sole-admin workspace and atomically deactivates the account", async () => {
@@ -70,7 +70,8 @@ describe("deactivateAccountAction", () => {
     const adminCounts: Record<string, number> = {
       "org-other-admin": 2,
       "org-sole-admin": 1,
-      "org-viewer": 1,
+      // Existing administrator-less workspaces must not be closed by a viewer leaving.
+      "org-viewer": 0,
     };
 
     const queryMock = vi.fn().mockImplementation(async (sql: string, params: unknown[] = []) => {
@@ -115,6 +116,10 @@ describe("deactivateAccountAction", () => {
       .filter(Boolean);
 
     expect(sqlCalls.some((sql) => sql.includes("UPDATE organizations") && sql.includes("deleted_at = NOW()"))).toBe(true);
+    const closedWorkspaceIds = queryMock.mock.calls
+      .filter(([sql]) => typeof sql === "string" && sql.includes("UPDATE organizations") && sql.includes("deleted_at = NOW()"))
+      .map(([, params]) => String((params as unknown[])[0]));
+    expect(closedWorkspaceIds).toEqual(["org-sole-admin"]);
     expect(sqlCalls.some((sql) => sql.includes("UPDATE sessions") && sql.includes("WHERE workspace_id = $1"))).toBe(true);
     expect(sqlCalls.some((sql) => sql.includes("UPDATE users") && sql.includes("SET deleted_at = NOW()"))).toBe(true);
     expect(sqlCalls.some((sql) => sql.includes("UPDATE sessions") && sql.includes("WHERE user_id = $1"))).toBe(true);
@@ -126,6 +131,11 @@ describe("deactivateAccountAction", () => {
     );
     expect(deletedMemberships).toHaveLength(2);
     expect(deletedMemberships.some(([, params]) => (params as unknown[])[0] === "org-sole-admin")).toBe(false);
+
+    const membershipSelection = queryMock.mock.calls.find(([sql]) =>
+      typeof sql === "string" && sql.includes("SELECT m.organization_id, m.role")
+    )?.[0];
+    expect(String(membershipSelection)).toMatch(/ORDER BY m\\.organization_id ASC/);
 
     // Workspace locks are acquired in deterministic organization-id order.
     const lockParams = queryMock.mock.calls
