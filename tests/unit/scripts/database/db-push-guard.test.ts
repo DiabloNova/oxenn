@@ -41,6 +41,7 @@ function catalogRow(overrides: Record<string, unknown> = {}): Record<string, unk
     role_can_create_role: false,
     role_can_replicate: false,
     role_bypasses_rls: false,
+    role_memberships: [],
     object_inventory: { schemas: 0, relations: 0, types: 0, routines: 0 },
     extensions: ["plpgsql"],
     ...overrides,
@@ -241,6 +242,35 @@ describe("db:push database guard", () => {
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toMatch(/privileges/);
+  });
+
+  it.each([
+    ["pg_write_all_data"],
+    ["pg_execute_server_program"],
+    ["another_privileged_role"],
+  ])("rejects any inherited or assumable PostgreSQL role: %j", async (memberships) => {
+    const client = mockClient([catalogRow({ role_memberships: memberships })]);
+    const result = await validateDbPushGuard({
+      env: baseEnv,
+      targets: [target],
+      clientFactory: () => client,
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/must not inherit or be able to assume/);
+  });
+
+  it("rejects a missing or malformed role-membership catalog value", async () => {
+    for (const roleMemberships of [undefined, "invalid-json", ["role", 42]]) {
+      const client = mockClient([catalogRow({ role_memberships: roleMemberships })]);
+      const result = await validateDbPushGuard({
+        env: baseEnv,
+        targets: [target],
+        clientFactory: () => client,
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toMatch(/must not inherit or be able to assume/);
+    }
   });
 
   it("rejects an identity, database owner, or database-attestation mismatch", async () => {
