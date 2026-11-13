@@ -65,7 +65,7 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
   ),
   "sys-auth-role-check": definePath(
     ["users", "organizations", "organization_members"],
-    ["src/services/auth/authorization.ts", "src/app/actions/workspace.ts"],
+    ["src/services/auth/authorization.ts"],
     "Reads the authoritative workspace role from organization_members.role; it does not use the frozen-legacy roles table."
   ),
   "sys-auth-api-check": definePath(
