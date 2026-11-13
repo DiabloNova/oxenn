@@ -2,6 +2,7 @@ import { cookies as nextCookies } from "next/headers";
 import crypto from "crypto";
 import { User, Session } from "@/types/auth";
 import { TenantContextManager } from "@/core/database/tenant-context";
+import { lockActiveUser, lockActiveWorkspace } from "@/services/auth/workspace-locks";
 
 let cookiesFn = nextCookies;
 
@@ -38,19 +39,11 @@ export async function createSession(user: User): Promise<void> {
 
     // Serialize session creation with account deactivation so no new usable
     // session can be committed after the account has been soft-deleted.
-    const { rows: activeUsers } = await client.query(
-      `SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
-      [user.id]
-    );
-    if (activeUsers.length === 0) {
+    if (!(await lockActiveUser(client, user.id))) {
       throw new Error("Cannot create a session for an inactive account.");
     }
 
-    const { rows: activeWorkspaces } = await client.query(
-      `SELECT id FROM organizations WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
-      [user.workspaceId]
-    );
-    if (activeWorkspaces.length === 0) {
+    if (!(await lockActiveWorkspace(client, user.workspaceId))) {
       throw new Error("Cannot create a session for an inactive workspace.");
     }
 
