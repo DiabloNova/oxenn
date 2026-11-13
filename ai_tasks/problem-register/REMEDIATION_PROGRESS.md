@@ -142,7 +142,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [SRC-014](./findings/060-SRC-014.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SRC-015](./findings/061-SRC-015.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started | — | — |
 | [SRC-016](./findings/062-SRC-016.md) | Wave 2 (persistence/expiry) + Wave 4 (localized UI/email workflow) | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
-| [SRC-017](./findings/063-SRC-017.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
+| [SRC-017](./findings/063-SRC-017.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | — | main@ec86cfccd02abcea31be07782a56416529c08b2d; branch review/063-src-017-20261113; 2026-11-13 implementation log|
 | [SRC-018](./findings/064-SRC-018.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Needs decision | — | main@9ac5fe0; Wave 0 log 062–097|
 | [SRC-019](./findings/065-SRC-019.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [SRC-020](./findings/066-SRC-020.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
@@ -640,3 +640,17 @@ At the end of each batch, report:
 At the end of each wave, provide a concise wave summary and wait for the required user approval before proceeding if the scope or next wave has not already been authorized.
 
 The project is complete only when every in-scope finding is either verified complete or has an explicitly approved disposition (deferred, superseded, already fixed, or out of scope), with evidence. The number of changed files or closed issues is not a completion metric.
+
+
+### SRC-017 implementation — 2026-11-13
+
+- Finding: [SRC-017](./findings/063-SRC-017.md). Current-main baseline: `main@ec86cfccd02abcea31be07782a56416529c08b2d`. Working branch: `review/063-src-017-20261113`; pre-sync working head: `0550095616c3801fd3e053b9ef881515b3ca1d96`.
+- Revalidation: confirmed. `removeMemberAction` and `updateMemberRoleAction` previously allowed the final active `workspace_admin` to be removed/demoted without a concurrency-safe shared lock. `deactivateAccountAction` soft-deleted the user first and retained a sole-admin membership, leaving an active workspace without an active admin.
+- Owner decision: use option 2. If deactivation would leave a workspace without an active `workspace_admin`, soft-deactivate that workspace in the same atomic transaction. Preserve membership rows for recovery/audit and revoke all sessions scoped to the closed workspace. If another active admin remains, remove only the deactivating user's membership.
+- Implementation: organization-row serialization lock shared by member removal, role changes, invitations, and account deactivation; deterministic organization lock order; active-user/workspace/member checks on session and workspace lifecycle paths; stable `LAST_WORKSPACE_ADMIN` domain response; removal of nested manual transaction boundaries inside managed transactions; privileged-path registry updated for newly accessed tables.
+- Files changed: `src/app/actions/workspace.ts`; `src/app/actions/account.ts`; `src/services/auth/session.ts`; `src/core/database/privileged-paths.ts`; `tests/unit/app/actions/workspace-membership.test.ts` (new); `tests/unit/app/actions/workspace-invitations.test.ts`; `tests/unit/app/actions/account.test.ts`; `tests/unit/services/auth/session.test.ts`; this finding record; this progress tracker.
+- Tests added/updated: last-admin removal/demotion including self-actions; allow changes if another active admin exists; reject inactive workspaces; account deactivation closes sole-admin workspaces and preserves memberships; reject invalid invitation roles; reject session creation for inactive/deleted users, closed workspaces, and revoked memberships.
+- Verification: focused tests, typecheck, lint, build, database/isolation suite, and GitHub CI **Not run yet**. No pass is claimed. No database connection, migration, production operation, deployment, or PR merge was performed.
+- Concurrency/rollback: the organization row is the shared serialization point; deactivation locks the user first and organizations in sorted ID order; workspace/session-creation paths also lock the user to prevent sessions or memberships racing account deactivation. Account mutations and audit writes are within one system-context transaction; a failed final user update throws to force rollback.
+- Safety decision: the user explicitly authorized bypassing Wave 0 for this SRC-017 implementation. The recorded project-wide Wave 0 state remains PARTIAL (77/97 previously revalidated); this action does not claim Wave 0 completion and does not change unrelated finding dispositions.
+- Status transition: SRC-017 `Confirmed` → `Implemented — verification pending`. Next permitted action: synchronize the working branch with current main, run focused and repository CI checks, review any failures, and update this record with exact outcomes.
