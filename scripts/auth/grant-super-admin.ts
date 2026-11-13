@@ -1,5 +1,8 @@
 import { randomUUID } from "crypto";
 import { TenantContextManager } from "../../src/core/database/tenant-context";
+import { hasAnotherActiveWorkspaceAdmin } from "../../src/services/auth/workspace-admin-invariant";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 /**
  * Grant the operator-only super_admin role without orphaning an active
@@ -40,14 +43,7 @@ export async function grantSuperAdmin(userId: string, workspaceId: string): Prom
     }
 
     if (membership.role === "workspace_admin") {
-      const { rows: adminRows } = await client.query(
-        `SELECT COUNT(*)::int AS admin_count
-         FROM organization_members m
-         INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
-         WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
-        [workspaceId]
-      );
-      if (Number(adminRows[0]?.admin_count ?? 0) <= 1) {
+      if (!(await hasAnotherActiveWorkspaceAdmin(client, workspaceId))) {
         throw new Error("Cannot grant super_admin to the final active workspace administrator.");
       }
     }
@@ -103,9 +99,19 @@ async function main() {
 }
 
 // Avoid executing the CLI when the exported operation is imported by unit tests.
-const invokedScript = (process.argv[1] ?? "").replaceAll(String.fromCharCode(92), "/");
-if (invokedScript.endsWith("/scripts/auth/grant-super-admin.ts") || invokedScript.endsWith("/scripts/auth/grant-super-admin.js") ||
-    invokedScript === "scripts/auth/grant-super-admin.ts" || invokedScript === "scripts/auth/grant-super-admin.js") {
+// Resolve both paths physically so direct invocation works with symlinks,
+// relative paths, and platform-specific path separators.
+const invokedScriptPath = process.argv[1];
+const isDirectInvocation = (() => {
+  if (!invokedScriptPath) return false;
+  try {
+    return realpathSync(invokedScriptPath) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
+
+if (isDirectInvocation) {
   main().catch((err) => {
     console.error("Fatal error:", err);
     process.exit(1);
