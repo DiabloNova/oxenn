@@ -2803,7 +2803,7 @@
 - **Migration Coverage:** Not applicable (USER_OWNED)
 - **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
 - **Status:** `WIRED`
-- **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
+- **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`, `tests/isolation/suite.ts`
 
 ### Columns
 
