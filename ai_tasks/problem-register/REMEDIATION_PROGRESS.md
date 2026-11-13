@@ -654,3 +654,9 @@ The project is complete only when every in-scope finding is either verified comp
 - The current-main dispositions and exact caveats are recorded in [WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md](./WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md). The other 80 findings are not automatically closed: their cited paths must be confirmed unchanged before their prior dispositions can be carried forward.
 - DOC-006 remains an owner decision; DOC-009, SRC-002, PUB-001, and GHA-003 remain confirmed; SRC-006 and GHA-001 are partially valid; SRC-013 and TST-002/TST-003 have repository/CI evidence of resolution; VER-002 remains historical-only.
 - Wave 0 remains IN PROGRESS. No aggregate status counts or canonical Finding Ledger statuses were changed in this partial path-mapping batch.
+
+### Closed PR reconciliation — 2026-11-13
+
+- PR #108 is closed/unmerged. Its API-auth change is superseded by current-main `authorizeApiRequest` use, but the proposed login `returnTo` and locale-aware ProtectedRoute changes are absent; its direct authorization regression test was not proven present. Do not replay the whole PR.
+- PR #109 is closed/unmerged and contains only `verification/rls-state-contract.md`, absent from current main. Some principles appear in current docs, but the standalone contract is not current policy or live-database evidence.
+- Exact comparison and caveats are recorded in `WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md`.
