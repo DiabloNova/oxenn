@@ -1792,7 +1792,7 @@
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
-- **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/features/public-api/public-api.test.ts`
+- **Consumers:** `scripts/auth/grant-super-admin.ts`, `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/features/admin/infrastructure/persistence/postgres/index.ts`, `src/features/ai-intelligence/repositories/index.ts`, `src/services/auth/authorization.ts`, `src/services/auth/session.ts`, `tests/features/acquisition/integration/run-all.ts`, `tests/features/admin/tenant-isolation-behavior.test.ts`, `tests/features/public-api/public-api.test.ts`, `tests/isolation/suite.ts`
 
 ### Columns
 
