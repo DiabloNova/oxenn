@@ -52,7 +52,7 @@ export interface FreeAuditResponse {
 }
 
 type LimitDecision = { status: number; message: string; retryAfterSeconds?: number } | null;
-type QuotaReservation = { decision: LimitDecision; quotaBucketKey: string; idempotencyBucketKey: string | null };
+type QuotaReservation = { decision: LimitDecision; idempotencyBucketKey: string | null; globalBucketExpiresAt: Date };
 
 function hashBucket(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -144,7 +144,7 @@ async function reserveFreeAudit(
   const quotaBucketKey = hashBucket(`${userId}:${month}`);
   const idempotencyKey = request.headers.get("idempotency-key");
   if (idempotencyKey !== null && !/^[\x21-\x7e]{8,128}$/.test(idempotencyKey)) {
-    return { decision: { status: 400, message: "کلید تکرار درخواست نامعتبر است." }, quotaBucketKey, idempotencyBucketKey: null };
+    return { decision: { status: 400, message: "کلید تکرار درخواست نامعتبر است." }, idempotencyBucketKey: null, globalBucketExpiresAt: dayExpiry };
   }
 
   const idempotencyBucketKey = idempotencyKey ? hashBucket(`${userId}:${idempotencyKey}`) : null;
@@ -198,29 +198,32 @@ async function reserveFreeAudit(
     }
     return null;
   });
-  return { decision, quotaBucketKey, idempotencyBucketKey };
+  return { decision, idempotencyBucketKey, globalBucketExpiresAt: dayExpiry };
 }
 
-async function releaseFreeAuditReservation(
+async function releaseFreeAuditGlobalCapacity(
   userId: string,
-  quotaBucketKey: string,
+  globalBucketExpiresAt: Date,
   idempotencyBucketKey: string | null
 ): Promise<void> {
   let releaseError: unknown = null;
   try {
     await TenantContextManager.runWithSystemContext(userId, "sys-free-audit", async () => {
       const client = TenantContextManager.getDbClient();
-      if (!client) throw new Error("Free audit quota release context is unavailable");
+      if (!client) throw new Error("Free Audit global capacity release context is unavailable");
+      // Never refund a newer UTC day's counter when a crawl crosses midnight.
       await client.query(
-        "UPDATE auth_rate_limits SET attempts = GREATEST(attempts - 1, 0) WHERE endpoint = $1 AND bucket_key = $2",
-        ["free-audit-user", quotaBucketKey]
+        `UPDATE auth_rate_limits
+         SET attempts = GREATEST(attempts - 1, 0)
+         WHERE endpoint = $1 AND bucket_key = $2 AND expires_at = $3 AND attempts > 0`,
+        ["free-audit-global", "global", globalBucketExpiresAt.toISOString()]
       );
     });
   } catch (error) {
     releaseError = error;
   }
 
-  // Use a separate transaction so a quota-release failure cannot strand the idempotency key.
+  // Use a separate transaction so a capacity-release failure cannot strand the idempotency key.
   if (idempotencyBucketKey) {
     try {
       await TenantContextManager.runWithSystemContext(userId, "sys-free-audit", async () => {
@@ -235,7 +238,6 @@ async function releaseFreeAuditReservation(
 
   if (releaseError) throw releaseError;
 }
-
 function buildResponse(html: string, requestedUrl: string, crawl: {
   pages: number; bytesProcessed: number; durationMs: number; partial: boolean;
 }): FreeAuditResponse {
@@ -371,20 +373,20 @@ export async function POST(req: NextRequest) {
     };
     const startedAt = Date.now();
     let reservationReleaseAttempted = false;
-    const releaseReservationOnce = async () => {
+    const releaseCapacityOnce = async () => {
       if (reservationReleaseAttempted) return;
       reservationReleaseAttempted = true;
       try {
-        await releaseFreeAuditReservation(identity.userId, reservation.quotaBucketKey, reservation.idempotencyBucketKey);
+        await releaseFreeAuditGlobalCapacity(identity.userId, reservation.globalBucketExpiresAt, reservation.idempotencyBucketKey);
       } catch (releaseError) {
-        console.error("[Free Audit] Reservation release failed", releaseError instanceof Error ? releaseError.name : "UnknownError");
+        console.error("[Free Audit] Capacity release failed", releaseError instanceof Error ? releaseError.name : "UnknownError");
       }
     };
     try {
       const result = await new HttpCrawlProvider().execute(crawlRequest, policy, req.signal);
       const document = result.documents[0];
       if (!document?.html || result.pageCount !== 1) {
-        await releaseReservationOnce();
+        await releaseCapacityOnce();
         return NextResponse.json(
           { error: "Crawl Unavailable", message: "این صفحه قابل دریافت یا بررسی نیست؛ ممکن است سیاست robots.txt دسترسی را محدود کرده باشد." },
           { status: 422 }
@@ -399,7 +401,7 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json(payload, { status: 200 });
     } catch (crawlError) {
-      await releaseReservationOnce();
+      await releaseCapacityOnce();
       throw crawlError;
     }
   } catch (error: unknown) {

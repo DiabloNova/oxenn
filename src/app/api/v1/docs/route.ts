@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     if (!isPublicDocumentation(content)) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-    return NextResponse.json({ content });
+    return NextResponse.json({ content, path: path.relative(docsDir, targetPath).split(path.sep).join('/') });
   } catch (e) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

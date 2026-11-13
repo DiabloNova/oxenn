@@ -51,7 +51,7 @@ jobs:
       - name: Verify RLS migration coverage
         run: pnpm db:verify-rls-migrations
 
-      - name: Verify Phase 0 baseline and documentation links
+      - name: Verify MVP engineering baseline and documentation links
         run: node scripts/docs/verify-phase-0-baseline.mjs
 
       - name: Verify RLS documentation consistency

@@ -11,11 +11,11 @@ export interface DocMeta {
 export const DOCS_INDEX: DocMeta[] = [
   {
     slug: "product",
-    titleEn: "Seorchable Documentation Architecture",
-    titleFa: "Seorchable Documentation Architecture",
+    titleEn: "OXENN Documentation",
+    titleFa: "OXENN Documentation",
     category: "product",
     categoryFa: "Product",
-    snippet: `# Seorchable Documentation Architecture  Welcome to the Seorchable documentation. This documentation accurately reflects the implemented state of the repository, separating currently available capabilities from future plans.  ## Documentation Domains  To find what you are looking for, navigate to one of our six documentation domains:  ### 1. [Product Documentation](./product/README.md) Explains what Seorchable is and what capabilities it provides. Useful for understanding core features like AI V`
+    snippet: `# OXENN Documentation  This documentation describes the OXENN product, its target architecture, user-facing behavior, APIs, services, security boundaries, and the implementation evidence available in the repository.  ## Canonical product and MVP authorities  - [MVP Product Specification](./product/OXENN_MVP_PRODUCT_SPECIFICATION.md): current owner-approved product scope and acceptance criteria. - [MVP Engineering Baseline](./project/MVP_ENGINEERING_BASELINE.md): code-level implementation mapping`
   },
   {
     slug: "api",
@@ -55,15 +55,15 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "OXENN Product Architecture — Architecture-Aligned Remediation Baseline",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# OXENN Product Architecture — Architecture-Aligned Remediation Baseline  **Product:** OXENN   **Product identity:** Seorchable   **Status:** Approved working architecture baseline for repository remediation   **Revision date:** 2026-11-07   **Source architecture:** \`DiabloNova/oxenn_documents/product_architecture.md\` (main)   **Repository baseline:** \`DiabloNova/oxenn\` main at \`7bd2b6ba04e18abbcaf772fac63f29c465a45a42\`   **Scope:** Product, commercial, application, intelligence, data, execution`
+    snippet: `# OXENN Product Architecture — Architecture-Aligned Remediation Baseline  **Product:** OXENN   **Product identity:** OXENN   **Status:** Approved working architecture baseline for repository remediation   **Revision date:** 2026-11-07   **Source architecture:** \`DiabloNova/oxenn_documents/product_architecture.md\` (main)   **Repository baseline:** \`DiabloNova/oxenn\` main at \`7bd2b6ba04e18abbcaf772fac63f29c465a45a42\`   **Scope:** Product, commercial, application, intelligence, data, execution, sec`
   },
   {
     slug: "architecture",
-    titleEn: "Architecture Documentation",
-    titleFa: "Architecture Documentation",
+    titleEn: "OXENN Architecture Documentation",
+    titleFa: "OXENN Architecture Documentation",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Architecture Documentation  This section describes the technical architecture of Seorchable.  ## Status Dictionary - **Implemented**: Documented architecture accurately reflects the codebase. - **Planned**: Architectural changes that are proposed but not implemented.  ## System Overview  Seorchable is a Next.js application built on a PostgreSQL database utilizing Drizzle ORM. The architecture enforces strict multi-tenant isolation, structured service boundaries, and deterministic background pr`
+    snippet: `# OXENN Architecture Documentation  This section describes the technical architecture of OXENN. It documents the intended architecture and the structures present in the repository; it does not by itself certify production readiness.  ## Status dictionary  - **Planned:** target architecture or requirement with no complete implementation evidence. - **In progress:** implementation exists but the required workflow or boundary is incomplete. - **Implemented:** repository code exists for the describe`
   },
   {
     slug: "SITEMAP_AND_ROUTE_SPECIFICATION",
@@ -314,12 +314,20 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Canonical Table Ownership Registry  **Status:** SCR-001 Stage 2   **Workspace source:** database/schema/index.ts and its canonical modular exports   **Platform Admin source:** database/platform-admin/schema/index.ts  ## Purpose and authority  scripts/database/table-ownership-registry.ts is the explicit, reviewed ownership inventory for the application's canonical database tables. Each table has a scope, lifecycle status, rationale, and evidence. Classification is based on repository domain/schema`
   },
   {
-    slug: "product",
-    titleEn: "Product Documentation",
-    titleFa: "Product Documentation",
+    slug: "OXENN_MVP_PRODUCT_SPECIFICATION",
+    titleEn: "OXENN — MVP Product Specification",
+    titleFa: "OXENN — MVP Product Specification",
     category: "product",
     categoryFa: "Product",
-    snippet: `# Product Documentation  This section describes the implemented product capabilities of Seorchable.  ## Status Dictionary - **Implemented**: Fully operational in the current codebase. - **Partial**: Feature exists but may be incomplete or experimental. - **Planned**: Not currently implemented.  ## Implemented Capabilities  ### AI Visibility Audit Engine Measures brand representation across large language models, evaluates metrics for 8 visibility dimensions, and calculates a deterministic weight`
+    snippet: `# OXENN — MVP Product Specification  **Document status:** Owner-approved product scope   **Specification version:** 1.0   **Effective date:** 2026-11-12   **Product:** OXENN — Product & Market Improvement Intelligence Platform   **Repository:** \`DiabloNova/oxenn\`   **Authority:** Owner approval recorded in Stele \`KNOW-66\`, together with the independent-service decision \`KNOW-25\` (version 2), authenticated-access decision \`KNOW-64\`, and the product-to-engineering mapping in \`DOC-67\` (version 4). `
+  },
+  {
+    slug: "product",
+    titleEn: "OXENN Product Documentation",
+    titleFa: "OXENN Product Documentation",
+    category: "product",
+    categoryFa: "Product",
+    snippet: `# OXENN Product Documentation  This directory contains the canonical product-level requirements and product decision references.  ## Current product authority  - [OXENN MVP Product Specification](./OXENN_MVP_PRODUCT_SPECIFICATION.md) — owner-approved product definition, target customers, Offer model, independent services, user journey, evidence policy, MVP boundaries, and acceptance criteria FR-01–FR-11. - [OXENN Product Architecture](../architecture/OXENN_PRODUCT_ARCHITECTURE.md) — nine product`
   },
   {
     slug: "PHASE-01-PRODUCT-DESIGN-AUDIT",

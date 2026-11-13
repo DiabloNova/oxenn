@@ -159,24 +159,40 @@ describe("Free audit API", () => {
     expect(mocks.execute).not.toHaveBeenCalled();
   });
 
-  it("does not expose crawler diagnostics when SSRF policy rejects a target", async () => {
+  it("does not expose crawler diagnostics or refund monthly attempts when a crawl fails", async () => {
     mocks.execute.mockRejectedValue(new CrawlError("SSRF_BLOCKED", "private address rejected", { rule: "private-rfc1918" }));
     const response = await POST(makeRequest("http://127.0.0.1/", { "idempotency-key": "retry-after-crawl-001" }));
     const payload = await response.json();
     expect(response.status).toBe(400);
     expect(payload.message).not.toContain("private-rfc1918");
-    expect(mocks.query.mock.calls.some((call) => String(call[0]).startsWith("UPDATE auth_rate_limits"))).toBe(true);
+    const globalRefund = mocks.query.mock.calls.find((call) =>
+      String(call[0]).startsWith("UPDATE auth_rate_limits") && call[1]?.[0] === "free-audit-global"
+    );
+    expect(globalRefund).toBeDefined();
+    expect(String(globalRefund?.[0])).toContain("expires_at = $3");
+    expect(globalRefund?.[1]?.[1]).toBe("global");
+    expect(globalRefund?.[1]?.[2]).toEqual(expect.any(String));
+    expect(mocks.query.mock.calls.some((call) =>
+      String(call[0]).startsWith("UPDATE auth_rate_limits") && call[1]?.[0] === "free-audit-user"
+    )).toBe(false);
     expect(mocks.query.mock.calls.some((call) => String(call[0]).startsWith("DELETE FROM auth_rate_limits") && call[1]?.[0] === "free-audit-idempotency")).toBe(true);
   });
-  it("preserves the no-document response and attempts reservation release only once", async () => {
+  it("preserves the no-document response and attempts global capacity release only once", async () => {
     mocks.execute.mockResolvedValue({ ...crawlResult(), documents: [], pageCount: 0 });
     mocks.query.mockImplementation(async (sql: string) => {
-      if (sql.startsWith("UPDATE auth_rate_limits")) throw new Error("simulated release failure");
+      if (sql.startsWith("UPDATE auth_rate_limits")) throw new Error("simulated capacity release failure");
       return { rows: [{ attempts: 1 }] };
     });
     const response = await POST(makeRequest("https://example.com/", { "idempotency-key": "release-failure-001" }));
     expect(response.status).toBe(422);
-    expect(mocks.query.mock.calls.filter((call) => String(call[0]).startsWith("UPDATE auth_rate_limits"))).toHaveLength(1);
+    const capacityRefunds = mocks.query.mock.calls.filter((call) =>
+      String(call[0]).startsWith("UPDATE auth_rate_limits") && call[1]?.[0] === "free-audit-global"
+    );
+    expect(capacityRefunds).toHaveLength(1);
+    expect(String(capacityRefunds[0]?.[0])).toContain("expires_at = $3");
+    expect(mocks.query.mock.calls.some((call) =>
+      String(call[0]).startsWith("UPDATE auth_rate_limits") && call[1]?.[0] === "free-audit-user"
+    )).toBe(false);
     expect(mocks.query.mock.calls.some((call) => String(call[0]).startsWith("DELETE FROM auth_rate_limits") && call[1]?.[0] === "free-audit-idempotency")).toBe(true);
   });
 

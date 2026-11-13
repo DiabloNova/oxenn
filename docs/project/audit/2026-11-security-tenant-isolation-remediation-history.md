@@ -1,6 +1,12 @@
-# Oxenn MVP — Phase 1: Security and Tenant Isolation
+# Historical Security and Tenant Isolation Remediation Record
 
-**Status:** In progress — API identity audit and local verification passed; provider/DB/CI validation remains open
+**Record date:** 2026-11-04; preserved and reclassified on 2026-11-12  
+**Status:** Historical implementation/verification record; not a current MVP phase, release decision, or proof of current runtime behavior.  
+**Original workstream:** `mvp/phase-1-security-tenant-isolation`, based on the former `mvp/phase-0-scope-baseline` workstream.
+
+> This record preserves the technical scope, changes, tests, and verification limitations reported for the historical security-remediation workstream. Its references to the former two-journey MVP and its release gate are historical only. The current product scope is defined by [OXENN MVP Product Specification](../../product/OXENN_MVP_PRODUCT_SPECIFICATION.md), and the current code-level mapping is in [MVP Engineering Baseline](../MVP_ENGINEERING_BASELINE.md).
+
+**Historical status at the time of writing:** In progress — API identity audit and local verification passed; provider/DB/CI validation remained open
 **Branch:** `mvp/phase-1-security-tenant-isolation`
 **Base:** `mvp/phase-0-scope-baseline`
 **Started:** 2026-11-04
@@ -11,14 +17,11 @@ Close the highest-priority security gaps found in the repository audit before th
 
 This document records code changes and verification boundaries for this branch. Passing tests do not establish production security or prove effective RLS behavior in a live database.
 
-## 1.1 Scope decision
+## 1.1 Historical scope context
 
-The Phase 1 scope is a security prerequisite for the two MVP journeys defined
-in Phase 0: Technical SEO Audit and AI Visibility Audit. It does not expand the
-MVP to make every dashboard tool production-ready. The work in this PR is
-limited to server-derived tenant identity, SSRF-safe outbound fetching,
-subscription authorization for premium audit work, executable regression
-coverage, and accurate release documentation.
+This workstream was originally organized as a security prerequisite for the former two-journey engineering MVP (Technical SEO Audit and AI Visibility Audit). That scope is no longer the current product MVP definition. The security work described here remains relevant as historical implementation evidence, but it must not be used to limit the current product MVP to those two journeys.
+
+The historical work focused on server-derived tenant identity, SSRF-safe outbound fetching, subscription authorization for premium audit work, executable regression coverage, and release documentation. Current security requirements are maintained in [Security Model](../../security/SECURITY_MODEL.md).
 
 ## 1.2 Historical Phase 1 repository baseline — 2026-11-04
 
@@ -27,8 +30,8 @@ inventory recorded for this Phase 1 workstream on 2026-11-04. They are retained
 as a dated historical baseline, not as the current repository inventory or a
 claim about deployed database state. Subsequent DB-001 remediation and the
 DOC-001 ownership-governance work changed the repository contract. For the
-current per-table inventory, use the generated [Database Reference Matrix](../database/reference-matrix.md);
-for ownership and verification semantics, use the [Canonical Data Contract](../database/canonical-data-contract.md).
+current per-table inventory, use the generated [Database Reference Matrix](../../database/reference-matrix.md);
+for ownership and verification semantics, use the [Canonical Data Contract](../../database/canonical-data-contract.md).
 
 At the time this Phase 1 baseline was written, the canonical Drizzle schema
 was recorded as containing 70 tables and its reconciled tenant RLS subset as
@@ -68,29 +71,11 @@ deployed runtime, production subscription records, or deployed session-cookie
 configuration. Those require separately authorized staging/production
 verification and must remain NOT VERIFIED until observed directly.
 
-## 1.5 Phase 0 exit criteria and release gate
+## 1.5 Historical release-gate context and current interpretation
 
-Phase 0 is recorded as In Progress in MVP_PHASE_0_SCOPE_BASELINE.md. Phase 1
-implementation does not retroactively mark Phase 0 complete. Repository scope,
-schema/migration inventory, and CI checks are documented; production
-connectivity, deployed provider behavior, and production RLS remain unknown.
-The Phase 0 exit review therefore remains incomplete for release purposes.
+The original Phase 0/Phase 1 gate was tied to the previous engineering MVP and is retained here only to explain the historical workstream. It is not the current OXENN MVP release gate. The new product MVP's engineering acceptance and release gates are defined in [MVP Engineering Baseline](../MVP_ENGINEERING_BASELINE.md).
 
-**Public beta remains BLOCKED** until all of the following are verified on the
-candidate release revision:
-
-1. Unit and UI regression suites pass, including authentication, route
-   validation, DNS/redirect, timeout, response-size, and content-encoding
-   negative paths.
-2. The PostgreSQL isolation suite passes, and an authorized isolated
-   environment verifies effective RLS and migration state.
-3. Staging verifies session creation/revocation, entitlement decisions,
-   provider credentials, and safe outbound behavior from the deployed runtime.
-4. Remaining security review threads are either fixed and verified or have a
-   documented, accepted reason for being out of scope.
-5. The release owner explicitly reviews and accepts the Phase 0/Phase 1 gate.
-
-No statement in this document is an assertion that public beta is approved.
+The historical verification work did not establish production/staging database connectivity, effective deployed RLS, live provider credentials/reachability, or end-to-end behavior in a deployed environment. Those limitations remain meaningful whenever the relevant environment is evaluated today; they must be reverified against the actual current revision and environment. This historical record does not certify that any current beta or release is approved.
 
 ## 2. Implemented on this branch
 
@@ -133,15 +118,7 @@ session cookies are the authentication mechanism.
 
 Non-tenant / public endpoint classification:
 
-- /api/v1/audit/free requires a validated server session and is not public.
-  It uses the narrow `sys-free-audit` system database purpose for counters and
-  audit metadata; it does not create tenant-scoped request context. It meters
-  3 attempts per user per UTC month, 10 per trusted Vercel ingress IP per UTC
-  hour, and 500 globally per UTC day. User, IP, and idempotency bucket keys are
-  SHA-256 hashes. The bounded internal HTTP crawl is limited to one page, 1 MiB
-  response/total bytes, 20 seconds, and three redirects, and enforces robots
-  policy plus the shared SSRF protections. A scheduled job deletes expired
-  `free-audit-*` rate-limit rows.
+- The original classification treated `/api/v1/audit/free` as public. That historical classification was superseded by the owner-approved rule in `KNOW-64` and the authenticated, quota-metered internal HTTP implementation delivered on 2026-11-13. Current endpoint enforcement is documented in [Security Model](../../security/SECURITY_MODEL.md); this archived record preserves the earlier state and is not the current endpoint specification.
 - /api/v1/docs is intentionally public but serves only documentation approved
   by isPublicDocumentation.
 - /api/inngest delegates request handling to the Inngest serve adapter. The
@@ -208,7 +185,7 @@ boundary cases use the real server-session authorization path. The offline
 crawler harness injects a fixture implementing the same safe-fetch response
 contract; it no longer relies on global fetch interception.
 
-## 3. Remaining Phase 1 work
+## 3. Remaining work recorded for the historical Phase 1 snapshot
 
 - [ ] Run the complete GitHub Actions workflow and record its result before
   marking Phase 1 complete.

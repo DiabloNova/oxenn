@@ -21,6 +21,8 @@ describe("Free Audit rate-limit cleanup", () => {
     await expect(cleanupExpiredFreeAuditRateLimits()).resolves.toBe(2);
     expect(mocks.runWithSystemContext).toHaveBeenCalledWith(null, "sys-free-audit", expect.any(Function));
     const sql = String(mocks.query.mock.calls[0]?.[0]);
+    expect(sql).toContain("DELETE FROM auth_rate_limits AS rate_limit");
+    expect(sql).toContain("USING expired");
     expect(sql).toContain("endpoint LIKE 'free-audit-%'");
     expect(sql).toContain("expires_at <= NOW()");
     expect(sql).toContain("LIMIT 5000");

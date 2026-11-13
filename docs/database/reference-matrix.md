@@ -380,7 +380,7 @@
 - **Migration Coverage:** Not applicable (PLATFORM_OWNED)
 - **Runtime Enforcement Verification:** Not applicable (PLATFORM_OWNED)
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/auth.ts`, `src/app/api/v1/audit/free/route.ts`
+- **Consumers:** `src/app/actions/auth.ts`, `src/app/api/v1/audit/free/route.ts`, `src/services/audit/free-audit-rate-limit-cleanup.ts`
 
 ### Columns
 

@@ -14,7 +14,7 @@ export const CURRENT_RLS_DOCUMENTS = Object.freeze([
 
 export const HISTORICAL_RLS_DOCUMENTS = Object.freeze([
   "docs/architecture/database/reconciliation-report.md",
-  "docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md",
+  "docs/project/audit/2026-11-security-tenant-isolation-remediation-history.md",
 ] as const);
 
 /**
@@ -123,7 +123,7 @@ export function collectRlsDocumentationIssues(documents: Record<string, string>)
     }
   }
 
-  const phaseOnePath = "docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md";
+  const phaseOnePath = "docs/project/audit/2026-11-security-tenant-isolation-remediation-history.md";
   const phaseOne = read(phaseOnePath);
   if (!/Historical Phase 1 repository baseline\s*[—-]\s*2026-11-04/i.test(phaseOne)) {
     issues.push(`${phaseOnePath} must label its 70/51 figures as the dated historical Phase 1 baseline`);
@@ -152,8 +152,12 @@ export function collectRlsDocumentationIssues(documents: Record<string, string>)
   if (!doc002 || !/56 Tenant-Owned and 14 Global/i.test(doc002)) {
     issues.push("DOC-002 in docs-folder-audit.md must record the current 56 Tenant-Owned / 14 Global Matrix inventory");
   }
-  if (!/MVP Phase 0[\s\S]*?already records the corrected 56-table/i.test(doc002)) {
-    issues.push("DOC-002 audit text must distinguish the corrected MVP Phase 0 baseline from historical Phase 1 figures");
+  if (
+    !/MVP Engineering Baseline[\s\S]*?current engineering record/i.test(doc002) ||
+    !/Historical security remediation record/i.test(doc002) ||
+    /MVP_PHASE_0_SCOPE_BASELINE|MVP_PHASE_1_SECURITY_TENANT_ISOLATION/.test(doc002)
+  ) {
+    issues.push("DOC-002 audit text must link the current MVP Engineering Baseline and distinguish the historical security record");
   }
 
   return issues;

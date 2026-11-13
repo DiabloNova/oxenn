@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { GET } from "@/app/api/v1/docs/route";
+import { resolveDocsViewerHref, rewriteRelativeMarkdownLinks } from "@/lib/docs-viewer-links";
 
 describe("GET /api/v1/docs visibility enforcement", () => {
   let fixtureRoot: string;
@@ -45,6 +46,36 @@ describe("GET /api/v1/docs visibility enforcement", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       content: "# Public guide\n\nThe phrase visibility: internal appears here as ordinary body text.",
+      path: "public-guide.md",
     });
+  });
+
+  it("serves nested README documents by their directory slug and returns their docs-relative path", async () => {
+    const nestedDirectory = path.join(docsDirectory, "architecture", "database");
+    mkdirSync(nestedDirectory, { recursive: true });
+    writeFileSync(path.join(nestedDirectory, "README.md"), "# Database architecture");
+
+    const response = await GET(new Request("http://localhost/api/v1/docs?slug=README&domain=database"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      content: "# Database architecture",
+      path: "architecture/database/README.md",
+    });
+  });
+
+  it("translates relative Markdown links into locale-aware slug routes", () => {
+    expect(resolveDocsViewerHref("./database/README.md", "en", "architecture/README.md")).toBe("/en/docs/database");
+    expect(resolveDocsViewerHref("../database/reference-matrix.md", "fa", "architecture/README.md")).toBe("/fa/docs/reference-matrix");
+    expect(resolveDocsViewerHref("../database/canonical-data-contract.md#ownership", "en", "architecture/README.md")).toBe("/en/docs/canonical-data-contract#ownership");
+    expect(resolveDocsViewerHref("https://example.com/guide.md", "en", "architecture/README.md")).toBe("https://example.com/guide.md");
+    expect(resolveDocsViewerHref("#local-heading", "en", "architecture/README.md")).toBe("#local-heading");
+    expect(
+      rewriteRelativeMarkdownLinks(
+        "[Database](./database/README.md) [Matrix](../database/reference-matrix.md)",
+        "en",
+        "architecture/README.md",
+      ),
+    ).toBe("[Database](/en/docs/database) [Matrix](/en/docs/reference-matrix)");
   });
 });
