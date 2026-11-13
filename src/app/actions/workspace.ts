@@ -11,6 +11,9 @@ import { randomUUID, createHash } from "crypto";
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { getEmailSender } from "@/services/email/adapters";
+import { lockActiveUser, lockActiveWorkspace } from "@/services/auth/workspace-locks";
+import { hasAnotherActiveWorkspaceAdmin } from "@/services/auth/workspace-admin-invariant";
+import type { UserRole } from "@/types/auth";
 
 
 /**
@@ -22,21 +25,16 @@ async function lockWorkspaceAndVerifyAdmin(
   client: NonNullable<ReturnType<typeof TenantContextManager.getDbClient>>,
   workspaceId: string,
   actorUserId: string,
-  actorWorkspaceId: string
+  actorRole: UserRole
 ): Promise<boolean> {
-  const { rows: workspaceRows } = await client.query(
-    `SELECT id
-     FROM organizations
-     WHERE id = $1 AND deleted_at IS NULL
-     FOR UPDATE`,
-    [workspaceId]
-  );
+  const workspaceIsActive = await lockActiveWorkspace(client, workspaceId);
 
-  if (workspaceRows.length === 0) return false;
+  if (!workspaceIsActive) return false;
 
-  // Re-check direct target-workspace privileges after taking the lock. A
-  // super_admin override is resolved separately through the system auth path
-  // because tenant RLS intentionally hides the actor's other workspaces.
+  // Re-check the direct target-workspace membership after taking the lock.
+  // requireRole performed the authoritative cross-workspace role lookup before
+  // this tenant transaction; carry its result in instead of opening a second
+  // system transaction while this one holds the organization row lock.
   const { rows: actorRows } = await client.query(
     `SELECT m.role
      FROM organization_members m
@@ -46,34 +44,10 @@ async function lockWorkspaceAndVerifyAdmin(
   );
   const targetRole = actorRows[0]?.role;
 
-  let hasActiveSuperAdminOverride = false;
-  if (targetRole !== "workspace_admin" && targetRole !== "super_admin") {
-    hasActiveSuperAdminOverride = await TenantContextManager.runWithSystemContext(
-      actorUserId,
-      "sys-auth-role-check",
-      async () => {
-        const systemClient = TenantContextManager.getDbClient();
-        if (!systemClient) throw new Error("Failed to get DB client in system auth context");
-        const { rows } = await systemClient.query(
-          `SELECT 1
-           FROM organization_members m
-           INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
-           INNER JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
-           WHERE m.user_id = $1
-             AND m.organization_id = $2
-             AND m.role = 'super_admin'
-           LIMIT 1`,
-          [actorUserId, actorWorkspaceId]
-        );
-        return rows.length > 0;
-      }
-    );
-  }
-
   if (
     targetRole !== "workspace_admin" &&
     targetRole !== "super_admin" &&
-    !hasActiveSuperAdminOverride
+    actorRole !== "super_admin"
   ) {
     throw new AuthorizationError(403, "Forbidden: Workspace administrator privileges are no longer active.");
   }
@@ -91,11 +65,7 @@ export async function createWorkspaceAction(name: string) {
   await TenantContextManager.runWithSystemContext(session.user.id, "sys-create-workspace", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
-    const { rows: activeUserRows } = await client.query(
-      `SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
-      [session.user!.id]
-    );
-    if (activeUserRows.length === 0) {
+    if (!(await lockActiveUser(client, session.user!.id))) {
       throw new AuthorizationError(401, "Unauthorized: Account is no longer active.");
     }
 
@@ -152,7 +122,7 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
     throw new AuthorizationError(400, "Bad Request: Invalid workspace role.");
   }
   await requireWorkspaceMembership(session.user.id, workspaceId);
-  await requireRole("workspace_admin", workspaceId);
+  const actorRole = await requireRole("workspace_admin", workspaceId);
 
   // Test email setup before creating token
   let sender;
@@ -172,7 +142,7 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
       client,
       workspaceId,
       session.user!.id,
-      session.user!.workspaceId
+      actorRole
     );
     if (!workspaceIsActive) {
       throw new AuthorizationError(403, "Forbidden: Workspace is inactive or administrator access was revoked.");
@@ -242,11 +212,7 @@ export async function acceptInvitationAction(token: string) {
   return await TenantContextManager.runWithSystemContext(session.user.id, "sys-accept-invitation", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
-    const { rows: activeUserRows } = await client.query(
-      `SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
-      [session.user!.id]
-    );
-    if (activeUserRows.length === 0) {
+    if (!(await lockActiveUser(client, session.user!.id))) {
       throw new AuthorizationError(401, "Unauthorized: Account is no longer active.");
     }
 
@@ -281,15 +247,9 @@ export async function acceptInvitationAction(token: string) {
 
     // Serialize invitation acceptance with workspace closure and re-check
     // active state after acquiring the same organization-row lock.
-    const { rows: activeWorkspaces } = await client.query(
-      `SELECT id
-       FROM organizations
-       WHERE id = $1 AND deleted_at IS NULL
-       FOR UPDATE`,
-      [invite.organizationId]
-    );
-
-    if (activeWorkspaces.length === 0) throw new Error("Workspace is inactive");
+    if (!(await lockActiveWorkspace(client, invite.organizationId))) {
+      throw new Error("Workspace is inactive");
+    }
 
     // Accept it
     await db.insert(organizationMembers).values({
@@ -332,15 +292,7 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
     );
 
     if (targetRows[0]?.role === "workspace_admin" && targetRows[0]?.user_active) {
-      const { rows: adminRows } = await client.query(
-        `SELECT COUNT(*)::int AS admin_count
-         FROM organization_members m
-         INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
-         WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
-        [workspaceId]
-      );
-
-      if (Number(adminRows[0]?.admin_count ?? 0) <= 1) {
+      if (!(await hasAnotherActiveWorkspaceAdmin(client, workspaceId))) {
         return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
       }
     }
@@ -444,19 +396,11 @@ export async function switchWorkspaceAction(workspaceId: string) {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    const { rows: activeUserRows } = await client.query(
-      `SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
-      [session.user!.id]
-    );
-    if (activeUserRows.length === 0) {
+    if (!(await lockActiveUser(client, session.user!.id))) {
       throw new AuthorizationError(401, "Unauthorized: Account is no longer active.");
     }
 
-    const { rows: activeWorkspaceRows } = await client.query(
-      `SELECT id FROM organizations WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
-      [workspaceId]
-    );
-    if (activeWorkspaceRows.length === 0) {
+    if (!(await lockActiveWorkspace(client, workspaceId))) {
       throw new AuthorizationError(403, "Forbidden: Workspace is inactive.");
     }
 
