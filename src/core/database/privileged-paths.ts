@@ -11,6 +11,7 @@ export type PrivilegedPurposeTag =
   | "sys-api-key-auth"
   | "api-key-issue"
   | "api-key-revoke"
+  | "sys-grant-super-admin"
   | "sys-admin-run"
   | "test-req";
 
@@ -107,6 +108,11 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     ["api_keys"],
     ["scripts/api/revoke-key.ts"],
     "CLI operation that revokes an API key by its identifier."
+  ),
+  "sys-grant-super-admin": definePath(
+    ["users", "organizations", "organization_members", "audit_records"],
+    ["scripts/auth/grant-super-admin.ts"],
+    "Operator-only Workspace super_admin grant. It serializes on the parent organization and preserves at least one active workspace_admin."
   ),
   "sys-admin-run": definePath(
     ["*"],
