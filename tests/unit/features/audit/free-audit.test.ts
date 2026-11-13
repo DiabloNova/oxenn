@@ -174,7 +174,7 @@ describe("Free audit API", () => {
       if (sql.startsWith("UPDATE auth_rate_limits")) throw new Error("simulated release failure");
       return { rows: [{ attempts: 1 }] };
     });
-    const response = await POST(makeRequest());
+    const response = await POST(makeRequest("https://example.com/", { "idempotency-key": "release-failure-001" }));
     expect(response.status).toBe(422);
     expect(mocks.query.mock.calls.filter((call) => String(call[0]).startsWith("UPDATE auth_rate_limits"))).toHaveLength(1);
     expect(mocks.query.mock.calls.some((call) => String(call[0]).startsWith("DELETE FROM auth_rate_limits") && call[1]?.[0] === "free-audit-idempotency")).toBe(true);
