@@ -1,6 +1,7 @@
 import { Pool, PoolClient } from "pg";
 import { runMigrations } from "../../src/core/database/migrator";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-tables.generated";
+import { hasAnotherActiveWorkspaceAdmin } from "../../src/services/auth/workspace-admin-invariant";
 import * as crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -236,23 +237,15 @@ async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<
       throw new Error("Second transaction did not acquire the workspace lock after the first commit.");
     }
 
-    const secondCount = await secondClient.query<{ admin_count: number }>(
-      `SELECT COUNT(*)::int AS admin_count
-       FROM organization_members m
-       INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
-       WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
-      [organizationId],
-    );
-    const remainingAdmins = Number(secondCount.rows[0]?.admin_count ?? 0);
-    if (remainingAdmins !== 1) {
-      throw new Error(
-        `Second transaction observed ${remainingAdmins} active administrators; expected exactly one and must reject the final removal.`,
-      );
+    // This is the same guard helper called by removeMemberAction,
+    // updateMemberRoleAction, and the operator grant path. It must reject the
+    // competing removal after the first transaction commits its deletion.
+    const competingRemovalAllowed = await hasAnotherActiveWorkspaceAdmin(secondClient, organizationId);
+    if (competingRemovalAllowed) {
+      throw new Error("Production final-admin guard allowed removal of the final active workspace administrator.");
     }
 
-    // Model the application guard: with one active administrator after waiting
-    // for the lock, the competing removal is rejected rather than committed.
-    await secondClient.query("COMMIT");
+    await secondClient.query("ROLLBACK");
     secondTransactionOpen = false;
 
     const finalCount = await setupClient.query<{ admin_count: number }>(
