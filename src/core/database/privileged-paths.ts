@@ -112,7 +112,7 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
   "sys-grant-super-admin": definePath(
     ["users", "organizations", "organization_members", "audit_records"],
     ["scripts/auth/grant-super-admin.ts"],
-    "Operator-only Workspace super_admin grant. It serializes on the parent organization and preserves at least one active workspace_admin."
+    "Dedicated operator-only purpose tag for granting Workspace super_admin. The recorded table list is audit metadata, not SQL access enforcement; the operation serializes on the parent organization and preserves at least one active workspace_admin."
   ),
   "sys-admin-run": definePath(
     ["*"],
