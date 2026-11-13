@@ -48,8 +48,8 @@ describe("server session lifecycle and error handling", () => {
     );
     getDbClientMock.mockReturnValue({ query: queryMock });
     queryMock.mockImplementation(async (sql: string) => {
-      if (sql.includes("SELECT id FROM users")) return { rows: [{ id: user.id }] };
-      if (sql.includes("SELECT id FROM organizations")) return { rows: [{ id: user.workspaceId }] };
+      if (/SELECT\s+id\s+FROM\s+users/i.test(sql)) return { rows: [{ id: user.id }] };
+      if (/SELECT\s+id\s+FROM\s+organizations/i.test(sql)) return { rows: [{ id: user.workspaceId }] };
       if (sql.includes("FROM organization_members")) return { rows: [{ "?column?": 1 }] };
       return { rows: [] };
     });
@@ -87,9 +87,9 @@ describe("server session lifecycle and error handling", () => {
     await createSession(user);
 
     expect(queryMock).toHaveBeenCalledTimes(4);
-    expect(queryMock.mock.calls[0][0]).toContain("SELECT id FROM users");
+    expect(queryMock.mock.calls[0][0]).toMatch(/SELECT\s+id\s+FROM\s+users/i);
     expect(queryMock.mock.calls[0][0]).toContain("FOR UPDATE");
-    expect(queryMock.mock.calls[1][0]).toContain("SELECT id FROM organizations");
+    expect(queryMock.mock.calls[1][0]).toMatch(/SELECT\s+id\s+FROM\s+organizations/i);
     expect(queryMock.mock.calls[1][0]).toContain("FOR UPDATE");
     expect(queryMock.mock.calls[2][0]).toContain("FROM organization_members");
     expect(queryMock.mock.calls[3][0]).toContain("INSERT INTO sessions");
@@ -130,8 +130,8 @@ describe("server session lifecycle and error handling", () => {
 
   it("refuses to create a session after workspace membership is revoked", async () => {
     queryMock.mockImplementation(async (sql: string) => {
-      if (sql.includes("SELECT id FROM users")) return { rows: [{ id: user.id }] };
-      if (sql.includes("SELECT id FROM organizations")) return { rows: [{ id: user.workspaceId }] };
+      if (/SELECT\s+id\s+FROM\s+users/i.test(sql)) return { rows: [{ id: user.id }] };
+      if (/SELECT\s+id\s+FROM\s+organizations/i.test(sql)) return { rows: [{ id: user.workspaceId }] };
       if (sql.includes("FROM organization_members")) return { rows: [] };
       return { rows: [] };
     });
@@ -142,8 +142,8 @@ describe("server session lifecycle and error handling", () => {
 
   it("refuses to create a session for a closed workspace", async () => {
     queryMock.mockImplementation(async (sql: string) => {
-      if (sql.includes("SELECT id FROM users")) return { rows: [{ id: user.id }] };
-      if (sql.includes("SELECT id FROM organizations")) return { rows: [] };
+      if (/SELECT\s+id\s+FROM\s+users/i.test(sql)) return { rows: [{ id: user.id }] };
+      if (/SELECT\s+id\s+FROM\s+organizations/i.test(sql)) return { rows: [] };
       return { rows: [] };
     });
 
