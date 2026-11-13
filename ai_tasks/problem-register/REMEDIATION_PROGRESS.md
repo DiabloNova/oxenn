@@ -639,6 +639,18 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Next safe action: retain the draft PR for review and resolve the Vercel quota or explicitly accept the external check limitation; do not merge or provision/connect a database as part of this change.
 
 
+
+### SCR-002 role-membership hardening — 2026-11-13
+
+- Date/time: 2026-11-13T15:52:58.137Z (UTC); branch: `investigation/041-scr-002-review-2026-11-13`; code head introducing the hardening: `51cbf6fa108a514db7785ddd818e350c87a6c6f6`.
+- Final security review found that rejecting only membership in the database-owner role did not rule out membership in other privileged PostgreSQL roles. The guard now inventories every role membership of the dedicated push login and rejects any non-empty or malformed result; the account must have no inherited/assumable role memberships at all.
+- Files changed: `scripts/database/db-push-guard.ts`, `tests/unit/scripts/database/db-push-guard.test.ts`, and `ai_tasks/problem-register/findings/041-SCR-002.md`.
+- Added six focused test cases for privileged-role membership, arbitrary memberships, and missing/malformed catalog values. Focused suite is now expected to contain 40 tests.
+- Previous full branch CI run #43456422269 passed for the preceding head. New CI run [#43456872919](https://github.com/DiabloNova/oxenn/actions/runs/43456872919) was queued for the role-membership code head; a later documentation-only commit updated the Finding record. The current head still requires a fresh successful CI result before verification can advance.
+- The `db:push` registry remains empty; no target was provisioned or connected. The change only adds SQL query text and mocked tests; no database was accessed by this hardening.
+- Status remains **Implemented — verification pending**. Vercel previously failed with its external `build-rate-limit` response; no merge or post-merge CI is claimed. Wave 0 remains **PARTIAL**, and the user authorization remains scoped to SCR-002 only.
+
+
 ## 6. Wave-level gates
 
 | Stage | Entry condition | Exit condition |
