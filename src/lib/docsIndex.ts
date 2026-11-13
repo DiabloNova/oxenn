@@ -394,6 +394,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Service Documentation  This section describes the internal application services, their boundaries, and responsibilities.  ## Status Dictionary - **Implemented**: Verified existing service. - **Partial**: Service exists but is missing functionality. - **Planned**: Not currently implemented.  ## Core Services  ### Asynchronous Job Processing (\`src/services/jobs/\`) Defines a canonical, infrastructure-agnostic background processing boundary via \`IJobQueue\`, \`IJobExecutor\`, and \`IJobRepository\` int`
   },
   {
+    slug: "PR-137-derived-chunk-overlap",
+    titleEn: "PR #137 — Derived Chunk Overlap Remediation",
+    titleFa: "PR #137 — Derived Chunk Overlap Remediation",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# PR #137 — Derived Chunk Overlap Remediation  **Date:** 2026-11-13   **Repository:** \`DiabloNova/oxenn\`   **Branch:** \`review/058-src-012\`   **Pull request:** [#137](https://github.com/DiabloNova/oxenn/pull/137)   **Review finding:** [discussion_r4564611228](https://github.com/DiabloNova/oxenn/pull/137#discussion_r4564611228)  ## Objective and invariant  Ensure an omitted overlap for custom chunk sizes remains proportional to the chunk size, preserves room for new content and the joining separa`
+  },
+  {
     slug: "api-keys-prefix-index-reconciliation",
     titleEn: "Remove Redundant API-Key Prefix Index",
     titleFa: "Remove Redundant API-Key Prefix Index",
