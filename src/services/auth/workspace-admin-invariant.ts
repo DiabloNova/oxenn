@@ -30,10 +30,10 @@ export type WorkspaceMembershipChange =
   | { kind: "role"; newRole: string };
 
 /**
- * Check whether a member removal or role change preserves an active
+ * Decide whether a member removal or role change preserves an active
  * workspace_admin. The caller must already hold the parent organizations
- * row FOR UPDATE lock; this function locks and re-reads the target membership
- * before counting the remaining active administrators.
+ * row FOR UPDATE lock; this function locks and re-reads the target membership.
+ * Missing targets are distinguished from attempts to remove the final admin.
  */
 export type WorkspaceMembershipChangeDecision = "allowed" | "last_admin" | "target_not_found";
 
