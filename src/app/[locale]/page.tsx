@@ -215,15 +215,15 @@ export default function MarketingLandingPage({ params }: { params: Promise<{ loc
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-8 relative z-10 text-center">
           <div className="max-w-3xl mx-auto space-y-3">
             <span className="text-xs uppercase font-black tracking-widest text-[var(--sky-blue-500)]">
-              {isFa ? "موتور خزش و ممیزی معنایی" : "REAL-TIME SEMANTIC AUDIT INGESTION"}
+              {isFa ? "پیش‌نمایش نمایشی ممیزی فنی" : "TECHNICAL AUDIT DEMO PREVIEW"}
             </span>
             <h2 className="font-display font-black text-3xl md:text-4xl text-gradient-brand">
-              {isFa ? "سیگنال‌های دیده‌شدن برند خود را همین حالا بسنجید" : "Audit Your Conversational Presence Instantly"}
+              {isFa ? "گزارش نمونهٔ ممیزی فنی را مشاهده کنید" : "Explore a Technical Audit Demo"}
             </h2>
             <p className="text-sm text-[var(--text-secondary)] leading-relaxed font-medium">
               {isFa
-                ? "کافی است آدرس وب‌سایت خود را برای اجرای تحلیل خودکار مبتنی بر Firecrawl و جمنی وارد کنید."
-                : "Submit your domain target to deploy active crawlers, map semantic triples, and check your AI discovery health."}
+                ? "این بخش یک شبیه‌سازی نمایشی با داده‌های ساختگی است؛ هیچ وب‌سایتی خزش نمی‌شود و Firecrawl یا Gemini فراخوانی نمی‌شوند."
+                : "Synthetic demo data only: no website is crawled and no Firecrawl, Gemini, or other AI provider is called."}
             </p>
           </div>
 
