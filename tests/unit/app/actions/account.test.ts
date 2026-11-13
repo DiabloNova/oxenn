@@ -123,7 +123,7 @@ describe("deactivateAccountAction", () => {
     const revokedWorkspaceSessionScopes = queryMock.mock.calls
       .filter(([sql]) =>
         typeof sql === "string" &&
-        /UPDATE\\s+sessions\\s+SET\\s+revoked_at\\s*=\\s*NOW\\(\\)\\s+WHERE\\s+workspace_id\\s*=\\s*\\$1/.test(sql)
+        /UPDATE\s+sessions\s+SET\s+revoked_at\s*=\s*NOW\(\)\s+WHERE\s+workspace_id\s*=\s*\$1/.test(sql)
       )
       .map(([, params]) => String((params as unknown[])[0]));
     expect(revokedWorkspaceSessionScopes).toEqual(["org-sole-admin"]);
