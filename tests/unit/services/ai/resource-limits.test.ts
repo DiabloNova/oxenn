@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   chunkRequestSchema,
   ingestionRequestSchema,
+  MAX_METADATA_BYTES,
   ragQueryRequestSchema,
   readBoundedJson,
   sentimentRequestSchema,
@@ -40,6 +41,16 @@ describe("shared AI request resource limits", () => {
     expect(tooDeep.success).toBe(false);
   });
 
+  it("reserves metadata capacity for ingestion enrichment before provider work", () => {
+    const tooManyKeys = Object.fromEntries(
+      Array.from({ length: 96 }, (_, index) => [`key${index}`, index]),
+    );
+    const tooManyBytes = { payload: "x".repeat(MAX_METADATA_BYTES - 32) };
+
+    expect(ingestionRequestSchema.safeParse({ text: "document", metadata: tooManyKeys }).success).toBe(false);
+    expect(ingestionRequestSchema.safeParse({ text: "document", metadata: tooManyBytes }).success).toBe(false);
+  });
+
   it("uses UTF-8 bytes rather than JavaScript character count for text caps", () => {
     const result = sentimentRequestSchema.safeParse({ text: "😀".repeat(8_193) });
     expect(result.success).toBe(false);
@@ -56,6 +67,12 @@ describe("shared AI request resource limits", () => {
       text: "content",
       maxChunkSize: 50,
       overlap: 50,
+    }).success).toBe(false);
+
+    expect(chunkRequestSchema.safeParse({
+      text: "content",
+      maxChunkSize: 10,
+      overlap: 7,
     }).success).toBe(false);
   });
 
@@ -98,6 +115,10 @@ describe("readBoundedJson", () => {
     });
 
     const result = await readBoundedJson(request, 128);
-    expect(result).toMatchObject({ ok: false, status: 400 });
+    expect(result).toEqual({
+      ok: false,
+      status: 400,
+      error: "Request body must contain valid UTF-8 JSON.",
+    });
   });
 });

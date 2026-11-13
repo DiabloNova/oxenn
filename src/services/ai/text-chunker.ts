@@ -43,24 +43,42 @@ function findSafeEnd(text: string, start: number, requestedEnd: number): number 
       (text.charAt(end) === ZERO_WIDTH_NON_JOINER ||
         text.charAt(end - 1) === ZERO_WIDTH_NON_JOINER)
     ) {
+      // Never move a boundary into the middle of a preceding surrogate pair.
+      if (
+        end > start + 1 &&
+        isHighSurrogate(text.charCodeAt(end - 2)) &&
+        isLowSurrogate(text.charCodeAt(end - 1))
+      ) {
+        break;
+      }
       end -= 1;
     }
   }
 
-  // Keep a quoted Persian phrase intact when it fits in one bounded chunk.
-  const openingQuote = text.indexOf("«", start);
-  if (openingQuote !== -1 && openingQuote < requestedEnd) {
+  // Keep quoted Persian phrases intact when the closing quote fits in this chunk.
+  let preserveQuoteBoundary = false;
+  let openingQuote = text.indexOf("«", start);
+  while (openingQuote !== -1 && openingQuote < requestedEnd) {
     const closingQuote = text.indexOf("»", openingQuote + 1);
-    if (closingQuote !== -1 && requestedEnd <= closingQuote) {
-      if (closingQuote + 1 <= requestedEnd) {
+    if (closingQuote === -1) break;
+
+    if (closingQuote < requestedEnd) {
+      const lastSpaceInChunk = text.lastIndexOf(" ", end);
+      if (lastSpaceInChunk > openingQuote && lastSpaceInChunk < closingQuote) {
         end = closingQuote + 1;
-      } else if (openingQuote > start) {
-        end = openingQuote;
+        preserveQuoteBoundary = true;
+        break;
       }
+    } else if (openingQuote > start) {
+      end = openingQuote;
+      preserveQuoteBoundary = true;
+      break;
     }
+
+    openingQuote = text.indexOf("«", closingQuote + 1);
   }
 
-  if (end > start && end < text.length) {
+  if (!preserveQuoteBoundary && end > start && end < text.length) {
     const lastSpace = text.lastIndexOf(" ", end);
     if (lastSpace > start && lastSpace < end) end = lastSpace;
   }

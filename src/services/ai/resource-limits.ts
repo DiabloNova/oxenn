@@ -1,11 +1,12 @@
 import { z } from "zod";
 
 export const MAX_INGESTION_REQUEST_BYTES = 4 * 1024 * 1024;
-export const MAX_AI_REQUEST_BYTES = 256 * 1024;
-export const MAX_RAG_REQUEST_BYTES = 16 * 1024;
-
 export const MAX_INGESTION_TEXT_BYTES = 3 * 1024 * 1024;
 export const MAX_CHUNK_TEXT_BYTES = 256 * 1024;
+export const MAX_AI_REQUEST_BYTES = 256 * 1024;
+// JSON can expand control characters to six bytes each (\u0000). Keep the envelope bounded too.
+export const MAX_CHUNK_REQUEST_BYTES = MAX_CHUNK_TEXT_BYTES * 6 + 1_024;
+export const MAX_RAG_REQUEST_BYTES = 16 * 1024;
 export const MAX_SENTIMENT_TEXT_BYTES = 32 * 1024;
 export const MAX_RAG_QUESTION_BYTES = 8 * 1024;
 
@@ -16,9 +17,9 @@ export const MAX_METADATA_NODES = 1_000;
 
 export const MAX_CHUNK_SIZE = 4_000;
 export const MAX_CHUNK_OVERLAP = 1_000;
+export const DEFAULT_CHUNK_SIZE = 4_000;
+export const DEFAULT_CHUNK_OVERLAP = 1_000;
 export const MAX_CHUNK_COUNT = 2_048;
-export const DEFAULT_CHUNK_SIZE = 500;
-export const DEFAULT_CHUNK_OVERLAP = 50;
 
 export const MAX_RAG_RETRIEVAL_RESULTS = 20;
 
@@ -90,22 +91,41 @@ const metadataSchema = z
     message: `Metadata must be JSON-safe, at most ${MAX_METADATA_BYTES} UTF-8 bytes, ${MAX_METADATA_DEPTH} levels deep, and contain at most ${MAX_METADATA_KEYS} object keys.`,
   });
 
+const validateOverlap = (maxChunkSize: number, overlap: number, context: z.core.$RefinementCtx) => {
+  if (overlap > 0 && overlap > maxChunkSize - 4) {
+    context.addIssue({
+      code: "custom",
+      path: ["overlap"],
+      message: "Overlap must leave at least three characters for chunk content and a joining separator.",
+    });
+  }
+};
+
 const chunkingOptionsSchema = z
   .object({
     maxChunkSize: z.number().int().min(3).max(MAX_CHUNK_SIZE).optional(),
     overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional(),
   })
   .superRefine((options, context) => {
-    const maxChunkSize = options.maxChunkSize ?? DEFAULT_CHUNK_SIZE;
-    const overlap = options.overlap ?? DEFAULT_CHUNK_OVERLAP;
-    if (overlap > 0 && overlap > maxChunkSize - 4) {
-      context.addIssue({
-        code: "custom",
-        path: ["overlap"],
-        message: "Overlap must leave at least three characters for chunk content and a joining separator.",
-      });
-    }
+    validateOverlap(
+      options.maxChunkSize ?? DEFAULT_CHUNK_SIZE,
+      options.overlap ?? DEFAULT_CHUNK_OVERLAP,
+      context,
+    );
   });
+
+const ingestionMetadataSchema = metadataSchema.refine(
+  (metadata) => isBoundedJsonMetadata({
+    ...metadata,
+    chunkIndex: MAX_CHUNK_COUNT - 1,
+    sentiment: {
+      score: -1.7976931348623157e308,
+      label: "negative",
+      confidence: 1.7976931348623157e308,
+    },
+  }),
+  { message: "Metadata must leave room for the chunk index and sentiment fields added during ingestion." },
+);
 
 const boundedText = (maxBytes: number, label: string) =>
   z.string().min(1, `${label} must be provided`).refine(
@@ -115,7 +135,7 @@ const boundedText = (maxBytes: number, label: string) =>
 
 export const ingestionRequestSchema = z.object({
   text: boundedText(MAX_INGESTION_TEXT_BYTES, "Text to ingest"),
-  metadata: metadataSchema.optional().default(() => ({})),
+  metadata: ingestionMetadataSchema.optional().default(() => ({})),
   chunkingOptions: chunkingOptionsSchema.optional(),
 });
 
@@ -124,13 +144,7 @@ export const chunkRequestSchema = z.object({
   maxChunkSize: z.number().int().min(3).max(MAX_CHUNK_SIZE).optional().default(DEFAULT_CHUNK_SIZE),
   overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional().default(DEFAULT_CHUNK_OVERLAP),
 }).superRefine((data, context) => {
-  if (data.overlap >= data.maxChunkSize) {
-    context.addIssue({
-      code: "custom",
-      path: ["overlap"],
-      message: "Overlap must be smaller than maxChunkSize.",
-    });
-  }
+  validateOverlap(data.maxChunkSize, data.overlap, context);
 });
 
 export const sentimentRequestSchema = z.object({

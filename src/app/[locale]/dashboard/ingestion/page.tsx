@@ -30,7 +30,7 @@ export default function DocumentIngestionPage() {
   const { language, direction } = useTheme();
   const isRtl = language === "fa";
   const maxUploadBytes = 3 * 1024 * 1024;
-  const maxRequestPayloadBytes = 3.5 * 1024 * 1024;
+  const maxRequestPayloadBytes = 4 * 1024 * 1024;
 
   const [text, setText] = useState("");
   const [fileText, setFileText] = useState("");
@@ -183,8 +183,8 @@ export default function DocumentIngestionPage() {
           locale: language,
         },
         chunkingOptions: {
-          maxChunkSize: 500,
-          overlap: 50
+          maxChunkSize: 4_000,
+          overlap: 1_000
         }
       };
 
@@ -208,9 +208,29 @@ export default function DocumentIngestionPage() {
         const result = await response.json().catch(() => null);
 
         if (!response.ok) {
-          setActionError(
-            typeof result?.error === "string" ? result.error : strings.errorTitle
-          );
+          const chunkErrors = Array.isArray(result?.errors)
+            ? result.errors
+                .filter(
+                  (entry: unknown): entry is { chunkIndex: number; error: string } =>
+                    typeof entry === "object" &&
+                    entry !== null &&
+                    typeof (entry as { chunkIndex?: unknown }).chunkIndex === "number" &&
+                    typeof (entry as { error?: unknown }).error === "string"
+                )
+                .slice(0, 5)
+                .map((entry: { chunkIndex: number; error: string }) =>
+                  `${isRtl ? "بخش" : "Chunk"} ${entry.chunkIndex + 1}: ${entry.error}`
+                )
+            : [];
+          const additionalErrorCount = Array.isArray(result?.errors)
+            ? Math.max(0, result.errors.length - chunkErrors.length)
+            : 0;
+          const errorDetails = chunkErrors.length
+            ? `${chunkErrors.join("; ")}${additionalErrorCount ? `; ${additionalErrorCount} ${isRtl ? "خطای دیگر" : "more errors"}` : ""}`
+            : typeof result?.error === "string"
+              ? result.error
+              : strings.errorTitle;
+          setActionError(chunkErrors.length ? `${strings.errorTitle}: ${errorDetails}` : errorDetails);
           return;
         }
 

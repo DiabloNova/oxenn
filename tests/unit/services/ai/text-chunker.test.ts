@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chunkText } from "@/services/ai/text-chunker";
-import { MAX_CHUNK_COUNT, MAX_CHUNK_SIZE } from "@/services/ai/resource-limits";
+import { MAX_CHUNK_COUNT, MAX_CHUNK_SIZE, MAX_INGESTION_TEXT_BYTES } from "@/services/ai/resource-limits";
 
 function hasUnpairedSurrogate(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
@@ -34,12 +34,26 @@ describe("chunkText resource boundaries", () => {
     expect(chunks.every((chunk) => chunk.length <= 31)).toBe(true);
   });
 
-  it("does not split a Persian zero-width non-joiner at a chunk edge when a word boundary is available", () => {
-    const source = ("بخش آغازین متن می‌رود و ادامه پیدا می‌کند. ").repeat(20);
-    const chunks = chunkText(source, 32, 0);
+  it("keeps a surrogate pair intact when a ZWNJ follows it at the requested boundary", () => {
+    const source = `${"x".repeat(8)}😀\u200C${"y".repeat(20)}`;
+    const chunks = chunkText(source, 10, 0);
 
     expect(chunks.length).toBeGreaterThan(1);
-    expect(chunks.every((chunk) => !chunk.startsWith("\u200C") && !chunk.endsWith("\u200C"))).toBe(true);
+    expect(chunks[0]).toBe(`${"x".repeat(8)}😀`);
+    expect(chunks.every((chunk) => !hasUnpairedSurrogate(chunk))).toBe(true);
+  });
+
+  it("keeps a Persian quoted phrase intact when its closing quote fits", () => {
+    const chunks = chunkText("«الف ب ج د»متن طولانی برای آزمون", 11, 0);
+
+    expect(chunks[0]).toBe("«الف ب ج د»");
+    expect(chunks.every((chunk) => chunk.length <= 11)).toBe(true);
+  });
+
+  it("chunks the full advertised ingestion size with the dashboard defaults", () => {
+    const chunks = chunkText("x".repeat(MAX_INGESTION_TEXT_BYTES), 4_000, 1_000);
+
+    expect(chunks.length).toBeLessThanOrEqual(MAX_CHUNK_COUNT);
   });
 
   it("rejects documents that exceed the configured chunk count before downstream processing", () => {

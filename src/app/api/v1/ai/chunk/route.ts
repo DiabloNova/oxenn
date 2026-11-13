@@ -4,14 +4,14 @@ import { TenantContextManager } from '@/core/database/tenant-context';
 import { authorizationErrorResponse, authorizeApiRequest } from '@/services/auth/authorization';
 import {
   chunkRequestSchema,
-  MAX_AI_REQUEST_BYTES,
+  MAX_CHUNK_REQUEST_BYTES,
   readBoundedJson,
 } from '@/services/ai/resource-limits';
 
 export async function POST(req: NextRequest) {
   try {
     const { tenantId, userId } = await authorizeApiRequest(req);
-    const bodyResult = await readBoundedJson(req, MAX_AI_REQUEST_BYTES);
+    const bodyResult = await readBoundedJson(req, MAX_CHUNK_REQUEST_BYTES);
     if (!bodyResult.ok) {
       return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
     }
