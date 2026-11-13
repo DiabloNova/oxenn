@@ -14,7 +14,7 @@ export const CURRENT_RLS_DOCUMENTS = Object.freeze([
 
 export const HISTORICAL_RLS_DOCUMENTS = Object.freeze([
   "docs/architecture/database/reconciliation-report.md",
-  "docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md",
+  "docs/project/audit/2026-11-security-tenant-isolation-remediation-history.md",
 ] as const);
 
 /**
@@ -123,7 +123,7 @@ export function collectRlsDocumentationIssues(documents: Record<string, string>)
     }
   }
 
-  const phaseOnePath = "docs/project/MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md";
+  const phaseOnePath = "docs/project/audit/2026-11-security-tenant-isolation-remediation-history.md";
   const phaseOne = read(phaseOnePath);
   if (!/Historical Phase 1 repository baseline\s*[—-]\s*2026-11-04/i.test(phaseOne)) {
     issues.push(`${phaseOnePath} must label its 70/51 figures as the dated historical Phase 1 baseline`);

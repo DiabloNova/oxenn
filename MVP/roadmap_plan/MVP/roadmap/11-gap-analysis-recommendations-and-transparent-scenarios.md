@@ -37,7 +37,7 @@ Turn validated baseline and assessment evidence into explainable gaps, prioritiz
 - Prepare a prioritized recommendation backlog suitable for the Growth Execution Plan stage, but do not execute external actions here.
 
 ### Prerequisites and sequencing
-Relevant service/assessment evidence from MVP-04–MVP-10 is available. MVP-00 has approved target/benchmark criteria, confidence policy and pilot scoring rules.
+Relevant service/assessment evidence from MVP-05–MVP-10 is available as applicable. MVP-00 has approved target/benchmark criteria, confidence policy and pilot scoring rules.
 
 ### Out of scope
 - Any product capability not required to meet this stage's goal and exit criteria.
@@ -96,7 +96,7 @@ The assigned AI/engineering agent must treat this file as the complete stage bri
 8. Invalid LLM output, missing provenance and unsupported claims are rejected or marked incomplete.
 9. User rejection/defer decisions are stored with actor, time and reason where provided.
 
-Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN or NOT VERIFIED.
+Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN.
 
 ## 7. Stage exit criteria
 
@@ -135,4 +135,4 @@ Do not invent target metrics, benchmark weights, confidence formulas, ROI formul
 - [MVP Baseline](../MVP_baseline.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)

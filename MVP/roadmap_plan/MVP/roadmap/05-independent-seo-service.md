@@ -94,7 +94,7 @@ The assigned AI/engineering agent must treat this file as the complete stage bri
 8. Mock fixtures are visibly labelled MOCK and never mixed with LIVE observations without an explicit HYBRID breakdown.
 9. Repeated runs are traceable and do not overwrite older evidence.
 
-Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN or NOT VERIFIED.
+Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN.
 
 ## 7. Stage exit criteria
 
@@ -133,4 +133,4 @@ Do not claim that a technical crawl proves search rankings or business outcomes.
 - [MVP Baseline](../MVP_baseline.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)

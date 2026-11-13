@@ -25,7 +25,7 @@ The Product Specification is the authority for what OXENN is expected to deliver
 2. [Architecture](./architecture/README.md) — system boundaries, domain architecture, database and service design.
 3. [API](./api/README.md) — API entry points, contracts, authentication, and rate limits where implemented.
 4. [Security](./security/README.md) — authentication, authorization, tenant isolation, data access, and API security.
-5. User and service documentation — user workflows, internal service boundaries, integrations, and operational behavior.
+5. [User guides](./user-guides/README.md) and [Service documentation](./services/README.md) — user workflows, internal service boundaries, integrations, and operational behavior.
 6. [Project records](./project/README.md) — engineering baseline, historical audits, roadmaps, task instructions, and reports.
 
 ## Documentation truth rules

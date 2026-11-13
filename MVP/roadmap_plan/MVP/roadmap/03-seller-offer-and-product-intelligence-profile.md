@@ -30,7 +30,7 @@ Create the canonical model for who offers what, through which channels, and what
 - Build staged onboarding: minimal required Offer identity first; optional nature-specific fields next; comprehensive PIP completion only when the customer selects Product Assessment & Improvement or another workflow that needs it.
 - Create a versioned, reviewable Product Intelligence Profile with Offer description/category/lifecycle, value proposition, differentiating claims, customer groups, needs/use cases, markets/geographies/languages/channels, pricing/business model where allowed, competitors, constraints, operational readiness and evidence gaps.
 - Keep PIP, Current-State Baseline and Benchmark as separate versioned concepts. PIP describes the Offer and intended context; baseline records what is currently observed/known; benchmark is a context-specific comparison basis.
-- Track field-level source and confidence where appropriate. Preserve whether each value is user-provided, directly observed, imported, estimated or unknown.
+- Track field-level source and confidence where appropriate. Preserve whether each value is user-provided information, direct observation, third-party claim, estimate, hypothesis, simulation or unknown.
 - Support partial PIP completion. Missing values remain explicit; no synthetic defaults or fabricated scores. Different Offer natures use different relevant fields and do not require unrelated fields.
 - Allow profile history, review, correction and version comparison. Material edits must not erase historical assessment context; preserve linkage from a report to the PIP version used.
 - Expose service-specific intake paths. Standalone SEO may ask for website scope and authorization without asking the customer to complete all Offer questions or create a comprehensive PIP.
@@ -95,7 +95,7 @@ The assigned AI/engineering agent must treat this file as the complete stage bri
 8. Unauthorized users cannot view or edit another seller's Offer/PIP.
 9. Empty or missing fields are not converted into zeros, fabricated claims or success scores.
 
-Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN or NOT VERIFIED.
+Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN.
 
 ## 7. Stage exit criteria
 
@@ -134,4 +134,4 @@ Do not model a customer's Offer as an OXENN Service SKU, and do not model social
 - [MVP Baseline](../MVP_baseline.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)

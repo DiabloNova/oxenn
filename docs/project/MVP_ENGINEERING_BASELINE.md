@@ -103,7 +103,7 @@ The nine domains are connected product capabilities, not nine independently ship
 
 ### P1 — Before relying on affected service flows
 
-1. **Free Audit authentication:** the inspected `src/app/api/v1/audit/free/route.ts` does not perform a server-side session/workspace authorization check, while `src/proxy.ts` bypasses `/api`. The route can use a mock path when Firecrawl is unavailable. This conflicts with the owner-approved authenticated access invariant in `KNOW-64` and the current [Security Model](../security/SECURITY_MODEL.md). The route remains a confirmed repository-level gap until separately remediated and verified.
+1. **Free Audit authentication:** the inspected `src/app/api/v1/audit/free/route.ts` does not perform a server-side session/workspace authorization check, while `src/proxy.ts` bypasses `/api`. The route selects its mock path when `FIRECRAWL_API_KEY` is missing or contains a recognized placeholder value; a failed live Firecrawl scrape returns an HTTP 500 response rather than falling back to mock data. This conflicts with the owner-approved authenticated access invariant in `KNOW-64` and the current [Security Model](../security/SECURITY_MODEL.md). The route remains a confirmed repository-level gap until separately remediated and verified.
 2. **Truthful live/mock behavior:** provider choice, credentials, LIVE/MOCK/HYBRID status, fallback policy, partial results, and failure states must be explicit. Synthetic output must not appear as live observation.
 3. **Persistence and tenant proof:** repository code, SQL statements, schemas, and migrations do not by themselves establish durable application reads, deployed database connectivity, or effective RLS. Verify the entire path and tenant isolation in an appropriate environment.
 4. **Service-level entitlement:** the independent service model requires server-side authorization for each Service SKU and its quota. UI hiding/showing is not authorization; client payment state does not establish entitlement.
@@ -231,7 +231,7 @@ This baseline establishes the target engineering sequence and the evidence requi
 - [Security Model](../security/SECURITY_MODEL.md)
 - [Owner-approved MVP specification — KNOW-66](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-66)
 - [Independent service decision — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Nine-domain architecture decision — KNOW-22](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-22)
 - [Product-to-Engineering Blueprint — DOC-67](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-67)

@@ -166,6 +166,7 @@ The MVP must satisfy the approved FR-01 through FR-11 requirements:
 - Every service, including a free service, requires registration and a server-authenticated session.
 - Registration is not a universal paid entitlement.
 - Every service's entitlement and quota are enforced server-side.
+- Paid access is never granted from client-side payment or status claims; payment confirmation is verified server-side.
 - A customer is charged only for a selected and authorized item.
 - The system distinguishes Offer, Service SKU, plan/subscription, entitlement, quota/usage record, bundle, and service run.
 - Tenant/workspace identity comes from trusted server authentication context, not caller-controlled identity headers or request fields.

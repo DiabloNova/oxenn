@@ -97,7 +97,7 @@ The assigned AI/engineering agent must treat this file as the complete stage bri
 9. Bundle activation grants only the included services and respects the exact approved bundle terms.
 10. Client-side payment claims cannot activate paid access; webhook signature/verification and reconciliation are tested if payment integration is in scope.
 
-Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN or NOT VERIFIED.
+Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN.
 
 ## 7. Stage exit criteria
 
@@ -136,4 +136,4 @@ Do not invent prices, quotas, billing intervals, refund terms or a payment provi
 - [MVP Baseline](../MVP_baseline.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)

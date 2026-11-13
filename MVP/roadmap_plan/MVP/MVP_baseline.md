@@ -44,7 +44,7 @@ Every stage must preserve the following invariants:
 ### 2.3 Evidence and truth
 - Distinguish user-provided information, direct observation, third-party claim, estimate, hypothesis and simulation.
 - Preserve applicable source, timestamp, geography, methodology, sample, scope, permission, freshness and confidence.
-- Keep UNKNOWN, NOT_PROVIDED, NOT_VERIFIED, NOT_APPLICABLE, ZERO, NEGATIVE, INCOMPLETE and FAILED distinct.
+- Keep UNKNOWN, NOT_PROVIDED, NOT_APPLICABLE, ZERO, NEGATIVE, INCOMPLETE and FAILED distinct.
 - UNKNOWN is not ZERO.
 - Do not infer physical product quality from images or sentiment alone.
 - Describe only observable AI responses and available provider metadata; never claim access to hidden model reasoning.
@@ -82,7 +82,7 @@ The roadmap is dependency-led. Build the shared security and commercial foundati
 | MVP-07 | Standalone GEO | End-to-end generative-engine visibility assessment | MVP-02, MVP-04; AEO/ GEO separation decision |
 | MVP-08 | Optional Digital Visibility Suite | Bundle composition and unified digital reporting | MVP-05, MVP-06, MVP-07 |
 | MVP-09 | Geo-market context and contextual benchmarks | Market/geography evidence suitable for comparisons | MVP-03, MVP-04 |
-| MVP-10 | Product value and competitiveness assessment | Foundational customer/value/competitor/operational assessment | MVP-03, MVP-04, MVP-09 |
+| MVP-10 | Product value and competitiveness assessment | Foundational customer/value/competitor/operational assessment | MVP-02, MVP-03, MVP-04, MVP-09 |
 | MVP-11 | Gap analysis, recommendations and transparent scenarios | Evidence-linked decisions and bounded scenario estimates | MVP-05–MVP-10 as applicable |
 | MVP-12 | Growth plan, approval and task workflow | Customer-approved plan and trackable tasks | MVP-11 |
 | MVP-13 | Outcomes and continuous improvement | Traceable outcome capture and reassessment | MVP-12 and measurable baselines |
@@ -218,4 +218,4 @@ The roadmap must not invent launch geography/language/currency, pilot cohort, ex
 - [MVP Map](../../architecture_map/MVP_map.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service decision — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)

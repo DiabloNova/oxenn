@@ -21,7 +21,7 @@ Use the following precedence:
 1. Owner-approved product scope: [OXENN MVP Product Specification](../docs/product/OXENN_MVP_PRODUCT_SPECIFICATION.md).
 2. Product portfolio and strategy context: [DOC-18 — Product Strategy v2](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18).
 3. Independent service access: [KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25).
-4. Authenticated access to every service: [KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64).
+4. Authenticated access to every service: [KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64).
 5. Nine-domain product architecture: [KNOW-22](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-22) and [Product Architecture](../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md).
 6. Repository implementation evidence: [MVP Engineering Baseline](../docs/project/MVP_ENGINEERING_BASELINE.md).
 

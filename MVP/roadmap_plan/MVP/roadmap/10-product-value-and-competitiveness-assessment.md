@@ -37,7 +37,7 @@ Deliver the foundational Product Value & Competitiveness Assessment pilot for ex
 - Present missing and contradictory information explicitly. An incomplete assessment may be useful, but it must not appear comprehensive or verified.
 
 ### Prerequisites and sequencing
-MVP-00 defines pilot depth and assessment dimensions. MVP-03 Offer/PIP, MVP-04 evidence and MVP-09 market/geography context have passed their applicable exit criteria.
+Before this stage starts, the agent must verify that MVP-00 has approved pilot depth and assessment dimensions, and that MVP-02 service catalog/entitlement/quota, MVP-03 Offer/PIP, MVP-04 evidence and MVP-09 market/geography context have passed their applicable exit criteria. The pilot decisions remain open until explicitly approved; this brief does not assert stage completion.
 
 ### Out of scope
 - Any product capability not required to meet this stage's goal and exit criteria.
@@ -95,7 +95,7 @@ The assigned AI/engineering agent must treat this file as the complete stage bri
 7. Unauthorized access to another seller's Offer or evidence is denied.
 8. Assessment result references exact Offer/PIP/evidence/benchmark versions used.
 
-Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN or NOT VERIFIED.
+Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN.
 
 ## 7. Stage exit criteria
 
@@ -134,4 +134,4 @@ Do not claim comprehensive market research or definitive competitor coverage. Do
 - [MVP Baseline](../MVP_baseline.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)

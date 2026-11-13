@@ -4,7 +4,7 @@ import path from "node:path";
 import ts from "typescript";
 
 const root = process.cwd();
-const baselinePath = "docs/project/MVP_PHASE_0_SCOPE_BASELINE.md";
+const baselinePath = "docs/project/MVP_ENGINEERING_BASELINE.md";
 const indexPath = "docs/project/README.md";
 
 function readFile(relativePath) {
@@ -264,43 +264,27 @@ function main() {
   const migrationCount = journal.entries.length;
   const migrationTableCount = unique(migrationTables).length;
 
-  const claims = [
-    ["found " + localCount + " declarations", "schema entry-point count"],
-    ["effective Drizzle schema therefore contains **" + totalTables + " tables**", "effective schema count"],
-    ["latest checked-in Drizzle snapshot also contains " + totalTables + " tables", "snapshot total"],
-    ["ordered journal contains " + migrationCount + " entries, and all " + migrationCount + " referenced SQL migration files exist", "migration journal/file count"],
-    ["migration SQL creates " + migrationTableCount + " unique tables", "migration-created table count"],
-    ["latest snapshot contains **" + rlsCount + " policy-bearing tables**", "snapshot RLS count"],
-    ["for all " + rlsCount + " of those tables", "RLS migration count"],
-  ];
-  for (const [claim, label] of claims) {
-    assert.ok(baseline.includes(claim), "Stale or missing Phase 0 baseline claim: " + label);
-  }
-
-  const runtimeClaim = baseline.split(/\r?\n/).find((line) => line.includes("generated runtime list"));
-  assert.ok(runtimeClaim, "Phase 0 baseline is missing the generated runtime list claim");
-  assert.ok(
-    runtimeClaim.includes("also contains " + runtimeTables.length + " entries"),
-    "Phase 0 baseline has a stale generated runtime tenant-table count",
-  );
+  assert.match(baseline, /^# OXENN.*MVP Engineering Baseline/m, "Current MVP engineering baseline heading is missing");
+  assert.match(baseline, /Repository snapshot|Repository implementation snapshot/i, "Engineering baseline must identify its repository snapshot");
+  assert.match(baseline, /known gaps|implementation gaps/i, "Engineering baseline must retain implementation-gap reporting");
 
   const projectIndexLinks = checkLinks(indexPath);
   const baselineLinks = checkLinks(baselinePath);
   const expectedBaselinePath = path.resolve(root, baselinePath);
   assert.ok(
     projectIndexLinks.some((link) => link.target === expectedBaselinePath),
-    "docs/project/README.md must link to the Phase 0 baseline document",
+    "docs/project/README.md must link to the current MVP engineering baseline",
   );
 
   const implementationPaths = checkInlinePaths(baseline);
 
   console.log(
-    "Phase 0 baseline verification passed: " +
+    "MVP engineering baseline verification passed: " +
       totalTables + " schema/snapshot/migration tables (" + localCount + " + 2 modular), " +
       migrationCount + " migration files, " +
       rlsCount + " RLS tables aligned across snapshot/runtime/ENABLE/FORCE, " +
       projectIndexLinks.length + " project-index links, " +
-      baselineLinks.length + " baseline links, " +
+      baselineLinks.length + " engineering-baseline links, " +
       implementationPaths.length + " referenced repository paths.",
   );
 }
@@ -308,7 +292,7 @@ function main() {
 try {
   main();
 } catch (error) {
-  console.error("[Phase 0 baseline verification] FAILED");
+  console.error("[MVP engineering baseline verification] FAILED");
   console.error(error instanceof Error ? error.stack : error);
   process.exitCode = 1;
 }

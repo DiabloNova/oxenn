@@ -323,4 +323,4 @@ Product approval does not mean the repository already implements these requireme
 - Authenticated access to all services: [KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)
 - Product strategy: [DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - Nine-domain architecture: [KNOW-22](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-22)
-- Product-to-engineering mapping: [DOC-67](https://app.stele.ai.dev/p/oxenn-59hxc/nodes/DOC-67)
+- Product-to-engineering mapping: [DOC-67](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-67)

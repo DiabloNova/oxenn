@@ -286,3 +286,4 @@ Never promote a candidate, planned item, UI mock, test fixture, provider library
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Nine-domain architecture — KNOW-22](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-22)
 - [Independent service purchasing/access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
+- [Authenticated access to every service — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)

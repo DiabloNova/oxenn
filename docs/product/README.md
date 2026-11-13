@@ -11,7 +11,7 @@ This directory contains the canonical product-level requirements and product dec
 
 Product documentation defines intended customer value, product behavior, and acceptance criteria. It does not prove that a capability is implemented, verified, connected to a live provider, or ready for production.
 
-Use [MVP Engineering Baseline](../project/MVP_ENGINEERING_BASELINE.md) for the repository implementation map and known gaps. Use the Security Model for current authentication and authorization requirements. Treat dated audits and roadmaps as historical or planned records, not as evidence of current runtime behavior.
+Use [MVP Engineering Baseline](../project/MVP_ENGINEERING_BASELINE.md) for the repository implementation map and known gaps. Use the [Security Model](../security/SECURITY_MODEL.md) for current authentication and authorization requirements. Treat dated audits and roadmaps as historical or planned records, not as evidence of current runtime behavior.
 
 ## Commercial product principles
 

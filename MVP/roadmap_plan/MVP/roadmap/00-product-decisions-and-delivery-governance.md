@@ -30,7 +30,7 @@ Turn the approved product scope into unambiguous, testable and owner-approved de
 - Resolve service catalogue and commercial rules: SKU identifiers, free/trial versus paid status, purchase/subscription semantics, price display, billing period, quota, overage, renewal, cancellation/refund, bundle composition and service activation timing. Keep unresolved prices and legal terms as owner decisions.
 - Define Product Assessment & Improvement pilot depth per Offer nature: minimum PIP fields, assessment dimensions, benchmark eligibility, evidence thresholds, assessment/report outputs, and the boundary between a supported finding and a hypothesis.
 - Define workspace roles, seller/provider ownership, Offer limits, task ownership, approval authority and the first pilot's collaboration model without overbuilding enterprise roles.
-- Define evidence classes, required provenance fields, confidence policy, freshness windows, sample sufficiency, contradiction handling, and the conditions under which a metric is UNKNOWN, NOT_PROVIDED, NOT_VERIFIED, NOT_APPLICABLE, ZERO, INCOMPLETE or FAILED.
+- Define evidence classes, required provenance fields, confidence policy, freshness windows, sample sufficiency, contradiction handling, and the conditions under which a metric is UNKNOWN, NOT_PROVIDED, NOT_APPLICABLE, ZERO, INCOMPLETE or FAILED.
 - Revalidate repository reality and engineering findings against the current target branch and exact commit. Inspect existing authentication, proxy/middleware, authorization, persistence adapters, schema/migrations, tests, crawlers, AI providers, competitor features, reports and monitoring before planning code changes.
 - Create a requirement-to-code/test/evidence matrix for FR-01 through FR-11 and the cross-cutting security, commercial, evidence and workflow gates. Each requirement gets an owner, stage, test layer, release criticality and proof required.
 
@@ -53,9 +53,9 @@ The assigned AI/engineering agent must treat this file as the complete stage bri
 3. Reconcile existing behavior against this stage contract. Label it PLANNED, IN_PROGRESS, IMPLEMENTED, VERIFIED, LIVE, MOCK, HYBRID, PARTIAL, FAILED or UNKNOWN using evidence, not inference.
 4. Write a small design proposal before implementation: domain ownership, contracts, state transitions, trust boundaries, persistence needs, failure behavior, affected modules, test plan and rollback.
 5. Choose the smallest end-to-end slice that meets the stage objective. Preserve repository conventions and established architecture. Avoid duplicating existing owners or adding unnecessary services/frameworks.
-6. Implement only the authorized scope. If a product, legal, commercial, privacy, data-retention or architecture choice is unresolved, stop at that decision boundary and request owner approval.
-7. Add regression tests for existing affected behavior and tests for positive, negative, boundary, permission, partial and failure states.
-8. Run focused tests first, then relevant integration/security/type/lint/build checks available in the repository. Record exact commands, environment and results.
+6. Convert approved decisions into explicit implementation constraints, contracts, stage dependencies and acceptance criteria; do not implement product features in MVP-00. If a product, legal, commercial, privacy, data-retention or architecture choice is unresolved, stop at that decision boundary and request owner approval.
+7. Define the regression, integration, security, permission, partial and failure tests required by later implementation stages; do not add feature tests or change application code in MVP-00.
+8. Validate this stage's decision register, requirement traceability, dependency matrix, documentation links and handoff artifacts. Record the exact validation commands and results; defer application test suites to the implementation stages that change code.
 9. Review the final diff for scope leakage, secrets, unsafe logs, mock/live confusion, broken links, missing tests and unintended behavior changes.
 10. Hand off the exact branch and commit, changed files, tests, acceptance evidence, unresolved issues and remaining risks. Do not proceed to another stage without authorization.
 
@@ -90,7 +90,7 @@ The assigned AI/engineering agent must treat this file as the complete stage bri
 4. Review source/provider selection for legal access, explicit permission, reliable data provenance, failure semantics and resource/cost limits.
 5. Verify that historical audit or PR records are not represented as current implementation proof without revalidation at the inspected commit.
 
-Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN or NOT VERIFIED.
+Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN.
 
 ## 7. Stage exit criteria
 
@@ -129,4 +129,4 @@ Do not implement product features, alter schemas, connect external services, cho
 - [MVP Baseline](../MVP_baseline.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)

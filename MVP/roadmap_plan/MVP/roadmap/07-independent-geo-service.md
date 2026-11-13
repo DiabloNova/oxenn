@@ -36,7 +36,7 @@ Deliver a separately purchasable Generative Engine Optimization service measurin
 - Enforce GEO-specific entitlement, quota, provider cost budget, permission and retention policies.
 
 ### Prerequisites and sequencing
-MVP-00 approves GEO terminology, supported surface matrix, prompt/sample policy and non-overlapping metrics. MVP-01 auth, MVP-02 GEO entitlement/quota and MVP-04 evidence/provenance are verified. AEO's boundary is documented before shared response metrics are introduced.
+Before this stage starts, the agent must verify that MVP-00 has approved GEO terminology, the supported-surface matrix, prompt/sample policy and non-overlapping metrics; MVP-01 authentication, MVP-02 GEO entitlement/quota and MVP-04 evidence/provenance must have passed their applicable exit criteria. AEO's boundary must be documented before shared response metrics are introduced. Record the evidence for each gate; this planned brief does not assert that any stage is complete.
 
 ### Out of scope
 - Any product capability not required to meet this stage's goal and exit criteria.
@@ -94,7 +94,7 @@ The assigned AI/engineering agent must treat this file as the complete stage bri
 7. Quota, concurrency, retries and provider cost are bounded.
 8. GEO and AEO outputs do not double count a shared observation as two distinct positive events.
 
-Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN or NOT VERIFIED.
+Verification must be performed against the exact branch/commit being handed off. Tests against mocks prove mock-path behavior only. Runtime, provider, data-source, payment and database claims require evidence from the relevant controlled or deployed environment. When such an environment is unavailable, mark the corresponding property UNKNOWN.
 
 ## 7. Stage exit criteria
 
@@ -133,4 +133,4 @@ Do not market GEO as access to a model's hidden reasoning or training corpus. Do
 - [MVP Baseline](../MVP_baseline.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
-- [Authenticated service access — KNOW-64](https://app.stele.ai/p/oxenn-59hxc/nodes/KNOW-64)
+- [Authenticated service access — KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)
