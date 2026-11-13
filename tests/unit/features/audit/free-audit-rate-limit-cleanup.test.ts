@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanupExpiredFreeAuditRateLimits } from "@/services/audit/free-audit-rate-limit-cleanup";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn(), runWithSystemContext: vi.fn() }));
+const mocks = vi.hoisted(() => ({ query: vi.fn(), getDbClient: vi.fn(), runWithSystemContext: vi.fn() }));
 
 vi.mock("@/core/database/tenant-context", () => ({
   TenantContextManager: {
     runWithSystemContext: mocks.runWithSystemContext,
-    getDbClient: () => ({ query: mocks.query })
+    getDbClient: mocks.getDbClient
   }
 }));
 
@@ -15,6 +15,7 @@ describe("Free Audit rate-limit cleanup", () => {
 
   it("deletes only expired Free Audit buckets in bounded skip-locked batches", async () => {
     mocks.runWithSystemContext.mockImplementation(async (_userId: null, _purpose: string, work: () => Promise<unknown>) => work());
+    mocks.getDbClient.mockReturnValue({ query: mocks.query });
     mocks.query.mockResolvedValue({ rows: [{}, {}] });
 
     await expect(cleanupExpiredFreeAuditRateLimits()).resolves.toBe(2);
@@ -27,6 +28,7 @@ describe("Free Audit rate-limit cleanup", () => {
   });
 
   it("fails when the privileged database client is unavailable", async () => {
+    mocks.getDbClient.mockReturnValue(null);
     mocks.runWithSystemContext.mockImplementation(async (_userId: null, _purpose: string, work: () => Promise<unknown>) => work());
     await expect(cleanupExpiredFreeAuditRateLimits()).rejects.toThrow("Free audit cleanup database context is unavailable");
   });
