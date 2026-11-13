@@ -222,7 +222,7 @@ async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<
       firstAdminId,
       { kind: "remove" },
     );
-    if (!firstRemovalAllowed) {
+    if (firstRemovalAllowed !== "allowed") {
       throw new Error("Production membership guard incorrectly rejected removal while another active administrator remained.");
     }
 
@@ -249,7 +249,7 @@ async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<
       secondAdminId,
       { kind: "remove" },
     );
-    if (competingRemovalAllowed) {
+    if (competingRemovalAllowed !== "last_admin") {
       throw new Error("Production membership guard allowed removal of the final active workspace administrator.");
     }
 
