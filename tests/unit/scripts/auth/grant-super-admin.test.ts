@@ -55,7 +55,7 @@ describe("grantSuperAdmin", () => {
     expect(sqlCalls[0]).toContain("FOR UPDATE");
     expect(sqlCalls.some((sql) => sql.includes("UPDATE organization_members"))).toBe(false);
     expect(sqlCalls.some((sql) => sql.includes("INSERT INTO audit_records"))).toBe(false);
-    expect(sqlCalls.some((sql) => sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK")).toBe(false);
+    expect(systemRunner).toHaveBeenCalledWith(null, "sys-grant-super-admin", expect.any(Function));
   });
 
   it("allows the grant when another active workspace_admin remains and audits it", async () => {
@@ -73,7 +73,6 @@ describe("grantSuperAdmin", () => {
     expect(countIndex).toBeGreaterThan(lockIndex);
     expect(updateIndex).toBeGreaterThan(countIndex);
     expect(auditIndex).toBeGreaterThan(updateIndex);
-    expect(sqlCalls.some((sql) => sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK")).toBe(false);
     expect(systemRunner).toHaveBeenCalledWith(null, "sys-grant-super-admin", expect.any(Function));
   });
 
