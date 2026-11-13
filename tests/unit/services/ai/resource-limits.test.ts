@@ -6,6 +6,7 @@ import {
   ragQueryRequestSchema,
   readBoundedJson,
   sentimentRequestSchema,
+  validateChunkingOptions,
 } from "@/services/ai/resource-limits";
 
 describe("shared AI request resource limits", () => {
@@ -54,6 +55,43 @@ describe("shared AI request resource limits", () => {
   it("uses UTF-8 bytes rather than JavaScript character count for text caps", () => {
     const result = sentimentRequestSchema.safeParse({ text: "😀".repeat(8_193) });
     expect(result.success).toBe(false);
+  });
+
+  it("derives a compatible default overlap for smaller custom chunk sizes", () => {
+    const chunkRequest = chunkRequestSchema.safeParse({
+      text: "content",
+      maxChunkSize: 100,
+    });
+    const ingestionRequest = ingestionRequestSchema.safeParse({
+      text: "document",
+      chunkingOptions: { maxChunkSize: 100 },
+    });
+
+    expect(chunkRequest.success).toBe(true);
+    if (chunkRequest.success) {
+      expect(chunkRequest.data).toMatchObject({ maxChunkSize: 100, overlap: 96 });
+    }
+
+    expect(ingestionRequest.success).toBe(true);
+    if (ingestionRequest.success) {
+      expect(ingestionRequest.data.chunkingOptions).toEqual({
+        maxChunkSize: 100,
+        overlap: 96,
+      });
+    }
+
+    expect(validateChunkingOptions(100)).toEqual({
+      maxChunkSize: 100,
+      overlap: 96,
+    });
+    expect(validateChunkingOptions(4_000)).toEqual({
+      maxChunkSize: 4_000,
+      overlap: 1_000,
+    });
+    expect(validateChunkingOptions(3)).toEqual({
+      maxChunkSize: 3,
+      overlap: 0,
+    });
   });
 
   it("rejects chunk parameters outside the shared contract", () => {
