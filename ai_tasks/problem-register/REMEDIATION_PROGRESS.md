@@ -711,3 +711,15 @@ The project is complete only when every in-scope finding is either verified comp
 - All 18 review threads are resolved; the two remaining HeyDeer findings were answered and resolved after CI #837.
 - The separate GitHub commit status `Vercel – oxenn` reports failure with target `vercel.com/oxenn?upgradeToPro=build-rate-limit`, indicating the hosted Vercel build-rate limit; `DeepSource: Secrets` reports success. This external Vercel status is distinct from the successful GitHub Actions CI and is not represented as a successful deployment. No production database, migration, deployment, or merge was performed.
 - Status remains `Implemented — verification pending` until the PR is merged and successful post-merge CI is confirmed on the exact merge commit; repository-wide Wave 0 remains partial and unchanged.
+
+
+### SRC-017 follow-up review round — 2026-11-13
+
+- Addressed all five new inline review findings on `review/063-src-017-20261113`.
+- Added the omitted `authorization.ts` and both new auth helpers to the Finding's Changed paths list.
+- Updated `lockWorkspaceAndVerifyAdmin` to acquire the actor's active user row lock before the workspace lock. This matches account deactivation's user→workspace lock order and rejects an inactive actor before honoring a stale, previously verified `super_admin` role.
+- Changed `canChangeWorkspaceMember` to distinguish `allowed`, `last_admin`, and `target_not_found`; both removal and role-change actions now return `MEMBER_NOT_FOUND` for absent targets instead of reporting a successful no-op.
+- Added a cross-workspace assertion for the authoritative return value of `requireRole`, exact workspace-scoped session-revocation assertion, stale-super-admin race regression, missing-target action regressions, and updated invitation mocks for the shared active-user lock.
+- GitHub Actions CI run #859 passed on implementation head `29cc59e25adae41c08e0780624af2dc4b3c71733`: Unit Tests (76 files passed, 1 skipped; 555 tests passed, 1 todo), UI tests (4 files / 33 tests passed), Isolation Suite (56 tenant tables / 677 assertions; concurrent workspace-admin guard passed), and Build and Test including typecheck, lint, schema/RLS, documentation, migration, production build, reference-matrix generation, and generated-file no-drift verification.
+- All 23 PR review threads have been answered and are resolved. The separate `Vercel – oxenn` status remains a build-rate-limit failure; no deployment success is claimed.
+- At this checkpoint the branch is 88 commits ahead and 24 behind `main`; no base-branch synchronization was performed as part of this review request. PR #136 remains open and unmerged. No production database, schema migration, or deployment occurred.
