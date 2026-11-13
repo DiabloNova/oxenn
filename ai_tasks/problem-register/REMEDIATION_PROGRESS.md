@@ -671,3 +671,10 @@ The project is complete only when every in-scope finding is either verified comp
 - Exported the grant operation for focused unit tests while guarding CLI execution so importing the operation in Vitest does not run the command-line entrypoint.
 - Added `tests/unit/scripts/auth/grant-super-admin.test.ts` covering last-admin rejection, successful grant when another admin remains, inactive workspace, inactive/missing membership, and lock/update/audit ordering.
 - Additional changed paths: `scripts/auth/grant-super-admin.ts` and `tests/unit/scripts/auth/grant-super-admin.test.ts`. SRC-017 remains `Implemented — verification pending`; no tests or CI result are claimed as passing yet.
+
+
+### SRC-017 least-privilege operator purpose — 2026-11-13
+
+- Final security refinement: the grant CLI previously used `sys-admin-run`, which is guarded by `TenantContextManager` as a test/verification-only purpose. Replaced it with dedicated `sys-grant-super-admin`, whose explicit allowlist is `users`, `organizations`, `organization_members`, and `audit_records`, with only `scripts/auth/grant-super-admin.ts` listed as caller.
+- The new tag does not inherit the wildcard `sys-admin-run` privileges and is not subject to the test-only execution restriction. The CLI unit test now asserts this specific purpose tag.
+- Verification status remains pending; this refinement has not yet been covered by a completed CI run.
