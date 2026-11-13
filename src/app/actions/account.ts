@@ -3,6 +3,7 @@
 import { requireSession } from "@/services/auth/session";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { hashPassword, verifyPassword } from "@/services/auth/passwords";
+import { lockActiveUser, lockActiveWorkspace } from "@/services/auth/workspace-locks";
 
 /**
  * Deactivates the user account securely.
@@ -74,15 +75,7 @@ export async function deactivateAccountAction(password: string): Promise<{ succe
       const client = TenantContextManager.getDbClient();
       if (!client) throw new Error("Failed to get DB client in system context");
 
-      const { rows: activeUserRows } = await client.query(
-        `SELECT id
-         FROM users
-         WHERE id = $1 AND deleted_at IS NULL
-         FOR UPDATE`,
-        [userId]
-      );
-
-      if (activeUserRows.length === 0) return "ACCOUNT_ALREADY_DEACTIVATED";
+      if (!(await lockActiveUser(client, userId))) return "ACCOUNT_ALREADY_DEACTIVATED";
 
       const { rows: memberships } = await client.query(
         `SELECT m.organization_id, m.role
@@ -105,14 +98,7 @@ export async function deactivateAccountAction(password: string): Promise<{ succe
           [orgId]
         );
 
-        const { rows: organizationRows } = await client.query(
-          `SELECT id
-           FROM organizations
-           WHERE id = $1 AND deleted_at IS NULL
-           FOR UPDATE`,
-          [orgId]
-        );
-        if (organizationRows.length === 0) continue;
+        if (!(await lockActiveWorkspace(client, orgId))) continue;
 
         const { rows: currentMembershipRows } = await client.query(
           `SELECT m.role
@@ -134,9 +120,11 @@ export async function deactivateAccountAction(password: string): Promise<{ succe
         );
         const activeAdminsCount = Number(adminRows[0]?.admin_count ?? 0);
 
+        // A member leaving must never close a workspace because it was already
+        // administrator-less. Close only when this account is the final active
+        // workspace_admin and its departure would cause the loss of the last one.
         const workspaceMustClose =
-          activeAdminsCount === 0 ||
-          (currentRole === "workspace_admin" && activeAdminsCount === 1);
+          currentRole === "workspace_admin" && activeAdminsCount === 1;
 
         if (workspaceMustClose) {
           // Preserve workspace data and memberships for audit/recovery, but
