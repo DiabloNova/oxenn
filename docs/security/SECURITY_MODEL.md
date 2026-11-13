@@ -41,9 +41,11 @@ These helpers provide repository-level server-side enforcement primitives. Their
 
 All Oxenn services, including free Fred Audit / Free Audit, require a registered account and a server-authenticated session. Free-tier access is available only after registration and sign-in; anonymous service execution is not permitted. This is the owner-approved product access rule and applies across product areas, not only to Workspace authorization roles.
 
-**Current enforcement gap:** the current `src/app/api/v1/audit/free/route.ts` POST handler validates the submitted URL and proceeds to the Firecrawl/mock execution path, but it does not invoke a server-side session or registration authorization helper and does not apply a route-level rate-limit gate. The documented product rule is therefore **not enforced by this route in the current repository snapshot**. Do not describe Free Audit as access-controlled until the route is separately remediated and verified. This documentation change does not modify or secure the route.
+**Current repository enforcement:** `src/app/api/v1/audit/free/route.ts` calls `authorizeApiRequest` before parsing the request body, so the endpoint requires a valid server session. It meters 3 attempts per user per UTC month, 10 attempts per trusted Vercel ingress IP per UTC hour, and 500 attempts globally per UTC day. User, IP, and idempotency bucket identifiers are SHA-256 hashes; idempotency reservations are retained only after a successful audit, while rejected and failed requests release the key and failed crawls refund the monthly reservation. A bounded scheduled job removes expired `free-audit-*` counters.
 
-Quota metering and SSRF-safe fetching remain separate enforcement requirements. No implementation or production enforcement is claimed here.
+The endpoint uses the internal `HttpCrawlProvider`, not Firecrawl or Gemini. Its crawl policy is limited to one page, 1 MiB response and total-byte budgets, a 20-second duration budget, at most three redirects, and robots-policy enforcement; the shared crawler transport applies SSRF protections. The homepage `FreeAuditPanel` is a separate local synthetic demo and does not call this live endpoint or external providers.
+
+These are repository-level implementation facts, not proof of deployed database state, ingress-header provenance, or production behavior. Those still require authorized staging/production verification.
 
 ## 4. Platform Admin authorization
 
