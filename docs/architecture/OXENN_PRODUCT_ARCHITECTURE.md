@@ -1,7 +1,7 @@
 # OXENN Product Architecture — Architecture-Aligned Remediation Baseline
 
 **Product:** OXENN  
-**Product identity:** Seorchable  
+**Product identity:** OXENN  
 **Status:** Approved working architecture baseline for repository remediation  
 **Revision date:** 2026-11-07  
 **Source architecture:** `DiabloNova/oxenn_documents/product_architecture.md` (main)  

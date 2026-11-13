@@ -1,12 +1,19 @@
-# Project Management
+# Oxenn Project Documentation
 
-This section contains historical documents, roadmap planning, execution logs, and audits. These documents are generally point-in-time reflections of task planning and may not represent the current implemented architectural truth.
+This section contains the current MVP authorities, historical engineering records, roadmaps, execution logs, and audits. Product scope, engineering baseline, and repository implementation status are separate documents and must not be conflated.
 
-## Current MVP Execution
-- [MVP Phase 0 — Scope and Baseline](./MVP_PHASE_0_SCOPE_BASELINE.md): current scope decision, verified repository baseline, conflicts, unknowns, and Phase 0 exit criteria.
-- [MVP Phase 1 — Security and Tenant Isolation](./MVP_PHASE_1_SECURITY_TENANT_ISOLATION.md): implementation scope, server-derived tenant identity, SSRF-safe outbound crawling, regression coverage, and remaining release gates.
+## Current official MVP documents
 
-## Subdirectories
-- `audit/`: Pre-implementation audits and readiness checks.
-- `roadmap/`: Product evolution and execution roadmaps.
-- `tasks/`: Task execution logs and specific step-by-step guides for historical feature implementation.
+- [OXENN MVP Product Specification](../product/OXENN_MVP_PRODUCT_SPECIFICATION.md): owner-approved product definition, customer groups, Offer model, independent OXENN services, product lifecycle, evidence requirements, scope boundaries, and FR-01–FR-11.
+- [OXENN MVP Engineering Baseline](./MVP_ENGINEERING_BASELINE.md): repository snapshot, implementation evidence, gaps, delivery stages, and verification/release gates.
+
+The Product Specification defines what the MVP must do. The Engineering Baseline describes what the inspected repository does and does not yet demonstrate.
+
+## Historical and supporting records
+
+- `audit/`: point-in-time audits and historical security/tenant-isolation remediation records. These are evidence records, not current MVP scope authorities.
+- `roadmap/`: product evolution and execution roadmaps; treat dated plans as point-in-time planning unless explicitly reconfirmed.
+- `tasks/`: historical task instructions and implementation notes.
+- `tasks_reports/`: task completion and verification reports.
+
+The former Phase 0 two-journey MVP scope document has been retired from the current documentation set. The earlier security/tenant-isolation work is retained as a historical remediation record under `audit/`; its original release status and results are point-in-time evidence only.
