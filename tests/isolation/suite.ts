@@ -214,8 +214,20 @@ async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<
       throw new Error("Second transaction did not block on the shared workspace row lock.");
     }
 
-    // The first transaction removes one administrator while holding the
-    // serialization lock, then commits before the second count is evaluated.
+    // Exercise the production membership guard for the first permitted
+    // removal while both administrators are still active.
+    const firstRemovalAllowed = await canChangeWorkspaceMember(
+      firstClient,
+      organizationId,
+      firstAdminId,
+      { kind: "remove" },
+    );
+    if (!firstRemovalAllowed) {
+      throw new Error("Production membership guard incorrectly rejected removal while another active administrator remained.");
+    }
+
+    // Remove one administrator while holding the serialization lock, then
+    // commit before the competing transaction re-checks the final admin.
     await firstClient.query(
       "DELETE FROM organization_members WHERE organization_id = $1 AND user_id = $2",
       [organizationId, firstAdminId],
