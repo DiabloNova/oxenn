@@ -21,7 +21,10 @@ describe("Privileged Paths Registry Test Suite", () => {
   it("registers free audit with only its rate-limit and audit-log tables", () => {
     expect(PRIVILEGED_PATHS_REGISTRY["sys-free-audit"]).toMatchObject({
       allowedTables: ["auth_rate_limits", "audit_records"],
-      callerModules: ["src/app/api/v1/audit/free/route.ts"],
+      callerModules: [
+        "src/app/api/v1/audit/free/route.ts",
+        "src/services/audit/free-audit-rate-limit-cleanup.ts"
+      ],
       status: "in-use"
     });
   });
