@@ -133,8 +133,15 @@ session cookies are the authentication mechanism.
 
 Non-tenant / public endpoint classification:
 
-- /api/v1/audit/free is intentionally public (free audit lead magnet) and does
-  not create tenant context.
+- /api/v1/audit/free requires a validated server session and is not public.
+  It uses the narrow `sys-free-audit` system database purpose for counters and
+  audit metadata; it does not create tenant-scoped request context. It meters
+  3 attempts per user per UTC month, 10 per trusted Vercel ingress IP per UTC
+  hour, and 500 globally per UTC day. User, IP, and idempotency bucket keys are
+  SHA-256 hashes. The bounded internal HTTP crawl is limited to one page, 1 MiB
+  response/total bytes, 20 seconds, and three redirects, and enforces robots
+  policy plus the shared SSRF protections. A scheduled job deletes expired
+  `free-audit-*` rate-limit rows.
 - /api/v1/docs is intentionally public but serves only documentation approved
   by isPublicDocumentation.
 - /api/inngest delegates request handling to the Inngest serve adapter. The
