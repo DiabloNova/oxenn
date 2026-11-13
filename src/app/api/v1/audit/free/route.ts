@@ -52,7 +52,7 @@ export interface FreeAuditResponse {
 }
 
 type LimitDecision = { status: number; message: string; retryAfterSeconds?: number } | null;
-type QuotaReservation = { decision: LimitDecision; quotaBucketKey: string };
+type QuotaReservation = { decision: LimitDecision; quotaBucketKey: string; idempotencyBucketKey: string | null };
 
 function hashBucket(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -126,6 +126,12 @@ async function incrementCounter(
   return attempts;
 }
 
+async function deleteIdempotencyReservation(
+  client: Parameters<typeof incrementCounter>[0],
+  bucketKey: string
+): Promise<void> {
+  await client.query("DELETE FROM auth_rate_limits WHERE endpoint = $1 AND bucket_key = $2", ["free-audit-idempotency", bucketKey]);
+}
 async function reserveFreeAudit(
   userId: string,
   request: NextRequest
@@ -138,8 +144,10 @@ async function reserveFreeAudit(
   const quotaBucketKey = hashBucket(`${userId}:${month}`);
   const idempotencyKey = request.headers.get("idempotency-key");
   if (idempotencyKey !== null && !/^[\x21-\x7e]{8,128}$/.test(idempotencyKey)) {
-    return { decision: { status: 400, message: "کلید تکرار درخواست نامعتبر است." }, quotaBucketKey };
+    return { decision: { status: 400, message: "کلید تکرار درخواست نامعتبر است." }, quotaBucketKey, idempotencyBucketKey: null };
   }
+
+  const idempotencyBucketKey = idempotencyKey ? hashBucket(`${userId}:${idempotencyKey}`) : null;
 
   // x-real-ip is only trusted on Vercel, where the ingress supplies this header.
   // Never trust a caller-provided X-Forwarded-For chain.
@@ -150,12 +158,12 @@ async function reserveFreeAudit(
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Free audit database context is unavailable");
 
-    // Return a decision instead of throwing so the counter updates commit even on 409/429/503.
-    if (idempotencyKey) {
+    // Return decisions so denied-attempt counters commit instead of being rolled back.
+    if (idempotencyBucketKey) {
       const duplicateAttempts = await incrementCounter(
         client,
         "free-audit-idempotency",
-        hashBucket(`${userId}:${idempotencyKey}`),
+        idempotencyBucketKey,
         new Date(now.getTime() + IDEMPOTENCY_WINDOW_MS)
       );
       if (duplicateAttempts > 1) {
@@ -166,37 +174,48 @@ async function reserveFreeAudit(
     if (trustedIp) {
       const ipAttempts = await incrementCounter(client, "free-audit-ip", hashBucket(trustedIp), hourExpiry);
       if (ipAttempts > IP_HOURLY_LIMIT) {
+        if (idempotencyBucketKey) await deleteIdempotencyReservation(client, idempotencyBucketKey);
         return { status: 429, message: "تعداد درخواست‌های این شبکه در بازهٔ زمانی فعلی بیش از حد مجاز است.", retryAfterSeconds: secondsUntil(hourExpiry, now) };
       }
     }
 
-    const globalAttempts = await incrementCounter(client, "free-audit-global", "global", dayExpiry);
-    if (globalAttempts > GLOBAL_DAILY_LIMIT) {
-      return { status: 503, message: "سرویس ممیزی موقتاً به سقف ظرفیت روزانه رسیده است.", retryAfterSeconds: secondsUntil(dayExpiry, now) };
+    // Check the user's monthly limit before consuming shared daily capacity.
+    const userAttempts = await incrementCounter(client, "free-audit-user", quotaBucketKey, monthExpiry);
+    if (userAttempts > USER_MONTHLY_LIMIT) {
+      if (idempotencyBucketKey) await deleteIdempotencyReservation(client, idempotencyBucketKey);
+      return { status: 429, message: "سهمیهٔ ممیزی رایگان این حساب برای ماه جاری به پایان رسیده است.", retryAfterSeconds: secondsUntil(monthExpiry, now) };
     }
 
-    const userAttempts = await incrementCounter(
-      client,
-      "free-audit-user",
-      quotaBucketKey,
-      monthExpiry
-    );
-    if (userAttempts > USER_MONTHLY_LIMIT) {
-      return { status: 429, message: "سهمیهٔ ممیزی رایگان این حساب برای ماه جاری به پایان رسیده است.", retryAfterSeconds: secondsUntil(monthExpiry, now) };
+    const globalAttempts = await incrementCounter(client, "free-audit-global", "global", dayExpiry);
+    if (globalAttempts > GLOBAL_DAILY_LIMIT) {
+      // The global service is unavailable; refund the monthly reservation in this transaction.
+      await client.query(
+        "UPDATE auth_rate_limits SET attempts = GREATEST(attempts - 1, 0) WHERE endpoint = $1 AND bucket_key = $2",
+        ["free-audit-user", quotaBucketKey]
+      );
+      if (idempotencyBucketKey) await deleteIdempotencyReservation(client, idempotencyBucketKey);
+      return { status: 503, message: "سرویس ممیزی موقتاً به سقف ظرفیت روزانه رسیده است.", retryAfterSeconds: secondsUntil(dayExpiry, now) };
     }
     return null;
   });
-  return { decision, quotaBucketKey };
+  return { decision, quotaBucketKey, idempotencyBucketKey };
 }
 
-async function releaseFreeAuditQuota(userId: string, quotaBucketKey: string): Promise<void> {
+async function releaseFreeAuditReservation(
+  userId: string,
+  quotaBucketKey: string,
+  idempotencyBucketKey: string | null
+): Promise<void> {
   await TenantContextManager.runWithSystemContext(userId, "sys-free-audit", async () => {
     const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Free audit quota release context is unavailable");
+    if (!client) throw new Error("Free audit reservation release context is unavailable");
     await client.query(
       "UPDATE auth_rate_limits SET attempts = GREATEST(attempts - 1, 0) WHERE endpoint = $1 AND bucket_key = $2",
       ["free-audit-user", quotaBucketKey]
     );
+    if (idempotencyBucketKey) {
+      await deleteIdempotencyReservation(client, idempotencyBucketKey);
+    }
   });
 }
 
@@ -334,11 +353,21 @@ export async function POST(req: NextRequest) {
       correlationId: randomUUID()
     };
     const startedAt = Date.now();
+    let reservationReleaseAttempted = false;
+    const releaseReservationOnce = async () => {
+      if (reservationReleaseAttempted) return;
+      reservationReleaseAttempted = true;
+      try {
+        await releaseFreeAuditReservation(identity.userId, reservation.quotaBucketKey, reservation.idempotencyBucketKey);
+      } catch (releaseError) {
+        console.error("[Free Audit] Reservation release failed", releaseError instanceof Error ? releaseError.name : "UnknownError");
+      }
+    };
     try {
-      const result = await new HttpCrawlProvider().execute(crawlRequest, policy, new AbortController().signal);
+      const result = await new HttpCrawlProvider().execute(crawlRequest, policy, req.signal);
       const document = result.documents[0];
       if (!document?.html || result.pageCount !== 1) {
-        await releaseFreeAuditQuota(identity.userId, reservation.quotaBucketKey);
+        await releaseReservationOnce();
         return NextResponse.json(
           { error: "Crawl Unavailable", message: "این صفحه قابل دریافت یا بررسی نیست؛ ممکن است سیاست robots.txt دسترسی را محدود کرده باشد." },
           { status: 422 }
@@ -353,11 +382,7 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json(payload, { status: 200 });
     } catch (crawlError) {
-      try {
-        await releaseFreeAuditQuota(identity.userId, reservation.quotaBucketKey);
-      } catch (releaseError) {
-        console.error("[Free Audit] Quota release failed", releaseError instanceof Error ? releaseError.name : "UnknownError");
-      }
+      await releaseReservationOnce();
       throw crawlError;
     }
   } catch (error: unknown) {
