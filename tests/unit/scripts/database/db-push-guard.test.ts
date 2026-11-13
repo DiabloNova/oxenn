@@ -89,10 +89,15 @@ describe("db:push target resolution", () => {
     ).toThrow(/NODE_ENV/);
   });
 
-  it("blocks production markers even when NODE_ENV is development", () => {
+  it.each([
+    ["VERCEL_ENV", "production"],
+    ["VERCEL_ENV", "preview"],
+    ["APP_ENV", "staging"],
+    ["DATABASE_ENV", "production"],
+  ] as const)("blocks a non-development deployment marker: %s=%s", (name, value) => {
     expect(() =>
-      resolveConfiguredDbPushTarget({ ...baseEnv, VERCEL_ENV: "production" }, [target]),
-    ).toThrow(/production environment marker/);
+      resolveConfiguredDbPushTarget({ ...baseEnv, [name]: value }, [target]),
+    ).toThrow(new RegExp(name));
   });
 
   it("requires the additional operator approval gate", () => {
