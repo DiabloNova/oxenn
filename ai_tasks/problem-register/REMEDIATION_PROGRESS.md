@@ -675,8 +675,8 @@ The project is complete only when every in-scope finding is either verified comp
 
 ### SRC-017 least-privilege operator purpose — 2026-11-13
 
-- Final security refinement: the grant CLI previously used `sys-admin-run`, which is guarded by `TenantContextManager` as a test/verification-only purpose. Replaced it with dedicated `sys-grant-super-admin`, whose explicit allowlist is `users`, `organizations`, `organization_members`, and `audit_records`, with only `scripts/auth/grant-super-admin.ts` listed as caller.
-- The new tag does not inherit the wildcard `sys-admin-run` privileges and is not subject to the test-only execution restriction. The CLI unit test now asserts this specific purpose tag.
+- Final security refinement: the grant CLI previously used `sys-admin-run`, which is guarded by `TenantContextManager` as a test/verification-only purpose. It now uses the dedicated `sys-grant-super-admin` tag so the operator command is not subject to that test-only execution gate.
+- The registry's `allowedTables` value records observed tables in audit metadata only. It does not constrain SQL access or change the privileges of the shared system database connection. The dedicated tag therefore improves purpose attribution; it is not a database-enforced table allowlist.
 - Verification status remains pending; this refinement has not yet been covered by a completed CI run.
 
 
