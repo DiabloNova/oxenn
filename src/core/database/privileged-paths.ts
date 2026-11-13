@@ -117,7 +117,6 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
   "sys-admin-run": definePath(
     ["*"],
     [
-      "scripts/auth/grant-super-admin.ts",
       "tests/features/public-api/public-api.test.ts",
       "tests/features/ai-intelligence/tenant-pipeline.test.ts",
       "tests/features/ai-intelligence/run-all.ts",
