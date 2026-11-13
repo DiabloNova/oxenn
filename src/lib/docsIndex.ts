@@ -55,7 +55,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "OXENN Product Architecture — Architecture-Aligned Remediation Baseline",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# OXENN Product Architecture — Architecture-Aligned Remediation Baseline  **Product:** OXENN   **Product identity:** Seorchable   **Status:** Approved working architecture baseline for repository remediation   **Revision date:** 2026-11-07   **Source architecture:** \`DiabloNova/oxenn_documents/product_architecture.md\` (main)   **Repository baseline:** \`DiabloNova/oxenn\` main at \`7bd2b6ba04e18abbcaf772fac63f29c465a45a42\`   **Scope:** Product, commercial, application, intelligence, data, execution`
+    snippet: `# OXENN Product Architecture — Architecture-Aligned Remediation Baseline  **Product:** OXENN   **Product identity:** OXENN   **Status:** Approved working architecture baseline for repository remediation   **Revision date:** 2026-11-07   **Source architecture:** \`DiabloNova/oxenn_documents/product_architecture.md\` (main)   **Repository baseline:** \`DiabloNova/oxenn\` main at \`7bd2b6ba04e18abbcaf772fac63f29c465a45a42\`   **Scope:** Product, commercial, application, intelligence, data, execution, sec`
   },
   {
     slug: "architecture",
