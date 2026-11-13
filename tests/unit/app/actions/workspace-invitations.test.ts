@@ -53,6 +53,9 @@ describe("inviteUserAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     queryMock.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM users") && sql.includes("FOR UPDATE")) {
+        return { rows: [{ id: "user-1" }], rowCount: 1 };
+      }
       if (sql.includes("FROM organizations") && sql.includes("FOR UPDATE")) {
         return { rows: [{ id: "org-1" }], rowCount: 1 };
       }
