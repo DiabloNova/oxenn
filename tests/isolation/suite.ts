@@ -1,7 +1,8 @@
 import { Pool, PoolClient } from "pg";
 import { runMigrations } from "../../src/core/database/migrator";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-tables.generated";
-import { hasAnotherActiveWorkspaceAdmin } from "../../src/services/auth/workspace-admin-invariant";
+import { canChangeWorkspaceMember } from "../../src/services/auth/workspace-admin-invariant";
+import { lockActiveWorkspace } from "../../src/services/auth/workspace-locks";
 import * as crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -151,7 +152,7 @@ async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<
 
   let firstTransactionOpen = false;
   let secondTransactionOpen = false;
-  let secondLockPromise: Promise<number> | null = null;
+  let secondLockPromise: Promise<boolean> | null = null;
 
   try {
     await setupClient.query(
@@ -170,13 +171,8 @@ async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<
 
     await firstClient.query("BEGIN");
     firstTransactionOpen = true;
-    const firstLock = await firstClient.query(
-      `SELECT id FROM organizations
-       WHERE id = $1 AND deleted_at IS NULL
-       FOR UPDATE`,
-      [organizationId],
-    );
-    if (firstLock.rowCount !== 1) {
+    const firstLock = await lockActiveWorkspace(firstClient, organizationId);
+    if (!firstLock) {
       throw new Error("First concurrent transaction failed to acquire the workspace lock.");
     }
 
@@ -197,12 +193,7 @@ async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<
 
     await secondClient.query("BEGIN");
     secondTransactionOpen = true;
-    secondLockPromise = secondClient.query(
-      `SELECT id FROM organizations
-       WHERE id = $1 AND deleted_at IS NULL
-       FOR UPDATE`,
-      [organizationId],
-    ).then((result) => result.rowCount ?? 0);
+    secondLockPromise = lockActiveWorkspace(secondClient, organizationId);
 
     // Confirm PostgreSQL has actually queued the second transaction on the
     // organization row before allowing the first transaction to commit.
@@ -232,17 +223,22 @@ async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<
     await firstClient.query("COMMIT");
     firstTransactionOpen = false;
 
-    const secondLockRows = await secondLockPromise;
-    if (secondLockRows !== 1) {
+    const secondLockAcquired = await secondLockPromise;
+    if (!secondLockAcquired) {
       throw new Error("Second transaction did not acquire the workspace lock after the first commit.");
     }
 
-    // This is the same guard helper called by removeMemberAction,
-    // updateMemberRoleAction, and the operator grant path. It must reject the
-    // competing removal after the first transaction commits its deletion.
-    const competingRemovalAllowed = await hasAnotherActiveWorkspaceAdmin(secondClient, organizationId);
+    // Exercise the same target-membership lock and final-admin decision used
+    // by removeMemberAction. The first transaction has already removed one of
+    // the two admins, so this production guard must reject removing the last.
+    const competingRemovalAllowed = await canChangeWorkspaceMember(
+      secondClient,
+      organizationId,
+      secondAdminId,
+      { kind: "remove" },
+    );
     if (competingRemovalAllowed) {
-      throw new Error("Production final-admin guard allowed removal of the final active workspace administrator.");
+      throw new Error("Production membership guard allowed removal of the final active workspace administrator.");
     }
 
     await secondClient.query("ROLLBACK");
