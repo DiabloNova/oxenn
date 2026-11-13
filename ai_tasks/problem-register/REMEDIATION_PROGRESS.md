@@ -640,3 +640,10 @@ At the end of each batch, report:
 At the end of each wave, provide a concise wave summary and wait for the required user approval before proceeding if the scope or next wave has not already been authorized.
 
 The project is complete only when every in-scope finding is either verified complete or has an explicitly approved disposition (deferred, superseded, already fixed, or out of scope), with evidence. The number of changed files or closed issues is not a completion metric.
+
+### Current-main revalidation — 2026-11-13 (in progress)
+
+- Branch: `wave0/revalidate-current-main-20261113`; base: `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`.
+- Detailed evidence and provisional dispositions are recorded in [WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md](./WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md).
+- The 9ac5fe0 ledger snapshot is historical; 52 commits and 66 changed paths separate it from current main.
+- This batch is partial. No canonical 97-row status transitions are made until all 97 current-main reviews are complete. Wave 0 remains IN PROGRESS; Wave 1 entry criteria are not met.
