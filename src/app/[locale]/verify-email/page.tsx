@@ -28,8 +28,10 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(60);
   const [isResending, setIsResending] = useState(false);
-  const [showResendFlow, setShowResendFlow] = useState(false);
-  const [resendEmail, setResendEmail] = useState("");
+  const [showResendFlow, setShowResendFlow] = useState(
+    searchParams?.get("delivery") === "failed" || searchParams?.get("resend") === "1"
+  );
+  const [resendEmail, setResendEmail] = useState(searchParams?.get("email") || "");
   const [resendSuccess, setResendSuccess] = useState(false);
 
   // Fill token from URL if available, but only if it changed to prevent overwriting manual input unexpectedly
@@ -77,8 +79,8 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
       : `Resend token in ${resendCooldown}s`,
     successTitle: isFa ? "فعال‌سازی با موفقیت انجام شد!" : "Verification Complete!",
     successDesc: isFa
-      ? "ایمیل سازمانی شما تایید گردید. در حال انتقال به پیشخوان کاربری..."
-      : "Your workspace has been successfully verified. Entering the dashboard...",
+      ? "ایمیل شما با موفقیت تأیید شد. اکنون می‌توانید با ورود مجدد به حساب خود دسترسی پیدا کنید."
+      : "Your email address is verified. Sign in again to access your account.",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
     validationCodeRequired: isFa ? "وارد کردن توکن تایید الزامی است." : "Verification token is required.",
     validationCodeLength: isFa ? "توکن وارد شده معتبر نمی‌باشد." : "The token format is invalid.",
@@ -102,7 +104,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
       if (res && res.success) {
         setIsSuccess(true);
         setTimeout(() => {
-          router.push(`/${locale}/dashboard`);
+          router.replace(`/${locale}/login`);
         }, 1500);
       } else {
         throw new Error("Invalid token");
@@ -121,7 +123,10 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
     setIsResending(true);
     setSubmitError("");
     try {
-      await requestVerification(resendEmail.trim());
+      const result = await requestVerification(resendEmail.trim());
+      if (!result.success) {
+        throw new Error(result.error || "Verification email could not be sent.");
+      }
       setResendSuccess(true);
       // Notice: token is intentionally not returned, so we avoid enumeration timing logic in actions/auth.ts
     } catch (e) {
@@ -176,6 +181,9 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                   </div>
                   <div className="text-sm font-semibold text-[var(--text-primary)]">{strings.resendSuccessTitle}</div>
                   <p className="text-xs text-[var(--text-muted)]">{strings.resendSuccessDesc}</p>
+                  <Link href={`/${locale}/login`} className="text-xs font-bold underline underline-offset-2">
+                    {isFa ? "ورود به حساب کاربری" : "Sign in to your account"}
+                  </Link>
                 </div>
               ) : (
                 <form onSubmit={handleResendRequest} className="space-y-4">

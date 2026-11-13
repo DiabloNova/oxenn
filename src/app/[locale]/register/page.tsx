@@ -31,6 +31,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [verificationEmailSent, setVerificationEmailSent] = useState(true);
 
   const strings = {
     title: isFa ? "ایجاد حساب کاربری سازمانی" : "Create Enterprise Account",
@@ -52,7 +53,13 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     loginLink: isFa ? "ورود به حساب کاربری" : "Sign In to Account",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
     successTitle: isFa ? "ثبت‌نام با موفقیت انجام شد!" : "Account Provisioned Successfully!",
-    successDesc: isFa ? "در حال ایجاد کانال‌های خزش و تخصیص شناسه ابری شما..." : "Deploying private crawling instances and allocating tenant space...",
+    successDesc: verificationEmailSent
+      ? (isFa
+          ? "حساب و فضای کاری ایجاد شد. برای ورود به پیشخوان، لینک تأیید ارسال‌شده به ایمیل را باز کنید."
+          : "Your account and workspace are ready. Open the verification link sent to your email before signing in.")
+      : (isFa
+          ? "حساب ایجاد شد، اما ارسال ایمیل تأیید ناموفق بود. از صفحه تأیید ایمیل برای تلاش مجدد استفاده کنید."
+          : "Your account was created, but the verification email could not be sent. Use the verification page to retry.");
     successBtn: isFa ? "ورود به پیشخوان کاربری" : "Proceed to Dashboard",
   };
 
@@ -108,11 +115,15 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
 
     setIsLoading(true);
     try {
-      await register(name, email, password, workspaceName);
+      const registration = await register(name, email, password, workspaceName);
+      setVerificationEmailSent(registration.verificationEmailSent);
       setIsSuccess(true);
-      // Let the user proceed to verify email or directly to dashboard
       setTimeout(() => {
-        router.push(`/${locale}/verify-email`);
+        const query = new URLSearchParams({
+          email: email.trim(),
+          delivery: registration.verificationEmailSent ? "sent" : "failed",
+        });
+        router.push(`/${locale}/verify-email?${query.toString()}`);
       }, 1500);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;

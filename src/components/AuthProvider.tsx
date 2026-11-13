@@ -7,7 +7,7 @@ import { loginAction, logoutAction, getServerSessionAction, registerAction } fro
 interface AuthContextType {
   session: Session;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, workspaceName?: string) => Promise<void>;
+  register: (name: string, email: string, password: string, workspaceName?: string) => Promise<{ verificationEmailSent: boolean }>;
   logout: () => Promise<void>;
   hasPermission: (requiredRole: UserRole) => boolean;
 }
@@ -95,12 +95,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw Object.assign(new Error("Registration failed."), { code: result.errorCode });
       }
 
-      // Do NOT sign in the user after register, because registration does not create a session
+      // Do NOT sign in the user after register, because registration does not create a session.
       setSession({
         user: null,
         expiresAt: null,
         status: "unauthenticated",
       });
+      return { verificationEmailSent: result.verificationEmailSent };
     } catch (e) {
       setSession({
         user: null,
