@@ -192,8 +192,8 @@ export default function DocumentIngestionPage() {
       if (payloadBytes > maxRequestPayloadBytes) {
         setActionError(
           isRtl
-            ? "حجم داده ارسالی پس از کدگذاری از سقف مجاز ۳٫۵ مگابایت بیشتر است."
-            : "The encoded request exceeds the 3.5MB upload limit."
+            ? "حجم داده ارسالی پس از کدگذاری از سقف مجاز ۴ مگابایت بیشتر است."
+            : "The encoded request exceeds the 4 MiB upload limit."
         );
         return;
       }
