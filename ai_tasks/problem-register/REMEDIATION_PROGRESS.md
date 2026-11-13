@@ -651,6 +651,20 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Status remains **Implemented — verification pending**. Vercel previously failed with its external `build-rate-limit` response; no merge or post-merge CI is claimed. Wave 0 remains **PARTIAL**, and the user authorization remains scoped to SCR-002 only.
 
 
+
+### SCR-002 final branch verification — 2026-11-13
+
+- Date/time: 2026-11-13T16:00:19.613Z (UTC); repository: `DiabloNova/oxenn`; branch: `investigation/041-scr-002-review-2026-11-13`. The latest implementation source and configuration were tested at `216bb2be0b9ec6f8d67e16ef03c274a2f93eccaa` against `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`; the subsequent `5b641389ce85734dc0b48a4009a113ca4c006693` commit only updated the Finding's verification evidence.
+- GitHub Actions run [#43457642077](https://github.com/DiabloNova/oxenn/actions/runs/43457642077) completed **success** for all three jobs: Unit Tests, Isolation Suite, and Build and Test.
+- Focused SCR-002 guard suite: **38 tests passed**. Unit project: **75 files passed, 1 skipped; 574 tests passed, 1 todo**. UI project: **4 test files, 33 tests passed**.
+- Isolation Suite: **success** using a temporary PostgreSQL 16 CI service; 56 tenant tables and 677 assertions passed. This existing CI job applies the regular Workspace migration chain to its isolated service; the SCR-002 guard suite itself uses mocked catalog rows and does not connect. No persistent or production database is attached or modified.
+- Build and Test: **success** for dependency audit, audit-gate tests, typecheck, lint (0 errors, 209 warnings), tenant/RLS checks, documentation consistency, Drizzle migration-chain validation, application build, Reference Matrix generation, and generated-file no-drift check.
+- DeepSource Secrets: **success** on tested head. Vercel: **failure** with the explicit external `build-rate-limit` response; it remains an outstanding check unrelated to the successful GitHub application build.
+- No `db:push` command was executed. No live disposable target was validated because the positive target registry remains intentionally empty. No production or Platform Admin database was connected or modified.
+- PR #139 remains draft, open, mergeable, and unmerged. No post-merge `main` CI evidence exists. SCR-002 status remains **Implemented — verification pending**, not Verified complete, pending the external Vercel check disposition and post-merge verification.
+- Wave 0 remains **PARTIAL**. The user's explicit exception authorizes only SCR-002; it does not update or waive the remaining 20 Not started findings or the historical-only VER-005/VER-006 restrictions.
+
+
 ## 6. Wave-level gates
 
 | Stage | Entry condition | Exit condition |
