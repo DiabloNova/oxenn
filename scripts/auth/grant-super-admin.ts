@@ -11,7 +11,7 @@ export async function grantSuperAdmin(userId: string, workspaceId: string): Prom
     throw new Error("Both userId and workspaceId are required.");
   }
 
-  return TenantContextManager.runWithSystemContext(null, "sys-admin-run", async () => {
+  return TenantContextManager.runWithSystemContext(null, "sys-grant-super-admin", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
