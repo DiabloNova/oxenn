@@ -1,11 +1,8 @@
 "use server";
 
-import { requireSession, revokeAllForUser } from "@/services/auth/session";
+import { requireSession } from "@/services/auth/session";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { hashPassword, verifyPassword } from "@/services/auth/passwords";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { organizationMembers } from "../../../database/schema";
-import { eq, and } from "drizzle-orm";
 
 /**
  * Deactivates the user account securely.
@@ -69,102 +66,156 @@ export async function deactivateAccountAction(password: string): Promise<{ succe
     return { success: false, errorCode: passwordError };
   }
 
-  // 2. Mark users.deleted_at first, before mutating memberships
-  // We use sys-login context since it is allowed to touch users and is the canonical context used during auth mutations.
-  await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
-    const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Failed to get DB client in system context");
-
-    await client.query(
-      "UPDATE users SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1",
-      [userId]
-    );
-  });
-
-  // 3. Discover user's current workspace memberships
-  const memberships = await TenantContextManager.runWithSystemContext(userId, "sys-list-workspaces", async () => {
-    const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Failed to get DB client in system context");
-
-    const { rows } = await client.query(`
-      SELECT m.organization_id, m.role, o.name as org_name
-      FROM organization_members m
-      JOIN organizations o ON m.organization_id = o.id
-      WHERE m.user_id = $1 AND o.deleted_at IS NULL
-    `, [userId]);
-    return rows;
-  });
-
-  // 4. For each organization, inspect other administrators and apply consequences
-  for (const membership of memberships) {
-    const orgId = membership.organization_id;
-
-    // We must run in tenant context to mutate tenant-scoped tables safely
-    await TenantContextManager.runWithTenantContext(orgId, userId, "ctx-remove-member", async () => {
+  // 2. Close any workspace that would otherwise lose its final active
+  // workspace_admin, and remove this user's memberships elsewhere. All of
+  // these changes, account deactivation, session revocation, and the audit
+  // event share one system transaction so a failure rolls the operation back.
+  const deactivationError = await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
       const client = TenantContextManager.getDbClient();
-      if (!client) throw new Error("Failed to get DB client in tenant context");
-      const db = drizzle(client);
+      if (!client) throw new Error("Failed to get DB client in system context");
 
-      // Check for other valid administrators by using FOR UPDATE OF m within the tenant context's built-in transaction
-      // Note: Because we already updated deleted_at = NOW() for the current user, they won't be counted here!
-      const { rows: adminRows } = await client.query(`
-        SELECT count(*) AS admin_count FROM (
-          SELECT m.user_id
-          FROM organization_members m
-          JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
-          WHERE m.organization_id = $1 AND m.role = 'workspace_admin'
-          FOR UPDATE OF m
-        ) locked
-      `, [orgId]);
+      const { rows: activeUserRows } = await client.query(
+        `SELECT id
+         FROM users
+         WHERE id = $1 AND deleted_at IS NULL
+         FOR UPDATE`,
+        [userId]
+      );
 
-      const activeAdminsCount = parseInt(adminRows[0].admin_count, 10);
+      if (activeUserRows.length === 0) return "ACCOUNT_ALREADY_DEACTIVATED";
 
-      const isSoleAdmin = membership.role === 'workspace_admin' && activeAdminsCount === 0;
+      const { rows: memberships } = await client.query(
+        `SELECT m.organization_id, m.role
+         FROM organization_members m
+         INNER JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
+         WHERE m.user_id = $1
+         ORDER BY m.organization_id ASC`,
+        [userId]
+      );
 
-      if (isSoleAdmin) {
-        // Unresolved product decision: sole administrator account deactivation handling.
-        // Leaving the organization and membership untouched as per repository instructions.
-        console.warn(`[J-034] User ${userId} is the sole administrator of organization ${orgId}. Preserving existing membership state as an unresolved product/architecture decision.`);
-      } else {
-        // Safe to remove the user's membership as another admin exists (or user is not an admin)
-        await db.delete(organizationMembers)
-          .where(
-            and(
-              eq(organizationMembers.organizationId, orgId),
-              eq(organizationMembers.userId, userId)
-            )
+      // Stable lock order prevents two multi-workspace deactivations from
+      // deadlocking when they share more than one organization.
+      for (const membership of memberships) {
+        const orgId = membership.organization_id as string;
+
+        // The system path is explicitly scoped to one tenant for each set of
+        // RLS-protected workspace queries. The setting is transaction-local.
+        await client.query(
+          "SELECT set_config('app.current_tenant_id', $1, true)",
+          [orgId]
+        );
+
+        const { rows: organizationRows } = await client.query(
+          `SELECT id
+           FROM organizations
+           WHERE id = $1 AND deleted_at IS NULL
+           FOR UPDATE`,
+          [orgId]
+        );
+        if (organizationRows.length === 0) continue;
+
+        const { rows: currentMembershipRows } = await client.query(
+          `SELECT m.role
+           FROM organization_members m
+           INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+           WHERE m.organization_id = $1 AND m.user_id = $2
+           FOR UPDATE OF m`,
+          [orgId, userId]
+        );
+        const currentRole = currentMembershipRows[0]?.role;
+        if (!currentRole) continue;
+
+        const { rows: adminRows } = await client.query(
+          `SELECT COUNT(*)::int AS admin_count
+           FROM organization_members m
+           INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+           WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
+          [orgId]
+        );
+        const activeAdminsCount = Number(adminRows[0]?.admin_count ?? 0);
+
+        const workspaceMustClose =
+          activeAdminsCount === 0 ||
+          (currentRole === "workspace_admin" && activeAdminsCount === 1);
+
+        if (workspaceMustClose) {
+          // Preserve workspace data and memberships for audit/recovery, but
+          // mark the workspace inactive and revoke every session scoped to it.
+          await client.query(
+            `UPDATE organizations
+             SET deleted_at = NOW(), updated_at = NOW()
+             WHERE id = $1 AND deleted_at IS NULL`,
+            [orgId]
           );
+          await client.query(
+            `UPDATE sessions
+             SET revoked_at = NOW()
+             WHERE workspace_id = $1 AND revoked_at IS NULL`,
+            [orgId]
+          );
+        } else {
+          // Another active workspace_admin remains, so this account can be
+          // detached without violating the workspace administrator invariant.
+          await client.query(
+            `DELETE FROM organization_members
+             WHERE organization_id = $1 AND user_id = $2`,
+            [orgId, userId]
+          );
+          await client.query(
+            `UPDATE sessions
+             SET revoked_at = NOW()
+             WHERE user_id = $1 AND workspace_id = $2 AND revoked_at IS NULL`,
+            [userId, orgId]
+          );
+        }
       }
+
+      // Do not let the last tenant setting leak into subsequent system work.
+      await client.query("SELECT set_config('app.current_tenant_id', '', true)");
+
+      const { rowCount: deactivatedRows } = await client.query(
+        `UPDATE users
+         SET deleted_at = NOW(), updated_at = NOW()
+         WHERE id = $1 AND deleted_at IS NULL`,
+        [userId]
+      );
+      if (deactivatedRows !== 1) {
+        throw new Error("Account deactivation lost its locked user row; rolling back.");
+      }
+
+      await client.query(
+        `UPDATE sessions
+         SET revoked_at = NOW()
+         WHERE user_id = $1 AND revoked_at IS NULL`,
+        [userId]
+      );
+
+      await client.query(
+        `INSERT INTO audit_records (
+            id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
+          ) VALUES (
+            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+          )`,
+        [
+          userId,
+          session.user!.email,
+          session.user!.role,
+          "account-deactivation",
+          "user_account",
+          userId,
+          "success",
+          null,
+          "0.0.0.0",
+          "system-context"
+        ]
+      );
+
+      return null;
     });
+
+  if (deactivationError) {
+    return { success: false, errorCode: deactivationError };
   }
-
-  // 5. Revoke sessions
-  await revokeAllForUser(userId);
-
-  // 6. Explicitly record the account-deactivation audit event using sys-login context since no bespoke tag exists
-  await TenantContextManager.runWithSystemContext(userId, "sys-login", async () => {
-    const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Failed to get DB client in system context");
-    await client.query(
-      `INSERT INTO audit_records (
-          id, actor_id, actor_email, actor_role, action, resource_type, resource_id, status, error_details, ip_address, user_agent
-        ) VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-        )`,
-      [
-        userId,
-        session.user!.email,
-        session.user!.role,
-        "account-deactivation",
-        "user_account",
-        userId,
-        "success",
-        null,
-        "0.0.0.0",
-        "system-context"
-      ]
-    );
-  });
 
   return { success: true };
 }
