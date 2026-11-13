@@ -52,7 +52,7 @@ describe("deactivateAccountAction", () => {
 
     const result = await deactivateAccountAction("wrongpass");
     expect(result).toEqual({ success: false, errorCode: "INVALID_PASSWORD" });
-    expect(queryMock.mock.calls.some(([sql]) => typeof sql === "string" && /UPDATE\\s+users\\s+SET\\s+deleted_at/.test(sql))).toBe(false);
+    expect(queryMock.mock.calls.some(([sql]) => typeof sql === "string" && /UPDATE\s+users\s+SET\s+deleted_at/.test(sql))).toBe(false);
   });
 
   it("closes a sole-admin workspace and atomically deactivates the account", async () => {
@@ -135,7 +135,7 @@ describe("deactivateAccountAction", () => {
     const membershipSelection = queryMock.mock.calls.find(([sql]) =>
       typeof sql === "string" && sql.includes("SELECT m.organization_id, m.role")
     )?.[0];
-    expect(String(membershipSelection)).toMatch(/ORDER BY m\\.organization_id ASC/);
+    expect(String(membershipSelection)).toMatch(/ORDER BY m\.organization_id ASC/);
 
     // Workspace locks are acquired in deterministic organization-id order.
     const lockParams = queryMock.mock.calls
