@@ -206,17 +206,34 @@ async function releaseFreeAuditReservation(
   quotaBucketKey: string,
   idempotencyBucketKey: string | null
 ): Promise<void> {
-  await TenantContextManager.runWithSystemContext(userId, "sys-free-audit", async () => {
-    const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Free audit reservation release context is unavailable");
-    await client.query(
-      "UPDATE auth_rate_limits SET attempts = GREATEST(attempts - 1, 0) WHERE endpoint = $1 AND bucket_key = $2",
-      ["free-audit-user", quotaBucketKey]
-    );
-    if (idempotencyBucketKey) {
-      await deleteIdempotencyReservation(client, idempotencyBucketKey);
+  let releaseError: unknown = null;
+  try {
+    await TenantContextManager.runWithSystemContext(userId, "sys-free-audit", async () => {
+      const client = TenantContextManager.getDbClient();
+      if (!client) throw new Error("Free audit quota release context is unavailable");
+      await client.query(
+        "UPDATE auth_rate_limits SET attempts = GREATEST(attempts - 1, 0) WHERE endpoint = $1 AND bucket_key = $2",
+        ["free-audit-user", quotaBucketKey]
+      );
+    });
+  } catch (error) {
+    releaseError = error;
+  }
+
+  // Use a separate transaction so a quota-release failure cannot strand the idempotency key.
+  if (idempotencyBucketKey) {
+    try {
+      await TenantContextManager.runWithSystemContext(userId, "sys-free-audit", async () => {
+        const client = TenantContextManager.getDbClient();
+        if (!client) throw new Error("Free Audit idempotency release context is unavailable");
+        await deleteIdempotencyReservation(client, idempotencyBucketKey);
+      });
+    } catch (error) {
+      releaseError ??= error;
     }
-  });
+  }
+
+  if (releaseError) throw releaseError;
 }
 
 function buildResponse(html: string, requestedUrl: string, crawl: {
