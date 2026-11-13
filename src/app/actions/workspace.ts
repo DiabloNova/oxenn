@@ -6,13 +6,80 @@ import { requireWorkspaceMembership, requireRole } from "@/services/auth/authori
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { users, organizations, organizationMembers, organizationInvitations } from "../../../database/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { randomUUID, createHash } from "crypto";
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { getEmailSender } from "@/services/email/adapters";
 
-import { UserRole } from "@/types/auth";
+
+/**
+ * Serialize every operation that can reduce workspace administrators on the
+ * organization row. All such operations (including account deactivation) must
+ * acquire this same lock before reading the administrator count.
+ */
+async function lockWorkspaceAndVerifyAdmin(
+  client: NonNullable<ReturnType<typeof TenantContextManager.getDbClient>>,
+  workspaceId: string,
+  actorUserId: string,
+  actorWorkspaceId: string
+): Promise<boolean> {
+  const { rows: workspaceRows } = await client.query(
+    `SELECT id
+     FROM organizations
+     WHERE id = $1 AND deleted_at IS NULL
+     FOR UPDATE`,
+    [workspaceId]
+  );
+
+  if (workspaceRows.length === 0) return false;
+
+  // Re-check direct target-workspace privileges after taking the lock. A
+  // super_admin override is resolved separately through the system auth path
+  // because tenant RLS intentionally hides the actor's other workspaces.
+  const { rows: actorRows } = await client.query(
+    `SELECT m.role
+     FROM organization_members m
+     INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+     WHERE m.user_id = $1 AND m.organization_id = $2`,
+    [actorUserId, workspaceId]
+  );
+  const targetRole = actorRows[0]?.role;
+
+  let hasActiveSuperAdminOverride = false;
+  if (targetRole !== "workspace_admin" && targetRole !== "super_admin") {
+    hasActiveSuperAdminOverride = await TenantContextManager.runWithSystemContext(
+      actorUserId,
+      "sys-auth-role-check",
+      async () => {
+        const systemClient = TenantContextManager.getDbClient();
+        if (!systemClient) throw new Error("Failed to get DB client in system auth context");
+        const { rows } = await systemClient.query(
+          `SELECT 1
+           FROM organization_members m
+           INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+           INNER JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
+           WHERE m.user_id = $1
+             AND m.organization_id = $2
+             AND m.role = 'super_admin'
+           LIMIT 1`,
+          [actorUserId, actorWorkspaceId]
+        );
+        return rows.length > 0;
+      }
+    );
+  }
+
+  if (
+    targetRole !== "workspace_admin" &&
+    targetRole !== "super_admin" &&
+    !hasActiveSuperAdminOverride
+  ) {
+    throw new AuthorizationError(403, "Forbidden: Workspace administrator privileges are no longer active.");
+  }
+
+  return true;
+}
 
 export async function createWorkspaceAction(name: string) {
   const session = await requireSession();
@@ -24,6 +91,14 @@ export async function createWorkspaceAction(name: string) {
   await TenantContextManager.runWithSystemContext(session.user.id, "sys-create-workspace", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
+    const { rows: activeUserRows } = await client.query(
+      `SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+      [session.user!.id]
+    );
+    if (activeUserRows.length === 0) {
+      throw new AuthorizationError(401, "Unauthorized: Account is no longer active.");
+    }
+
     const db = drizzle(client);
 
     await db.insert(organizations).values({
@@ -60,7 +135,10 @@ export async function listWorkspacesAction() {
       })
       .from(organizationMembers)
       .innerJoin(organizations, eq(organizationMembers.organizationId, organizations.id))
-      .where(eq(organizationMembers.userId, session.user!.id));
+      .where(and(
+        eq(organizationMembers.userId, session.user!.id),
+        isNull(organizations.deletedAt)
+      ));
 
     return records;
   });
@@ -70,6 +148,9 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
   const session = await requireSession();
   if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
   if (role === "super_admin") throw new AuthorizationError(403, "Forbidden: super_admin can only be assigned by operators.");
+  if (role !== "workspace_admin" && role !== "viewer") {
+    throw new AuthorizationError(400, "Bad Request: Invalid workspace role.");
+  }
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
@@ -85,7 +166,18 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
 
   const result = await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-invite-user", async () => {
     const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Failed to get DB client in system context");
+    if (!client) throw new Error("Failed to get DB client in tenant context");
+
+    const workspaceIsActive = await lockWorkspaceAndVerifyAdmin(
+      client,
+      workspaceId,
+      session.user!.id,
+      session.user!.workspaceId
+    );
+    if (!workspaceIsActive) {
+      throw new AuthorizationError(403, "Forbidden: Workspace is inactive or administrator access was revoked.");
+    }
+
     const db = drizzle(client);
 
     // Ensure user doesn't already exist in workspace
@@ -150,6 +242,14 @@ export async function acceptInvitationAction(token: string) {
   return await TenantContextManager.runWithSystemContext(session.user.id, "sys-accept-invitation", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
+    const { rows: activeUserRows } = await client.query(
+      `SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+      [session.user!.id]
+    );
+    if (activeUserRows.length === 0) {
+      throw new AuthorizationError(401, "Unauthorized: Account is no longer active.");
+    }
+
     const db = drizzle(client);
 
     const tokenHash = createHash('sha256').update(token).digest('hex');
@@ -179,6 +279,18 @@ export async function acceptInvitationAction(token: string) {
       throw new Error("Invitation email does not match authenticated user");
     }
 
+    // Serialize invitation acceptance with workspace closure and re-check
+    // active state after acquiring the same organization-row lock.
+    const { rows: activeWorkspaces } = await client.query(
+      `SELECT id
+       FROM organizations
+       WHERE id = $1 AND deleted_at IS NULL
+       FOR UPDATE`,
+      [invite.organizationId]
+    );
+
+    if (activeWorkspaces.length === 0) throw new Error("Workspace is inactive");
+
     // Accept it
     await db.insert(organizationMembers).values({
       organizationId: invite.organizationId,
@@ -200,32 +312,53 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
 
   return await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-remove-member", async () => {
     const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Failed to get DB client in system context");
-    const db = drizzle(client);
+    if (!client) throw new Error("Failed to get DB client in tenant context");
 
-    await client.query("BEGIN");
-    try {
-      await db.delete(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.organizationId, workspaceId),
-            eq(organizationMembers.userId, memberId)
-          )
-        );
+    const workspaceIsActive = await lockWorkspaceAndVerifyAdmin(
+      client,
+      workspaceId,
+      session.user!.id,
+      session.user!.workspaceId
+    );
+    if (!workspaceIsActive) return { success: false, errorCode: "WORKSPACE_INACTIVE" as const };
 
-      await client.query(`
-        UPDATE sessions
-        SET revoked_at = NOW()
-        WHERE user_id = $1 AND workspace_id = $2 AND revoked_at IS NULL
-      `, [memberId, workspaceId]);
+    const { rows: targetRows } = await client.query(
+      `SELECT m.role, (u.deleted_at IS NULL) AS user_active
+       FROM organization_members m
+       INNER JOIN users u ON u.id = m.user_id
+       WHERE m.organization_id = $1 AND m.user_id = $2
+       FOR UPDATE OF m`,
+      [workspaceId, memberId]
+    );
 
-      await client.query("COMMIT");
-    } catch(e) {
-      await client.query("ROLLBACK");
-      throw e;
+    if (targetRows[0]?.role === "workspace_admin" && targetRows[0]?.user_active) {
+      const { rows: adminRows } = await client.query(
+        `SELECT COUNT(*)::int AS admin_count
+         FROM organization_members m
+         INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+         WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
+        [workspaceId]
+      );
+
+      if (Number(adminRows[0]?.admin_count ?? 0) <= 1) {
+        return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
+      }
     }
 
-    return { success: true };
+    await client.query(
+      `DELETE FROM organization_members
+       WHERE organization_id = $1 AND user_id = $2`,
+      [workspaceId, memberId]
+    );
+
+    await client.query(
+      `UPDATE sessions
+       SET revoked_at = NOW()
+       WHERE user_id = $1 AND workspace_id = $2 AND revoked_at IS NULL`,
+      [memberId, workspaceId]
+    );
+
+    return { success: true as const };
   });
 }
 
@@ -233,24 +366,59 @@ export async function updateMemberRoleAction(workspaceId: string, memberId: stri
   const session = await requireSession();
   if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
   if (role === "super_admin") throw new AuthorizationError(403, "Forbidden: super_admin can only be assigned by operators.");
+  if (role !== "workspace_admin" && role !== "viewer") {
+    throw new AuthorizationError(400, "Bad Request: Invalid workspace role.");
+  }
   await requireWorkspaceMembership(session.user.id, workspaceId);
   await requireRole("workspace_admin", workspaceId);
 
   return await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-update-role", async () => {
     const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Failed to get DB client in system context");
-    const db = drizzle(client);
+    if (!client) throw new Error("Failed to get DB client in tenant context");
 
-    await db.update(organizationMembers)
-      .set({ role })
-      .where(
-        and(
-          eq(organizationMembers.organizationId, workspaceId),
-          eq(organizationMembers.userId, memberId)
-        )
+    const workspaceIsActive = await lockWorkspaceAndVerifyAdmin(
+      client,
+      workspaceId,
+      session.user!.id,
+      session.user!.workspaceId
+    );
+    if (!workspaceIsActive) return { success: false, errorCode: "WORKSPACE_INACTIVE" as const };
+
+    const { rows: targetRows } = await client.query(
+      `SELECT m.role, (u.deleted_at IS NULL) AS user_active
+       FROM organization_members m
+       INNER JOIN users u ON u.id = m.user_id
+       WHERE m.organization_id = $1 AND m.user_id = $2
+       FOR UPDATE OF m`,
+      [workspaceId, memberId]
+    );
+
+    if (
+      targetRows[0]?.role === "workspace_admin" &&
+      targetRows[0]?.user_active &&
+      role !== "workspace_admin"
+    ) {
+      const { rows: adminRows } = await client.query(
+        `SELECT COUNT(*)::int AS admin_count
+         FROM organization_members m
+         INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+         WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
+        [workspaceId]
       );
 
-    return { success: true };
+      if (Number(adminRows[0]?.admin_count ?? 0) <= 1) {
+        return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
+      }
+    }
+
+    await client.query(
+      `UPDATE organization_members
+       SET role = $3, updated_at = NOW()
+       WHERE organization_id = $1 AND user_id = $2`,
+      [workspaceId, memberId, role]
+    );
+
+    return { success: true as const };
   });
 }
 
@@ -276,40 +444,49 @@ export async function switchWorkspaceAction(workspaceId: string) {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    await client.query("BEGIN");
-    try {
-      const { rows } = await client.query(`
-        SELECT role FROM organization_members
-        WHERE user_id = $1 AND organization_id = $2
-      `, [session.user!.id, workspaceId]);
-
-      const role = rows[0]?.role;
-      if (!role) throw new Error("Membership not found");
-
-      const { rows: newSessionRows } = await client.query(`
-        INSERT INTO sessions (user_id, token_hash, workspace_id, role_snapshot, expires_at)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id
-      `, [session.user!.id, newTokenHash, workspaceId, role, expiresAt.toISOString()]);
-
-      const newSessionId = newSessionRows[0].id;
-
-      const upd = await client.query(`
-        UPDATE sessions
-        SET revoked_at = NOW(), replaced_by = $1
-        WHERE token_hash = $2 AND user_id = $3 AND revoked_at IS NULL AND expires_at > NOW()
-      `, [newSessionId, oldTokenHash, session.user!.id]);
-
-      if (upd.rowCount !== 1) {
-        throw new Error("Unauthorized: session no longer valid");
-      }
-
-      await client.query("COMMIT");
-      return role;
-    } catch(e) {
-      await client.query("ROLLBACK");
-      throw e;
+    const { rows: activeUserRows } = await client.query(
+      `SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+      [session.user!.id]
+    );
+    if (activeUserRows.length === 0) {
+      throw new AuthorizationError(401, "Unauthorized: Account is no longer active.");
     }
+
+    const { rows: activeWorkspaceRows } = await client.query(
+      `SELECT id FROM organizations WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+      [workspaceId]
+    );
+    if (activeWorkspaceRows.length === 0) {
+      throw new AuthorizationError(403, "Forbidden: Workspace is inactive.");
+    }
+
+    const { rows } = await client.query(`
+      SELECT role FROM organization_members
+      WHERE user_id = $1 AND organization_id = $2
+    `, [session.user!.id, workspaceId]);
+
+    const role = rows[0]?.role;
+    if (!role) throw new Error("Membership not found");
+
+    const { rows: newSessionRows } = await client.query(`
+      INSERT INTO sessions (user_id, token_hash, workspace_id, role_snapshot, expires_at)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
+    `, [session.user!.id, newTokenHash, workspaceId, role, expiresAt.toISOString()]);
+
+    const newSessionId = newSessionRows[0].id;
+
+    const upd = await client.query(`
+      UPDATE sessions
+      SET revoked_at = NOW(), replaced_by = $1
+      WHERE token_hash = $2 AND user_id = $3 AND revoked_at IS NULL AND expires_at > NOW()
+    `, [newSessionId, oldTokenHash, session.user!.id]);
+
+    if (upd.rowCount !== 1) {
+      throw new Error("Unauthorized: session no longer valid");
+    }
+
+    return role;
   });
 
   cookieStore.set("oxenn_session", rawNewToken, {
