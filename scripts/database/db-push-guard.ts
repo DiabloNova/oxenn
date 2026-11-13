@@ -221,15 +221,18 @@ function assertEnvironmentAllowsDbPush(env: GuardEnvironment): void {
     throw new Error("db:push is allowed only when NODE_ENV is explicitly 'development' or 'test'.");
   }
 
-  const productionMarkers = [
-    env.APP_ENV,
-    env.ENVIRONMENT,
-    env.DATABASE_ENV,
-    env.DB_ENV,
-    env.VERCEL_ENV,
-  ];
-  if (productionMarkers.some((value) => value?.trim().toLowerCase() === "production")) {
-    throw new Error("db:push is blocked because a production environment marker is present.");
+  const environmentMarkers = [
+    ["APP_ENV", env.APP_ENV],
+    ["ENVIRONMENT", env.ENVIRONMENT],
+    ["DATABASE_ENV", env.DATABASE_ENV],
+    ["DB_ENV", env.DB_ENV],
+    ["VERCEL_ENV", env.VERCEL_ENV],
+  ] as const;
+  for (const [name, value] of environmentMarkers) {
+    const normalized = value?.trim().toLowerCase();
+    if (normalized && !["development", "dev", "test"].includes(normalized)) {
+      throw new Error(`db:push is blocked because ${name} does not identify a development or test environment.`);
+    }
   }
 
   if (env.ALLOW_DB_PUSH !== "true") {
