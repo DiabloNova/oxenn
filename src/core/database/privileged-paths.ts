@@ -63,8 +63,8 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     "Validates the persisted session and verifies membership in the requested workspace."
   ),
   "sys-auth-role-check": definePath(
-    ["organizations", "organization_members"],
-    ["src/services/auth/authorization.ts"],
+    ["users", "organizations", "organization_members"],
+    ["src/services/auth/authorization.ts", "src/app/actions/workspace.ts"],
     "Reads the authoritative workspace role from organization_members.role; it does not use the frozen-legacy roles table."
   ),
   "sys-auth-api-check": definePath(
@@ -74,7 +74,7 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     "unreferenced"
   ),
   "sys-create-workspace": definePath(
-    ["organizations", "organization_members"],
+    ["users", "organizations", "organization_members"],
     ["src/app/actions/workspace.ts"],
     "Creates a workspace (organizations) and its initial membership (organization_members)."
   ),
@@ -84,12 +84,12 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     "Lists a user's workspace memberships and associated organization details."
   ),
   "sys-accept-invitation": definePath(
-    ["organization_invitations", "organization_members"],
+    ["users", "organization_invitations", "organization_members", "organizations"],
     ["src/app/actions/workspace.ts"],
     "Resolves a pending organization invitation and creates the accepted user's membership."
   ),
   "sys-switch-workspace": definePath(
-    ["organization_members", "sessions"],
+    ["users", "organization_members", "sessions"],
     ["src/app/actions/workspace.ts"],
     "Re-reads the target workspace role, creates the replacement session, and revokes the previous session."
   ),
