@@ -399,7 +399,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "PR #138 authentication remediation report",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: `# PR #138 authentication remediation report  ## Status INCOMPLETE — PR #138 enforces verified-email access immediately. At reviewed head \`05ad7fe\`, Unit Tests and Isolation Suite passed, but Build and Test failed Typecheck because an obsolete \`result.error\` access remained after per-address quota exhaustion was changed to a generic success response. That redundant branch is being removed. Production email delivery remains a hard deployment blocker because the production sender is unimplemented. `
+    snippet: `# PR #138 authentication remediation report  ## Status INCOMPLETE — the authentication code and CI remediation are complete on reviewed code head \`122a500\`. Unit Tests, Isolation Suite, and Build and Test all pass. Production email delivery remains a hard deployment blocker: the production sender is unimplemented even though this PR already enforces verified-email access.  ## Invariant Only users who have verified control of their email address may establish or retain an authenticated workspace `
   },
   {
     slug: "api-keys-prefix-index-reconciliation",
