@@ -173,7 +173,7 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
     priorityMedium: isRtl ? "اولویت متوسط" : "Medium Priority",
     priorityLow: isRtl ? "اولویت کم" : "Low Priority",
 
-    retryBtn: isRtl ? "شروع مجدد تحلیل" : "Analyze Another Website",
+    retryBtn: isRtl ? "اجرای نمونهٔ نمایشی دیگر" : "Run Another Demo",
   };
 
   const handleUrlSubmit = (e: React.FormEvent) => {
@@ -452,7 +452,7 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
                 <Globe size={18} />
               </div>
               <div className="text-start">
-                <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">{isRtl ? "آدرس وب‌سایت اسکن شده" : "AUDITED TARGET DOMAIN"}</span>
+                <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">{isRtl ? "نشانی هدف در نمونهٔ نمایشی" : "DEMO TARGET DOMAIN"}</span>
                 <h2 className="text-base font-black text-[var(--text-primary)] font-display mt-0.5">{auditState.job.url}</h2>
               </div>
             </div>
@@ -531,7 +531,7 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
 
                   {/* Grade Badge */}
                   <div className="px-5 py-2 rounded-full border bg-sky-500/10 border-sky-500/30 text-sky-400 font-bold text-xs flex items-center gap-2">
-                    <span>{isRtl ? "رتبه کیفی کلی:" : "Page AI Grade:"}</span>
+                    <span>{isRtl ? "رتبهٔ نمونهٔ نمایشی:" : "Demo Sample Grade:"}</span>
                     <span className="text-sm font-black">{auditState.job.grade}</span>
                   </div>
                 </CardContent>
@@ -770,7 +770,7 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
               <AlertCircle size={24} />
             </div>
             <CardTitle className="text-lg font-black font-display text-[var(--text-primary)]">
-              {isRtl ? "خطا در فرآیند تحلیل ساختار وب‌سایت" : "An Error Occurred During Audit Ingestion"}
+              {isRtl ? "خطا در اجرای شبیه‌سازی نمایشی" : "An Error Occurred During the Demo Simulation"}
             </CardTitle>
             <CardDescription className="text-xs">{auditState.error}</CardDescription>
           </CardHeader>
