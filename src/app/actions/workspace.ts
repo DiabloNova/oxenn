@@ -268,7 +268,7 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
   const session = await requireSession();
   if (!session.user) throw new AuthorizationError(401, "Unauthorized: No active session user.");
   await requireWorkspaceMembership(session.user.id, workspaceId);
-  await requireRole("workspace_admin", workspaceId);
+  const actorRole = await requireRole("workspace_admin", workspaceId);
 
   return await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-remove-member", async () => {
     const client = TenantContextManager.getDbClient();
@@ -278,7 +278,7 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
       client,
       workspaceId,
       session.user!.id,
-      session.user!.workspaceId
+      actorRole
     );
     if (!workspaceIsActive) return { success: false, errorCode: "WORKSPACE_INACTIVE" as const };
 
@@ -322,7 +322,7 @@ export async function updateMemberRoleAction(workspaceId: string, memberId: stri
     throw new AuthorizationError(400, "Bad Request: Invalid workspace role.");
   }
   await requireWorkspaceMembership(session.user.id, workspaceId);
-  await requireRole("workspace_admin", workspaceId);
+  const actorRole = await requireRole("workspace_admin", workspaceId);
 
   return await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-update-role", async () => {
     const client = TenantContextManager.getDbClient();
@@ -332,7 +332,7 @@ export async function updateMemberRoleAction(workspaceId: string, memberId: stri
       client,
       workspaceId,
       session.user!.id,
-      session.user!.workspaceId
+      actorRole
     );
     if (!workspaceIsActive) return { success: false, errorCode: "WORKSPACE_INACTIVE" as const };
 
@@ -350,15 +350,7 @@ export async function updateMemberRoleAction(workspaceId: string, memberId: stri
       targetRows[0]?.user_active &&
       role !== "workspace_admin"
     ) {
-      const { rows: adminRows } = await client.query(
-        `SELECT COUNT(*)::int AS admin_count
-         FROM organization_members m
-         INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
-         WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
-        [workspaceId]
-      );
-
-      if (Number(adminRows[0]?.admin_count ?? 0) <= 1) {
+      if (!(await hasAnotherActiveWorkspaceAdmin(client, workspaceId))) {
         return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
       }
     }
