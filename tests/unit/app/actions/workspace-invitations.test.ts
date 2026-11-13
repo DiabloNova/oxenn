@@ -11,7 +11,7 @@ vi.mock("@/services/auth/authorization", async (importOriginal) => {
   return {
     ...actual,
     requireWorkspaceMembership: vi.fn(),
-    requireRole: vi.fn(),
+    requireRole: vi.fn().mockResolvedValue("workspace_admin"),
   };
 });
 
