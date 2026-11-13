@@ -1,7 +1,7 @@
 # PR #138 authentication remediation report
 
 ## Status
-INCOMPLETE — code and test fixes are prepared for CI validation; production email delivery remains an existing operational blocker because the repository's `ProductionEmailSender` is intentionally unimplemented.
+INCOMPLETE — the auth code, unit tests, isolation suite, and Vercel preview now pass on the current head; the remaining CI failure is generated tracked-file drift, which is being corrected. Production email delivery remains a separate release blocker because the repository's `ProductionEmailSender` is intentionally unimplemented.
 
 ## Invariant
 Only users who have verified control of their email address may establish or retain an authenticated workspace session. Verification recovery must not expose email addresses in URLs, allow unknown-address requests to exhaust a victim's delivery quota, or make a committed registration appear to have failed.
@@ -18,7 +18,9 @@ Only users who have verified control of their email address may establish or ret
 ## Verification
 - The prior `Build and Test` CI log reported `TS1005: ',' expected` in `src/app/[locale]/register/page.tsx:62`.
 - The prior `Unit Tests` log reported failures in `tests/unit/authorization-lifecycle.test.ts`, `tests/unit/services/auth/session.test.ts`, and `tests/unit/app/actions/auth.test.ts` (unknown-address resend fixture and legacy token fixture among them).
-- Targeted tests and the full build must be rerun by the PR CI after this commit. No passing result is claimed here.
+- Current head `dc8e1ce630925d2c1fdc888f99b7a6e87f523e3e`: Unit Tests passed (including UI tests) and Isolation Suite passed in CI run `43436952088`.
+- The Vercel preview for the same head reached `READY` and its alias was assigned; the Next.js compile, TypeScript, and production build completed successfully.
+- `Build and Test` reached the final tracked-generated-files check, then failed because the report adds one `src/lib/docsIndex.ts` entry and `auth.ts` adds a consumer to `docs/database/reference-matrix.md`. Those generated outputs are now being synchronized; CI must rerun after they are committed.
 
 ## Negative-path checks added
 - An unverified database-backed session is revoked and returns `null`.
@@ -28,4 +30,4 @@ Only users who have verified control of their email address may establish or ret
 
 ## Known limitations
 - `src/services/email/adapters.ts` currently throws from `ProductionEmailSender.send()` even when `EMAIL_PROVIDER` is configured. Production users cannot receive verification messages until a real provider adapter and its deployment configuration are supplied. This task does not invent a provider or credentials; the deployment owner must choose and configure one before enforcing verification in production.
-- Vercel deployment queries for the PR #138 head SHA/branch returned no deployment. The recent `oxenn` project deployments in `ERROR` were associated with PR #136 (`review/063-src-017-20261113`), not this PR, so they are not attributed to PR #138.
+- The first Vercel deployment after the initial remediation commit failed TypeScript checks in `registerAction` and the lifecycle test. Those type errors were corrected; the current PR #138 head deployment is `READY` with its preview alias assigned.
