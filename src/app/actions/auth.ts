@@ -349,8 +349,6 @@ export async function requestVerification(email: string): Promise<{ success: boo
     return { success: true, rawToken, email: String(userRecord.email) };
   });
 
-  if (result?.error) return { success: false, error: result.error };
-
   if (result?.rawToken && result.email) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     try {

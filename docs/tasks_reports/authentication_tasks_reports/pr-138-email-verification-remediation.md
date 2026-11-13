@@ -1,7 +1,7 @@
 # PR #138 authentication remediation report
 
 ## Status
-INCOMPLETE — PR #138 enforces verified-email access immediately. At the reviewed head (`36d282b`), Unit Tests and Isolation Suite passed, but Build and Test failed its generated-file consistency check because `src/lib/docsIndex.ts` was one character out of sync with the report-derived snippet. The production email sender is unimplemented, making this a deployment blocker until a real provider is selected, implemented, and configured.
+INCOMPLETE — PR #138 enforces verified-email access immediately. At reviewed head `05ad7fe`, Unit Tests and Isolation Suite passed, but Build and Test failed Typecheck because an obsolete `result.error` access remained after per-address quota exhaustion was changed to a generic success response. That redundant branch is being removed. Production email delivery remains a hard deployment blocker because the production sender is unimplemented.
 
 ## Invariant
 Only users who have verified control of their email address may establish or retain an authenticated workspace session. Verification recovery must not expose email addresses in URLs, allow unknown-address requests to exhaust a victim's delivery quota, or make a committed registration appear to have failed. Resend responses must not reveal whether an address belongs to an unverified account.
@@ -18,8 +18,9 @@ Only users who have verified control of their email address may establish or ret
 
 ## Verification
 - The earlier `Build and Test` syntax failure (`TS1005: ',' expected`) in `src/app/[locale]/register/page.tsx` was fixed in commit `4912128`.
-- At reviewed head `36d282b`, CI run `43437871644`: Unit Tests passed; Isolation Suite passed; Vercel Preview Comments passed; Build and Test failed only at the final generated tracked-file check. Its diff identified the PR report's `src/lib/docsIndex.ts` snippet as stale by one character.
-- The generated docs-index entry is being regenerated from the report source in this remediation commit. CI must rerun on the resulting head; no successful Build and Test result is claimed yet.
+- At head `36d282b`, CI run `43437871644` passed Unit Tests and Isolation Suite; Build and Test failed at the generated tracked-file check because the PR report's `src/lib/docsIndex.ts` snippet was stale by one character. The index was regenerated in commit `05ad7fe`.
+- At head `05ad7fe`, CI run `43458597028` passed Unit Tests and Isolation Suite. Build and Test failed at Typecheck with TS2339 on the obsolete `result.error` access in `src/app/actions/auth.ts:352`; the branch is removed in this follow-up.
+- CI must rerun on the resulting head. No successful Build and Test result is claimed yet.
 
 ## Negative-path checks
 - An unverified database-backed session is revoked and returns `null`.
