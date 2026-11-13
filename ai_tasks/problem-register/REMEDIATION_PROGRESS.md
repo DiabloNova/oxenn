@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current `main` at `9ac5fe0`; 20 remain Not started. The ledger records 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. Wave 0 remains incomplete; no Wave 1 authorization is implied.
+**Current overall status:** PARTIAL — 77 of 97 findings were revalidated against `main@9ac5fe0`; SCR-002 was revalidated separately against `main@a9f22b6` on 2026-11-13. 20 findings remain Not started. The current ledger records 63 Confirmed, 1 In progress, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. Wave 0 remains incomplete. The user explicitly authorized a scoped SCR-002 implementation exception; this does not complete Wave 0 or authorize other Wave 1 findings.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -16,12 +16,12 @@
 |---|---:|
 | Individual finding records | 97 |
 | Findings revalidated against current `main` | 77 |
-| Findings approved for implementation (cumulative) | 2 |
-| Findings with implementation started (cumulative) | 2 |
+| Findings approved for implementation (cumulative) | 3 |
+| Findings with implementation started (cumulative) | 3 |\n| Findings currently in progress | 1 |
 | Findings with verified implementation complete | 4 |
 | Findings implemented — verification pending | 2 |
 | Findings blocked / historical-only | 3 |
-| Findings with confirmed issues | 64 |
+| Findings with confirmed issues | 63 |
 | Findings already fixed in repository | 1 |
 | Findings needing a product/security decision | 3 |
 | Findings not started | 20 |
@@ -29,7 +29,7 @@
 
 *Approved and implementation-started values are cumulative historical counts; the other Finding Ledger counts reflect current primary dispositions.*
 
-**This tracker does not itself authorize code changes.** The narrowly scoped DOC-001 investigation was separately authorized and is recorded below; it does not waive mandatory Wave 0 revalidation or user approval for the remaining findings, and it does not authorize starting Wave 1. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
+**This tracker does not itself authorize code changes.** The narrowly scoped DOC-001 investigation was separately authorized and is recorded below. The user has now explicitly authorized implementation of SCR-002 despite the incomplete project-wide Wave 0 gate. This is recorded as a single-finding exception only; Wave 0 remains incomplete, and no other finding or wave is authorized by this exception. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
 
 ## 2. Status definitions
 
@@ -120,7 +120,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [PUB-005](./findings/038-PUB-005.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [PUB-006](./findings/039-PUB-006.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [SCR-001](./findings/040-SCR-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; registry/verifier/matrix tests; live enforcement unknown |
-| [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
+| [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | In progress | — | main@a9f22b6; user-authorized scoped exception; SCR-002 log 2026-11-13|
 | [SCR-003](./findings/042-SCR-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SCR-004](./findings/043-SCR-004.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SCR-005](./findings/044-SCR-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
@@ -595,6 +595,22 @@ Append newest entries at the bottom. Do not delete or rewrite historical entries
 - Targeted validation on the working diff: Vitest 5.0.2 — 2 files passed, 26 tests passed (`tenant-tables.test.ts`: 19; `remediation-finding-coverage.test.ts`: 7); targeted TypeScript check passed for the three changed TypeScript test files; `git diff --check` passed.
 - The PostgreSQL-backed Isolation Suite was not run in this local sandbox because no PostgreSQL service is available; updated PR CI is required to execute it. The earlier PR CI run is not presented as validation of this new diff.
 - Files changed in this correction: `ai_tasks/problem-register/REMEDIATION_PROGRESS.md`, `ai_tasks/problem-register/findings/074-TST-002.md`, `ai_tasks/problem-register/findings/075-TST-003.md`, `tests/isolation/suite.ts`, `tests/unit/core/tenant-context/tenant-tables.test.ts`, and `tests/unit/scripts/docs/remediation-finding-coverage.test.ts`.
+
+
+### SCR-002 scoped implementation — 2026-11-13
+
+- Date/time: 2026-11-13T15:40:52.699Z (UTC); repository: `DiabloNova/oxenn`; branch: `investigation/041-scr-002-review-2026-11-13`.
+- User authorization: the user explicitly instructed that the Wave 0 restrictions be ignored for this task. This authorization is applied only to SCR-002. The project-wide Wave 0 status remains incomplete; the 20 Not started findings, historical-only VER-005/VER-006 restrictions, and every other finding disposition remain unchanged.
+- Revalidation base: `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`. Working branch head before this tracker update: `081a7a00c91c605ecc87fe9eff0339a7c9581d72`. The branch was already current with main before implementation; main was not modified.
+- Root cause reconfirmed: the prior Workspace db:push guard trusted the general `DATABASE_URL`, hostname substring checks, operator booleans, and a table-only count. The ordinary Drizzle configuration also supplied a privileged local fallback. The Platform Admin control plane already uses its own separate URL variables, config, guard, migration runner, and migration folder; those remain unchanged.
+- Files changed for this scoped implementation: `scripts/database/db-push-targets.ts`, `scripts/database/db-push-guard.ts`, `drizzle.config.ts`, `drizzle.push.config.ts`, `package.json`, `.env.example`, `scripts/env-check.ts`, `tests/unit/scripts/database/db-push-guard.test.ts`, deletion of `tests/scripts/database/db-push-guard.test.ts`, and `ai_tasks/problem-register/findings/041-SCR-002.md`.
+- Implementation: the approved disposable-target registry is empty by default; db:push now requires a dedicated target ID and URL matching a reviewed registry entry, an independent database comment attestation, a separate database owner, a non-privileged push role, exact extensions, and an empty user-object inventory. The guard refuses configured targets that match either Workspace or Platform Admin database URLs. Drizzle's ordinary config is schema-only; the dedicated push config is only used after the package-script guard.
+- Related finding boundaries: RF-004's unsafe fallback was removed because it formed part of the db:push bypass surface; RF-004 is not marked complete and retains its separate acceptance criteria. DB-002 migration files and migration history were not changed.
+- Tests added: focused Vitest coverage for no registered target, missing/mismatched configuration, production markers, all configured database URL collisions, remote TLS, catalog identity/attestation, role privileges, object inventory, extensions, connection/query/cleanup failure, and credential redaction. The prior self-running test file outside Vitest's configured include paths was removed.
+- Commands/tests: local clone and test execution were **not run successfully**. The container could not resolve `github.com` during `git clone`; no `pnpm` command was executed. CI has not yet been triggered at this entry. No test is claimed as passing.
+- Database safety: no database was provisioned, connected, queried, migrated, pushed, or modified. The guard uses mocked catalog responses in its tests. No production or Platform Admin credentials were supplied to a command.
+- Open verification/risk: review the complete diff, validate TypeScript/Vitest behavior in GitHub CI, and inspect any CI failures before treating the finding as fixed. Drizzle Kit supports explicit CLI URL options; a user who already possesses another database credential can bypass a repository wrapper by manually invoking the vendor CLI with those credentials. This cannot be fully enforced by the wrapper alone; runtime/production credentials must remain unavailable to developer/test command environments, and the future disposable push role must be restricted at the database/network layer.
+- Status transition: SCR-002 `Confirmed` → `In progress`. Wave 0 remains **PARTIAL**. Next permitted action: complete diff review and run branch CI; do not merge or run db:push against a live target.
 
 ## 6. Wave-level gates
 
