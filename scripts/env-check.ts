@@ -49,7 +49,7 @@ const RULES: VarRule[] = [
     name: "DB_PUSH_DATABASE_URL",
     modes: ["dev", "test"],
     required: false,
-    format: /^postgres(ql)?:\\/\\/.+/,
+    format: /^postgres(ql)?:\/\/.+/,
     formatDescription: "must be a PostgreSQL connection URL if provided",
   },
   {
