@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { removeMemberAction, updateMemberRoleAction } from "@/app/actions/workspace";
 import { requireSession } from "@/services/auth/session";
 
-const { queryMock, tenantRunner } = vi.hoisted(() => ({
+const { queryMock, tenantRunner, systemRunner } = vi.hoisted(() => ({
   queryMock: vi.fn(),
   tenantRunner: vi.fn(),
+  systemRunner: vi.fn(),
 }));
 
 vi.mock("@/services/auth/session", () => ({
@@ -23,6 +24,7 @@ vi.mock("@/services/auth/authorization", async (importOriginal) => {
 vi.mock("@/core/database/tenant-context", () => ({
   TenantContextManager: {
     runWithTenantContext: tenantRunner,
+    runWithSystemContext: systemRunner,
     getDbClient: () => ({ query: queryMock }),
   },
 }));
@@ -47,12 +49,13 @@ describe("workspace final-administrator invariant", () => {
     });
 
     tenantRunner.mockImplementation(async (_workspaceId, _userId, _purpose, work) => work());
+    systemRunner.mockImplementation(async (_userId, _purpose, work) => work());
     queryMock.mockImplementation(async (sql: string) => {
       if (sql.includes("FROM organizations") && sql.includes("FOR UPDATE")) {
         return { rows: [{ id: "org-1" }], rowCount: 1 };
       }
-      if (sql.includes("SELECT m.organization_id, m.role")) {
-        return { rows: [{ organization_id: "org-1", role: "workspace_admin" }], rowCount: 1 };
+      if (sql.includes("SELECT m.role") && sql.includes("FROM organization_members m") && !sql.includes("FOR UPDATE OF m")) {
+        return { rows: [{ role: "workspace_admin" }], rowCount: 1 };
       }
       if (sql.includes("SELECT m.role") && sql.includes("FOR UPDATE OF m")) {
         return { rows: [{ role: "workspace_admin", user_active: true }], rowCount: 1 };
