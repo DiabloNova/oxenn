@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current `main` at `9ac5fe0`; 20 remain Not started. The ledger records 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. Wave 0 remains incomplete; no Wave 1 authorization is implied.
+**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current `main` at `9ac5fe0`; 20 remain Not started. The ledger records 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. Wave 0 remains incomplete; no Wave 1 authorization is implied.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -19,9 +19,9 @@
 | Findings approved for implementation (cumulative) | 2 |
 | Findings with implementation started (cumulative) | 2 |
 | Findings with verified implementation complete | 4 |
-| Findings implemented — verification pending | 2 |
+| Findings implemented — verification pending | 3 |
 | Findings blocked / historical-only | 3 |
-| Findings with confirmed issues | 64 |
+| Findings with confirmed issues | 63 |
 | Findings already fixed in repository | 1 |
 | Findings needing a product/security decision | 3 |
 | Findings not started | 20 |
@@ -76,7 +76,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At `main@9ac5fe0`, 77 of 97 findings have been revalidated: 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The remaining 20 findings are Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. These finding-level dispositions do not satisfy the project-wide Wave 0 exit condition.
+The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At `main@9ac5fe0`, 77 of 97 findings have been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The remaining 20 findings are Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. These finding-level dispositions do not satisfy the project-wide Wave 0 exit condition.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -696,3 +696,16 @@ The project is complete only when every in-scope finding is either verified comp
 - CI run #809 confirmed that the concurrent isolation test is green and the PostgreSQL probe passes. Its Build and Test job again reached the generated-file check and found one additional expected consumer: `tests/isolation/suite.ts` also creates disposable `users` fixtures. This was separate from the previously identified `organizations` consumer.
 - Added `tests/isolation/suite.ts` to the `users` consumer list in `docs/database/reference-matrix.md`. The resulting GitHub contents blob SHA `887112d72475e36d889e8812d81a5db0d6a766fd` matches the generated blob SHA reported by CI run #809, indicating the checked-in matrix now matches canonical generator output for this final difference.
 - A new CI run is required on the corrected current head. Do not describe run #809 as fully green; its only remaining failure was generated reference-matrix drift. Source typecheck, lint, app build, unit/UI tests, and the disposable PostgreSQL isolation/concurrency suite passed.
+
+
+### SRC-017 automated-review corrections — 2026-11-13
+
+- Updated `deactivateAccountAction` so workspace closure is triggered only when the departing membership is the final active `workspace_admin`. A viewer cannot close a workspace that was already administrator-less.
+- Added shared auth helpers for active user/workspace row locks and the final-active-administrator guard. Membership removal, demotion, operator grant, and the PostgreSQL isolation probe now call the same final-admin guard.
+- Updated the PostgreSQL concurrency probe to execute the production guard after waiting for the organization lock and roll back the rejected competing removal.
+- Changed `requireRole` to return its authoritative database-verified role; workspace management actions reuse it after acquiring their tenant transaction rather than opening another system transaction while holding the workspace lock.
+- Strengthened account, membership and grant tests; removed assertions against transaction SQL that were vacuous under the mocked transaction manager.
+- Hardened CLI direct-invocation detection using canonical physical paths. Corrected security documentation and finding/progress claims so `allowedTables` is described strictly as audit metadata, not SQL enforcement.
+- Updated generated database reference-matrix consumers for the shared auth helper files.
+- Current branch: `review/063-src-017-20261113`; implementation verification for these follow-up commits is pending. CI run #810 passed on the preceding head only and is not evidence for these changes. No production database, migration, deployment, or merge was performed.
+- Status remains `Implemented — verification pending`; repository-wide Wave 0 remains partial and unchanged.
