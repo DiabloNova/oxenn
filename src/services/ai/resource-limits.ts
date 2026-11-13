@@ -91,7 +91,17 @@ const metadataSchema = z
     message: `Metadata must be JSON-safe, at most ${MAX_METADATA_BYTES} UTF-8 bytes, ${MAX_METADATA_DEPTH} levels deep, and contain at most ${MAX_METADATA_KEYS} object keys.`,
   });
 
-const validateOverlap = (maxChunkSize: number, overlap: number, context: z.core.$RefinementCtx) => {
+function getDefaultChunkOverlap(maxChunkSize: number): number {
+  // Preserve the established 1,000-character default where possible, while
+  // ensuring a smaller custom chunk still has room for new content and a separator.
+  return Math.min(DEFAULT_CHUNK_OVERLAP, Math.max(0, maxChunkSize - 4));
+}
+
+const validateOverlap = (
+  maxChunkSize: number,
+  overlap: number,
+  context: z.core.$RefinementCtx,
+) => {
   if (overlap > 0 && overlap > maxChunkSize - 4) {
     context.addIssue({
       code: "custom",
@@ -107,11 +117,19 @@ const chunkingOptionsSchema = z
     overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional(),
   })
   .superRefine((options, context) => {
+    const maxChunkSize = options.maxChunkSize ?? DEFAULT_CHUNK_SIZE;
     validateOverlap(
-      options.maxChunkSize ?? DEFAULT_CHUNK_SIZE,
-      options.overlap ?? DEFAULT_CHUNK_OVERLAP,
+      maxChunkSize,
+      options.overlap ?? getDefaultChunkOverlap(maxChunkSize),
       context,
     );
+  })
+  .transform((options) => {
+    const maxChunkSize = options.maxChunkSize ?? DEFAULT_CHUNK_SIZE;
+    return {
+      maxChunkSize,
+      overlap: options.overlap ?? getDefaultChunkOverlap(maxChunkSize),
+    };
   });
 
 const ingestionMetadataSchema = metadataSchema.refine(
@@ -139,13 +157,28 @@ export const ingestionRequestSchema = z.object({
   chunkingOptions: chunkingOptionsSchema.optional(),
 });
 
-export const chunkRequestSchema = z.object({
-  text: boundedText(MAX_CHUNK_TEXT_BYTES, "Text to chunk"),
-  maxChunkSize: z.number().int().min(3).max(MAX_CHUNK_SIZE).optional().default(DEFAULT_CHUNK_SIZE),
-  overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional().default(DEFAULT_CHUNK_OVERLAP),
-}).superRefine((data, context) => {
-  validateOverlap(data.maxChunkSize, data.overlap, context);
-});
+export const chunkRequestSchema = z
+  .object({
+    text: boundedText(MAX_CHUNK_TEXT_BYTES, "Text to chunk"),
+    maxChunkSize: z.number().int().min(3).max(MAX_CHUNK_SIZE).optional(),
+    overlap: z.number().int().min(0).max(MAX_CHUNK_OVERLAP).optional(),
+  })
+  .superRefine((data, context) => {
+    const maxChunkSize = data.maxChunkSize ?? DEFAULT_CHUNK_SIZE;
+    validateOverlap(
+      maxChunkSize,
+      data.overlap ?? getDefaultChunkOverlap(maxChunkSize),
+      context,
+    );
+  })
+  .transform((data) => {
+    const maxChunkSize = data.maxChunkSize ?? DEFAULT_CHUNK_SIZE;
+    return {
+      ...data,
+      maxChunkSize,
+      overlap: data.overlap ?? getDefaultChunkOverlap(maxChunkSize),
+    };
+  });
 
 export const sentimentRequestSchema = z.object({
   text: boundedText(MAX_SENTIMENT_TEXT_BYTES, "Text to analyze"),
@@ -187,7 +220,10 @@ export function validateIngestionInput(
   return parsed.data;
 }
 
-export function validateChunkingOptions(maxChunkSize: number, overlap: number) {
+export function validateChunkingOptions(
+  maxChunkSize: number,
+  overlap?: number,
+) {
   const parsed = chunkingOptionsSchema.safeParse({ maxChunkSize, overlap });
   if (!parsed.success) {
     throw new RangeError(`Invalid chunking options: ${parsed.error.issues.map((issue) => issue.message).join(" ")}`);
