@@ -12,7 +12,7 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import { getEmailSender } from "@/services/email/adapters";
 import { lockActiveUser, lockActiveWorkspace } from "@/services/auth/workspace-locks";
-import { hasAnotherActiveWorkspaceAdmin } from "@/services/auth/workspace-admin-invariant";
+import { canChangeWorkspaceMember } from "@/services/auth/workspace-admin-invariant";
 import type { UserRole } from "@/types/auth";
 
 
@@ -282,19 +282,8 @@ export async function removeMemberAction(workspaceId: string, memberId: string) 
     );
     if (!workspaceIsActive) return { success: false, errorCode: "WORKSPACE_INACTIVE" as const };
 
-    const { rows: targetRows } = await client.query(
-      `SELECT m.role, (u.deleted_at IS NULL) AS user_active
-       FROM organization_members m
-       INNER JOIN users u ON u.id = m.user_id
-       WHERE m.organization_id = $1 AND m.user_id = $2
-       FOR UPDATE OF m`,
-      [workspaceId, memberId]
-    );
-
-    if (targetRows[0]?.role === "workspace_admin" && targetRows[0]?.user_active) {
-      if (!(await hasAnotherActiveWorkspaceAdmin(client, workspaceId))) {
-        return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
-      }
+    if (!(await canChangeWorkspaceMember(client, workspaceId, memberId, { kind: "remove" }))) {
+      return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
     }
 
     await client.query(
@@ -336,23 +325,8 @@ export async function updateMemberRoleAction(workspaceId: string, memberId: stri
     );
     if (!workspaceIsActive) return { success: false, errorCode: "WORKSPACE_INACTIVE" as const };
 
-    const { rows: targetRows } = await client.query(
-      `SELECT m.role, (u.deleted_at IS NULL) AS user_active
-       FROM organization_members m
-       INNER JOIN users u ON u.id = m.user_id
-       WHERE m.organization_id = $1 AND m.user_id = $2
-       FOR UPDATE OF m`,
-      [workspaceId, memberId]
-    );
-
-    if (
-      targetRows[0]?.role === "workspace_admin" &&
-      targetRows[0]?.user_active &&
-      role !== "workspace_admin"
-    ) {
-      if (!(await hasAnotherActiveWorkspaceAdmin(client, workspaceId))) {
-        return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
-      }
+    if (!(await canChangeWorkspaceMember(client, workspaceId, memberId, { kind: "role", newRole: role }))) {
+      return { success: false, errorCode: "LAST_WORKSPACE_ADMIN" as const };
     }
 
     await client.query(
