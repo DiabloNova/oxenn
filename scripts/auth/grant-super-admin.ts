@@ -102,7 +102,12 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("Fatal error:", err);
-  process.exit(1);
-});
+// Avoid executing the CLI when the exported operation is imported by unit tests.
+const invokedScript = process.argv[1]?.replace(/\\\\/g, "/") ?? "";
+if (invokedScript.endsWith("/scripts/auth/grant-super-admin.ts") || invokedScript.endsWith("/scripts/auth/grant-super-admin.js") ||
+    invokedScript === "scripts/auth/grant-super-admin.ts" || invokedScript === "scripts/auth/grant-super-admin.js") {
+  main().catch((err) => {
+    console.error("Fatal error:", err);
+    process.exit(1);
+  });
+}
