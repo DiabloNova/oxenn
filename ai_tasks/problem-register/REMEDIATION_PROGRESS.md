@@ -689,3 +689,10 @@ The project is complete only when every in-scope finding is either verified comp
 - A fresh CI run for the corrected branch head is pending; do not treat run #806 as fully green. The Finding status remains **Implemented — verification pending** until the corrected final PR head passes CI and the exact merged commit later passes post-merge CI on `main`.
 - No schema migration, production database access, deployment, or PR merge occurred. The only real PostgreSQL concurrency test ran against the CI-created disposable `isolation_test_db`.
 - Current implementation scope remains SRC-017 only. The user explicitly waived Wave 0 for this finding; repository-wide Wave 0 remains partial and is not marked complete.
+
+
+### SRC-017 generated-matrix follow-up — 2026-11-13
+
+- CI run #809 confirmed that the concurrent isolation test is green and the PostgreSQL probe passes. Its Build and Test job again reached the generated-file check and found one additional expected consumer: `tests/isolation/suite.ts` also creates disposable `users` fixtures. This was separate from the previously identified `organizations` consumer.
+- Added `tests/isolation/suite.ts` to the `users` consumer list in `docs/database/reference-matrix.md`. The resulting GitHub contents blob SHA `887112d72475e36d889e8812d81a5db0d6a766fd` matches the generated blob SHA reported by CI run #809, indicating the checked-in matrix now matches canonical generator output for this final difference.
+- A new CI run is required on the corrected current head. Do not describe run #809 as fully green; its only remaining failure was generated reference-matrix drift. Source typecheck, lint, app build, unit/UI tests, and the disposable PostgreSQL isolation/concurrency suite passed.
