@@ -33,3 +33,9 @@ export function resolveDocsViewerHref(href: string, locale: string, sourcePath: 
   const slug = fileName.toLowerCase() === "readme.md" ? (parentDirectory === "root" ? "README" : parentDirectory) : fileName.slice(0, -3);
   return `/${locale}/docs/${encodeURIComponent(slug)}${fragment}`;
 }
+
+export function rewriteRelativeMarkdownLinks(text: string, locale: string, sourcePath: string | null): string {
+  return text.replace(/\[(.*?)\]\((.*?)\)/g, (_match, label: string, href: string) =>
+    `[${label}](${resolveDocsViewerHref(href, locale, sourcePath)})`,
+  );
+}

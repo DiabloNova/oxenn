@@ -112,15 +112,14 @@ describe("RLS documentation consistency contract", () => {
     );
   });
 
-  it("distinguishes the corrected Phase 0 baseline from historical Phase 1 figures", () => {
+  it("distinguishes the current engineering baseline from the historical security record", () => {
     const documents = repositoryDocuments();
     const target = "ai_tasks/docs-folder-audit.md";
-    documents[target] = documents[target].replace(
-      "already records the corrected 56-table",
-      "still awaits the 51-table",
-    );
+    documents[target] = documents[target]
+      .replace("MVP Engineering Baseline", "Retired Phase 0 document")
+      .replace("Historical security remediation record", "Current Phase 1 document");
     expect(collectRlsDocumentationIssues(documents).join("\n")).toContain(
-      "distinguish the corrected MVP Phase 0 baseline",
+      "link the current MVP Engineering Baseline and distinguish the historical security record",
     );
   });
 

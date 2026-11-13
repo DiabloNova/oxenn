@@ -6,7 +6,7 @@ import { DOCS_INDEX } from "@/lib/docsIndex";
 import { ArrowLeft, Clock, Tag, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import DOMPurify from 'dompurify';
-import { resolveDocsViewerHref } from "@/lib/docs-viewer-links";
+import { rewriteRelativeMarkdownLinks } from "@/lib/docs-viewer-links";
 
 interface DocDetailPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -189,8 +189,11 @@ export default function DocDetailPage({ params }: DocDetailPageProps) {
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
     // Basic inline code
     text = text.replace(/`(.*?)`/g, '<code class="bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono text-[var(--sky-blue-500)] border border-white/5">$1</code>');
+    // Rewrite repository-relative Markdown paths to the locale-aware slug routes
+    // supported by the in-app documentation viewer before rendering anchors.
+    text = rewriteRelativeMarkdownLinks(text, locale, contentPath);
     // Basic links
-    text = text.replace(/\[(.*?)\]\((.*?)\)/g, `<a href="${resolveDocsViewerHref("$2", locale, contentPath)}" class="text-[var(--sky-blue-500)] hover:underline decoration-white/30 underline-offset-4 transition-all">$1</a>`);
+    text = text.replace(/\[(.*?)\]\((.*?)\)/g, `<a href="$2" class="text-[var(--sky-blue-500)] hover:underline decoration-white/30 underline-offset-4 transition-all">$1</a>`);
     return DOMPurify.sanitize(text, { USE_PROFILES: { html: true } });
   };
 

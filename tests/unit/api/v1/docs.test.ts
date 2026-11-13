@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { GET } from "@/app/api/v1/docs/route";
-import { resolveDocsViewerHref } from "@/lib/docs-viewer-links";
+import { resolveDocsViewerHref, rewriteRelativeMarkdownLinks } from "@/lib/docs-viewer-links";
 
 describe("GET /api/v1/docs visibility enforcement", () => {
   let fixtureRoot: string;
@@ -70,5 +70,12 @@ describe("GET /api/v1/docs visibility enforcement", () => {
     expect(resolveDocsViewerHref("../database/canonical-data-contract.md#ownership", "en", "architecture/README.md")).toBe("/en/docs/canonical-data-contract#ownership");
     expect(resolveDocsViewerHref("https://example.com/guide.md", "en", "architecture/README.md")).toBe("https://example.com/guide.md");
     expect(resolveDocsViewerHref("#local-heading", "en", "architecture/README.md")).toBe("#local-heading");
+    expect(
+      rewriteRelativeMarkdownLinks(
+        "[Database](./database/README.md) [Matrix](../database/reference-matrix.md)",
+        "en",
+        "architecture/README.md",
+      ),
+    ).toBe("[Database](/en/docs/database) [Matrix](/en/docs/reference-matrix)");
   });
 });
