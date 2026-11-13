@@ -35,12 +35,14 @@ export type WorkspaceMembershipChange =
  * row FOR UPDATE lock; this function locks and re-reads the target membership
  * before counting the remaining active administrators.
  */
+export type WorkspaceMembershipChangeDecision = "allowed" | "last_admin" | "target_not_found";
+
 export async function canChangeWorkspaceMember(
   client: WorkspaceAdminClient,
   workspaceId: string,
   memberId: string,
   change: WorkspaceMembershipChange,
-): Promise<boolean> {
+): Promise<WorkspaceMembershipChangeDecision> {
   const { rows: targetRows } = await client.query<{
     role: string;
     user_active: boolean;
@@ -54,12 +56,16 @@ export async function canChangeWorkspaceMember(
   );
 
   const target = targetRows[0];
+  if (!target) return "target_not_found";
+
   const changeReducesAdminCount =
-    target?.role === "workspace_admin" &&
+    target.role === "workspace_admin" &&
     target.user_active &&
     (change.kind === "remove" || change.newRole !== "workspace_admin");
 
-  if (!changeReducesAdminCount) return true;
+  if (!changeReducesAdminCount) return "allowed";
 
-  return hasAnotherActiveWorkspaceAdmin(client, workspaceId);
+  return (await hasAnotherActiveWorkspaceAdmin(client, workspaceId))
+    ? "allowed"
+    : "last_admin";
 }
