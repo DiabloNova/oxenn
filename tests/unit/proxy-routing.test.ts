@@ -32,7 +32,7 @@ describe("locale routing proxy", () => {
     expect(isSupportedLocale("fil")).toBe(false);
   });
 
-  it("adds Report-Only CSP at request time on Preview page responses", () => {
+  it("adds modern and legacy Report-Only headers at request time on Preview", () => {
     vi.stubEnv("VERCEL_ENV", "preview");
 
     const response = runProxy("/fa/dashboard");
@@ -44,6 +44,11 @@ describe("locale routing proxy", () => {
     expect(response.headers.get("reporting-endpoints")).toBe(
       'csp-endpoint="/api/security/csp-report"',
     );
+    const legacy = JSON.parse(response.headers.get("report-to") ?? "{}");
+    expect(legacy.group).toBe("csp-endpoint");
+    expect(legacy.endpoints[0].url).toBe(
+      ORIGIN + "/api/security/csp-report",
+    );
   });
 
   it("does not add Preview CSP headers to Production page responses", () => {
@@ -54,6 +59,7 @@ describe("locale routing proxy", () => {
     expectNext(response);
     expect(response.headers.get("content-security-policy-report-only")).toBeNull();
     expect(response.headers.get("reporting-endpoints")).toBeNull();
+    expect(response.headers.get("report-to")).toBeNull();
   });
 
   it("does not add Preview CSP headers to local development page responses", () => {
@@ -64,6 +70,7 @@ describe("locale routing proxy", () => {
     expectNext(response);
     expect(response.headers.get("content-security-policy-report-only")).toBeNull();
     expect(response.headers.get("reporting-endpoints")).toBeNull();
+    expect(response.headers.get("report-to")).toBeNull();
   });
 
   it("redirects the root to the default locale", () => {
