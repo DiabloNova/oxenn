@@ -45,6 +45,10 @@ function buildEmailContent({ templateId, params }: EmailSenderParams): {
           : "You have been invited to join a workspace on Oxenn.",
         actionLabel: "Accept invitation",
       };
+    default: {
+      const exhaustiveCheck: never = templateId;
+      throw new Error(`Unsupported email template: ${String(exhaustiveCheck)}`);
+    }
   }
 }
 
