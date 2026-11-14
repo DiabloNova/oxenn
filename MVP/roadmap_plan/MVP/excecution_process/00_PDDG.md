@@ -462,9 +462,16 @@ Do not rewrite or reorder prior entries. Append a new entry for every material a
 - Updated the WP-00 baseline report and the MVP-00 service-boundary, commercial-entitlement, and workspace/role work-package guidance. Whether service usage attaches to the Workspace, an Offer, or both remains an explicit design item for WP-02/WP-03.
 - This is a product/architecture direction only. No application code, schema, migration, dashboard UI, or billing implementation was changed.
 
-### Subsequent entries
+### 2026-11-14 — WP-01 owner decision register preparation
 
-_Add dated entries here; preserve all previous journal text._
+- Created and claimed Stele task [TASK-80](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/TASK-80) for WP-01.
+- Re-read the complete MVP-00 governance contract and reconciled the owner-approved Product Specification, MVP Map, MVP Baseline, Engineering Baseline, roadmap README, Product Strategy v2 (DOC-18), DOC-67 v4, and owner decisions KNOW-66, KNOW-25 v3, KNOW-64 v2 and KNOW-22.
+- Revalidated `main` at `326403812756b815f5d9a7dc77e29097ff7dd6b0` and `MVP_00` at `f93ab0ad50213778b73ab2c31a3dbd0599d667c2` immediately before the WP-01 documentation write.
+- Prepared [00_WP01_OWNER_DECISION_REGISTER.md](./00_WP01_OWNER_DECISION_REGISTER.md). It preserves confirmed constraints, consolidates D-001–D-012, adds decisions for scoring, integrations, Offer/resource limits, privacy/retention and service launch readiness, and records options, trade-offs, recommendations, blockers and required owner approvals.
+- Confirmed the single shared Workspace/dashboard model and independent SEO/AEO/GEO entitlements as already approved constraints. Role details, usage attribution, commercial terms, metric ownership, source permissions, pilot choices and other listed decisions remain open where the evidence does not show owner approval.
+- WP-01 remains **PARTIAL** pending explicit owner decisions. No product feature, code, schema, migration, provider/payment integration, external account connection, deployment, PR, merge, main-branch or production change was authorized or performed.
+
+
 
 ## 16. Source references
 
