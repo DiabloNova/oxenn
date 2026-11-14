@@ -1,12 +1,15 @@
 # PR #138 authentication remediation report
 
 ## Status
-INCOMPLETE — the authentication code and CI remediation are complete on reviewed code head `122a500`. Unit Tests, Isolation Suite, and Build and Test all pass. Production email delivery remains a hard deployment blocker: the production sender is unimplemented even though this PR already enforces verified-email access.
+
+PARTIALLY IMPLEMENTED — the production email sender is now implemented for Maileroo's Email API, using the approved sender identity `noreply@oxenn.ir`. Provider-specific tests and environment documentation have been added. CI has not yet reported results for this revision, and the PR still has merge conflicts with `main`; do not merge or deploy until those gates are cleared.
 
 ## Invariant
+
 Only users who have verified control of their email address may establish or retain an authenticated workspace session. Verification recovery must not expose email addresses in URLs, allow unknown-address requests to exhaust a victim's delivery quota, or make a committed registration appear to have failed. Resend responses must not reveal whether an address belongs to an unverified account.
 
 ## Implementation
+
 - Return `EMAIL_NOT_VERIFIED` as serializable data from the login Server Action and reconstruct the coded error in `AuthProvider` on the client.
 - Revoke sessions for unverified users and cover authenticated, unverified, revoked, and replaced-session paths in tests.
 - Apply requester-based verification throttling before lookup using an HMAC of the requester IP keyed by `SESSION_SECRET`; apply the per-address delivery quota only after finding an existing unverified account, while keeping quota-exhaustion responses enumeration-safe.
@@ -15,21 +18,30 @@ Only users who have verified control of their email address may establish or ret
 - Bind verification tokens to the recipient email fingerprint and consume stale links when the account email has changed.
 - Correct the verification success redirect copy and malformed registration object separator.
 - Keep the generated docs index and database reference matrix synchronized with their source documents.
+- Implement `ProductionEmailSender` using Maileroo's Email API with a domain sending key, configurable sender name/address, plain-text and HTML bodies, disabled open/click tracking for authentication messages, HTTP timeout, safe error handling, and HTTP(S)-only action links.
+- Use `noreply@oxenn.ir` as the documented default sender address. No SMTP password or Sending Key is committed to the repository.
+- Await password-reset delivery so the Server Action does not return before the provider request has settled.
+- Add unit coverage for Maileroo configuration, payload construction, disabled tracking, HTML escaping, provider rejection, and invalid action URLs.
+
+## Runtime configuration
+
+Configure these server-side environment variables in the actual application runtime:
+
+- `EMAIL_PROVIDER=maileroo`
+- `MAILEROO_SENDING_KEY` — the Sending Key created for the `oxenn.ir` domain (not an API Management key and not the SMTP password)
+- `EMAIL_FROM_ADDRESS=noreply@oxenn.ir`
+- `EMAIL_FROM_NAME=Oxenn`
+
+The SMTP username/password are not consumed by this implementation because it uses the HTTPS Email API rather than opening an SMTP socket. DNS records in Cloudflare prove domain ownership/authentication but do not inject application secrets into the runtime. Confirm the domain is verified and the Maileroo account is approved for production sending before enabling this in production.
 
 ## Verification
-- The earlier `Build and Test` syntax failure (`TS1005: ',' expected`) in `src/app/[locale]/register/page.tsx` was fixed in commit `4912128`.
-- At head `36d282b`, CI run `43437871644` passed Unit Tests and Isolation Suite; Build and Test failed at the generated tracked-file check because the PR report's `src/lib/docsIndex.ts` snippet was stale by one character. The index was regenerated in commit `05ad7fe`.
-- At head `05ad7fe`, CI run `43458597028` passed Unit Tests and Isolation Suite. Build and Test exposed TS2339 on an obsolete `result.error` access after the quota response was made enumeration-safe. The impossible branch was removed in commit `122a500`.
-- At code head `122a500`, CI run `43459001747` passed Unit Tests, Isolation Suite, and Build and Test. Build and Test included Typecheck, Lint, production Build, reference-matrix generation, and the generated tracked-file no-drift check.
-- The Vercel Preview Comments and Gitar checks passed on the same head. The Vercel check is a preview-comments check, not proof that production email delivery is configured or that deployment is safe.
 
-## Negative-path checks
-- An unverified database-backed session is revoked and returns `null`.
-- Unknown addresses and addresses whose delivery quota is exhausted receive the same success-shaped resend response.
-- Requester IP rate-limit keys are derived with HMAC using the server-side `SESSION_SECRET`, not an unkeyed hash vulnerable to offline guessing.
-- Legacy verification tokens without the recipient fingerprint are rejected before database access.
-- A token bound to a previous email address is consumed without verifying the changed address.
-- Verification delivery exceptions after account commit are converted to `verificationEmailSent: false`.
+- Earlier CI at code head `122a500` passed Unit Tests, Isolation Suite, and Build and Test (run `43459001747`).
+- The Maileroo implementation and new tests were committed after that successful run. No workflow runs or combined status checks were returned for the current code head at the time this report was updated. The new implementation and tests must therefore be treated as **not yet CI-verified**.
+- The previous Vercel preview-comments result is not evidence that production email delivery is configured or that the new Maileroo integration works in the deployment runtime.
 
 ## Known limitations and deployment gate
-- **Do not deploy this enforcement until production email delivery is implemented and configured.** `ProductionEmailSender.send()` currently throws even when `EMAIL_PROVIDER` is set. Because this PR already blocks login for unverified users and revokes their existing sessions, new production registrations cannot receive verification links and existing unverified accounts cannot recover access. This is an active consequence of the PR, not a future enforcement step. This change does not choose an email provider, add provider credentials, or silently weaken the verified-email invariant; the deployment owner must approve and supply the provider integration and rollout plan before deployment.
+
+- The PR remains behind and diverged from `main` and GitHub reports `mergeable: false`. This is a merge-conflict blocker; it has not been resolved by blindly updating or force-pushing the branch.
+- The possible response-timing distinction in the verification resend flow has not yet been removed with a durable asynchronous outbox/queue. The current equal-shaped response is not sufficient proof of timing indistinguishability.
+- Do not deploy until the merge conflict is resolved, CI passes on the final head, the Maileroo domain/account is cleared for production sending, and a real end-to-end delivery test succeeds without exposing credentials.
