@@ -16,8 +16,8 @@
 |---|---:|
 | Individual finding records | 97 |
 | Findings revalidated against current `main` | 77 |
-| Findings approved for implementation (cumulative) | 2 |
-| Findings with implementation started (cumulative) | 2 |
+| Findings approved for implementation (cumulative) | 3 |
+| Findings with implementation started (cumulative) | 3 |
 | Findings with verified implementation complete | 4 |
 | Findings implemented — verification pending | 3 |
 | Findings blocked / historical-only | 3 |
