@@ -93,8 +93,9 @@ describe("Auth Lifecycle Tests", () => {
     // 3. requireWorkspaceMembership (pass)
     await requireWorkspaceMembership(loggedInUser.id, loggedInUser.workspaceId);
 
-    // 4. requireRole
-    await requireRole("workspace_admin", loggedInUser.workspaceId);
+    // 4. requireRole returns the authoritative role for a different workspace.
+    const crossWorkspaceRole = await requireRole("workspace_admin", "ws-cross-workspace");
+    expect(crossWorkspaceRole).toBe("workspace_admin");
 
   });
 

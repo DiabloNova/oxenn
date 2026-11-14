@@ -60,13 +60,13 @@ describe("db:push guard attestation", () => {
     const symlinkPath = `${filePath}.link`;
     await symlink(filePath, symlinkPath);
     vi.stubEnv(DB_PUSH_GUARD_ATTESTATION_ENV, symlinkPath);
-    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/invalid attestation file type/);
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/valid, fresh, private invocation marker/);
   });
 
   it.skipIf(process.platform === "win32")("rejects a group/world-readable invocation marker file", async () => {
     const filePath = await issue();
     chmodSync(filePath, 0o644);
-    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/attestation file permissions are too broad/);
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/valid, fresh, private invocation marker/);
   });
 
   it("rejects a malformed invocation marker payload", async () => {

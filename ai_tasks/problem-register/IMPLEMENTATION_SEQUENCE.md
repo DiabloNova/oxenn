@@ -2,20 +2,23 @@
 
 **Purpose:** arrange the 97 individual problem records into a technically safe order for later implementation.  
 **This is not the full product Roadmap and does not authorize code changes.**  
+**Sequencing policy:** [Wave 0 Policy Supersession](./WAVE0_POLICY_SUPERSESSION.md) retires the blanket project-wide Wave 0 entry gate; task-specific validation, relevant dependencies, and safeguards remain mandatory.  
 **Source records:** [findings/](./findings/) · **Subject categories:** [categories/](./categories/README.md)
 
-## Mandatory Wave 0 — Revalidation and safety gate
+## Task-specific revalidation and safety prerequisites
 
-Before any implementation wave, revalidate **all 97 findings** against the then-current main branch, not only the historical audit baseline. Record for each item whether it remains valid, is already fixed, is superseded, is a policy decision, or is out of scope. Update the corresponding individual record with exact commit and evidence.
+Before each approved remediation, revalidate the selected finding and its relevant implementation against the exact current base commit. Record the base SHA, evidence, affected paths, and finding disposition. Revalidation of all 97 findings is not a universal prerequisite.
 
-- Reconcile PR #108 and PR #109 with current main before touching overlapping auth/RLS files.
-- Reconcile issue #115 with the full SSRF call-site inventory and issue #116 with workspace membership authorization.
-- PR #117 is open and unmerged in the current check. Revalidate its head, checks, and current behavior before deciding whether SRC-022 still needs work; do not duplicate its patch or assume it is merged.
-- Verify a disposable PostgreSQL target by positive identity before any database test or migration. Do not run `verification/phase-0/probe-system-context.ts` or `verification/phase-0/run_rls_matrix.js`; records VER-005 and VER-006 are historical-only safety warnings.
-- Recheck the time-bounded dependency advisory in VER-013 against the exact release candidate by 2026-11-19.
+- Reconcile PR #108/#109 only before touching overlapping authentication or RLS files.
+- Reconcile issue #115 only for affected provider-bound URL/fetch paths, and issue #116 only for affected workspace-membership authorization.
+- Revalidate PR #117 before touching SRC-022/payment behavior; inspect its live head and checks, and do not assume it merged or duplicate its patch.
+- Verify a disposable PostgreSQL target by positive identity before any database test or migration. Never run `verification/phase-0/probe-system-context.ts` or `verification/phase-0/run_rls_matrix.js`; VER-005 and VER-006 remain historical-only safety warnings.
+- Recheck VER-013 when its advisory is a direct dependency of the selected task and its stated deadline applies.
 - No production database, deployment, external provider, payment provider, or destructive command is authorized by this document.
 
 ## Implementation waves
+
+The waves below are a dependency map, not a blanket authorization sequence. Apply the prerequisites relevant to the selected finding; do not require completion of unrelated findings or unrelated waves.
 
 ### Wave 1 — Security, tenant isolation, and safe access boundaries
 
@@ -150,7 +153,7 @@ Start only after the OXENN-owned runtime interface, provider modes, provenance, 
 
 ## Historical / Non-executable Findings
 
-The following two records remain part of the 97-finding inventory and their primary category membership, but are intentionally excluded from implementation Waves 1–7. They are historical safety warnings, not executable remediation assignments. Their exclusion does not change the mandatory Wave 0 requirement to revalidate all 97 findings; it explicitly prohibits executing or reusing the historical verification artifacts.
+The following two records remain part of the 97-finding inventory and their primary category membership, but are intentionally excluded from implementation Waves 1–7. They are historical safety warnings, not executable remediation assignments. Their exclusion preserves the historical 97-finding inventory and explicitly prohibits executing or reusing the historical verification artifacts. It does not reinstate a project-wide Wave 0 entry gate.
 
 - [VER-005](./findings/086-VER-005.md) — **Blocked** · `HISTORICAL_ONLY / DO NOT RUN`. The historical `probe-system-context.ts` can fall back to a local PostgreSQL superuser target, print the database URL, and mutate application state without reliable cleanup. Do not execute or reuse it; any future verification requires a newly designed harness that positively verifies a disposable database target.
 - [VER-006](./findings/087-VER-006.md) — **Blocked** · `HISTORICAL_ONLY / DO NOT RUN`. The historical `run_rls_matrix.js` hardcodes database targeting and role credentials without positively verifying target identity. Do not execute or reuse it; any future verification requires a maintained runner that proves the target is disposable before connecting.
