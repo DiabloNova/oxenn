@@ -2,15 +2,16 @@
 
 **97 individual records completed**
 
-**Status:** 97 findings recorded; DOC-001 and DOC-002 are verified complete on main. The remaining findings still require Wave 0 revalidation and explicit approval before remediation.  
-**Branch:** `docs/architecture-aligned-remediation-2026-11`  
+**Status:** 97 findings recorded; DOC-001 and DOC-002 are verified complete on main. Other findings retain their individual statuses and require task-specific revalidation before remediation.
+**Branch:** `docs/architecture-aligned-remediation-2026-11`
 **Architecture reference:** [OXENN_PRODUCT_ARCHITECTURE.md](../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)
 
 ## Register structure
 
 - [Individual findings](./findings/): one file per finding, with problem statement, evidence, affected paths, impact, recommended solution, architecture alignment, verification criteria, and related findings.
 - [Subject categories](./categories/README.md): eight primary categories. Each finding has exactly one primary category; cross-references do not merge findings.
-- [Dependency-based implementation sequence](./IMPLEMENTATION_SEQUENCE.md): proposed code-remediation order with prerequisites and safety gates. This is not the full product Roadmap and does not authorize code changes.
+- [Dependency-based implementation sequence](./IMPLEMENTATION_SEQUENCE.md): proposed code-remediation order with prerequisites. It does not authorize code changes.
+- [Wave 0 Policy Supersession](./WAVE0_POLICY_SUPERSESSION.md): retires the blanket project-wide Wave 0 prerequisite while preserving task-specific safety and evidence requirements.
 
 ## Coverage
 
@@ -38,21 +39,21 @@ The 94 original audit identifiers are preserved individually. Three additional a
 3. The recommended solution in each record is aligned with the current Oxenn architecture; unresolved product/security decisions are explicitly identified.
 4. The category files describe subject matter, not priority.
 5. The implementation sequence expresses dependencies and safe code order; it is not a full Roadmap or implementation authorization.
-6. Every finding must be revalidated against the then-current main branch before code changes begin.
-7. No source code, database schema, migration, CI workflow, dependency, deployment, PR, or production change is authorized by these documents.
+6. Revalidate the selected finding against the exact current base commit and inspect the relevant implementation before code changes.
+7. No source code, schema, migration, CI workflow, dependency, deployment, PR, or production change is authorized merely by these documents.
 8. Historical verification probes marked do-not-run must remain unused.
-
+9. Preserve all task-specific security, data-safety, authorization, and approval controls in [Wave 0 Policy Supersession](./WAVE0_POLICY_SUPERSESSION.md).
 
 ## AI execution instructions and live progress
 
-- [AI Remediation Agent Prompt](./AI_REMEDIATION_AGENT_PROMPT.md) — English operating instructions for an AI agent: revalidation, dependency order, architecture invariants, implementation method, verification, parallel-work boundaries, stop conditions, and definition of done.
-- [Remediation Progress & Execution Log](./REMEDIATION_PROGRESS.md) — the live 97-finding ledger and dated execution history. Update it throughout the work so the current state, evidence, blockers, and next permitted action remain visible.
+- [AI Remediation Agent Prompt](./AI_REMEDIATION_AGENT_PROMPT.md) — operating instructions for evidence-driven remediation, task-specific revalidation, relevant dependencies, architecture invariants, implementation, verification, parallel-work boundaries, stop conditions, and definition of done. [Wave 0 Policy Supersession](./WAVE0_POLICY_SUPERSESSION.md) is authoritative if older blanket Wave 0 wording conflicts.
+- [Remediation Progress & Execution Log](./REMEDIATION_PROGRESS.md) — the live 97-finding ledger and dated execution history. Preserve prior entries as historical evidence; update it when a finding is actually worked on.
 
-The progress tracker began at **not started**. DOC-001 and DOC-002 have since been verified on main; the remaining findings still require explicit approval and the mandatory Wave 0 gate before remediation.
+The progress tracker remains the historical record of prior Wave 0 activity and its recorded finding statuses. Its previous counts and dated entries are not retroactively changed by the policy supersession; the incomplete project-wide inventory is not a universal prerequisite for a separately approved task.
 
 ## Next gate
 
-The documentation set is ready for review. Implementation may begin only after the user approves the relevant scope and the Wave 0 revalidation/safety gate in the implementation sequence is completed.
+A remediation task may begin on a dedicated branch after its exact scope is approved, its finding and relevant code are revalidated against the current base commit, and its task-specific dependencies and safeguards are satisfied. Completing the unrelated project-wide Wave 0 inventory is not a prerequisite. This does not authorize production access, destructive operations, or changes outside the approved task scope.
 
 ## Automated GitHub event recording
 

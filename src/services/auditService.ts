@@ -59,27 +59,27 @@ export class MockAiAuditService implements IAiAuditService {
     const timestamp = () => new Date().toLocaleTimeString();
 
     // 1. Initial Handshake & crawler initialization
-    onProgress(`[${timestamp()}] Initializing Firecrawl crawler cluster for ${domain}...`);
+    onProgress(`[${timestamp()}] Demo simulation: initializing a local sample for ${domain} (no crawler is started)...`);
     await new Promise((r) => setTimeout(r, 800));
 
     // 2. Fetch Robots.txt & Sitemap crawling
-    onProgress(`[${timestamp()}] Fetching robots.txt guidelines and checking crawl accessibility...`);
+    onProgress(`[${timestamp()}] Demo simulation: displaying sample robots-policy status (no request is sent)...`);
     await new Promise((r) => setTimeout(r, 600));
 
     // 3. Page Ingestion Simulation
-    onProgress(`[${timestamp()}] Firecrawl successfully ingesting pages. Discovered 12 corporate pages...`);
+    onProgress(`[${timestamp()}] Demo simulation: showing synthetic page-discovery data (no pages were fetched)...`);
     await new Promise((r) => setTimeout(r, 600));
 
     // 4. Content Parsing & Entity Extraction
-    onProgress(`[${timestamp()}] Core content parsed. Initiating Google Gemini entity extraction model...`);
+    onProgress(`[${timestamp()}] Demo simulation: showing synthetic content-analysis data (Gemini is not called)...`);
     await new Promise((r) => setTimeout(r, 800));
 
     // 5. LLM Citation and Sentiment Matching
-    onProgress(`[${timestamp()}] Correlating parsed brand claims against foundational AI indices...`);
+    onProgress(`[${timestamp()}] Demo simulation: displaying illustrative model output (no AI index is queried)...`);
     await new Promise((r) => setTimeout(r, 800));
 
     // 6. Synthesizing recommendations
-    onProgress(`[${timestamp()}] Formulating strategic recommendations and grading page discoverability score...`);
+    onProgress(`[${timestamp()}] Demo simulation: generating illustrative recommendations from sample data...`);
     await new Promise((r) => setTimeout(r, 400));
 
     const score = Math.floor(Math.random() * 26) + 65; // realistic score between 65 and 90
@@ -87,9 +87,9 @@ export class MockAiAuditService implements IAiAuditService {
 
     // Build Firecrawl crawling logs
     const firecrawlLogs: FirecrawlLog[] = [
-      { timestamp: timestamp(), level: "info", message: `Crawled root path / successfully with HTTP 200.` },
-      { timestamp: timestamp(), level: "info", message: `Discovered and extracted canonical schema elements.` },
-      { timestamp: timestamp(), level: "warning", message: `No semantic entity-relationship schema detected in header metadata.` }
+      { timestamp: timestamp(), level: "info", message: `Demo sample only: no HTTP request was made.` },
+      { timestamp: timestamp(), level: "info", message: `Demo sample only: canonical schema extraction was not performed.` },
+      { timestamp: timestamp(), level: "warning", message: `Demo sample only: no page metadata was inspected.` }
     ];
 
     return {
@@ -99,24 +99,24 @@ export class MockAiAuditService implements IAiAuditService {
       grade,
       analysis: {
         geminiScore: score - 2,
-        geminiInsights: `The website ${domain} demonstrates acceptable structural search layouts. However, it lacks defined schema triples for brand identity, meaning conversational agents must infer your value proposition. Ingesting clean, semantic entities will decrease hallucination risk from 14% to below 3%.`,
-        firecrawlCrawledPagesCount: 12,
+        geminiInsights: `Synthetic demo text for ${domain}. No Gemini model or external AI index was queried; these statements are illustrative only.`,
+        firecrawlCrawledPagesCount: 0,
         firecrawlLogs,
         llmProviderInsights: [
           {
-            providerName: "OpenAI GPT-4o",
+            providerName: "Demo model sample (not queried)",
             sentimentScore: score + 4,
             visibilityIndex: score - 5,
             recommendation: "Provide direct claim mapping in technical guides to avoid model retrieval bias."
           },
           {
-            providerName: "Anthropic Claude 3.5 Sonnet",
+            providerName: "Demo model sample (not queried)",
             sentimentScore: score - 2,
             visibilityIndex: score + 3,
             recommendation: "Structure pricing tables using explicit XML microdata to secure exact quote citations."
           },
           {
-            providerName: "Perplexity AI",
+            providerName: "Demo model sample (not queried)",
             sentimentScore: score + 1,
             visibilityIndex: score - 1,
             recommendation: "Verify references in your robots.txt to ensure the conversational crawler is permitted."

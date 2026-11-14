@@ -118,7 +118,7 @@ session cookies are the authentication mechanism.
 
 Non-tenant / public endpoint classification:
 
-- The original classification treated `/api/v1/audit/free` as public. That historical classification is superseded by the owner-approved rule in `KNOW-64`: every service, including free services, requires registration and a server-authenticated session. The current route-level enforcement gap is documented in [Security Model](../../security/SECURITY_MODEL.md); this historical record does not claim that the route has been secured.
+- The original classification treated `/api/v1/audit/free` as public. That historical classification was superseded by the owner-approved rule in `KNOW-64` and the authenticated, quota-metered internal HTTP implementation delivered on 2026-11-13. Current endpoint enforcement is documented in [Security Model](../../security/SECURITY_MODEL.md); this archived record preserves the earlier state and is not the current endpoint specification.
 - /api/v1/docs is intentionally public but serves only documentation approved
   by isPublicDocumentation.
 - /api/inngest delegates request handling to the Inngest serve adapter. The

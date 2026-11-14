@@ -1,6 +1,8 @@
 import { Pool, PoolClient } from "pg";
 import { runMigrations } from "../../src/core/database/migrator";
 import { TENANT_SCOPED_TABLES } from "../../src/core/database/tenant-tables.generated";
+import { canChangeWorkspaceMember } from "../../src/services/auth/workspace-admin-invariant";
+import { lockActiveWorkspace } from "../../src/services/auth/workspace-locks";
 import * as crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -129,6 +131,161 @@ async function setupTestDb() {
   process.env.DATABASE_URL = testDbUrl;
   process.env.MIGRATION_DATABASE_URL = testDbUrl;
   await runMigrations(testDbUrl);
+}
+
+/**
+ * Verifies that the parent-organization FOR UPDATE lock serializes competing
+ * last-admin removals under real PostgreSQL READ COMMITTED transactions.
+ *
+ * This runs only against the disposable database created by this isolation
+ * suite. It does not use application credentials or any production database.
+ */
+async function verifyConcurrentWorkspaceAdminSerialization(pool: Pool): Promise<void> {
+  const setupClient = await pool.connect();
+  const firstClient = await pool.connect();
+  const secondClient = await pool.connect();
+  const organizationId = randomUUID();
+  const firstAdminId = `isolation-admin-${randomUUID()}`;
+  const secondAdminId = `isolation-admin-${randomUUID()}`;
+  const firstEmail = `${firstAdminId}@example.invalid`;
+  const secondEmail = `${secondAdminId}@example.invalid`;
+
+  let firstTransactionOpen = false;
+  let secondTransactionOpen = false;
+  let secondLockPromise: Promise<boolean> | null = null;
+
+  try {
+    await setupClient.query(
+      "INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)",
+      [organizationId, "Admin serialization fixture", `admin-lock-${organizationId}`],
+    );
+    await setupClient.query(
+      "INSERT INTO users (id, name, email) VALUES ($1, $2, $3), ($4, $5, $6)",
+      [firstAdminId, "First Admin", firstEmail, secondAdminId, "Second Admin", secondEmail],
+    );
+    await setupClient.query(
+      `INSERT INTO organization_members (organization_id, user_id, role)
+       VALUES ($1, $2, 'workspace_admin'), ($1, $3, 'workspace_admin')`,
+      [organizationId, firstAdminId, secondAdminId],
+    );
+
+    await firstClient.query("BEGIN");
+    firstTransactionOpen = true;
+    const firstLock = await lockActiveWorkspace(firstClient, organizationId);
+    if (!firstLock) {
+      throw new Error("First concurrent transaction failed to acquire the workspace lock.");
+    }
+
+    const firstCount = await firstClient.query<{ admin_count: number }>(
+      `SELECT COUNT(*)::int AS admin_count
+       FROM organization_members m
+       INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+       WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
+      [organizationId],
+    );
+    if (Number(firstCount.rows[0]?.admin_count ?? 0) !== 2) {
+      throw new Error("Concurrency fixture did not start with exactly two active workspace administrators.");
+    }
+
+    const backend = await secondClient.query<{ pid: number }>("SELECT pg_backend_pid() AS pid");
+    const secondPid = backend.rows[0]?.pid;
+    if (!secondPid) throw new Error("Could not inspect the second PostgreSQL backend.");
+
+    await secondClient.query("BEGIN");
+    secondTransactionOpen = true;
+    secondLockPromise = lockActiveWorkspace(secondClient, organizationId);
+
+    // Confirm PostgreSQL has actually queued the second transaction on the
+    // organization row before allowing the first transaction to commit.
+    let secondTransactionIsBlocked = false;
+    for (let attempt = 0; attempt < 500; attempt++) {
+      const activity = await setupClient.query<{ wait_event_type: string | null }>(
+        "SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1",
+        [secondPid],
+      );
+      if (activity.rows[0]?.wait_event_type === "Lock") {
+        secondTransactionIsBlocked = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    if (!secondTransactionIsBlocked) {
+      throw new Error("Second transaction did not block on the shared workspace row lock.");
+    }
+
+    // Exercise the production membership guard for the first permitted
+    // removal while both administrators are still active.
+    const firstRemovalAllowed = await canChangeWorkspaceMember(
+      firstClient,
+      organizationId,
+      firstAdminId,
+      { kind: "remove" },
+    );
+    if (firstRemovalAllowed !== "allowed") {
+      throw new Error("Production membership guard incorrectly rejected removal while another active administrator remained.");
+    }
+
+    // Remove one administrator while holding the serialization lock, then
+    // commit before the competing transaction re-checks the final admin.
+    await firstClient.query(
+      "DELETE FROM organization_members WHERE organization_id = $1 AND user_id = $2",
+      [organizationId, firstAdminId],
+    );
+    await firstClient.query("COMMIT");
+    firstTransactionOpen = false;
+
+    const secondLockAcquired = await secondLockPromise;
+    if (!secondLockAcquired) {
+      throw new Error("Second transaction did not acquire the workspace lock after the first commit.");
+    }
+
+    // Exercise the same target-membership lock and final-admin decision used
+    // by removeMemberAction. The first transaction has already removed one of
+    // the two admins, so this production guard must reject removing the last.
+    const competingRemovalAllowed = await canChangeWorkspaceMember(
+      secondClient,
+      organizationId,
+      secondAdminId,
+      { kind: "remove" },
+    );
+    if (competingRemovalAllowed !== "last_admin") {
+      throw new Error("Production membership guard allowed removal of the final active workspace administrator.");
+    }
+
+    await secondClient.query("ROLLBACK");
+    secondTransactionOpen = false;
+
+    const finalCount = await setupClient.query<{ admin_count: number }>(
+      `SELECT COUNT(*)::int AS admin_count
+       FROM organization_members m
+       INNER JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+       WHERE m.organization_id = $1 AND m.role = 'workspace_admin'`,
+      [organizationId],
+    );
+    if (Number(finalCount.rows[0]?.admin_count ?? 0) !== 1) {
+      throw new Error("Concurrent workspace operations violated the final-administrator invariant.");
+    }
+
+    console.log("✅ Concurrent workspace-admin serialization passed: the second transaction waited and observed the committed single-admin state.");
+  } catch (error) {
+    if (firstTransactionOpen) {
+      await firstClient.query("ROLLBACK").catch(() => undefined);
+      firstTransactionOpen = false;
+    }
+    if (secondTransactionOpen) {
+      await secondClient.query("ROLLBACK").catch(() => undefined);
+      secondTransactionOpen = false;
+    }
+    if (secondLockPromise) await secondLockPromise.catch(() => undefined);
+    throw error;
+  } finally {
+    await setupClient.query("DELETE FROM organizations WHERE id = $1", [organizationId]).catch(() => undefined);
+    await setupClient.query("DELETE FROM users WHERE id = ANY($1::text[])", [[firstAdminId, secondAdminId]]).catch(() => undefined);
+    firstClient.release();
+    secondClient.release();
+    setupClient.release();
+  }
 }
 
 async function runTest() {
@@ -806,6 +963,8 @@ async function runTest() {
       await client.query("RESET app.current_tenant_id");
       await client.query("RESET ROLE");
     }
+
+    await verifyConcurrentWorkspaceAdminSerialization(pool);
 
     console.log(`\nVerifying ${GLOBAL_TABLES.length} global tables (intentionally excluded from isolation)...`);
     for (const tableName of GLOBAL_TABLES) {
