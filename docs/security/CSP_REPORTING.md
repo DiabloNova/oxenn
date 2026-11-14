@@ -2,13 +2,15 @@
 
 ## Scope
 
-Content Security Policy reporting is enabled only when the Vercel deployment environment is `preview`. Production and local development receive no CSP reporting headers from this change. No enforcing `Content-Security-Policy` header is introduced.
+Content Security Policy reporting is enabled only for requests that execute in the Vercel `preview` environment. Production and local development receive no CSP reporting headers. No enforcing `Content-Security-Policy` header is introduced.
 
-The Preview policy is a deliberately narrow discovery baseline. It permits same-origin resources, plus data/blob URLs for images and fonts and blob workers. It does not grant wildcard hosts or unsafe inline/eval script allowances. Violations are reported but not blocked.
+The Preview policy is a deliberately narrow discovery baseline. It permits same-origin resources, plus data/blob URLs for images, data URLs for fonts, and blob workers. It does not grant wildcard hosts or unsafe inline/eval script allowances. Violations are reported but not blocked.
+
+The Preview check runs at request time in the existing `src/proxy.ts`, rather than being frozen into `next.config.ts` during the build. The CSP report endpoint also checks the runtime `VERCEL_ENV`. This keeps the header and collector disabled when a request is served in Production, including after a deployment promotion.
 
 ## Reporting endpoint
 
-The endpoint is `POST /api/security/csp-report`. The build uses `VERCEL_URL` only to validate that the Preview environment has a valid Vercel deployment host. The advertised Reporting API endpoint is the origin-relative path `/api/security/csp-report`, so reports follow the exact document origin users opened, including branch aliases and custom Preview domains. If the environment is not Preview or the deployment host is missing/invalid, the reporting headers are omitted.
+The endpoint is `POST /api/security/csp-report`. The Reporting API endpoint is the origin-relative path `/api/security/csp-report`, so reports follow the exact document origin users opened, including branch aliases and custom Preview domains. The leading slash is required by the Reporting API endpoint syntax. The existing Proxy adds the reporting headers only when the current request is running in Preview.
 
 The response advertises the endpoint using `Reporting-Endpoints` and selects it with `report-to`. The policy also includes `report-uri` for older CSP reporting implementations. Both modern Reporting API batches (`application/reports+json`) and the legacy CSP envelope (`application/csp-report`) are accepted. A JSON legacy envelope is also accepted for compatibility.
 
@@ -16,10 +18,10 @@ The response advertises the endpoint using `Reporting-Endpoints` and selects it 
 
 - The endpoint is active only in Vercel Preview and returns 404 elsewhere.
 - It does not require an application session and does not access Workspace or Platform Admin databases.
-- Request bodies are capped at 16 KiB and at 20 CSP reports per batch.
-- Unsupported content types, malformed JSON, and invalid report envelopes are rejected.
+- Request bodies are capped at 16 KiB and at 20 CSP report entries per batch.
+- Unsupported content types, malformed JSON, and invalid top-level report envelopes are rejected. Non-CSP entries in Reporting API batches are ignored.
 - Reports are treated as attacker-controlled. Raw payloads are never persisted or logged.
-- Logs contain only the directive, report disposition, status code, and origin-level values. Paths, query strings, fragments, referrers, script samples, cookies, and user-agent values are not logged.
+- Logs contain sanitized report summaries: the directive, report disposition, status code, and origin-level values, plus a fixed event name, environment, and report count. Paths, query strings, fragments, referrers, script samples, cookies, and user-agent values are not logged.
 
 ## Vercel Firewall rate limit
 
