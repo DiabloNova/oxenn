@@ -21,12 +21,14 @@ export function getPreviewCspHeaders(
     return [];
   }
 
-  const origin = getPreviewOrigin(vercelUrl);
-  if (!origin) {
+  // VERCEL_URL is only a deployment/Preview gate. The endpoint itself is an
+  // origin-relative path so branch aliases and custom Preview domains report
+  // back to the exact origin that served the document.
+  if (!isValidPreviewHost(vercelUrl)) {
     return [];
   }
 
-  const reportUrl = new URL(CSP_REPORT_PATH, origin).toString();
+  const reportUrl = CSP_REPORT_PATH;
   const policy = [
     "default-src 'self'",
     "script-src 'self'",
@@ -56,33 +58,29 @@ export function getPreviewCspHeaders(
   ];
 }
 
-function getPreviewOrigin(vercelUrl: string | undefined): string | null {
+function isValidPreviewHost(vercelUrl: string | undefined): boolean {
   if (
     !vercelUrl ||
     vercelUrl.length > 253 ||
     vercelUrl !== vercelUrl.trim() ||
     /[\\/?#@]/.test(vercelUrl)
   ) {
-    return null;
+    return false;
   }
 
   try {
     const parsed = new URL("https://" + vercelUrl);
-    if (
-      parsed.protocol !== "https:" ||
-      parsed.username ||
-      parsed.password ||
-      parsed.port ||
-      parsed.pathname !== "/" ||
-      parsed.search ||
-      parsed.hash ||
-      parsed.hostname.toLowerCase() !== vercelUrl.toLowerCase()
-    ) {
-      return null;
-    }
-
-    return parsed.origin;
+    return (
+      parsed.protocol === "https:" &&
+      !parsed.username &&
+      !parsed.password &&
+      !parsed.port &&
+      parsed.pathname === "/" &&
+      !parsed.search &&
+      !parsed.hash &&
+      parsed.hostname.toLowerCase() === vercelUrl.toLowerCase()
+    );
   } catch {
-    return null;
+    return false;
   }
 }
