@@ -507,13 +507,13 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     try {
       const sender = getEmailSender();
-      sender.send({
+      await sender.send({
         to: result.email,
         templateId: "password_reset",
         params: {
-          url: `${appUrl}/en/forgot-password?token=${result.rawToken}`
+          url: `${appUrl}/en/forgot-password?token=${encodeURIComponent(result.rawToken)}`
         }
-      }).catch((e) => console.error("Email send async error", e));
+      });
     } catch(e) {
       console.error("Email sender creation error", e);
     }
