@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current `main` at `9ac5fe0`; 20 remain Not started. The ledger records 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The historical project-wide Wave 0 inventory remains incomplete, but [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md) retires it as a universal prerequisite; each new task still requires explicit approval, exact-base revalidation, directly relevant dependencies, applicable safeguards, and separate authorization. No task or wave is authorized by this status line alone.
+**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current main at 9ac5fe0; 20 remain Not started. The PR #139 ledger records 62 Confirmed, 4 Verified complete, 4 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. SCR-002 is implemented with verification pending under explicit user approval. The historical project-wide Wave 0 inventory remains incomplete, but WAVE0_POLICY_SUPERSESSION.md retires it as a universal prerequisite; each new task still requires explicit approval, exact-base revalidation, directly relevant dependencies, applicable safeguards, and separate authorization.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -16,12 +16,12 @@
 |---|---:|
 | Individual finding records | 97 |
 | Findings revalidated against current `main` | 77 |
-| Findings approved for implementation (cumulative) | 3 |
-| Findings with implementation started (cumulative) | 3 |
+| Findings approved for implementation (cumulative) | 4 |
+| Findings with implementation started (cumulative) | 4 |
 | Findings with verified implementation complete | 4 |
-| Findings implemented — verification pending | 3 |
+| Findings implemented — verification pending | 4 |
 | Findings blocked / historical-only | 3 |
-| Findings with confirmed issues | 63 |
+| Findings with confirmed issues | 62 |
 | Findings already fixed in repository | 1 |
 | Findings needing a product/security decision | 3 |
 | Findings not started | 20 |
@@ -76,7 +76,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At `main@9ac5fe0`, 77 of 97 findings have been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The remaining 20 findings are Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. The historical project-wide Wave 0 exit condition remains incomplete; under [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md), it is not a universal prerequisite for independently approved, task-specific remediation.
+The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At main@9ac5fe0, 77 of 97 findings had been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked; 20 remained Not started. PR #139 moves SCR-002 from Confirmed to Implemented — verification pending. The current 97-row ledger therefore records 62 Confirmed, 4 Verified complete, 4 Implemented — verification pending, 1 Already fixed, 3 Needs decision, 3 Blocked, and 20 Not started. VER-005 and VER-006 remain historical-only and DO NOT RUN; VER-013 is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. The historical project-wide Wave 0 exit condition remains incomplete; under WAVE0_POLICY_SUPERSESSION.md, it is not a universal prerequisite for independently approved, task-specific remediation.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -120,7 +120,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [PUB-005](./findings/038-PUB-005.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [PUB-006](./findings/039-PUB-006.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [SCR-001](./findings/040-SCR-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; registry/verifier/matrix tests; live enforcement unknown |
-| [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
+| [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | — | PR #139; main@a9f22b6 revalidation; synchronized base pending|
 | [SCR-003](./findings/042-SCR-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SCR-004](./findings/043-SCR-004.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SCR-005](./findings/044-SCR-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
@@ -724,6 +724,73 @@ The project is complete only when every in-scope finding is either verified comp
 - All 23 PR review threads have been answered and are resolved. The separate `Vercel – oxenn` status remains a build-rate-limit failure; no deployment success is claimed.
 - At this checkpoint the branch is 88 commits ahead and 24 behind `main`; no base-branch synchronization was performed as part of this review request. PR #136 remains open and unmerged. No production database, schema migration, or deployment occurred.
 
+### SCR-002 scoped implementation — 2026-11-13
+
+- Date/time: 2026-11-13T15:40:52.699Z (UTC); repository: `DiabloNova/oxenn`; branch: `investigation/041-scr-002-review-2026-11-13`.
+- User authorization: the user explicitly instructed that the Wave 0 restrictions be ignored for this task. This authorization is applied only to SCR-002. The project-wide Wave 0 status remains incomplete; the 20 Not started findings, historical-only VER-005/VER-006 restrictions, and every other finding disposition remain unchanged.
+- Revalidation base: `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`. Working branch head before this tracker update: `081a7a00c91c605ecc87fe9eff0339a7c9581d72`. The branch was already current with main before implementation; main was not modified.
+- Root cause reconfirmed: the prior Workspace db:push guard trusted the general `DATABASE_URL`, hostname substring checks, operator booleans, and a table-only count. The ordinary Drizzle configuration also supplied a privileged local fallback. The Platform Admin control plane already uses its own separate URL variables, config, guard, migration runner, and migration folder; those remain unchanged.
+- Files changed for this scoped implementation: `scripts/database/db-push-targets.ts`, `scripts/database/db-push-guard.ts`, `drizzle.config.ts`, `drizzle.push.config.ts`, `package.json`, `.env.example`, `scripts/env-check.ts`, `tests/unit/scripts/database/db-push-guard.test.ts`, deletion of `tests/scripts/database/db-push-guard.test.ts`, and `ai_tasks/problem-register/findings/041-SCR-002.md`.
+- Implementation: the approved disposable-target registry is empty by default; db:push now requires a dedicated target ID and URL matching a reviewed registry entry, an independent database comment attestation, a separate database owner, a non-privileged push role, exact extensions, and an empty user-object inventory. The guard refuses configured targets that match either Workspace or Platform Admin database URLs. Drizzle's ordinary config is schema-only; the dedicated push config is only used after the package-script guard.
+- Related finding boundaries: RF-004's unsafe fallback was removed because it formed part of the db:push bypass surface; RF-004 is not marked complete and retains its separate acceptance criteria. DB-002 migration files and migration history were not changed.
+- Tests added: focused Vitest coverage for no registered target, missing/mismatched configuration, production markers, all configured database URL collisions, remote TLS, catalog identity/attestation, role privileges, object inventory, extensions, connection/query/cleanup failure, and credential redaction. The prior self-running test file outside Vitest's configured include paths was removed.
+- Commands/tests: local clone and test execution were **not run successfully**. The container could not resolve `github.com` during `git clone`; no `pnpm` command was executed. CI has not yet been triggered at this entry. No test is claimed as passing.
+- Database safety: no database was provisioned, connected, queried, migrated, pushed, or modified. The guard uses mocked catalog responses in its tests. No production or Platform Admin credentials were supplied to a command.
+- Open verification/risk: review the complete diff, validate TypeScript/Vitest behavior in GitHub CI, and inspect any CI failures before treating the finding as fixed. Drizzle Kit supports explicit CLI URL options; a user who already possesses another database credential can bypass a repository wrapper by manually invoking the vendor CLI with those credentials. This cannot be fully enforced by the wrapper alone; runtime/production credentials must remain unavailable to developer/test command environments, and the future disposable push role must be restricted at the database/network layer.
+- Status transition: SCR-002 `Confirmed` → `In progress`. Wave 0 remains **PARTIAL**. Next permitted action: complete diff review and run branch CI; do not merge or run db:push against a live target.
+
+
+### SCR-002 implementation review follow-up — 2026-11-13
+
+- Date/time: 2026-11-13T15:45:10.555Z (UTC); repository: `DiabloNova/oxenn`; branch: `investigation/041-scr-002-review-2026-11-13`.
+- Base remains `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`; branch head before this tracker entry: `fc88315754cd5a9733844d1cf662e8ce04d558c0`. Compare confirms the branch is not behind `main`; `main` remains unchanged.
+- Review refinements since the preceding SCR-002 log: the guard's CLI entry point now checks that CommonJS `require` exists before referencing it, so importing the module from Vitest or the Drizzle config remains safe in ESM; all non-development/non-test deployment markers (including Vercel preview and staging) are rejected; the dedicated push URL format rule was corrected; the remote TLS test now uses an explicit URL; and `.env.example` explains that Workspace runtime credentials and controlled migration credentials have different purposes.
+- The progress metric table's line break was corrected; Finding Ledger counts and the incomplete Wave 0 status remain unchanged.
+- Files changed in this follow-up: `scripts/database/db-push-guard.ts`, `scripts/env-check.ts`, `tests/unit/scripts/database/db-push-guard.test.ts`, and `.env.example`.
+- Verification: no local TypeScript, lint, or Vitest command has run. The container still cannot resolve `github.com`; GitHub CI is pending creation of the draft PR. No result is represented as passing.
+- Database and architecture boundary: no database connection or mutation occurred. Platform Admin configuration and migration files remain untouched; Workspace and Platform Admin URL aliases are both rejected by the Workspace push guard.
+- Status remains **In progress**. Wave 0 remains **PARTIAL** under the user's one-finding SCR-002 exception; this does not authorize any other finding or merge.
+
+
+### SCR-002 branch CI verification — 2026-11-13
+
+- Date/time: 2026-11-13T15:49:07.396Z (UTC); repository: `DiabloNova/oxenn`; branch: `investigation/041-scr-002-review-2026-11-13`; tested head: `a94514f3bcaab058136d613c4280410f863528bf`.
+- GitHub Actions run [#43455799422](https://github.com/DiabloNova/oxenn/actions/runs/43455799422) completed with conclusion **success**. The Isolation Suite, Unit Tests, and Build and Test jobs all succeeded.
+- The new focused guard suite was discovered and executed: `tests/unit/scripts/database/db-push-guard.test.ts` — 34 tests passed. Unit project summary: 75 test files passed, 1 skipped; 570 tests passed and 1 todo. UI project: 4 test files, 33 tests passed.
+- Build and Test completed successfully through dependency audit, audit-gate regression tests, typecheck, lint, tenant-table verifier, RLS migration verifier, baseline/documentation verification, Drizzle migration-chain check, app build, Reference Matrix build, and generated-file no-drift check.
+- DeepSource Secrets check succeeded. Vercel check failed with its explicit `build-rate-limit` status URL; no code compilation failure was reported by the successful GitHub Build job. The Vercel status remains an external outstanding PR check.
+- Database qualification: the new SCR-002 tests use mocked catalog responses and did not connect to PostgreSQL. The repository's pre-existing CI Isolation Suite started a temporary PostgreSQL 16 service container, applied the normal Workspace migration chain, then passed 677 assertions across 56 tenant tables; this service was scoped to that CI job and removed afterward. No persistent, production, or Platform Admin database was provisioned, attached, or accessed. The CI run did not execute `db:push`.
+- No test validates a real, registered disposable target because the repository's reviewed target registry is intentionally empty and no such Workspace database has been provisioned. The command remains blocked by default.
+- Status transition: SCR-002 `In progress` → **`Implemented — verification pending`**. This is branch CI evidence only; no post-merge CI has run, the Vercel quota status remains outstanding, and the PR remains draft/open/unmerged. Wave 0 remains **PARTIAL** under the single-finding user authorization.
+- Next safe action: retain the draft PR for review and resolve the Vercel quota or explicitly accept the external check limitation; do not merge or provision/connect a database as part of this change.
+
+
+
+### SCR-002 role-membership hardening — 2026-11-13
+
+- Date/time: 2026-11-13T15:52:58.137Z (UTC); branch: `investigation/041-scr-002-review-2026-11-13`; code head introducing the hardening: `51cbf6fa108a514db7785ddd818e350c87a6c6f6`.
+- Final security review found that rejecting only membership in the database-owner role did not rule out membership in other privileged PostgreSQL roles. The guard now inventories every role membership of the dedicated push login and rejects any non-empty or malformed result; the account must have no inherited/assumable role memberships at all.
+- Files changed: `scripts/database/db-push-guard.ts`, `tests/unit/scripts/database/db-push-guard.test.ts`, and `ai_tasks/problem-register/findings/041-SCR-002.md`.
+- Added unit coverage for privileged-role membership, arbitrary memberships, and missing/malformed catalog values. The focused guard suite now contains 38 tests (previously 34).
+- The role-membership version passed the Unit Tests job (including the 38-test guard suite) in run [#43456872919](https://github.com/DiabloNova/oxenn/actions/runs/43456872919); its Build and Test and Isolation Suite jobs were cancelled by a subsequent push. The current full CI run [#43457074191](https://github.com/DiabloNova/oxenn/actions/runs/43457074191) was started for the following progress-log head, and another run will be triggered by the latest documentation correction. The current head still requires a fresh successful full CI result before verification can advance.
+- The `db:push` registry remains empty; no target was provisioned or connected. The change only adds SQL query text and mocked tests; no database was accessed by this hardening.
+- Status remains **Implemented — verification pending**. Vercel previously failed with its external `build-rate-limit` response; no merge or post-merge CI is claimed. Wave 0 remains **PARTIAL**, and the user authorization remains scoped to SCR-002 only.
+
+
+
+### SCR-002 final branch verification — 2026-11-13
+
+- Date/time: 2026-11-13T16:00:19.613Z (UTC); repository: `DiabloNova/oxenn`; branch: `investigation/041-scr-002-review-2026-11-13`. The latest implementation source and configuration were tested at `216bb2be0b9ec6f8d67e16ef03c274a2f93eccaa` against `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`; the subsequent `5b641389ce85734dc0b48a4009a113ca4c006693` commit only updated the Finding's verification evidence.
+- GitHub Actions run [#43457642077](https://github.com/DiabloNova/oxenn/actions/runs/43457642077) completed **success** for all three jobs: Unit Tests, Isolation Suite, and Build and Test.
+- Focused SCR-002 guard suite: **38 tests passed**. Unit project: **75 files passed, 1 skipped; 574 tests passed, 1 todo**. UI project: **4 test files, 33 tests passed**.
+- Isolation Suite: **success** using a temporary PostgreSQL 16 CI service; 56 tenant tables and 677 assertions passed. This existing CI job applies the regular Workspace migration chain to its isolated service; the SCR-002 guard suite itself uses mocked catalog rows and does not connect. No persistent or production database is attached or modified.
+- Build and Test: **success** for dependency audit, audit-gate tests, typecheck, lint (0 errors, 209 warnings), tenant/RLS checks, documentation consistency, Drizzle migration-chain validation, application build, Reference Matrix generation, and generated-file no-drift check.
+- DeepSource Secrets: **success** on tested head. Vercel: **failure** with the explicit external `build-rate-limit` response; it remains an outstanding check unrelated to the successful GitHub application build.
+- No `db:push` command was executed. No live disposable target was validated because the positive target registry remains intentionally empty. No production or Platform Admin database was connected or modified.
+- PR #139 remains draft, open, mergeable, and unmerged. No post-merge `main` CI evidence exists. SCR-002 status remains **Implemented — verification pending**, not Verified complete, pending the external Vercel check disposition and post-merge verification.
+- Wave 0 remains **PARTIAL**. The user's explicit exception authorizes only SCR-002; it does not update or waive the remaining 20 Not started findings or the historical-only VER-005/VER-006 restrictions.
+
+
 ### Policy sequencing update — 2026-11-14 UTC
 
 - PR #140 updates the remediation entry policy: completion of the full 97-finding Wave 0 inventory is no longer a universal prerequisite for an independently approved, narrowly scoped task.
@@ -731,3 +798,13 @@ The project is complete only when every in-scope finding is either verified comp
 - Every new task still requires explicit user approval, exact-base-commit revalidation of the selected finding and relevant code, directly applicable dependency checks, preservation of architecture/security/data-safety invariants, and all task-specific safeguards.
 - `VER-005` and `VER-006` remain permanently DO NOT RUN. Production database operations, destructive actions, deployments, external-provider/payment side effects, and PR merge/close actions remain separately approval-gated.
 - Files changed in this policy update: `AI_REMEDIATION_AGENT_PROMPT.md`, `IMPLEMENTATION_SEQUENCE.md`, `WAVE0_POLICY_SUPERSESSION.md`, `README.md`, and this tracker. No finding disposition or verification claim is changed by this policy update.
+
+
+### PR #139 review follow-up and pre-sync CI — 2026-11-14
+
+- The six open review threads were rechecked against the current source and tests. The connection parser rejects query-driven destination overrides, duplicate query keys, TLS downgrades, and unreviewed driver options; regression cases cover host override, duplicate sslmode, sslmode=disable, and application_name. Database identity comparison uses a separate parser so unrelated configured URLs using passwordless local auth or sslmode=require are not forced through disposable-target connection policy; ambiguous destination overrides still fail closed.
+- The invocation-marker reader uses lstat and rejects symlinked markers, broad file/directory permissions, incorrect ownership, expired/future timestamps, malformed payloads, and mismatched target/connection identity. Tests cover symlink, group/world-readable permissions (skipped on Windows), and issuedAt more than five seconds in the future. Symlink and permission tests now assert the shared generic fail-closed marker error while preserving diagnostic causes.
+- GitHub Actions CI run #43562324178 completed successfully on exact pre-sync PR head 1adbea1741b765b1a421b18ae4caa9897df14952 (run #891): Unit Tests, Isolation Suite, and Build and Test all passed. This run predates the additional assertion strengthening and base synchronization; fresh CI is required on the resulting branch head.
+- The previously recorded Vercel Preview deployment dpl_7Emk4emWyEnkLpAxQbvej3QhEJZh and READY (STAGED) state apply only to 50aa30278ace210d5ede661e149441772ef3e648, not the pre-sync head 1adbea1741b765b1a421b18ae4caa9897df14952. The passing Vercel Preview Comments check on the latter is not a deployment-success claim.
+- At this checkpoint PR #139 targeted main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf, current main was 7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6 (after PR #140), and the branch was 39 commits ahead / 146 behind. A three-way comparison found only ai_tasks/problem-register/REMEDIATION_PROGRESS.md modified on both sides. The upcoming sync preserves the latest-main policy/history plus the SCR-002 branch work; it does not merge PR #139 into main.
+- SCR-002 remains Implemented — verification pending. Branch CI is not post-merge verification. No live disposable target was provisioned or used, and no production, Platform Admin, or persistent database was accessed or modified. Wave 0 remains historically incomplete but is no longer a universal prerequisite under PR #140 policy; the approval remains scoped to SCR-002 only.

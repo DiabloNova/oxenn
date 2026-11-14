@@ -35,17 +35,24 @@ const RULES: VarRule[] = [
   },
   {
     name: "ALLOW_DB_PUSH",
-    modes: ["dev", "migrate", "test"],
+    modes: ["dev", "test"],
     required: false,
     format: /^(true|false)$/,
     formatDescription: "must be 'true' or 'false'",
   },
   {
-    name: "DISPOSABLE_DB",
-    modes: ["dev", "migrate", "test"],
+    name: "DB_PUSH_TARGET_ID",
+    modes: ["dev", "test"],
     required: false,
-    format: /^(true|false)$/,
-    formatDescription: "must be 'true' or 'false'",
+    format: /^[a-z0-9][a-z0-9-]{0,63}$/,
+    formatDescription: "must be a lowercase reviewed target ID (1-64 letters, numbers, or hyphens)",
+  },
+  {
+    name: "DB_PUSH_DATABASE_URL",
+    modes: ["dev", "test"],
+    required: false,
+    format: /^postgres(ql)?:\/\/.+/,
+    formatDescription: "must be a PostgreSQL connection URL if provided",
   },
   {
     name: "NEXT_PUBLIC_API_URL",
@@ -103,7 +110,7 @@ export function validateEnv(modeArg?: string) {
   for (const rule of activeRules) {
     const val = process.env[rule.name];
 
-    if (!val) {
+    if (!val?.trim()) {
       if (rule.required) {
         missing.push(rule.name);
       }
@@ -115,6 +122,17 @@ export function validateEnv(modeArg?: string) {
         name: rule.name,
         reason: rule.formatDescription || "invalid format",
       });
+    }
+  }
+
+  if (mode === "dev" || mode === "test") {
+    if (process.env.ALLOW_DB_PUSH === "true") {
+      if (!process.env.DB_PUSH_TARGET_ID?.trim()) {
+        missing.push("DB_PUSH_TARGET_ID");
+      }
+      if (!process.env.DB_PUSH_DATABASE_URL?.trim()) {
+        missing.push("DB_PUSH_DATABASE_URL");
+      }
     }
   }
 
