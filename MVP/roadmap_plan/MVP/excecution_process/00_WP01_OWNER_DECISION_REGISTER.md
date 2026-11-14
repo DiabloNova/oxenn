@@ -1,6 +1,6 @@
 # MVP-00 WP-01 — Owner Decision Register
 
-**Status:** IN PROGRESS — decision inventory and evidence reconciliation complete; owner approvals remain outstanding  
+**Status:** IN PROGRESS — owner-approved recommendation directions recorded; specific pilot, commercial, legal, provider and operating choices remain open  
 **Repository:** `DiabloNova/oxenn`  
 **Execution branch:** `MVP_00`  
 **Baseline main:** `326403812756b815f5d9a7dc77e29097ff7dd6b0`  
@@ -272,7 +272,42 @@ WP-01 cannot be marked complete until each decision blocking the next authorized
 
 **WP-01 disposition:** `PARTIAL — evidence inventory and decision recommendations prepared; owner approvals pending`. No implementation authorization is created by this document.
 
-## 8. Source links
+## 9. Owner disposition — 2026-11-14
+
+**Approver:** Product owner (explicit approval in the project conversation on 2026-11-14).
+**Approval scope:** The owner approves the expert recommendations already written in this register as the default planning and design directions for downstream work. This approval does not invent missing numeric values, grant third-party permissions, constitute legal/privacy review, activate providers, or authorize implementation. The recommendations below are adopted as direction; the remaining specific choices listed under each item stay OPEN until explicitly decided or independently approved by the proper authority.
+
+**Disposition precedence:** This section supersedes the pre-approval status snapshot in Section 7. The earlier checklist remains a record of the state before this owner response; the specific-value and specialist-approval gates below remain open.
+
+| Decision | Approved planning direction | Still open / not implied by this approval |
+|---|---|---|
+| D-001 | Staged pilot, beginning with one focused segment and an explicit expansion gate. | Initial segment, eligibility/recruitment, sample size and gate values. |
+| D-002 | Retain Iran as the leading strategic candidate; verify operational, legal and provider feasibility before fixing the pilot geography. | Final country/regions, languages/locales, currency/display convention, timezone and exclusions. Persian-first remains a proposal, not a selected launch locale. |
+| D-003 | Hybrid measurement: share only permitted/provenanced raw observations; retain service-specific metric ownership and deduplicate observations. | Exact metric names/formulas, units, denominators, owners, sampling and surface exclusions. |
+| D-004 | Staged source/provider policy; only explicitly authorized sources and acquisition modes may be enabled. | Per-source allowlist, legal basis/consent, terms, coverage, retention, freshness, rates/costs, failure policy and provider selection. |
+| D-005 | Define service-by-service value and entitlement contracts before committing to billing/overage; do not guess prices or payment provider. | SKU versions, free/trial/paid choices, prices, billing period, quotas, overage, renewal, cancellation/refund and legal terms. |
+| D-006 | No first-pilot bundle launch until standalone services and their usage accounting are coherent; if later offered, preserve auditable per-service entitlements and allocation. | Whether/when to launch, composition, price and allocation. |
+| D-007 | Phased PAI common core with explicit Offer-nature extensions; do not make PAI a prerequisite for standalone services. | Pilot Offer-nature coverage, minimum PIP fields, dimensions, outputs, evidence threshold and exclusions. |
+| D-008 | Hybrid evidence/confidence policy; no universal confidence score; expose conflicts, freshness and uncertainty. | Metric/source-specific confidence semantics, formulas, freshness thresholds, sample sufficiency and contradiction rules. |
+| D-009 | Smallest safe Workspace role model that supports the pilot; roles must map to concrete permissions and audit events. | Member model, exact roles/capabilities, invitation limits, ownership transfer and approval authority. |
+| D-010 | Independent service-specific contracts and evidence-backed launch criteria; UI/mock/package presence is not readiness evidence. | Exact inputs/outputs, metrics, supported surfaces, coverage thresholds, partial-state rules and release thresholds. |
+| D-011 | Establish safety/quality gates before pilot; set numeric outcome targets only after baseline and initial distributions are measured. | KPI set, baseline method, measurement windows, sample expectations and stop/go authority. |
+| D-012 | Start with auditable manual planning/task workflow; reminders only after consent/notification policy; no autonomous consequential execution. | Task lifecycle, assignment, reminder channels/cadence, scheduling, effort/cost capture and approval roles. |
+| D-013 | Use evidence-backed dimension scores with explicit applicability; aggregate only where weighting, normalization and benchmark cohort are defensible and versioned. | Dimensions, weighting, normalization, comparison cohort, versioning and confidence disclosure. |
+| D-014 | Manual/customer-provided evidence is acceptable initially; add integrations only when pilot-critical, authorized and cost-justified. | Launch-critical platforms/integrations, permissions and exclusions. |
+| D-015 | Separate conservative technical safety ceilings from customer-facing SKU quotas; derive commercial quotas from measured cost/value. | Offer limits, quota units/quantities, acquisition budgets and overage/escalation policy. No numeric limits approved. |
+| D-016 | Apply data minimization, purpose limitation, least collection and source/data-class-specific retention with deletion/revocation paths. | Exact retention periods, consent/privacy wording, processing roles and qualified legal/privacy review. |
+| D-017 | Apply service-by-service readiness gates; only observed, authorized combinations may be called supported; mocks never substitute for live evidence. | Supported service/surface/locale matrix and acceptable beta/partial labeling. |
+
+### Approval boundary and next action
+
+- This approval adopts the recommendations as planning principles; it does **not** close D-001–D-017 wholesale.
+- The highest-impact owner selections still needed before WP-01 exit are: (1) initial pilot segment and eligibility; (2) final operating geography/locale/currency/timezone; (3) metric definitions/ownership and supported service scope; (4) first-pilot commercial/free-trial and bundle direction; (5) PAI pilot Offer-nature coverage; and (6) pilot role/approval model.
+- Source/provider permissions, exact retention and privacy wording, and legal requirements require evidence and the appropriate specialist approval; the product-owner approval here does not grant those permissions.
+- Exact prices, numeric quotas/budgets, sample sizes, confidence thresholds and outcome targets remain evidence-gated. No payment/provider account, schema, migration or implementation is authorized by this disposition.
+- **WP-01 remains PARTIAL.** Do not begin WP-02 implementation or mark MVP-00 complete until the blocking owner choices and evidence/policy approvals are explicitly resolved and the owner separately authorizes the handoff.
+
+## 10. Source links
 
 - [MVP-00 governance contract](../roadmap/00-product-decisions-and-delivery-governance.md)
 - [Owner-approved MVP Product Specification](../../../../docs/product/OXENN_MVP_PRODUCT_SPECIFICATION.md)

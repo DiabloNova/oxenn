@@ -486,3 +486,11 @@ Do not rewrite or reorder prior entries. Append a new entry for every material a
 - [Product Strategy v2 — Stele DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
 - [Independent service access — Stele KNOW-25](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-25)
 - [Authenticated service access — Stele KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)
+
+
+### 2026-11-14 — Owner approval of WP-01 recommendation directions
+
+- The owner explicitly approved the expert recommendations already documented in D-001–D-017 as default planning/design directions. This approval is limited to the recommendations; it does not silently choose unresolved values or grant legal, privacy, provider or third-party permissions.
+- Recorded the per-decision disposition and remaining open choices in [00_WP01_OWNER_DECISION_REGISTER.md](./00_WP01_OWNER_DECISION_REGISTER.md). Adopted directions include staged pilot; Iran retained only as the leading candidate pending feasibility; hybrid, service-owned metrics; staged permission-aware sources; deferred ungrounded prices/quotas; no early bundle before standalone coherence; phased optional PAI; hybrid evidence confidence; minimum safe Workspace roles; evidence-backed service gates; baseline-first KPI thresholds; manual auditable workflows; dimension-level scoring; manual-first integrations; separate safety ceilings and commercial quotas; data-class-specific privacy controls; and service-by-service readiness.
+- Explicitly retained unresolved owner choices for pilot segment, operating locale, metric definitions, source allowlist/legal basis, commercial terms, PAI Offer coverage, role capabilities, launch surfaces, KPIs, numeric limits, retention periods and legal review.
+- WP-01 remains **PARTIAL**. No WP-02 work, code, schema, migration, provider/payment connection, deployment, PR, merge, or main-branch change is authorized by this approval.
