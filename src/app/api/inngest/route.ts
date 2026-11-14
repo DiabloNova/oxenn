@@ -1,6 +1,6 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
-import { freeAuditRateLimitCleanup, helloWorld, scheduledMonitoring } from "@/lib/inngest/functions";
+import { freeAuditRateLimitCleanup, helloWorld, scheduledMonitoring, processEmailOutbox, recoverEmailOutbox } from "@/lib/inngest/functions";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -8,5 +8,7 @@ export const { GET, POST, PUT } = serve({
     helloWorld,
     scheduledMonitoring,
     freeAuditRateLimitCleanup,
+    processEmailOutbox,
+    recoverEmailOutbox,
   ],
 });

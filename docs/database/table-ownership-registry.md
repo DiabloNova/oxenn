@@ -25,8 +25,8 @@ status distinguishes current schema contracts from legacy records and unresolved
 
 ## Inventory coverage
 
-- Workspace schema: 70 tables, all declared in database/schema/index.ts or its canonical organization-table.ts and api-keys.ts exports.
-- Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 5 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
+- Workspace schema: 71 tables, all declared in database/schema/index.ts or its canonical organization-table.ts and api-keys.ts exports.
+- Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 5 USER_OWNED, 4 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
 - Platform Admin schema: 7 tables in database/platform-admin/schema/index.ts, backed by its own database, configuration, migration directory, and migration history.
 - The Platform Admin Drizzle migration ledger is infrastructure metadata, not an application table, and is not included in the seven-table application inventory.
 - database/schema/_legacy/ is quarantined and is not an authoritative schema source.
@@ -44,10 +44,10 @@ The other four Stage 1 review entries now have evidence-backed Workspace-global 
 - audit_records is the Workspace privileged audit stream written through system context and read by the Workspace admin persistence adapter; it is distinct from platform_admin_audit_events.
 - roles and permissions are frozen legacy Workspace-global catalogs; the schema explicitly identifies organization_members.role as the current authorization source.
 
-The schema also contains platform configuration tables and a shared AI-engine catalog. Their entries explain the evidence and any embedded-field caveats. In particular, feature_flags.tenant_overrides is an embedded payload, not a row-level tenant isolation boundary.
+The schema also contains platform configuration tables, the encrypted email_outbox delivery queue, and a shared AI-engine catalog. email_outbox is PLATFORM_OWNED because it is delivery infrastructure rather than user- or organization-owned application data. Their entries explain the evidence and any embedded-field caveats. In particular, feature_flags.tenant_overrides is an embedded payload, not a row-level tenant isolation boundary.
 
 ## Stage boundary
 
 SCR-001 Stage 2 integrates the explicit registry into verify-tenant-tables.ts, verify-rls-migrations.ts, and build-reference-matrix.ts. Unknown tables now fail closed instead of falling back to a column-marker classifier. Only ORGANIZATION_SCOPED entries feed the generated TENANT_SCOPED_TABLES runtime inventory and tenant RLS/migration checks. Other explicit scopes remain distinct in the Reference Matrix. UNRESOLVED is reported as unresolved and is not presented as Global or as having verified RLS applicability.
 
-Runtime authorization code and its tenant-context enforcement are not changed. The generated tenant table list is still the organization-scoped subset only. No RLS policies, migrations, database connections, or Platform Admin activation are changed by this stage.
+The privileged-path registry is extended with the narrowly scoped sys-email-outbox purpose; email_outbox remains outside the generated tenant-scoped table inventory. Migration 0016 adds this platform-owned table without enabling RLS or changing Platform Admin. No production database connection is used and no migration is applied to a live database by this code change.

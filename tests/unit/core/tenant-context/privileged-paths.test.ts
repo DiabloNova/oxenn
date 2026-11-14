@@ -29,6 +29,16 @@ describe("Privileged Paths Registry Test Suite", () => {
     });
   });
 
+  it("registers email outbox access with a dedicated narrow system purpose", () => {
+    expect(PRIVILEGED_PATHS_REGISTRY["sys-email-outbox"]).toMatchObject({
+      allowedTables: ["email_outbox", "email_verification_tokens", "password_reset_tokens", "users"],
+      callerModules: ["src/services/email/outbox.ts"],
+      status: "in-use",
+    });
+    expect(PRIVILEGED_PATHS_REGISTRY["sys-register"].allowedTables).toContain("email_outbox");
+    expect(PRIVILEGED_PATHS_REGISTRY["sys-login"].allowedTables).toContain("email_outbox");
+  });
+
   it("throws TenantContextViolationException for unregistered purpose tag", async () => {
     await expect(async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

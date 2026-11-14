@@ -1,5 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ProductionEmailSender } from "@/services/email/adapters";
+import { DevEmailSender, ProductionEmailSender } from "@/services/email/adapters";
+
+describe("DevEmailSender", () => {
+  it("redacts recipient addresses and authentication tokens from development logs", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      const rawToken = "sensitive-authentication-token";
+      await new DevEmailSender().send({
+        to: "private.user@example.com",
+        templateId: "password_reset",
+        params: { url: "https://oxenn.ir/en/forgot-password?token=" + rawToken },
+      });
+      const output = JSON.stringify(logSpy.mock.calls);
+      expect(output).not.toContain("private.user@example.com");
+      expect(output).not.toContain(rawToken);
+      expect(output).toContain("REDACTED");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});
 
 describe("ProductionEmailSender", () => {
   beforeEach(() => {

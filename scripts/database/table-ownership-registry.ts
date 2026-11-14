@@ -33,7 +33,7 @@ function organizationScoped(
       "introduce a multi-organization product model.",
     evidence: [
       schemaPath + ": " + marker + " references organizations.id",
-      "database/drizzle/meta/0015_snapshot.json: canonical Workspace snapshot",
+      "database/drizzle/meta/0016_snapshot.json: canonical Workspace snapshot",
     ],
   };
 }
@@ -45,7 +45,7 @@ function userOwned(rationale: string, schemaObject: string): TableOwnershipEntry
     rationale,
     evidence: [
       "database/schema/index.ts: " + schemaObject,
-      "database/drizzle/meta/0015_snapshot.json: canonical Workspace snapshot",
+      "database/drizzle/meta/0016_snapshot.json: canonical Workspace snapshot",
     ],
   };
 }
@@ -72,7 +72,7 @@ function workspaceGlobal(
     scope: "WORKSPACE_GLOBAL",
     status,
     rationale,
-    evidence: ["database/schema/index.ts: " + schemaObject, ...evidence, "database/drizzle/meta/0015_snapshot.json: canonical Workspace snapshot"],
+    evidence: ["database/schema/index.ts: " + schemaObject, ...evidence, "database/drizzle/meta/0016_snapshot.json: canonical Workspace snapshot"],
   };
 }
 
@@ -100,7 +100,7 @@ const workspaceOwnership = {
     evidence: [
       "database/schema/index.ts: aiEngines",
       "database/schema/index.ts: aiObservations.engineId references aiEngines.id",
-      "database/drizzle/meta/0015_snapshot.json: canonical Workspace snapshot",
+      "database/drizzle/meta/0016_snapshot.json: canonical Workspace snapshot",
     ],
   },
   ai_observations: organizationScoped("organization_id"),
@@ -138,6 +138,10 @@ const workspaceOwnership = {
   diagnostic_finding_relationships: organizationScoped("organization_id"),
   diagnostic_findings: organizationScoped("organization_id"),
   document_embeddings: organizationScoped("tenant_id"),
+  email_outbox: platformOwned(
+    "Encrypted authentication-email payloads and delivery state are shared platform queue data. User ownership is retained by user_id for lifecycle cleanup, but application access is routed through the authentication transaction and dedicated outbox worker system-context paths.",
+    "emailOutbox",
+  ),
   email_verification_tokens: userOwned(
     "Each token belongs to one user through its required user_id foreign key; it is an authentication artifact for that identity.",
     "emailVerificationTokens.userId references users.id",
@@ -163,7 +167,7 @@ const workspaceOwnership = {
     scope: "ORGANIZATION_SCOPED",
     status: "current",
     rationale: "Root table referenced by the existing organization_id and tenant_id foreign keys. This records the current schema relationship only and is not a product decision to support multiple organizations.",
-    evidence: ["database/schema/organization-table.ts: organizations", "database/drizzle/meta/0015_snapshot.json: canonical Workspace snapshot"],
+    evidence: ["database/schema/organization-table.ts: organizations", "database/drizzle/meta/0016_snapshot.json: canonical Workspace snapshot"],
   },
   pages: organizationScoped("organization_id"),
   pages_entities: organizationScoped("organization_id"),

@@ -5,14 +5,14 @@ import { createSession, invalidateSession, getSession } from "@/services/auth/se
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { randomUUID } from "crypto";
 import crypto from "crypto";
-import { getEmailSender } from "@/services/email/adapters";
 import { revokeAllForUser } from "@/services/auth/session";
 
 import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/services/auth/passwords";
 
 import { PoolClient } from "pg";
 import { headers } from "next/headers";
-import { after } from "next/server";
+import { enqueueEmailOutbox } from "@/services/email/outbox";
+import { dispatchEmailOutboxAfterResponse } from "@/services/email/outbox-dispatch";
 
 async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey: string, maxAttempts: number, windowMs: number): Promise<void> {
     const expiresAt = new Date(Date.now() + windowMs);
@@ -186,186 +186,237 @@ export async function loginAction(email: string, password: string): Promise<User
 /**
  * Registers user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<(User & { verificationEmailSent: boolean }) | { errorCode: "USER_EXISTS" | "TooManyRequests", error?: string }> {
-  if (!password || !validatePasswordRequirements(password)) {
-     throw new Error("Password must be between 10 and 255 characters");
-  }
 
-  const normalizedEmail = email.toLowerCase().trim();
-
-  const rlError = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
-      const c = TenantContextManager.getDbClient();
-      if (!c) throw new Error("Failed to get DB client in system context");
-      try {
-          await enforceRateLimit(c, 'register', `register:${normalizedEmail}`, 5, 60 * 60 * 1000);
-          return null;
-      } catch (err: unknown) {
-          if (err instanceof Error && err.message === "TooManyRequests") return "TooManyRequests";
-          throw err;
-      }
-  });
-  if (rlError === "TooManyRequests") {
-      return { error: "TooManyRequests", errorCode: "TooManyRequests" as const };
-  }
-
-  const result = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
-    const client = TenantContextManager.getDbClient();
-    if (!client) {
-        throw new Error("Failed to get DB client in system context");
-    }
-
-    // Check if user exists
-    const { rows: existingUser } = await client.query("SELECT id FROM users WHERE lower(email) = $1", [normalizedEmail]);
-    if (existingUser.length > 0) {
-        return { errorCode: "USER_EXISTS" as const };
-    }
-
-    const userId = `usr-${randomUUID()}`;
-
-    // Hash password
-    const hashResult = await hashPassword(password);
-
-    const orgId = randomUUID();
-
-    await client.query('BEGIN');
-    try {
-        // Create User
-        await client.query("INSERT INTO users (id, name, email) VALUES ($1, $2, $3)", [userId, name, normalizedEmail]);
-
-        // Create Credentials
-        await client.query(
-            "INSERT INTO user_credentials (id, user_id, password_hash, algorithm, params) VALUES ($1, $2, $3, $4, $5)",
-            [randomUUID(), userId, hashResult.hash, hashResult.algorithm, JSON.stringify(hashResult.params)]
-        );
-
-        // Create Organization (Workspace)
-        const effectiveWorkspaceName = workspaceName || `${name}'s Workspace`;
-        const orgSlug = `${effectiveWorkspaceName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${randomUUID().slice(0,4)}`;
-
-        await client.query("INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)", [orgId, effectiveWorkspaceName, orgSlug]);
-
-        // Create Membership
-        await client.query("INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, $3)", [orgId, userId, "workspace_admin"]);
-
-        await client.query('COMMIT');
-    } catch (e) {
-        await client.query('ROLLBACK');
-        throw e;
-    }
-
-    return {
-        id: userId,
-        name,
-        email,
-        role: "workspace_admin" as UserRole,
-        workspaceId: orgId,
-    };
-  });
-
-  // Registration never creates a session. Await delivery so the UI can
-  // distinguish account creation from an email that could not be sent.
-  if ("errorCode" in result && result.errorCode === "USER_EXISTS") {
-    return { errorCode: "USER_EXISTS" };
-  }
-
-  // Account creation is already committed. A follow-up verification failure must
-  // not make registration appear to fail and encourage a duplicate-account retry.
-  const verification = await requestVerification(normalizedEmail).catch(() => ({ success: false }));
-  return { ...(result as User), verificationEmailSent: verification.success };
+function createRateLimitBucket(secret: string, prefix: string, value: string): string {
+  const digest = crypto.createHmac("sha256", secret).update(value).digest("hex");
+  return prefix + ":" + digest;
 }
 
-export async function requestVerification(email: string): Promise<{ success: boolean, error?: string }> {
-  const normalizedEmail = email.toLowerCase().trim();
-
-  // Limit each requester before looking up the supplied address. Unknown addresses
-  // must never consume another person's per-address delivery allowance.
+async function enforceRequesterRateLimit(
+  endpoint: string,
+  bucketPrefix: string,
+  maxAttempts: number,
+): Promise<boolean> {
   const requestHeaders = await headers();
-  const requesterIp = requestHeaders.get("x-real-ip")?.trim();
-  if (!requesterIp) {
-    throw new Error("Unable to determine verification requester");
-  }
+  const requesterIp =
+    requestHeaders.get("cf-connecting-ip")?.trim() ||
+    requestHeaders.get("x-real-ip")?.trim() ||
+    "unknown";
   const requesterSecret = process.env.SESSION_SECRET;
-  if (!requesterSecret) {
-    throw new Error("SESSION_SECRET must be configured for verification rate limiting");
-  }
-  const requesterBucket = `verification-requester:${crypto.createHmac("sha256", requesterSecret).update(requesterIp).digest("hex")}`;
-  const requesterLimit = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+  if (!requesterSecret) throw new Error("SESSION_SECRET must be configured for authentication rate limiting");
+
+  const requesterBucket = createRateLimitBucket(requesterSecret, bucketPrefix, requesterIp);
+  return TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
     try {
-      await enforceRateLimit(client, "email-verification-requester", requesterBucket, 10, 60 * 60 * 1000);
+      await enforceRateLimit(client, endpoint, requesterBucket, maxAttempts, 60 * 60 * 1000);
+      return false;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "TooManyRequests") return true;
+      throw error;
+    }
+  });
+}
+
+async function createVerificationEmailOutbox(
+  client: PoolClient,
+  userId: string,
+  email: string,
+): Promise<string> {
+  const normalizedEmail = email.toLowerCase().trim();
+  const emailFingerprint = crypto.createHash("sha256").update(normalizedEmail).digest("hex");
+  const rawToken = crypto.randomBytes(32).toString("hex") + "." + emailFingerprint;
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  await client.query(
+    `UPDATE email_verification_tokens
+     SET consumed_at = NOW()
+     WHERE user_id = $1 AND consumed_at IS NULL`,
+    [userId],
+  );
+  await client.query(
+    `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3)`,
+    [userId, tokenHash, expiresAt.toISOString()],
+  );
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  return enqueueEmailOutbox(client, {
+    userId,
+    kind: "verification",
+    tokenHash,
+    payload: {
+      to: normalizedEmail,
+      templateId: "verification",
+      params: { url: appUrl + "/en/verify-email?token=" + encodeURIComponent(rawToken) },
+      rawToken,
+    },
+  });
+}
+
+async function createPasswordResetEmailOutbox(
+  client: PoolClient,
+  userId: string,
+  email: string,
+): Promise<string> {
+  const normalizedEmail = email.toLowerCase().trim();
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  await client.query(
+    `UPDATE password_reset_tokens
+     SET consumed_at = NOW()
+     WHERE user_id = $1 AND consumed_at IS NULL`,
+    [userId],
+  );
+  await client.query(
+    `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3)`,
+    [userId, tokenHash, expiresAt.toISOString()],
+  );
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  return enqueueEmailOutbox(client, {
+    userId,
+    kind: "password_reset",
+    tokenHash,
+    payload: {
+      to: normalizedEmail,
+      templateId: "password_reset",
+      params: { url: appUrl + "/en/forgot-password?token=" + encodeURIComponent(rawToken) },
+      rawToken,
+    },
+  });
+}
+
+export async function registerAction(
+  name: string,
+  email: string,
+  password: string,
+  workspaceName?: string,
+): Promise<(User & { verificationEmailQueued: boolean }) | { errorCode: "USER_EXISTS" | "TooManyRequests", error?: string }> {
+  if (!password || !validatePasswordRequirements(password)) {
+    throw new Error("Password must be between 10 and 255 characters");
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const rateLimitError = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+    try {
+      await enforceRateLimit(client, "register", "register:" + normalizedEmail, 5, 60 * 60 * 1000);
       return null;
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "TooManyRequests") return "TooManyRequests";
       throw error;
     }
   });
-  if (requesterLimit === "TooManyRequests") {
-    return { success: false, error: "TooManyRequests" };
+
+  if (rateLimitError === "TooManyRequests") {
+    return { error: "TooManyRequests", errorCode: "TooManyRequests" };
   }
 
-  const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+  const result = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    const { rows: userRows } = await client.query(
-      "SELECT id, email, email_verified_at FROM users WHERE lower(email) = $1 AND deleted_at IS NULL",
-      [normalizedEmail]
+    const { rows: existingUser } = await client.query(
+      "SELECT id FROM users WHERE lower(email) = $1",
+      [normalizedEmail],
     );
-    const userRecord = userRows[0];
+    if (existingUser.length > 0) return { errorCode: "USER_EXISTS" as const };
 
-    if (!userRecord || userRecord.email_verified_at) {
-      return { success: true, rawToken: undefined, email: undefined };
-    }
+    const userId = "usr-" + randomUUID();
+    const hashResult = await hashPassword(password);
+    const orgId = randomUUID();
+    const effectiveWorkspaceName = workspaceName || name + "'s Workspace";
+    const orgSlug = effectiveWorkspaceName.toLowerCase().replace(/[^a-z0-9]/g, "-") + "-" + randomUUID().slice(0, 4);
 
-    // Apply the delivery quota only after confirming that the address belongs to
-    // an unverified account. The requester quota above protects this lookup path.
-    try {
-      await enforceRateLimit(client, "email-verification", `verification:${normalizedEmail}`, 5, 60 * 60 * 1000);
-    } catch (error: unknown) {
-      if (error instanceof Error && error.message === "TooManyRequests") {
-        // Keep the response indistinguishable from an unknown or already-verified address.
-        return { success: true, rawToken: undefined, email: undefined };
-      }
-      throw error;
-    }
+    // runWithSystemContext already owns BEGIN/COMMIT/ROLLBACK. Identity,
+    // credentials, workspace, membership, verification token and outbox row commit together.
+    await client.query(
+      "INSERT INTO users (id, name, email) VALUES ($1, $2, $3)",
+      [userId, name, normalizedEmail],
+    );
+    await client.query(
+      "INSERT INTO user_credentials (id, user_id, password_hash, algorithm, params) VALUES ($1, $2, $3, $4, $5)",
+      [randomUUID(), userId, hashResult.hash, hashResult.algorithm, JSON.stringify(hashResult.params)],
+    );
+    await client.query(
+      "INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)",
+      [orgId, effectiveWorkspaceName, orgSlug],
+    );
+    await client.query(
+      "INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, $3)",
+      [orgId, userId, "workspace_admin"],
+    );
 
-    // Bind the opaque token to the address that receives it, without a schema migration.
-    const emailFingerprint = crypto.createHash("sha256").update(String(userRecord.email).toLowerCase()).digest("hex");
-    const rawToken = `${crypto.randomBytes(32).toString("hex")}.${emailFingerprint}`;
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
-
-    await client.query(`
-      UPDATE email_verification_tokens
-      SET consumed_at = NOW()
-      WHERE user_id = $1 AND consumed_at IS NULL
-    `, [userRecord.id]);
-
-    await client.query(`
-      INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
-      VALUES ($1, $2, $3)
-    `, [userRecord.id, tokenHash, expiresAt.toISOString()]);
-
-    return { success: true, rawToken, email: String(userRecord.email) };
+    const outboxId = await createVerificationEmailOutbox(client as PoolClient, userId, normalizedEmail);
+    return {
+      user: {
+        id: userId,
+        name,
+        email: normalizedEmail,
+        role: "workspace_admin" as UserRole,
+        workspaceId: orgId,
+      },
+      outboxId,
+    };
   });
 
-  if (result?.rawToken && result.email) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    try {
-      const sender = getEmailSender();
-      await sender.send({
-        to: result.email,
-        templateId: "verification",
-        params: {
-          url: `${appUrl}/en/verify-email?token=${encodeURIComponent(result.rawToken)}`
-        }
-      });
-      return { success: true };
-    } catch {
-      console.error("Verification email delivery failed.");
-      return { success: false, error: "Verification email could not be sent. Please try again later." };
-    }
+  if ("errorCode" in result && result.errorCode === "USER_EXISTS") {
+    return { errorCode: "USER_EXISTS" };
+  }
+
+  dispatchEmailOutboxAfterResponse(result.outboxId);
+  return { ...result.user, verificationEmailQueued: true };
+}
+
+export async function requestVerification(email: string): Promise<{ success: boolean, error?: string }> {
+  const normalizedEmail = email.toLowerCase().trim();
+  const requesterLimited = await enforceRequesterRateLimit(
+    "email-verification-requester",
+    "verification-requester",
+    10,
+  );
+  if (requesterLimited) return { success: true };
+
+  try {
+    const outboxId = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+      const client = TenantContextManager.getDbClient();
+      if (!client) throw new Error("Failed to get DB client in system context");
+
+      const { rows } = await client.query(
+        "SELECT id, email, email_verified_at FROM users WHERE lower(email) = $1 AND deleted_at IS NULL",
+        [normalizedEmail],
+      );
+      const user = rows[0];
+      if (!user || user.email_verified_at) return null;
+
+      const rateLimitSecret = process.env.SESSION_SECRET;
+      if (!rateLimitSecret) throw new Error("SESSION_SECRET must be configured for authentication rate limiting");
+      try {
+        await enforceRateLimit(
+          client,
+          "email-verification",
+          createRateLimitBucket(rateLimitSecret, "verification", normalizedEmail),
+          5,
+          60 * 60 * 1000,
+        );
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "TooManyRequests") return null;
+        throw error;
+      }
+
+      return createVerificationEmailOutbox(client as PoolClient, String(user.id), String(user.email));
+    });
+
+    if (outboxId) dispatchEmailOutboxAfterResponse(outboxId);
+  } catch {
+    console.error("Verification request could not be queued.");
   }
 
   return { success: true };
@@ -384,7 +435,6 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    await client.query("BEGIN");
     try {
       const { rows } = await client.query(`
         UPDATE email_verification_tokens
@@ -417,7 +467,6 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
 
       if (!matchesCurrentEmail) {
         // Consume stale links so a later email change cannot make an old link valid again.
-        await client.query("COMMIT");
         return { success: false };
       }
 
@@ -445,10 +494,8 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
         WHERE user_id = $1 AND revoked_at IS NULL
       `, [userId]);
 
-      await client.query("COMMIT");
       return { success: true };
     } catch (e) {
-      await client.query("ROLLBACK");
       throw e;
     }
   });
@@ -458,81 +505,46 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
 
 export async function requestPasswordReset(email: string): Promise<{ success: boolean, error?: string }> {
   const normalizedEmail = email.toLowerCase().trim();
+  const requesterLimited = await enforceRequesterRateLimit(
+    "password-reset-requester",
+    "password-reset-requester",
+    10,
+  );
+  if (requesterLimited) return { success: true };
 
-  const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
-      const c = TenantContextManager.getDbClient();
-      if (!c) throw new Error("Failed to get DB client in system context");
+  try {
+    const outboxId = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+      const client = TenantContextManager.getDbClient();
+      if (!client) throw new Error("Failed to get DB client in system context");
+
+      const { rows } = await client.query(
+        "SELECT id, email FROM users WHERE lower(email) = $1 AND deleted_at IS NULL",
+        [normalizedEmail],
+      );
+      const user = rows[0];
+      if (!user) return null;
+
+      const rateLimitSecret = process.env.SESSION_SECRET;
+      if (!rateLimitSecret) throw new Error("SESSION_SECRET must be configured for authentication rate limiting");
       try {
-          await enforceRateLimit(c, 'password-reset', `reset:${normalizedEmail}`, 5, 60 * 60 * 1000);
-          return null;
-      } catch (err: unknown) {
-          if (err instanceof Error && err.message === "TooManyRequests") return "TooManyRequests";
-          throw err;
-      }
-  });
-  if (rlError === "TooManyRequests") {
-      return { success: false, error: "TooManyRequests" };
-  }
-
-  const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
-    const client = TenantContextManager.getDbClient();
-    if (!client) throw new Error("Failed to get DB client in system context");
-
-    const { rows: userRows } = await client.query("SELECT id FROM users WHERE lower(email) = $1 AND deleted_at IS NULL", [normalizedEmail]);
-    const userRecord = userRows[0];
-
-    if (!userRecord) {
-      return { success: true }; // Enumeration safe
-    }
-
-    const rawToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
-
-    // Invalidate previous unconsumed password reset tokens
-    await client.query(`
-      UPDATE password_reset_tokens
-      SET consumed_at = NOW()
-      WHERE user_id = $1 AND consumed_at IS NULL
-    `, [userRecord.id]);
-
-    await client.query(`
-      INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-      VALUES ($1, $2, $3)
-    `, [userRecord.id, tokenHash, expiresAt.toISOString()]);
-
-    return { success: true, rawToken, email };
-  });
-
-  if (result && result.rawToken) {
-    const recipient = result.email;
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/en/forgot-password?token=${encodeURIComponent(result.rawToken)}`;
-
-    // Keep provider setup and network delivery outside the response path so registered
-    // and unknown addresses do not expose account existence through provider latency.
-    after(async () => {
-      let sender;
-      try {
-        sender = getEmailSender();
-      } catch (error) {
-        console.error("Password reset email sender initialization error", error);
-        return;
+        await enforceRateLimit(
+          client,
+          "password-reset",
+          createRateLimitBucket(rateLimitSecret, "reset", normalizedEmail),
+          5,
+          60 * 60 * 1000,
+        );
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "TooManyRequests") return null;
+        throw error;
       }
 
-      try {
-        await sender.send({
-          to: recipient,
-          templateId: "password_reset",
-          params: { url: resetUrl },
-        });
-      } catch (error) {
-        console.error("Password reset email delivery error", error);
-      }
+      return createPasswordResetEmailOutbox(client as PoolClient, String(user.id), String(user.email));
     });
-  }
 
-  if (result && ('error' in result)) {
-    return { success: false, error: (result as { error?: string }).error };
+    if (outboxId) dispatchEmailOutboxAfterResponse(outboxId);
+  } catch {
+    console.error("Password reset request could not be queued.");
   }
 
   return { success: true };
@@ -550,7 +562,6 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    await client.query('BEGIN');
     try {
       const { rows } = await client.query(`
         UPDATE password_reset_tokens
@@ -571,10 +582,8 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
         WHERE user_id = $4
       `, [hashResult.hash, hashResult.algorithm, JSON.stringify(hashResult.params), userId]);
 
-      await client.query('COMMIT');
       return userId;
     } catch (e) {
-      await client.query('ROLLBACK');
       throw e;
     }
   });

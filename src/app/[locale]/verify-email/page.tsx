@@ -60,14 +60,14 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const strings = {
     title: isFa ? "تایید ایمیل سازمانی" : "Verify Your Email Address",
     desc: isFa
-      ? `یک لینک و توکن تایید به آدرس ایمیل شما ارسال گردید. لطفاً توکن را وارد نمایید.`
-      : `We sent a secure confirmation link to your email. Enter your token to continue.`,
+      ? `ایمیل تأیید در صف ارسال قرار گرفته است. پس از دریافت ایمیل، توکن را وارد کنید.`
+      : `A verification email has been queued. Enter the token when it arrives.`,
     resendTitle: isFa ? "ارسال مجدد لینک تایید" : "Request New Verification Link",
     resendDesc: isFa ? "ایمیل خود را وارد کنید تا لینک تایید جدیدی دریافت کنید." : "Enter your email to receive a new verification link.",
     resendEmailLabel: isFa ? "آدرس ایمیل" : "Email Address",
     resendEmailPlaceholder: isFa ? "ایمیل خود را وارد کنید" : "Enter your email",
     resendSubmitBtn: isFa ? "ارسال لینک جدید" : "Send New Link",
-    resendSuccessTitle: isFa ? "لینک جدید ارسال شد" : "New Link Sent",
+    resendSuccessTitle: isFa ? "درخواست ثبت شد" : "Request Received",
     resendSuccessDesc: isFa ? "اگر ایمیل شما در سیستم ثبت شده باشد، لینک تایید جدیدی دریافت خواهید کرد." : "If your email is registered, you will receive a new verification link.",
     codeLabel: isFa ? "توکن تایید" : "Verification Token",
     codePlaceholder: isFa ? "توکن تایید را اینجا وارد کنید" : "Enter confirmation token here",

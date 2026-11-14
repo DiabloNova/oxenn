@@ -140,6 +140,33 @@ export const authRateLimits = pgTable("auth_rate_limits", {
   index("idx_auth_rate_limits_expires").on(table.expiresAt)
 ]);
 
+/** Encrypted, platform-owned transactional delivery queue for authentication email. */
+export const emailOutbox = pgTable("email_outbox", {
+  id: uuid("id").primaryKey().default(defaultUuid),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  payloadCiphertext: text("payload_ciphertext").notNull(),
+  payloadIv: text("payload_iv").notNull(),
+  payloadAuthTag: text("payload_auth_tag").notNull(),
+  status: text("status").notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  availableAt: timestamp("available_at", { withTimezone: true }).notNull().default(defaultNow),
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  lastErrorCode: text("last_error_code"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
+}, (table) => [
+  uniqueIndex("idx_email_outbox_kind_token_hash").on(table.kind, table.tokenHash),
+  index("idx_email_outbox_dispatch").on(table.status, table.availableAt),
+  index("idx_email_outbox_stale_lock").on(table.status, table.lockedAt),
+  index("idx_email_outbox_user_id").on(table.userId),
+  check("email_outbox_kind_check", sql.raw('"kind" IN (\'verification\', \'password_reset\')')),
+  check("email_outbox_status_check", sql.raw('"status" IN (\'pending\', \'processing\', \'sent\', \'failed\', \'cancelled\')')),
+  check("email_outbox_attempts_check", sql.raw('"attempts" >= 0')),
+]);
+
 export const organizationMembers = pgTable("organization_members", {
   id: uuid("id").primaryKey().default(defaultUuid),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),

@@ -1182,6 +1182,61 @@
 
 ---
 
+## Table: `email_outbox`
+
+- **Ownership Scope:** PLATFORM_OWNED
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (PLATFORM_OWNED)
+- **Migration Coverage:** Not applicable (PLATFORM_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (PLATFORM_OWNED)
+- **Status:** `WIRED`
+- **Consumers:** `src/services/email/outbox.ts`
+
+### Columns
+
+| Name | Type | Not Null | Primary Key | Default |
+|---|---|---|---|---|
+| `attempts` | `integer` | ✅ | ❌ | `0` |
+| `available_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
+| `created_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
+| `id` | `uuid` | ✅ | ✅ | `gen_random_uuid()` |
+| `kind` | `text` | ✅ | ❌ | NULL |
+| `last_error_code` | `text` | ❌ | ❌ | NULL |
+| `locked_at` | `timestamp with time zone` | ❌ | ❌ | NULL |
+| `payload_auth_tag` | `text` | ✅ | ❌ | NULL |
+| `payload_ciphertext` | `text` | ✅ | ❌ | NULL |
+| `payload_iv` | `text` | ✅ | ❌ | NULL |
+| `sent_at` | `timestamp with time zone` | ❌ | ❌ | NULL |
+| `status` | `text` | ✅ | ❌ | `'pending'` |
+| `token_hash` | `text` | ✅ | ❌ | NULL |
+| `updated_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
+| `user_id` | `text` | ✅ | ❌ | NULL |
+
+### Indexes
+
+| Name | Columns | Method | Unique | Predicate |
+|---|---|---|---|---|
+| `idx_email_outbox_dispatch` | `status, available_at` | `btree` | ❌ | — |
+| `idx_email_outbox_kind_token_hash` | `kind, token_hash` | `btree` | ✅ | — |
+| `idx_email_outbox_stale_lock` | `status, locked_at` | `btree` | ❌ | — |
+| `idx_email_outbox_user_id` | `user_id` | `btree` | ❌ | — |
+
+### Check Constraints
+
+| Name | Expression |
+|---|---|
+| `email_outbox_attempts_check` | `"attempts" >= 0` |
+| `email_outbox_kind_check` | `"kind" IN ('verification', 'password_reset')` |
+| `email_outbox_status_check` | `"status" IN ('pending', 'processing', 'sent', 'failed', 'cancelled')` |
+
+### Foreign Keys
+
+| Name | Columns | Foreign Table | Foreign Columns | On Delete |
+|---|---|---|---|---|
+| `email_outbox_user_id_users_id_fk` | `user_id` | `users` | `id` | cascade |
+
+---
+
 ## Table: `email_verification_tokens`
 
 - **Ownership Scope:** USER_OWNED
@@ -2924,6 +2979,6 @@
 
 
 ## Summary
-- Total Tables: 70
-- WIRED Tables: 59
+- Total Tables: 71
+- WIRED Tables: 60
 - ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 11

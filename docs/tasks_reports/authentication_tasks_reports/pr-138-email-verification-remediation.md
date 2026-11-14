@@ -2,46 +2,44 @@
 
 ## Status
 
-PARTIALLY IMPLEMENTED — the production email sender is now implemented for Maileroo's Email API, using the approved sender identity `noreply@oxenn.ir`. Provider-specific tests and environment documentation have been added. CI has not yet reported results for this revision, and the PR still has merge conflicts with `main`; do not merge or deploy until those gates are cleared.
+Implementation plan approved and applied on the PR branch. The branch was refreshed against main before changes; at the implementation baseline it was 20 commits ahead and 0 behind, with GitHub reporting no merge conflict. The new implementation still requires CI, DeepSource and deployment-configuration verification on the resulting commit. Do not merge or deploy solely on the basis of static review.
 
-## Invariant
+## Security and delivery invariants
 
-Only users who have verified control of their email address may establish or retain an authenticated workspace session. Verification recovery must not expose email addresses in URLs, allow unknown-address requests to exhaust a victim's delivery quota, or make a committed registration appear to have failed. Resend responses must not reveal whether an address belongs to an unverified account.
+- Password-reset and verification resend responses do not disclose whether an address exists, is verified, is throttled, or encountered a queue/provider failure.
+- The provider-dependent timing leak is removed because neither Server Action waits for Maileroo. Database work still differs for known and unknown accounts; no arbitrary delay or random jitter was added without a connected database and measured p95. Before claiming strict timing equalization, measure the production-like database p95 and add a calibrated minimum response floor if that measurement warrants it.
+- Authentication email delivery is not awaited by the Server Action. The token and encrypted outbox record are committed atomically with the user/token state.
+- Raw tokens and recipient addresses are encrypted in the outbox payload and are never included in Inngest event data or application log messages.
+- Only the current, unexpired, unconsumed token for the current user email is eligible for delivery; the worker revalidates it inside every send attempt, including Inngest retries.
+- The outbox is platform-owned infrastructure and is accessed through a dedicated, reviewed system purpose.
 
 ## Implementation
 
-- Return `EMAIL_NOT_VERIFIED` as serializable data from the login Server Action and reconstruct the coded error in `AuthProvider` on the client.
-- Revoke sessions for unverified users and cover authenticated, unverified, revoked, and replaced-session paths in tests.
-- Apply requester-based verification throttling before lookup using an HMAC of the requester IP keyed by `SESSION_SECRET`; apply the per-address delivery quota only after finding an existing unverified account, while keeping quota-exhaustion responses enumeration-safe.
-- Treat post-commit verification-request exceptions as delivery failure while preserving the created account result.
-- Remove email addresses from registration and resend query strings; users enter the address in the resend form.
-- Bind verification tokens to the recipient email fingerprint and consume stale links when the account email has changed.
-- Correct the verification success redirect copy and malformed registration object separator.
-- Keep the generated docs index and database reference matrix synchronized with their source documents.
-- Implement `ProductionEmailSender` using Maileroo's Email API with a domain sending key, configurable sender name/address, plain-text and HTML bodies, disabled open/click tracking for authentication messages, HTTP timeout, safe error handling, and HTTP(S)-only action links.
-- Use `noreply@oxenn.ir` as the documented default sender address. No SMTP password or Sending Key is committed to the repository.
-- Schedule password-reset delivery with Next.js `after()` so provider latency and delivery failures do not affect the Server Action response.
-- Add unit coverage for Maileroo configuration, payload construction, disabled tracking, HTML escaping, provider rejection, and missing and non-HTTP(S) action URLs.
+- Added the platform-owned `email_outbox` table with delivery status, attempt count, availability/lease timestamps, token hash, and AES-256-GCM encrypted payload fields.
+- Added `src/services/email/outbox.ts` for authenticated encryption/decryption, token fingerprint verification, atomic insertion, claim/lease handling, stale-token cancellation, sent/failed transitions, and recovery selection.
+- Bound AES-GCM ciphertext to its outbox row ID as additional authenticated data. The Inngest event contains only the opaque outbox ID; it never contains the recipient, raw token, or URL.
+- Added the `EMAIL_OUTBOX_ENCRYPTION_KEY` runtime setting. It must be a stable 32-byte key encoded as 64 hexadecimal characters. Generate with `openssl rand -hex 32`; do not rotate it while pending outbox rows encrypted with the old key remain.
+- Added an Inngest event worker with bounded retries and a minute-level recovery sweep. A 30-minute lease allows recovery after a worker stops; duplicate events are harmless because claiming is atomic.
+- Delivery is at-least-once, not exactly-once. If the provider accepts a message and the worker crashes before its step checkpoint, the same still-valid token email can be sent again. The design does not claim provider-side idempotency.
+- Registration now creates the user, credentials, workspace, membership, verification token, and encrypted outbox row in the same `runWithSystemContext` transaction. Redundant nested BEGIN/COMMIT statements were removed from registration, email verification, and password-reset confirmation; TenantContextManager owns the transaction boundary for all three flows.
+- Verification resend and password reset both create token/outbox records transactionally and wake the Inngest worker after the response. The periodic sweep is the durable recovery path if the wake-up event is lost.
+- Password reset now applies requester/IP throttling before account lookup and the per-account quota only after a real account is found. Email and IP bucket identifiers are HMAC-derived using `SESSION_SECRET`.
+- Verification resend uses the same generic response shape for unknown, verified, throttled, and queue-failure cases. The account-specific quota is also HMAC-derived.
+- Registration result naming now reports `verificationEmailQueued`, not `verificationEmailSent`, so the UI does not claim provider delivery before the worker succeeds.
+- Development email logging masks recipient addresses and redacts action-token query parameters.
+- Added the narrow `sys-email-outbox` privileged path and classified the table as `PLATFORM_OWNED`; it is not added to the organization-scoped runtime table inventory. The privileged-path registry is audit metadata, not a SQL-level table allow-list or an RLS substitute.
+- Added migration `0016_email_outbox.sql`, Drizzle snapshot `0016_snapshot.json`, and the migration journal entry. The migration is checked in but has not been applied to any production database.
 
-## Runtime configuration
+## Runtime configuration and deployment
 
-Configure these server-side environment variables in the actual application runtime:
+Configure `EMAIL_OUTBOX_ENCRYPTION_KEY` in the actual application runtime before enabling registration, verification resend, or password-reset delivery on the new code. The key is independent of the Maileroo Sending Key. Keep the existing Maileroo configuration (`EMAIL_PROVIDER=maileroo`, `MAILEROO_SENDING_KEY`, `EMAIL_FROM_ADDRESS`, and `EMAIL_FROM_NAME`) unchanged.
 
-- `EMAIL_PROVIDER=maileroo`
-- `MAILEROO_SENDING_KEY` — the Sending Key created for the `oxenn.ir` domain (not an API Management key and not the SMTP password)
-- `EMAIL_FROM_ADDRESS=noreply@oxenn.ir`
-- `EMAIL_FROM_NAME=Oxenn`
+The existing Inngest integration must be connected to the deployed environment with its event/signing keys. No provider credentials or encryption key are committed to the repository. No production database connection or production migration was used during this change.
 
-The SMTP username/password are not consumed by this implementation because it uses the HTTPS Email API rather than opening an SMTP socket. DNS records in Cloudflare prove domain ownership/authentication but do not inject application secrets into the runtime. Confirm the domain is verified and the Maileroo account is approved for production sending before enabling this in production.
+## Verification still required
 
-## Verification
-
-- Earlier CI at code head `122a500` passed Unit Tests, Isolation Suite, and Build and Test (run `43459001747`).
-- The Maileroo implementation and new tests were committed after that successful run. No workflow runs or combined status checks were returned for the current code head at the time this report was updated. The new implementation and tests must therefore be treated as **not yet CI-verified**.
-- The previous Vercel preview-comments result is not evidence that production email delivery is configured or that the new Maileroo integration works in the deployment runtime.
-
-## Known limitations and deployment gate
-
-- The PR remains behind and diverged from `main` and GitHub reports `mergeable: false`. This is a merge-conflict blocker; it has not been resolved by blindly updating or force-pushing the branch.
-- The possible response-timing distinction in the verification resend flow has not yet been removed with a durable asynchronous outbox/queue. The current equal-shaped response is not sufficient proof of timing indistinguishability.
-- Do not deploy until the merge conflict is resolved, CI passes on the final head, the Maileroo domain/account is cleared for production sending, and a real end-to-end delivery test succeeds without exposing credentials.
+- Run unit tests for auth actions, encrypted outbox persistence, Maileroo adapter logging, Inngest registration, and privileged-path ownership.
+- Run the database migration validation against a disposable PostgreSQL database; do not point the test at production.
+- Run TypeScript, lint, build, unit, isolation, and generated-file drift checks on the final PR head.
+- Inspect the DeepSource Secrets finding directly. A lack of GitHub Secret Scanning alerts does not prove the external DeepSource failure is harmless; do not suppress the analyzer or alter its thresholds without its exact finding.
+- Verify the new environment key and Inngest configuration in the deployment environment, then perform a controlled end-to-end delivery test before production rollout.

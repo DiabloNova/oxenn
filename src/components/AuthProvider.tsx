@@ -7,7 +7,7 @@ import { loginAction, logoutAction, getServerSessionAction, registerAction } fro
 interface AuthContextType {
   session: Session;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, workspaceName?: string) => Promise<{ verificationEmailSent: boolean }>;
+  register: (name: string, email: string, password: string, workspaceName?: string) => Promise<{ verificationEmailQueued: boolean }>;
   logout: () => Promise<void>;
   hasPermission: (requiredRole: UserRole) => boolean;
 }
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         expiresAt: null,
         status: "unauthenticated",
       });
-      return { verificationEmailSent: result.verificationEmailSent };
+      return { verificationEmailQueued: result.verificationEmailQueued };
     } catch (e) {
       setSession({
         user: null,

@@ -51,7 +51,7 @@ describe("Canonical table ownership registry", () => {
       missingRegistryEntries: [],
       staleRegistryEntries: [],
     });
-    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(70);
+    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(71);
   });
 
   it("accounts for every table in the separate Platform Admin Drizzle schema", () => {
@@ -93,6 +93,12 @@ describe("Canonical table ownership registry", () => {
     expect(getTableOwnershipEntry("workspace", "roles").status).toBe("legacy");
     expect(getTableOwnershipEntry("workspace", "permissions").status).toBe("legacy");
     expect(getTableOwnershipEntry("platform-admin", "platform_admin_accounts").scope).toBe("PLATFORM_OWNED");
+  });
+
+  it("classifies the encrypted email delivery outbox as platform-owned infrastructure", () => {
+    const outbox = getTableOwnershipEntry("workspace", "email_outbox");
+    expect(outbox.scope).toBe("PLATFORM_OWNED");
+    expect(outbox.rationale).toContain("encrypted authentication-email");
   });
 
   it("keeps user-owned sessions distinct from their optional workspace context", () => {

@@ -34,6 +34,13 @@ const RULES: VarRule[] = [
     formatDescription: "must be at least 16 characters long",
   },
   {
+    name: "EMAIL_OUTBOX_ENCRYPTION_KEY",
+    modes: ["dev", "build"],
+    required: false,
+    format: /^[a-f0-9]{64}$/i,
+    formatDescription: "must be a 32-byte AES-256-GCM key encoded as 64 hexadecimal characters when configured",
+  },
+  {
     name: "ALLOW_DB_PUSH",
     modes: ["dev", "test"],
     required: false,

@@ -54,29 +54,26 @@ function buildEmailContent({ templateId, params }: EmailSenderParams): {
 
 export class DevEmailSender implements EmailSender {
   async send({ to, templateId, params }: EmailSenderParams): Promise<void> {
-    console.log("================== DEV EMAIL SENT ==================");
-    console.log(`To: ${to}`);
-    console.log(`Template: ${templateId}`);
-    console.log("Params:", JSON.stringify(params, null, 2));
-    if (params.url) {
-      console.log(`Link: ${params.url}`);
+    const safeParams = { ...params };
+    if (safeParams.url) {
+      try {
+        const safeUrl = new URL(safeParams.url);
+        if (safeUrl.searchParams.has("token")) safeUrl.searchParams.set("token", "[REDACTED]");
+        safeParams.url = safeUrl.toString();
+      } catch {
+        safeParams.url = "[REDACTED_URL]";
+      }
     }
-    console.log("====================================================");
+    const [localPart, domain] = to.split("@");
+    const maskedRecipient = domain ? localPart.slice(0, 1) + "***@" + domain : "[REDACTED_EMAIL]";
+    console.log("================== DEV EMAIL SIMULATED ==================");
+    console.log("To:", maskedRecipient);
+    console.log("Template:", templateId);
+    console.log("Params:", JSON.stringify(safeParams, null, 2));
+    if (safeParams.url) console.log("Link:", safeParams.url);
+    console.log("======================================================");
   }
 }
-
-export class CaptureEmailSender implements EmailSender {
-  public static capturedEmails: EmailSenderParams[] = [];
-
-  static clear() {
-    this.capturedEmails = [];
-  }
-
-  async send(params: EmailSenderParams): Promise<void> {
-    CaptureEmailSender.capturedEmails.push(params);
-  }
-}
-
 export class ProductionEmailSender implements EmailSender {
   private readonly sendingKey: string;
   private readonly fromAddress: string;

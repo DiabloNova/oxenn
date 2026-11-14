@@ -1,5 +1,6 @@
 export type PrivilegedPurposeTag =
   | "sys-login"
+  | "sys-email-outbox"
   | "sys-register"
   | "sys-auth-check"
   | "sys-auth-role-check"
@@ -45,14 +46,19 @@ function definePath(
 
 export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedPathInfo> = {
   "sys-login": definePath(
-    ["users", "user_credentials", "auth_rate_limits", "email_verification_tokens", "password_reset_tokens", "sessions", "organizations", "organization_members", "audit_records"],
+    ["users", "user_credentials", "auth_rate_limits", "email_verification_tokens", "password_reset_tokens", "email_outbox", "sessions", "organizations", "organization_members", "audit_records"],
     ["src/app/actions/auth.ts", "src/app/actions/account.ts", "src/services/auth/session.ts"],
     "Shared authentication and account-security context for credentials, rate limits, verification/reset tokens, session lifecycle, workspace identity resolution, and account-deactivation audit writes."
   ),
   "sys-register": definePath(
-    ["users", "user_credentials", "organizations", "organization_members", "auth_rate_limits"],
+    ["users", "user_credentials", "organizations", "organization_members", "auth_rate_limits", "email_verification_tokens", "email_outbox"],
     ["src/app/actions/auth.ts"],
-    "Applies registration rate limits and creates the initial user, credentials, organization, and membership."
+    "Applies registration rate limits and atomically creates the user, credentials, organization, membership, verification token, and encrypted outbox row."
+  ),
+  "sys-email-outbox": definePath(
+    ["email_outbox", "email_verification_tokens", "password_reset_tokens", "users"],
+    ["src/services/email/outbox.ts"],
+    "Claims, validates, cancels, and marks encrypted authentication-email outbox records using the current token and user identity state."
   ),
   "sys-auth-check": definePath(
     ["sessions", "users", "organizations", "organization_members"],

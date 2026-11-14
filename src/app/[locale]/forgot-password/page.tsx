@@ -46,12 +46,12 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
     backToLogin: isFa ? "بازگشت به صفحه ورود" : "Back to sign in",
     successTitle: isConfirmMode
       ? (isFa ? "رمز عبور تغییر یافت" : "Password Updated")
-      : (isFa ? "ایمیل بازیابی ارسال شد" : "Reset Link Sent"),
+      : (isFa ? "درخواست ثبت شد" : "Request Received"),
     successDesc: isConfirmMode
       ? (isFa ? "رمز عبور شما با موفقیت تغییر یافت. اکنون می‌توانید وارد حساب خود شوید." : "Your password has been successfully updated. You can now sign in.")
       : (isFa
-          ? `اگر ایمیل ${email} در سیستم ثبت شده باشد، دستورالعمل‌های بازیابی رمز عبور را ظرف چند دقیقه دریافت خواهید کرد.`
-          : `If ${email} is registered with us, a secure password recovery message has been sent.`),
+          ? `اگر ایمیل ${email} در سیستم ثبت شده باشد، دستورالعمل‌های بازیابی رمز عبور طی چند دقیقه برای شما ارسال خواهد شد.`
+          : `If ${email} is registered with us, a secure password recovery message will be sent shortly.`),
     checkSpam: isConfirmMode ? "" : (isFa ? "لطفاً پوشه Spam یا Junk ایمیل خود را نیز بررسی کنید." : "Be sure to check your spam/junk folder if it doesn't arrive."),
   };
 
