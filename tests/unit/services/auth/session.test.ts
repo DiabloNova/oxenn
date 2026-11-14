@@ -67,6 +67,7 @@ describe("server session lifecycle and error handling", () => {
         replacedBy: null,
         email: user.email,
         name: user.name,
+        emailVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
         role: user.role
       }]
     });
@@ -86,14 +87,15 @@ describe("server session lifecycle and error handling", () => {
   it("creates opaque sessions with secure cookie attributes and stores only a token hash", async () => {
     await createSession(user);
 
-    expect(queryMock).toHaveBeenCalledTimes(4);
+    expect(queryMock).toHaveBeenCalledTimes(5);
     expect(queryMock.mock.calls[0][0]).toMatch(/SELECT\s+id\s+FROM\s+users/i);
     expect(queryMock.mock.calls[0][0]).toContain("FOR UPDATE");
-    expect(queryMock.mock.calls[1][0]).toMatch(/SELECT\s+id\s+FROM\s+organizations/i);
-    expect(queryMock.mock.calls[1][0]).toContain("FOR UPDATE");
-    expect(queryMock.mock.calls[2][0]).toContain("FROM organization_members");
-    expect(queryMock.mock.calls[3][0]).toContain("INSERT INTO sessions");
-    const tokenHash = queryMock.mock.calls[3][1][1] as string;
+    expect(queryMock.mock.calls[1][0]).toContain("email_verified_at IS NOT NULL");
+    expect(queryMock.mock.calls[2][0]).toMatch(/SELECT\s+id\s+FROM\s+organizations/i);
+    expect(queryMock.mock.calls[2][0]).toContain("FOR UPDATE");
+    expect(queryMock.mock.calls[3][0]).toContain("FROM organization_members");
+    expect(queryMock.mock.calls[4][0]).toContain("INSERT INTO sessions");
+    const tokenHash = queryMock.mock.calls[4][1][1] as string;
     expect(tokenHash).toMatch(/^[a-f0-9]{64}$/);
 
     const [sessionName, rawToken, sessionOptions] = cookieStore.set.mock.calls[0];
@@ -128,6 +130,18 @@ describe("server session lifecycle and error handling", () => {
     expect(queryMock.mock.calls[0][0]).toContain("FOR UPDATE");
   });
 
+  it("refuses to create a session for an unverified email", async () => {
+    queryMock.mockImplementation(async (sql: string) => {
+      if (sql.includes("email_verified_at IS NOT NULL")) return { rows: [] };
+      if (/SELECT\s+id\s+FROM\s+users/i.test(sql)) return { rows: [{ id: user.id }] };
+      return { rows: [] };
+    });
+
+    await expect(createSession(user)).rejects.toThrow("Cannot create a session before the account email is verified.");
+    expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(queryMock).toHaveBeenCalledTimes(2);
+  });
+
   it("refuses to create a session after workspace membership is revoked", async () => {
     queryMock.mockImplementation(async (sql: string) => {
       if (/SELECT\s+id\s+FROM\s+users/i.test(sql)) return { rows: [{ id: user.id }] };
@@ -149,7 +163,7 @@ describe("server session lifecycle and error handling", () => {
 
     await expect(createSession(user)).rejects.toThrow("Cannot create a session for an inactive workspace.");
     expect(cookieStore.set).not.toHaveBeenCalled();
-    expect(queryMock).toHaveBeenCalledTimes(2);
+    expect(queryMock).toHaveBeenCalledTimes(3);
   });
 
   it("revokes the current database session and deletes all session cookies on invalidation", async () => {
@@ -172,6 +186,26 @@ describe("server session lifecycle and error handling", () => {
     expect(queryMock).not.toHaveBeenCalled();
   });
 
+
+  it("fails closed when a session row has no verified-email marker", async () => {
+    queryMock.mockResolvedValue({
+      rows: [{
+        id: "session-unverified",
+        userId: user.id,
+        workspaceId: user.workspaceId,
+        expiresAt: new Date("2027-01-01T00:00:00.000Z"),
+        revokedAt: null,
+        replacedBy: null,
+        email: user.email,
+        name: user.name,
+        emailVerifiedAt: null,
+        role: user.role,
+      }],
+    });
+
+    await expect(getSession()).resolves.toBeNull();
+  });
+
   it("returns null when the session is absent", async () => {
     queryMock.mockResolvedValue({ rows: [] });
 
@@ -190,6 +224,7 @@ describe("server session lifecycle and error handling", () => {
         expiresAt: new Date("2027-01-01T00:00:00.000Z"),
         email: "user@example.com",
         name: "Test User",
+        emailVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
         role: "workspace_admin",
         ...state
       }]

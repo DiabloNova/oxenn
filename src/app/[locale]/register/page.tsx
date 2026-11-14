@@ -31,6 +31,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [verificationEmailSent, setVerificationEmailSent] = useState(false);
 
   const strings = {
     title: isFa ? "ایجاد حساب کاربری سازمانی" : "Create Enterprise Account",
@@ -52,7 +53,8 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     loginLink: isFa ? "ورود به حساب کاربری" : "Sign In to Account",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
     successTitle: isFa ? "ثبت‌نام با موفقیت انجام شد!" : "Account Provisioned Successfully!",
-    successDesc: isFa ? "در حال ایجاد کانال‌های خزش و تخصیص شناسه ابری شما..." : "Deploying private crawling instances and allocating tenant space...",
+    successEmailSentDesc: isFa ? "حساب شما ساخته شد و لینک تأیید به ایمیلتان ارسال شد. پیش از ورود، ایمیل خود را تأیید کنید." : "Your account was created and a verification link was sent. Verify your email before signing in.",
+    successEmailFailedDesc: isFa ? "حساب شما ساخته شد، اما ارسال ایمیل تأیید موفق نبود. به صفحه تأیید ایمیل بروید و پس از آماده‌بودن سرویس ایمیل، ارسال مجدد را امتحان کنید." : "Your account was created, but the verification email could not be sent. Continue to the verification page and request a new email when delivery is available.",
     successBtn: isFa ? "ورود به پیشخوان کاربری" : "Proceed to Dashboard",
   };
 
@@ -108,9 +110,10 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
 
     setIsLoading(true);
     try {
-      await register(name, email, password, workspaceName);
+      const result = await register(name, email, password, workspaceName);
+      setVerificationEmailSent(result.verificationEmailSent);
       setIsSuccess(true);
-      // Let the user proceed to verify email or directly to dashboard
+      // The verification page provides a safe resend path if delivery failed.
       setTimeout(() => {
         router.push(`/${locale}/verify-email`);
       }, 1500);
@@ -159,7 +162,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
               {isSuccess ? strings.successTitle : strings.title}
             </CardTitle>
             <CardDescription className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed mt-1">
-              {isSuccess ? strings.successDesc : strings.desc}
+              {isSuccess ? (verificationEmailSent ? strings.successEmailSentDesc : strings.successEmailFailedDesc) : strings.desc}
             </CardDescription>
           </CardHeader>
           <CardContent>

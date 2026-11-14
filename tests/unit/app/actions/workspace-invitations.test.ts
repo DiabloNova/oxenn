@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { inviteUserAction } from "@/app/actions/workspace";
-import { CaptureEmailSender } from "@/services/email/adapters";
+import { CaptureEmailSender, setMockEmailSender } from "@/services/email/adapters";
 
 vi.mock("@/services/auth/session", () => ({
   requireSession: vi.fn().mockResolvedValue({ user: { id: "user-1", name: "Alice" } }),
@@ -62,9 +62,13 @@ describe("inviteUserAction", () => {
       if (sql.includes("FROM organization_members m")) {
         return { rows: [{ organization_id: "org-1", role: "workspace_admin" }], rowCount: 1 };
       }
+      if (sql.includes("UPDATE organization_invitations")) {
+        return { rows: [{ id: "invitation-1" }], rowCount: 1 };
+      }
       return { rows: [], rowCount: 0 };
     });
     CaptureEmailSender.clear();
+    setMockEmailSender(null);
 
   });
 
@@ -81,11 +85,9 @@ describe("inviteUserAction", () => {
     expect(res).not.toHaveProperty("rawToken");
   });
 
-  it("delivers the raw token via EmailSender adapter", async () => {
+  it("awaits the configured invitation sender before returning", async () => {
     await inviteUserAction("org-1", "test@test.com", "viewer");
 
-    // Wait for unhandled promise of email to settle (microtasks)
-    await new Promise(process.nextTick);
 
     const emails = CaptureEmailSender.capturedEmails;
     expect(emails).toHaveLength(1);
@@ -94,4 +96,19 @@ describe("inviteUserAction", () => {
     expect(emails[0].params.url).toContain("token=");
     expect(emails[0].params.url).toMatch(/token=[a-f0-9-]{36}$/); // It's a randomUUID string
   });
+
+  it("revokes the pending invitation when email delivery fails", async () => {
+    setMockEmailSender({ send: vi.fn().mockRejectedValue(new Error("smtp credentials must not be exposed")) });
+
+    await expect(inviteUserAction("org-1", "test@test.com", "viewer"))
+      .rejects.toThrow("Invitation email could not be delivered.");
+
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE organization_invitations"),
+      ["org-1", expect.stringMatching(/^[a-f0-9]{64}$/)]
+    );
+    expect(CaptureEmailSender.capturedEmails).toHaveLength(0);
+  });
+
+
 });

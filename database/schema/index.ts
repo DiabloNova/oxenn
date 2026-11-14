@@ -92,8 +92,14 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   tokenHash: text("token_hash").notNull().unique(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  emailSnapshot: text("email_snapshot"),
+  deliveryStatus: text("delivery_status").notNull().default("pending"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  lastDeliveryError: text("last_delivery_error"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
-});
+}, (table) => [
+  check("email_verification_tokens_delivery_status_check", sql`${table.deliveryStatus} IN ('pending', 'sent', 'failed')`),
+]);
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: uuid("id").primaryKey().default(defaultUuid),

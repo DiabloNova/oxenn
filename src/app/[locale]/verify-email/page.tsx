@@ -59,14 +59,14 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
     title: isFa ? "تایید ایمیل سازمانی" : "Verify Your Email Address",
     desc: isFa
       ? `یک لینک و توکن تایید به آدرس ایمیل شما ارسال گردید. لطفاً توکن را وارد نمایید.`
-      : `We sent a secure confirmation link to your email. Enter your token to continue.`,
+      : `Use the secure confirmation link sent to your email. If it did not arrive, request a new one.`,
     resendTitle: isFa ? "ارسال مجدد لینک تایید" : "Request New Verification Link",
     resendDesc: isFa ? "ایمیل خود را وارد کنید تا لینک تایید جدیدی دریافت کنید." : "Enter your email to receive a new verification link.",
     resendEmailLabel: isFa ? "آدرس ایمیل" : "Email Address",
     resendEmailPlaceholder: isFa ? "ایمیل خود را وارد کنید" : "Enter your email",
     resendSubmitBtn: isFa ? "ارسال لینک جدید" : "Send New Link",
-    resendSuccessTitle: isFa ? "لینک جدید ارسال شد" : "New Link Sent",
-    resendSuccessDesc: isFa ? "اگر ایمیل شما در سیستم ثبت شده باشد، لینک تایید جدیدی دریافت خواهید کرد." : "If your email is registered, you will receive a new verification link.",
+    resendSuccessTitle: isFa ? "ایمیل خود را بررسی کنید" : "Check Your Email",
+    resendSuccessDesc: isFa ? "اگر حساب شما هنوز به تأیید ایمیل نیاز داشته باشد و سرویس ارسال در دسترس باشد، لینک تأیید ارسال می‌شود. اگر پیام را دریافت نکردید، کمی بعد دوباره تلاش کنید یا با پشتیبانی تماس بگیرید." : "If your account still needs email verification and delivery is available, a new link will be sent. If it does not arrive, try again later or contact support.",
     codeLabel: isFa ? "توکن تایید" : "Verification Token",
     codePlaceholder: isFa ? "توکن تایید را اینجا وارد کنید" : "Enter confirmation token here",
     submitBtn: isFa ? "تایید نهایی و فعال‌سازی" : "Verify & Activate Workspace",
@@ -75,10 +75,10 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
     resendWait: isFa
       ? `ارسال مجدد تا ${resendCooldown} ثانیه دیگر`
       : `Resend token in ${resendCooldown}s`,
-    successTitle: isFa ? "فعال‌سازی با موفقیت انجام شد!" : "Verification Complete!",
+    successTitle: isFa ? "تأیید ایمیل با موفقیت انجام شد!" : "Email Verified!",
     successDesc: isFa
-      ? "ایمیل سازمانی شما تایید گردید. در حال انتقال به پیشخوان کاربری..."
-      : "Your workspace has been successfully verified. Entering the dashboard...",
+      ? "آدرس ایمیل شما تأیید شد. برای ورود به حساب کاربری، اکنون وارد شوید."
+      : "Your email address is verified. Sign in to access your account.",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
     validationCodeRequired: isFa ? "وارد کردن توکن تایید الزامی است." : "Verification token is required.",
     validationCodeLength: isFa ? "توکن وارد شده معتبر نمی‌باشد." : "The token format is invalid.",
@@ -102,7 +102,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
       if (res && res.success) {
         setIsSuccess(true);
         setTimeout(() => {
-          router.push(`/${locale}/dashboard`);
+          router.push(`/${locale}/login`);
         }, 1500);
       } else {
         throw new Error("Invalid token");
@@ -123,7 +123,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
     try {
       await requestVerification(resendEmail.trim());
       setResendSuccess(true);
-      // Notice: token is intentionally not returned, so we avoid enumeration timing logic in actions/auth.ts
+      // The action intentionally never returns a token or reveals whether an address is registered.
     } catch (e) {
       setSubmitError(isFa ? "خطا در ارسال مجدد توکن." : "Failed to resend verification token.");
     } finally {

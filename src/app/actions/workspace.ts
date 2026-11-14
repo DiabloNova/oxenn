@@ -11,6 +11,7 @@ import { randomUUID, createHash } from "crypto";
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { getEmailSender } from "@/services/email/adapters";
+import { buildEmailActionUrl } from "@/services/email/links";
 import { lockActiveUser, lockActiveWorkspace } from "@/services/auth/workspace-locks";
 import { canChangeWorkspaceMember } from "@/services/auth/workspace-admin-invariant";
 import type { UserRole } from "@/types/auth";
@@ -130,14 +131,13 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
   await requireWorkspaceMembership(session.user.id, workspaceId);
   const actorRole = await requireRole("workspace_admin", workspaceId);
 
-  // Test email setup before creating token
+  // Resolve and validate the sender before creating an invitation token. A
+  // missing production transport must not create an invitation that cannot be delivered.
   let sender;
   try {
     sender = getEmailSender();
-  } catch (e) {
-    // If it fails (e.g. no EMAIL_PROVIDER in prod), we will just fallback to returning the token directly.
-    console.error("Email sender creation error during invite (fallback to raw token response)", e);
-    sender = null;
+  } catch {
+    throw new Error("Workspace invitations are unavailable because email delivery is not configured.");
   }
 
   const result = await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-invite-user", async () => {
@@ -190,24 +190,43 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
     return { success: true, email, workspaceName, token, inviterName: session.user!.name };
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  if (sender) {
-    // Do not await to avoid blocking response
-    sender.send({
+  try {
+    await sender.send({
       to: result.email,
       templateId: "workspace_invitation",
       params: {
         workspaceName: result.workspaceName,
         inviterName: result.inviterName,
-        url: `${appUrl}/en/accept-invite?token=${result.token}` // Assuming some front-end route to handle it later
-      }
-    }).catch((e) => console.error("Email send async error", e));
-
+        url: buildEmailActionUrl("/en/accept-invite", result.token),
+      },
+    });
     return { success: true };
-  } else {
-    // Fallback: If no provider is available, we return the token in the response so admins can share it manually.
-    // This gates the email provider feature while preserving the prior acceptance loop logic in Production.
-    return { success: true, token: result.token };
+  } catch {
+    // Never leave a pending invitation that was reported as sent. The raw token
+    // is not returned to the caller; revoke it when delivery fails.
+    let invitationRevoked = false;
+    try {
+      await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-revoke-undelivered-invite", async () => {
+        const client = TenantContextManager.getDbClient();
+        if (!client) throw new Error("Failed to get DB client in tenant context");
+        const { rows: revokedRows } = await client.query(`
+          UPDATE organization_invitations
+          SET status = 'revoked', updated_at = NOW()
+          WHERE organization_id = $1 AND token_hash = $2 AND status = 'pending'
+          RETURNING id
+        `, [workspaceId, createHash("sha256").update(result.token).digest("hex")]);
+        if (revokedRows.length !== 1) {
+          throw new Error("Undelivered invitation could not be revoked.");
+        }
+      });
+      invitationRevoked = true;
+    } catch {
+      console.error("[Workspace] Unable to revoke an undelivered invitation.");
+    }
+    console.error("[Workspace] Invitation email delivery failed.");
+    throw new Error(invitationRevoked
+      ? "Workspace invitation delivery is unavailable. The pending invitation was revoked; contact a workspace administrator."
+      : "Workspace invitation delivery failed and the pending invitation could not be revoked. Contact a workspace administrator.");
   }
 }
 

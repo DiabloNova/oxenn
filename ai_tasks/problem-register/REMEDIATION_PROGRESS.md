@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current main at 9ac5fe0; 20 remain Not started. The PR #139 ledger records 62 Confirmed, 4 Verified complete, 4 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. SCR-002 is implemented with verification pending under explicit user approval. The historical project-wide Wave 0 inventory remains incomplete, but WAVE0_POLICY_SUPERSESSION.md retires it as a universal prerequisite; each new task still requires explicit approval, exact-base revalidation, directly relevant dependencies, applicable safeguards, and separate authorization.
+**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated overall; the historical 77-finding baseline was recorded against `main` at `9ac5fe0`, and the latest task-specific revalidation of `SRC-018` and `RF-009` was performed against `main` at `3264038`. 20 findings remain Not started. The current ledger records 61 Confirmed, 4 Verified complete, 6 Implemented — verification pending, 1 Already fixed, 2 Needs decision, and 3 Blocked. SCR-002 remains implemented with verification pending under explicit user approval. SRC-018 and RF-009 have implementation started on a separate, explicitly approved audit branch and remain verification-pending. The historical project-wide Wave 0 inventory remains incomplete, but WAVE0_POLICY_SUPERSESSION.md retires it as a universal prerequisite; each new task still requires explicit approval, exact-base revalidation, directly relevant dependencies, applicable safeguards, and separate authorization.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -16,14 +16,14 @@
 |---|---:|
 | Individual finding records | 97 |
 | Findings revalidated against current `main` | 77 |
-| Findings approved for implementation (cumulative) | 4 |
-| Findings with implementation started (cumulative) | 4 |
+| Findings approved for implementation (cumulative) | 6 |
+| Findings with implementation started (cumulative) | 6 |
 | Findings with verified implementation complete | 4 |
-| Findings implemented — verification pending | 4 |
+| Findings implemented — verification pending | 6 |
 | Findings blocked / historical-only | 3 |
-| Findings with confirmed issues | 62 |
+| Findings with confirmed issues | 61 |
 | Findings already fixed in repository | 1 |
-| Findings needing a product/security decision | 3 |
+| Findings needing a product/security decision | 2 |
 | Findings not started | 20 |
 | Open implementation waves | 7 (not started) |
 
@@ -88,7 +88,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [RF-006](./findings/006-RF-006.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [RF-007](./findings/007-RF-007.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [RF-008](./findings/008-RF-008.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
-| [RF-009](./findings/009-RF-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
+| [RF-009](./findings/009-RF-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Implemented — verification pending | audit/064-src-018-email-verification-2026-11-14 | main@9ac5fe0; Wave 0 log 001–020; revalidated 2026-11-14 at main@3264038|
 | [DB-001](./findings/010-DB-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Already fixed | `4e54e8b` | Migration 0014/0015 and ephemeral CI evidence; live DB unknown |
 | [DB-002](./findings/011-DB-002.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [DB-003](./findings/012-DB-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Needs decision | — | main@9ac5fe0; Wave 0 log 001–020|
@@ -143,7 +143,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [SRC-015](./findings/061-SRC-015.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started | — | — |
 | [SRC-016](./findings/062-SRC-016.md) | Wave 2 (persistence/expiry) + Wave 4 (localized UI/email workflow) | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [SRC-017](./findings/063-SRC-017.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | — | main@ec86cfccd02abcea31be07782a56416529c08b2d; branch review/063-src-017-20261113; 2026-11-13 implementation log|
-| [SRC-018](./findings/064-SRC-018.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Needs decision | — | main@9ac5fe0; Wave 0 log 062–097|
+| [SRC-018](./findings/064-SRC-018.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | audit/064-src-018-email-verification-2026-11-14 | main@9ac5fe0; Wave 0 log 062–097; revalidated 2026-11-14 at main@3264038|
 | [SRC-019](./findings/065-SRC-019.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [SRC-020](./findings/066-SRC-020.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [SRC-021](./findings/067-SRC-021.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
@@ -808,3 +808,16 @@ The project is complete only when every in-scope finding is either verified comp
 - The previously recorded Vercel Preview deployment dpl_7Emk4emWyEnkLpAxQbvej3QhEJZh and READY (STAGED) state apply only to 50aa30278ace210d5ede661e149441772ef3e648, not the pre-sync head 1adbea1741b765b1a421b18ae4caa9897df14952. The passing Vercel Preview Comments check on the latter is not a deployment-success claim.
 - At this checkpoint PR #139 targeted main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf, current main was 7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6 (after PR #140), and the branch was 39 commits ahead / 146 behind. A three-way comparison found only ai_tasks/problem-register/REMEDIATION_PROGRESS.md modified on both sides. The upcoming sync preserves the latest-main policy/history plus the SCR-002 branch work; it does not merge PR #139 into main.
 - SCR-002 remains Implemented — verification pending. Branch CI is not post-merge verification. No live disposable target was provisioned or used, and no production, Platform Admin, or persistent database was accessed or modified. Wave 0 remains historically incomplete but is no longer a universal prerequisite under PR #140 policy; the approval remains scoped to SCR-002 only.
+
+### SRC-018 and RF-009 implementation — 2026-11-14
+
+- Scope: execute the approved, narrowly scoped email-verification remediation on `audit/064-src-018-email-verification-2026-11-14`, together with the directly required `RF-009` email-delivery dependency. The base revalidation was against `main` and the work branch at `326403812756b815f5d9a7dc77e29097ff7dd6b`; no main-branch synchronization was needed at that checkpoint.
+- Product policy: email/password registrations require email verification before login; no session is issued at registration; verification does not silently create a session; the user signs in after verification. Public resend responses remain enumeration-safe.
+- Authentication changes: removed the disabled verification flag; checked the verified-email state after password proof; enforced it at session creation and retrieval; revoked existing sessions on successful verification; bound delivered, single-use, expiring token hashes to a snapshot of the current account email; a resend only supersedes a prior link after the replacement is successfully accepted and activated in one transaction.
+- Email changes: implemented the production Nodemailer SMTP sender with strict configuration/TLS validation and safe verification/password-reset templates; awaited verification/password-reset sends; persisted verification delivery state; made workspace invitation email fail closed because its acceptance route is absent, revoking undelivered invitations without returning raw tokens; constrained production email action URLs to the configured HTTPS origin.
+- Persistence source changes: added additive migration `0016_email_verification_delivery` and matching Drizzle snapshot/journal. Legacy verification tokens intentionally fail closed and require resend. Migration was **not applied**.
+- Test changes: expanded auth/session regression tests and added SMTP contract, email-link, and invitation-delivery failure tests, including rejection of the unsupported invitation template until `SRC-016` is completed. Automated test/type/lint/migration-chain results must be recorded only after execution on the final branch head; none is claimed by this entry.
+- Findings updated: `SRC-018` and directly related `RF-009` are `Implemented — verification pending`, not Verified complete.
+- Safety limits: no production or disposable database was connected or modified; no SMTP credentials were present; no real email was sent; no deployment, pull request, merge, or external payment/provider side effect occurred.
+- This entry is a new dated execution record. Prior dated tracker entries and historical evidence above remain unchanged.
+

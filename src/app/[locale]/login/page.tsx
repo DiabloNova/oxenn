@@ -22,6 +22,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [requiresVerification, setRequiresVerification] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Strings translations
@@ -44,6 +45,8 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     validationPasswordRequired: isFa ? "وارد کردن رمز عبور الزامی است." : "Password is required.",
     validationPasswordLength: isFa ? "رمز عبور باید حداقل ۶ کاراکتر باشد." : "Password must be at least 6 characters.",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
+    emailNotVerified: isFa ? "ایمیل شما هنوز تأیید نشده است. برای دریافت لینک جدید، صفحه تأیید ایمیل را باز کنید." : "Your email address is not verified. Open the verification page to request another link.",
+    verifyEmailLink: isFa ? "ارسال مجدد لینک تأیید ایمیل" : "Resend verification email",
   };
 
   const validateForm = () => {
@@ -77,6 +80,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError("");
+    setRequiresVerification(false);
 
     if (!validateForm()) return;
 
@@ -87,7 +91,11 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
       router.push(`/${locale}/dashboard`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
+      const emailIsUnverified = msg === "Email must be verified before logging in.";
+      setRequiresVerification(emailIsUnverified);
+      setSubmitError(emailIsUnverified
+        ? strings.emailNotVerified
+        : (isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again."));
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +142,14 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
               {submitError && (
                 <div className="p-3.5 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs flex items-start gap-2 animate-shake">
                   <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                  <p className="font-bold">{submitError}</p>
+                  <div className="space-y-2">
+                    <p className="font-bold">{submitError}</p>
+                    {requiresVerification && (
+                      <Link href={`/${locale}/verify-email`} className="inline-flex font-bold underline underline-offset-2">
+                        {strings.verifyEmailLink}
+                      </Link>
+                    )}
+                  </div>
                 </div>
               )}
 
