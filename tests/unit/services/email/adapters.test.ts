@@ -21,6 +21,10 @@ describe("ProductionEmailSender", () => {
     vi.stubEnv("EMAIL_PROVIDER", "maileroo");
     vi.stubEnv("MAILEROO_SENDING_KEY", "");
     expect(() => new ProductionEmailSender()).toThrow("MAILEROO_SENDING_KEY is not configured");
+
+    vi.stubEnv("MAILEROO_SENDING_KEY", "test-sending-key");
+    vi.stubEnv("EMAIL_FROM_ADDRESS", "not-an-email");
+    expect(() => new ProductionEmailSender()).toThrow("EMAIL_FROM_ADDRESS must be a valid email address");
   });
 
   it("sends a verification message through Maileroo without enabling tracking", async () => {
@@ -100,6 +104,20 @@ describe("ProductionEmailSender", () => {
         params: {},
       }),
     ).rejects.toThrow("Email action URL is required");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-HTTP(S) action URLs before contacting Maileroo", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      new ProductionEmailSender().send({
+        to: "user@example.com",
+        templateId: "verification",
+        params: { url: "javascript:alert(1)" },
+      }),
+    ).rejects.toThrow("Email action URL must use HTTP or HTTPS");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

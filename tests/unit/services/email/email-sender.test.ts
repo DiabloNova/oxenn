@@ -29,12 +29,14 @@ describe("EmailSender Factory", () => {
     Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true });
     delete process.env.EMAIL_PROVIDER;
 
-    expect(() => getEmailSender()).toThrow("EMAIL_PROVIDER is not configured for production environment");
+    expect(() => getEmailSender()).toThrow('EMAIL_PROVIDER must be set to "maileroo" in production');
   });
 
   it("returns ProductionEmailSender when EMAIL_PROVIDER is set in production", () => {
     Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true });
-    process.env.EMAIL_PROVIDER = "dummy-provider";
+    process.env.EMAIL_PROVIDER = "maileroo";
+    process.env.MAILEROO_SENDING_KEY = "test-sending-key";
+    process.env.EMAIL_FROM_ADDRESS = "noreply@oxenn.ir";
 
     const sender = getEmailSender();
     expect(sender).toBeInstanceOf(ProductionEmailSender);

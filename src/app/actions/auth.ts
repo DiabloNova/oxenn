@@ -12,6 +12,7 @@ import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/se
 
 import { PoolClient } from "pg";
 import { headers } from "next/headers";
+import { after } from "next/server";
 
 async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey: string, maxAttempts: number, windowMs: number): Promise<void> {
     const expiresAt = new Date(Date.now() + windowMs);
@@ -504,19 +505,30 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
   });
 
   if (result && result.rawToken) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    try {
-      const sender = getEmailSender();
-      await sender.send({
-        to: result.email,
-        templateId: "password_reset",
-        params: {
-          url: `${appUrl}/en/forgot-password?token=${encodeURIComponent(result.rawToken)}`
-        }
-      });
-    } catch(e) {
-      console.error("Email sender creation error", e);
-    }
+    const recipient = result.email;
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/en/forgot-password?token=${encodeURIComponent(result.rawToken)}`;
+
+    // Keep provider setup and network delivery outside the response path so registered
+    // and unknown addresses do not expose account existence through provider latency.
+    after(async () => {
+      let sender;
+      try {
+        sender = getEmailSender();
+      } catch (error) {
+        console.error("Password reset email sender initialization error", error);
+        return;
+      }
+
+      try {
+        await sender.send({
+          to: recipient,
+          templateId: "password_reset",
+          params: { url: resetUrl },
+        });
+      } catch (error) {
+        console.error("Password reset email delivery error", error);
+      }
+    });
   }
 
   if (result && ('error' in result)) {

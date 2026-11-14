@@ -20,8 +20,8 @@ Only users who have verified control of their email address may establish or ret
 - Keep the generated docs index and database reference matrix synchronized with their source documents.
 - Implement `ProductionEmailSender` using Maileroo's Email API with a domain sending key, configurable sender name/address, plain-text and HTML bodies, disabled open/click tracking for authentication messages, HTTP timeout, safe error handling, and HTTP(S)-only action links.
 - Use `noreply@oxenn.ir` as the documented default sender address. No SMTP password or Sending Key is committed to the repository.
-- Await password-reset delivery so the Server Action does not return before the provider request has settled.
-- Add unit coverage for Maileroo configuration, payload construction, disabled tracking, HTML escaping, provider rejection, and invalid action URLs.
+- Schedule password-reset delivery with Next.js `after()` so provider latency and delivery failures do not affect the Server Action response.
+- Add unit coverage for Maileroo configuration, payload construction, disabled tracking, HTML escaping, provider rejection, and missing and non-HTTP(S) action URLs.
 
 ## Runtime configuration
 
