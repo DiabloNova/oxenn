@@ -20,6 +20,7 @@ export default defineConfig({
           environment: "node",
           // @ts-expect-error Vitest ProjectConfig omits passWithNoTests in TypeScript types
           passWithNoTests: false,
+          setupFiles: ["tests/setup/unit-setup.ts"],
           include: ["tests/unit/**/*.test.ts", "tests/unit/**/*.test.tsx"],
         },
       },

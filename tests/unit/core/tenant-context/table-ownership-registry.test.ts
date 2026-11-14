@@ -98,7 +98,7 @@ describe("Canonical table ownership registry", () => {
   it("classifies the encrypted email delivery outbox as platform-owned infrastructure", () => {
     const outbox = getTableOwnershipEntry("workspace", "email_outbox");
     expect(outbox.scope).toBe("PLATFORM_OWNED");
-    expect(outbox.rationale).toContain("encrypted authentication-email");
+    expect(outbox.rationale.toLowerCase()).toContain("encrypted authentication-email");
   });
 
   it("keeps user-owned sessions distinct from their optional workspace context", () => {

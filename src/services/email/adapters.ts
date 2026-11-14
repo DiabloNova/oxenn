@@ -74,6 +74,18 @@ export class DevEmailSender implements EmailSender {
     console.log("======================================================");
   }
 }
+export class CaptureEmailSender implements EmailSender {
+  public static capturedEmails: EmailSenderParams[] = [];
+
+  static clear() {
+    this.capturedEmails = [];
+  }
+
+  async send(params: EmailSenderParams): Promise<void> {
+    CaptureEmailSender.capturedEmails.push(params);
+  }
+}
+
 export class ProductionEmailSender implements EmailSender {
   private readonly sendingKey: string;
   private readonly fromAddress: string;
