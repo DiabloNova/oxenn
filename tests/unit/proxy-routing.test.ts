@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_LOCALE, isSupportedLocale, SUPPORTED_LOCALES } from "@/config/i18n";
 import { proxy } from "@/proxy";
 
@@ -12,6 +12,10 @@ function runProxy(path: string) {
 function expectNext(response: Response) {
   expect(response.headers.get("x-middleware-next")).toBe("1");
 }
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("locale routing proxy", () => {
   it("uses Persian as the supported default locale", () => {
@@ -26,6 +30,40 @@ describe("locale routing proxy", () => {
     expect(isSupportedLocale("en-US")).toBe(false);
     expect(isSupportedLocale("EN")).toBe(false);
     expect(isSupportedLocale("fil")).toBe(false);
+  });
+
+  it("adds Report-Only CSP at request time on Preview page responses", () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+
+    const response = runProxy("/fa/dashboard");
+
+    expectNext(response);
+    expect(response.headers.get("content-security-policy-report-only")).toContain(
+      "report-uri /api/security/csp-report",
+    );
+    expect(response.headers.get("reporting-endpoints")).toBe(
+      'csp-endpoint="/api/security/csp-report"',
+    );
+  });
+
+  it("does not add Preview CSP headers to Production page responses", () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+
+    const response = runProxy("/fa");
+
+    expectNext(response);
+    expect(response.headers.get("content-security-policy-report-only")).toBeNull();
+    expect(response.headers.get("reporting-endpoints")).toBeNull();
+  });
+
+  it("does not add Preview CSP headers to local development page responses", () => {
+    vi.stubEnv("VERCEL_ENV", "development");
+
+    const response = runProxy("/en");
+
+    expectNext(response);
+    expect(response.headers.get("content-security-policy-report-only")).toBeNull();
+    expect(response.headers.get("reporting-endpoints")).toBeNull();
   });
 
   it("redirects the root to the default locale", () => {
