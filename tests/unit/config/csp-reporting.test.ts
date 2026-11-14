@@ -2,19 +2,14 @@ import { describe, expect, it } from "vitest";
 import { getPreviewCspHeaders } from "@/config/csp-reporting";
 
 describe("Preview CSP reporting headers", () => {
-  const previewUrl = "oxenn-git-rf-006-oxenn.vercel.app";
-
-  it("does not add CSP reporting headers to Production", () => {
-    expect(getPreviewCspHeaders("production", previewUrl)).toEqual([]);
+  it("does not add CSP reporting headers outside Preview", () => {
+    expect(getPreviewCspHeaders("production")).toEqual([]);
+    expect(getPreviewCspHeaders("development")).toEqual([]);
+    expect(getPreviewCspHeaders(undefined)).toEqual([]);
   });
 
-  it("does not add CSP reporting headers to local development", () => {
-    expect(getPreviewCspHeaders("development", "localhost:3000")).toEqual([]);
-    expect(getPreviewCspHeaders(undefined, previewUrl)).toEqual([]);
-  });
-
-  it("uses an origin-relative reporting path on Preview aliases and custom domains", () => {
-    const headers = getPreviewCspHeaders("preview", previewUrl);
+  it("emits the exact origin-relative Report-Only policy on Preview", () => {
+    const headers = getPreviewCspHeaders("preview");
 
     expect(headers).toHaveLength(2);
     expect(headers[0]).toEqual({
@@ -22,31 +17,27 @@ describe("Preview CSP reporting headers", () => {
       value: 'csp-endpoint="/api/security/csp-report"',
     });
     expect(headers[1].key).toBe("Content-Security-Policy-Report-Only");
-    expect(headers[1].value).toContain("default-src 'self'");
-    expect(headers[1].value).toContain("script-src 'self'");
-    expect(headers[1].value).toContain("style-src 'self'");
-    expect(headers[1].value).toContain("object-src 'none'");
-    expect(headers[1].value).toContain("frame-ancestors 'none'");
-    expect(headers[1].value).toContain("report-to csp-endpoint");
-    expect(headers[1].value).toContain(
-      "report-uri /api/security/csp-report",
+    expect(headers[1].value).toBe(
+      [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "img-src 'self' data: blob:",
+        "font-src 'self' data:",
+        "connect-src 'self'",
+        "frame-src 'self'",
+        "worker-src 'self' blob:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        "report-to csp-endpoint",
+        "report-uri /api/security/csp-report",
+      ].join("; "),
     );
     expect(headers[1].value).not.toContain("https://");
     expect(headers[1].value).not.toContain("unsafe-inline");
     expect(headers[1].value).not.toContain("unsafe-eval");
-  });
-
-  it.each([
-    undefined,
-    "",
-    "https://example.com",
-    "example.com/path",
-    "user@example.com",
-    "example.com?target=elsewhere",
-    "example.com#fragment",
-    "example.com:443",
-    " example.com",
-  ])("fails closed when the Preview deployment host is invalid: %s", (host) => {
-    expect(getPreviewCspHeaders("preview", host)).toEqual([]);
+    expect(headers[1].value).not.toContain("*");
   });
 });
