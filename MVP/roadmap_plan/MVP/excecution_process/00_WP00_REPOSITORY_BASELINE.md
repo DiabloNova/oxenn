@@ -1,11 +1,11 @@
 # MVP-00 WP-00 — Repository Baseline and Evidence Index
 
-**Status:** COMPLETE — repository baseline inspection and evidence capture  
-**Repository:** DiabloNova/oxenn  
-**Audit branch:** MVP_00  
-**Source snapshot:** MVP_00 at 7f1e9d44ae88cf78721f4f5360449cbd14d19acf  
-**Compared base:** main at 326403812756b815f5d9a7dc77e29097ff7dd6b0  
-**Audit date:** 2026-11-14  
+**Status:** COMPLETE — repository baseline inspection and evidence capture
+**Repository:** DiabloNova/oxenn
+**Audit branch:** MVP_00
+**Source snapshot:** MVP_00 at 7f1e9d44ae88cf78721f4f5360449cbd14d19acf
+**Compared base:** main at 326403812756b815f5d9a7dc77e29097ff7dd6b0
+**Audit date:** 2026-11-14
 **Scope:** Read-only repository audit and documentation evidence only
 
 > This report establishes repository-level evidence at the exact source snapshot above. It does not establish that any external provider, production database, deployed authorization boundary, payment flow, or production user journey is live. Historical audits and issue records are treated as leads, not current proof.
@@ -16,7 +16,7 @@ WP-00 is complete. The current main and the code-bearing baseline of MVP_00 were
 
 The repository has substantial reusable foundations: server-side session and workspace authorization helpers, Workspace tenant-context/RLS infrastructure, a guarded migration discipline, a PostgreSQL-backed isolation suite in CI, bounded internal crawling, a Firecrawl adapter, AI-provider abstractions, billing/plan infrastructure, monitoring repositories, background jobs, and observability components.
 
-Those foundations do not yet establish the new approved product MVP end to end. In particular, the checked-in Workspace schema does not contain canonical persisted Offer/PIP, independent service-SKU/entitlement, optional-bundle, Growth Plan, task, or outcome models. Current billing is primarily a tenant-wide legacy plan/entitlement model. Several existing SEO, AI visibility, competitive-analysis, and report surfaces still use seeded or synthetic data. Provider selection and production reachability remain unverified.
+Those foundations do not yet establish the new approved product MVP end to end. In particular, the checked-in Workspace schema does not contain canonical persisted Offer/PIP, independent service-SKU/entitlement, optional-bundle, Growth Plan, task, or outcome models. Current billing is primarily a tenant-wide legacy plan/entitlement model. Several existing SEO, AI visibility, competitive-analysis, and report surfaces still use seeded or synthetic data. Provider selection and production reachability remain unverified. The intended customer operating model is one shared Workspace and central dashboard in which SEO, AEO, and GEO can each be activated and used independently; service independence does not imply a separate Workspace for every service.
 
 **WP-00 completion does not complete MVP-00.** Owner decisions, commercial rules, launch/pilot choices, evidence policy, and FR-01–FR-11 traceability remain for later work packages. No application-code, schema, migration, provider, deployment, production, merge, or PR change was made.
 
@@ -121,12 +121,16 @@ The current canonical snapshot does **not** contain tables named or serving as c
 
 This is a schema-level finding at this commit. It does not imply those domains have no types or prototypes anywhere; it means the inspected canonical persisted model does not yet establish those end-to-end product contracts.
 
+### Workspace is the shared customer operating context — owner direction (2026-11-14)
+
+The preferred user-facing model is one customer Workspace with a central dashboard. SEO, AEO, and GEO are distinct services that customers can activate and use independently inside that same Workspace. Service independence is a service-access and entitlement boundary, not a requirement to create separate Workspaces or separate customer identities per SKU. Workspace membership and the dashboard context remain shared; each service must still have its own server-enforced entitlement, quota, usage metering, and service-specific evidence. An optional bundle may aggregate access but must not become a prerequisite for standalone services. The detailed entitlement subject and accounting rules (for example, workspace-wide versus Offer-scoped usage) remain to be designed in WP-02/WP-03 and must not be silently assumed by this note.
+
 ### Existing billing is not yet the approved independent-service catalogue
 
 - src/features/billing/domain/plans.ts defines tenant-wide Free, Professional, Business, and Enterprise plans.
 - src/features/billing/services/subscription-service.ts resolves a tenant subscription and checks plan-level feature entitlements/quotas.
 - The Workspace tables include tenant_subscriptions, tenant_quotas, and credit_transactions.
-- This is reusable plan/credit infrastructure, but it is not the approved commercial contract of separately selectable SEO, AEO, and GEO SKUs with their own entitlements and usage ledgers. The optional Digital Visibility Suite and optional Product Assessment & Improvement pilot are not represented as independent persisted SKU/bundle contracts in the inspected snapshot.
+- This is reusable plan/credit infrastructure, but it is not the approved commercial contract of separately selectable SEO, AEO, and GEO SKUs with their own entitlements and usage ledgers within a shared Workspace. The absence of SKU-specific entitlement and metering must not be solved by splitting each service into a separate Workspace. The optional Digital Visibility Suite and optional Product Assessment & Improvement pilot are not represented as independent persisted SKU/bundle contracts in the inspected snapshot.
 
 Do not reuse the old plan model as if it already enforces FR-11. The product, commercial and schema design must be resolved in the relevant MVP-00 work packages before implementation.
 
