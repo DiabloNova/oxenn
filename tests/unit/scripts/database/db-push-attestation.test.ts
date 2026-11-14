@@ -24,27 +24,27 @@ afterEach(async () => {
 });
 
 describe("db:push guard attestation", () => {
-  it("issues a fresh private attestation bound to the exact target and URL", async () => {
+  it("creates a fresh private invocation marker bound to the exact target and URL", async () => {
     await issue();
     expect(() => assertDbPushGuardAttestation(targetId, connectionString)).not.toThrow();
   });
 
-  it("rejects direct Drizzle invocation without a guard-issued attestation", () => {
+  it("rejects direct Drizzle invocation without the wrapper marker", () => {
     expect(() => assertDbPushGuardAttestation(targetId, connectionString, { NODE_ENV: "test" })).toThrow(/requires a fresh attestation/);
   });
 
-  it("rejects an attestation bound to another target or connection URL", async () => {
+  it("rejects a marker bound to another target or connection URL", async () => {
     await issue();
     expect(() => assertDbPushGuardAttestation("another-target", connectionString)).toThrow(/valid, fresh, private attestation/);
     expect(() => assertDbPushGuardAttestation(targetId, "postgresql://other/db")).toThrow(/valid, fresh, private attestation/);
   });
 
-  it("rejects an expired attestation", async () => {
+  it("rejects an expired invocation marker", async () => {
     await issue();
     expect(() => assertDbPushGuardAttestation(targetId, connectionString, process.env, Date.now() + 60_001)).toThrow(/valid, fresh, private attestation/);
   });
 
-  it("rejects a modified attestation payload", async () => {
+  it("rejects a modified invocation marker payload", async () => {
     const filePath = await issue();
     const payload = JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
     payload.targetId = "another-target";

@@ -2,10 +2,10 @@ import { defineConfig } from "drizzle-kit";
 import { assertDbPushGuardAttestation } from "./scripts/database/db-push-attestation";
 import { resolveConfiguredDbPushTarget } from "./scripts/database/db-push-guard";
 
-// This config fails closed on accidental direct invocation: it requires a
-// short-lived attestation file written by the db:push wrapper after catalog
-// attestation. The file is not cryptographically unforgeable; a same-user
-// process can fabricate it, so it is not proof that the guard executed.
+// This config fails closed on accidental direct invocation by requiring a
+// short-lived marker created by db:push after catalog checks. This is defense
+// in depth, not an authenticated proof: a same-user process can fabricate the
+// marker. Production credentials must remain unavailable to developer processes.
 const { target, connectionString } = resolveConfiguredDbPushTarget();
 assertDbPushGuardAttestation(target.id, connectionString);
 
