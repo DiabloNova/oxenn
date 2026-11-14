@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 /**
  * Baseline security headers applied to every route.
- * CSP intentionally not enforced on day one; run report-only first
- * (see audit report Phase 4) to avoid breaking Next.js inline scripts.
+ * CSP Report-Only is added at request time by src/proxy.ts only on Preview.
+ * Keeping the Preview gate out of this build-time config prevents a Preview
+ * policy from being frozen into an artifact that is later served in Production.
  */
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },

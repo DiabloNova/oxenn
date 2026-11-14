@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current main at 9ac5fe0; 20 remain Not started. The PR #139 ledger records 62 Confirmed, 4 Verified complete, 4 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. SCR-002 is implemented with verification pending under explicit user approval. The historical project-wide Wave 0 inventory remains incomplete, but WAVE0_POLICY_SUPERSESSION.md retires it as a universal prerequisite; each new task still requires explicit approval, exact-base revalidation, directly relevant dependencies, applicable safeguards, and separate authorization.
+**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current main at 9ac5fe0; 20 remain Not started. The PR #139 ledger recorded 62 Confirmed, 4 Verified complete, 4 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. RF-006 has since moved from Confirmed to Implemented — verification pending under explicit user approval; the current dispositions are 61 Confirmed, 4 Verified complete, 5 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. SCR-002 remains implemented with verification pending under its separate approval. The historical project-wide Wave 0 inventory remains incomplete, but WAVE0_POLICY_SUPERSESSION.md retires it as a universal prerequisite; each new task still requires explicit approval, exact-base revalidation, directly relevant dependencies, applicable safeguards, and separate authorization.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -16,12 +16,12 @@
 |---|---:|
 | Individual finding records | 97 |
 | Findings revalidated against current `main` | 77 |
-| Findings approved for implementation (cumulative) | 4 |
-| Findings with implementation started (cumulative) | 4 |
+| Findings approved for implementation (cumulative) | 5 |
+| Findings with implementation started (cumulative) | 5 |
 | Findings with verified implementation complete | 4 |
-| Findings implemented — verification pending | 4 |
+| Findings implemented — verification pending | 5 |
 | Findings blocked / historical-only | 3 |
-| Findings with confirmed issues | 62 |
+| Findings with confirmed issues | 61 |
 | Findings already fixed in repository | 1 |
 | Findings needing a product/security decision | 3 |
 | Findings not started | 20 |
@@ -76,7 +76,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At main@9ac5fe0, 77 of 97 findings had been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked; 20 remained Not started. PR #139 moves SCR-002 from Confirmed to Implemented — verification pending. The current 97-row ledger therefore records 62 Confirmed, 4 Verified complete, 4 Implemented — verification pending, 1 Already fixed, 3 Needs decision, 3 Blocked, and 20 Not started. VER-005 and VER-006 remain historical-only and DO NOT RUN; VER-013 is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. The historical project-wide Wave 0 exit condition remains incomplete; under WAVE0_POLICY_SUPERSESSION.md, it is not a universal prerequisite for independently approved, task-specific remediation.
+The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At main@9ac5fe0, 77 of 97 findings had been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked; 20 remained Not started. PR #139 moves SCR-002 from Confirmed to Implemented — verification pending. The current 97-row ledger therefore records 61 Confirmed, 4 Verified complete, 5 Implemented — verification pending, 1 Already fixed, 3 Needs decision, 3 Blocked, and 20 Not started. VER-005 and VER-006 remain historical-only and DO NOT RUN; VER-013 is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. The historical project-wide Wave 0 exit condition remains incomplete; under WAVE0_POLICY_SUPERSESSION.md, it is not a universal prerequisite for independently approved, task-specific remediation.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -85,7 +85,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [RF-003](./findings/003-RF-003.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [RF-004](./findings/004-RF-004.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [RF-005](./findings/005-RF-005.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
-| [RF-006](./findings/006-RF-006.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
+| [RF-006](./findings/006-RF-006.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | — | main@326403812756b815f5d9a7dc77e29097ff7dd6b0; PR #142 head `36cbd682`; CI run #913 and Preview READY; authenticated browser report still unverified |
 | [RF-007](./findings/007-RF-007.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [RF-008](./findings/008-RF-008.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [RF-009](./findings/009-RF-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
@@ -808,3 +808,18 @@ The project is complete only when every in-scope finding is either verified comp
 - The previously recorded Vercel Preview deployment dpl_7Emk4emWyEnkLpAxQbvej3QhEJZh and READY (STAGED) state apply only to 50aa30278ace210d5ede661e149441772ef3e648, not the pre-sync head 1adbea1741b765b1a421b18ae4caa9897df14952. The passing Vercel Preview Comments check on the latter is not a deployment-success claim.
 - At this checkpoint PR #139 targeted main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf, current main was 7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6 (after PR #140), and the branch was 39 commits ahead / 146 behind. A three-way comparison found only ai_tasks/problem-register/REMEDIATION_PROGRESS.md modified on both sides. The upcoming sync preserves the latest-main policy/history plus the SCR-002 branch work; it does not merge PR #139 into main.
 - SCR-002 remains Implemented — verification pending. Branch CI is not post-merge verification. No live disposable target was provisioned or used, and no production, Platform Admin, or persistent database was accessed or modified. Wave 0 remains historically incomplete but is no longer a universal prerequisite under PR #140 policy; the approval remains scoped to SCR-002 only.
+
+
+### RF-006 scoped implementation — 2026-11-14
+
+- Date/time: 2026-11-14 13:09 +03:30. Responsible agent/tool: ChatGPT GPT-6 using Composio GitHub and Vercel integrations.
+- Finding: [RF-006](./findings/006-RF-006.md). Repository: `DiabloNova/oxenn`. Branch: `review/006-rf-006-2026-11-13`. Exact base: `main@326403812756b815f5d9a7dc77e29097ff7dd6b0`. Working head after final code and generated-index updates: `36cbd682544d76d0e5d6e149efc79989c7951723`. PR: [#142](https://github.com/DiabloNova/oxenn/pull/142).
+- Revalidation: the exact base still had no `Content-Security-Policy` or `Content-Security-Policy-Report-Only` in `next.config.ts`; no collector route existed. The existing HSTS setting is retained unchanged. This is a hardening gap, not evidence of an exploitable vulnerability.
+- Root cause and implementation: Preview CSP headers had been described but were not emitted. Added a same-origin collector at `POST /api/security/csp-report`, with strict content-type handling, bounded 16 KiB body reads, a 20-CSP-report batch cap applied after filtering non-CSP Reporting API entries, UTF-8/JSON validation, allow-listed origin-level sanitization, and no raw-report persistence. The collector is Preview-only at request time and accesses neither Workspace nor Platform Admin databases.
+- Reporting compatibility: the existing `src/proxy.ts` adds headers at request time only when `VERCEL_ENV=preview`; it derives the legacy `Report-To` absolute URL from the origin of the current request. The modern `Reporting-Endpoints` and legacy `report-uri` use the origin-relative `/api/security/csp-report` path. Production and development responses receive no CSP reporting headers.
+- External rate control: Vercel Firewall rule `CSP report endpoint - Preview rate limit` (`rule_csp_report_endpoint_preview_rate_limit_32ZUnN`) matches Environment=`preview` AND Path=`/api/security/csp-report` AND Method=`POST`; fixed window 60 seconds, 60 requests, key `ip`. Active configuration read-back reported firewall enabled, rule active, and `valid: true`. Exact conditions and repeatable manual verification are recorded in `docs/security/CSP_REPORTING.md`.
+- Files changed: `docs/security/CSP_REPORTING.md`, `next.config.ts`, `src/app/api/security/csp-report/route.ts`, `src/config/csp-reporting.ts`, `src/proxy.ts`, `tests/unit/app/api/security/csp-report/route.test.ts`, `tests/unit/config/csp-reporting.test.ts`, and `tests/unit/proxy-routing.test.ts`.
+- Verification on the exact final head: GitHub Actions run [#913](https://github.com/DiabloNova/oxenn/actions/runs/43584722541) completed successfully. Unit Tests, Isolation Suite, and Build and Test all succeeded. Build and Test steps passed dependency audit and audit regression tests, typecheck, lint, tenant-table schema alignment, RLS migration coverage, MVP/documentation checks, RLS documentation consistency, Drizzle migration-chain validation, application build, Reference Matrix generation, and generated tracked-file no-drift verification. DeepSource Secrets succeeded. Vercel Preview deployment `dpl_5Le7C22H3wpvSLbS8r2FLe5A5sx6` for this exact head was READY.
+- Review follow-up: alias/cross-origin delivery, external Firewall reproducibility, CSP-policy assertion completeness, source-path sanitization, non-CSP batch filtering, batch counting, runtime Preview gating, report metadata documentation, and font-source documentation were addressed. Applicable review threads received explanations and were resolved.
+- Safety and remaining limits: no Workspace or Platform Admin database connection, migration, or mutation; no Production CSP or enforcement; HSTS unchanged; Vercel Preview Deployment Protection remains enabled. Runtime Logs are only temporary initial validation, no durable Log Drain/external reporting sink is configured, and a real authenticated browser-generated report has not yet been observed. The frontend overhaul remains a separate PR and is a prerequisite to final policy selection/enforcement.
+- Status: `Confirmed` → `Implemented — verification pending`. Exact-head repository CI and Preview build pass, but do not mark Verified complete until an authenticated browser smoke test confirms that the Preview response includes the expected Report-Only and Reporting API headers and that a browser-generated report reaches the sanitized collector logs. No durable reporting sink is configured. PR #142 remains open and unmerged.

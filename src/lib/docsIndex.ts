@@ -354,6 +354,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Phase 02 — Creative Concept and Design Direction  **Concept name:** Signal Atlas — Oxenn's Living Digital Twin   **Design thesis:** Turn fragmented search and AI visibility signals into a clear model of where a brand stands, what is missing, and what to do next.   **Reference concept:** The generated Oxenn homepage image shared in the project conversation (1536 × 1024). It is an art-direction reference, not a production screenshot or proof of shipped functionality.  ## 1. Brand principles  1. `
   },
   {
+    slug: "CSP_REPORTING",
+    titleEn: "CSP Report-Only Discovery",
+    titleFa: "CSP Report-Only Discovery",
+    category: "security",
+    categoryFa: "Security",
+    snippet: `# CSP Report-Only Discovery  ## Scope  Content Security Policy reporting is enabled only for requests that execute in the Vercel \`preview\` environment. Production and local development receive no CSP reporting headers. No enforcing \`Content-Security-Policy\` header is introduced.  The Preview policy is a deliberately narrow discovery baseline. It permits same-origin resources, plus data/blob URLs for images, data URLs for fonts, and blob workers. It does not grant wildcard hosts or unsafe inline/eval`
+  },
+  {
     slug: "PLATFORM_ADMIN_AUTHENTICATION",
     titleEn: "Platform Admin Authentication and Persistence Boundary",
     titleFa: "Platform Admin Authentication and Persistence Boundary",
