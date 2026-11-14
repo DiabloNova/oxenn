@@ -48,10 +48,11 @@ describe("db:push guard attestation", () => {
 
   it("rejects an issuedAt timestamp more than five seconds in the future", async () => {
     const filePath = await issue();
+    const now = Date.now();
     const payload = JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
-    payload.issuedAt = Date.now() + 5_001;
+    payload.issuedAt = now + 5_001;
     writeFileSync(filePath, JSON.stringify(payload));
-    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/valid, fresh, private invocation marker/);
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString, process.env, now)).toThrow(/valid, fresh, private invocation marker/);
   });
 
   it("rejects a symlinked invocation marker file", async () => {
