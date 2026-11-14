@@ -10,9 +10,9 @@ The Preview check runs at request time in the existing `src/proxy.ts`, rather th
 
 ## Reporting endpoint
 
-The endpoint is `POST /api/security/csp-report`. The Reporting API endpoint is the origin-relative path `/api/security/csp-report`, so reports follow the exact document origin users opened, including branch aliases and custom Preview domains. The leading slash is required by the Reporting API endpoint syntax. The existing Proxy adds the reporting headers only when the current request is running in Preview.
+The endpoint is `POST /api/security/csp-report`. The modern Reporting API endpoint is the origin-relative path `/api/security/csp-report`, so reports follow the exact document origin users opened, including branch aliases and custom Preview domains. The leading slash is required by the Reporting API endpoint syntax. The legacy `Report-To` mapping uses the request's current HTTPS origin to construct its absolute endpoint URL; it does not use the build's unique `VERCEL_URL`.
 
-The response advertises the endpoint using `Reporting-Endpoints` and selects it with `report-to`. The policy also includes `report-uri` for older CSP reporting implementations. Both modern Reporting API batches (`application/reports+json`) and the legacy CSP envelope (`application/csp-report`) are accepted. A JSON legacy envelope is also accepted for compatibility.
+The response advertises the modern endpoint using `Reporting-Endpoints` and selects it with the CSP `report-to` directive. It also includes the deprecated `Report-To` header for older Reporting API v0 browsers, plus `report-uri` for browsers that support only legacy CSP reporting. Both modern Reporting API batches (`application/reports+json`) and the legacy CSP envelope (`application/csp-report`) are accepted. A JSON legacy envelope is also accepted for compatibility.
 
 ## Input and privacy controls
 
