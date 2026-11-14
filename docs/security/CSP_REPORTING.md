@@ -20,7 +20,36 @@ The response advertises the endpoint using `Reporting-Endpoints` and selects it 
 - Unsupported content types, malformed JSON, and invalid report envelopes are rejected.
 - Reports are treated as attacker-controlled. Raw payloads are never persisted or logged.
 - Logs contain only the directive, report disposition, status code, and origin-level values. Paths, query strings, fragments, referrers, script samples, cookies, and user-agent values are not logged.
-- Distributed IP rate limiting is configured separately in the Vercel Firewall for this Preview route.
+
+## Vercel Firewall rate limit
+
+The collector is protected by a Vercel Firewall custom rule configured outside the repository. The checked active configuration for the Vercel project `oxenn` is:
+
+| Setting | Required value |
+|---|---|
+| Rule name | `CSP report endpoint - Preview rate limit` |
+| Rule status | Active and valid |
+| Conditions (AND) | Environment = `preview`; Path = `/api/security/csp-report`; Method = `POST` |
+| Mitigation | Rate limit |
+| Algorithm | Fixed window |
+| Window | 60 seconds |
+| Limit | 60 requests |
+| Key | Client IP |
+
+The current Vercel Firewall rule ID is `rule_csp_report_endpoint_preview_rate_limit_32ZUnN`. The active firewall configuration was read back after creation; the rule reported `valid: true`, and the project firewall reported `firewallEnabled: true`.
+
+### Reproducible verification
+
+Before relying on this protection for a Preview deployment, an operator should:
+
+1. Open the Vercel team `oxenn` and project `oxenn`, then open its Firewall custom rules.
+2. Find `CSP report endpoint - Preview rate limit` and confirm it is enabled/valid.
+3. Confirm the three AND conditions exactly match the table above.
+4. Confirm the mitigation is a fixed-window rate limit of 60 requests per 60 seconds keyed by IP.
+5. Read the project's active Firewall configuration through Vercel's Firewall configuration API and confirm the rule is present and the firewall is enabled.
+6. Recheck after any Firewall configuration change or project transfer. This rule is external operational configuration; repository code and unit tests alone cannot prove that it remains deployed.
+
+Do not broaden the rule to Production or unrelated routes as part of RF-006.
 
 ## Operational limits
 
