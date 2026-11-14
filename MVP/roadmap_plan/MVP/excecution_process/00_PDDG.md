@@ -437,6 +437,15 @@ Do not rewrite or reorder prior entries. Append a new entry for every material a
 - Initialized this execution log. No application code, schema/migration, external provider, deployment, merge, or PR changes were made.
 - Stage status remains **IN PROGRESS**. Owner decisions and the repository baseline/traceability artifacts remain pending.
 
+### 2026-11-14 — WP-00 repository baseline revalidation
+
+- Revalidated main at 326403812756b815f5d9a7dc77e29097ff7dd6b0 and MVP_00 at 7f1e9d44ae88cf78721f4f5360449cbd14d19acf; main did not move and the pre-report branch delta remained this execution log only.
+- Inspected the current repository operating contract, product specification, engineering baseline, security and database rules, package/test/CI configuration, relevant application modules, schema snapshots/migration journals, monitoring/reporting surfaces, current issues and all open PR metadata.
+- Recorded the evidence-indexed result in [00_WP00_REPOSITORY_BASELINE.md](./00_WP00_REPOSITORY_BASELINE.md), including current-source dispositions for issues #115, #116, #87, #88 and #141, CI evidence, explicit NOT RUN/UNKNOWN boundaries, and downstream risks.
+- node --test scripts/audit-gate.test.mjs: **PASS**, 14/14. Initial git diff --check: **PASS**. Local dependency installation was killed by the constrained audit shell; the TypeScript-dependent documentation verifier and application test/build commands are **NOT RUN locally**. Exact-base GitHub CI run #43582227215 passed Build and Test, Unit Tests and Isolation Suite on the same application-code SHA.
+- No application code, tests, schema, migrations, generated artifacts, providers, deployment, main, other branches, PRs, or issue states were changed. No live database/provider/production runtime was exercised.
+- **WP-00 status: COMPLETE.** Parent MVP-00 remains **IN PROGRESS**; WP-01 and owner decisions remain pending.
+
 ### Subsequent entries
 
 _Add dated entries here; preserve all previous journal text._
