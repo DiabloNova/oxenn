@@ -132,3 +132,38 @@ The matching evidence includes the current docs audit/index and RLS verifier, `d
 - `verification/phase-0/probe-system-context.ts` and `verification/phase-0/run_rls_matrix.js` were not executed.
 - No Production action, external provider/payment action, deployment, issue/PR closure, or merge into main was performed. This merge is only latest main into the isolated review branch.
 - **Wave 0 task: IN PROGRESS, NOT COMPLETE.** Two findings have detailed revalidation on the latest source baseline; the remaining records still need individual dispositions. This does not reinstate the retired universal prerequisite.
+
+
+## Follow-on review batch — 2026-11-14 (base `7e9145a`)
+
+### DOC-007 — Verified complete (documentation/repository consistency only)
+
+Current documentation uses canonical names, identifies `organization_members.role` as the role authority, labels `roles` as frozen legacy, lists direct callers, and clearly says allowedTables is metadata, not SQL enforcement. The current AST-based documentation test reconciles registered purposes, literal call sites, documented callers and tables against canonical schema, and rejects legacy names. Exact main CI run #43570097349 passed all three core jobs. DOC-007 is Verified complete for documentation/inventory only; SRC-002 remains open for missing runtime SQL/caller/table/operation enforcement.
+
+### DOC-008 — Implemented; verification pending
+
+Security Model explicitly separates Workspace RBAC and Platform Admin authorization, prohibits implicit mapping, and says Workspace `super_admin` is not a Platform Admin principal. Server-only Platform Admin identity is trusted-provider-only, opaque and fail-closed; tests cover provider injection, Workspace-role-as-Platform-Admin rejection, invalid/inactive identities, exact permissions, and OIDC state/nonce/PKCE/RS256/issuer/audience/MFA. Exact latest main CI passed. A focused reverse-direction negative test (Platform Admin principal cannot be consumed as a customer Workspace session/membership at the actual boundary) was not established, so verification remains pending. No live Platform Admin database/provider is claimed.
+
+### SCR-003 — Confirmed; shared cleanup partially resolves original mechanism
+
+`grantSuperAdmin()` runs inside `runWithSystemContext`, whose shared wrapper owns transaction commit/rollback, error audit and leased-client release in `finally`; the old claim that the script itself owns an unclosed transaction is superseded. However the successful CLI path omits `PostgresClient.closePools()` for main/authenticator pools, and failure/usage branches use `process.exit(1)` rather than exit after graceful shutdown. Grant tests cover last-admin protection, success/audit order, inactive workspace, missing membership and viewer promotion, but not update/audit failure rollback, client release assertions or pool closure. Keep Confirmed; required follow-up is try/finally pool shutdown, `process.exitCode` after cleanup, and regression tests. No code changed in this audit.
+
+### SRC-013 — Verified complete (repository/CI scope)
+
+PR #135 merged at `a9f22b6...`. Free-audit API authenticates via server session before body/quota/crawl, enforces per-user monthly, trusted IP hourly and global daily limits, uses hashed counters/idempotency, invokes internal HttpCrawlProvider (not Firecrawl), and applies URL/body/page/byte/deadline/redirect/robots and SSRF-safe DNS/redirect constraints. Tests cover anonymous rejection, quotas, malformed/oversized requests, SSRF, refund/idempotency and abort signals. The homepage's MockAiAuditService is explicitly `Free Audit Demo`: no real crawl or AI provider call; displayed values are synthetic samples. Exact PR #135 merge CI run #43444406157 and exact latest main CI run #43570097349 passed Build and Test, Unit Tests and Isolation Suite. Verified complete is repository/CI scope only; deployment is not claimed.
+
+### TST-002 — Verified complete (CI disposable PostgreSQL scope)
+
+All five former global junction tables are tenant-owned. Isolation Suite tests missing-context read/insert, tenant-only reads, foreign-parent composite FK, cross-tenant insert/update/delete and ownership-transfer denial. PR #130 merge CI run #43061982552 and exact latest main CI run #43570097349 passed all core jobs. This verifies repository/CI behavior against disposable PostgreSQL only, not Production state.
+
+### TST-003 — Verified complete (independent repository oracle/CI scope)
+
+The independently reviewed expected ownership inventory (56 organization-scoped tables) is not derived from RLS presence or generated Runtime metadata. Omission mutation tests fail if a known tenant table is missing; policy/migration coverage is separate from ownership classification. PR #130 merge CI run #43061982552 and exact latest main CI run #43570097349 passed all core jobs. `system_configurations` remains explicitly unresolved rather than implicitly classified; no live Production DB claim.
+
+### Exact current-main CI checkpoint
+
+At `main@7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6`, Actions run #43570097349 passed **Build and Test**, **Unit Tests**, and **Isolation Suite**. Latest `record-remediation-event` retries succeeded separately in run #43571756813; these auxiliary checks are distinct from core CI. No persistent repository DB was accessed and no migration ran.
+
+### Task-specific count
+
+Eight findings have now been individually revalidated against `7e9145a`: SRC-012, SRC-017, SRC-013, TST-002, TST-003, DOC-007, DOC-008 and SCR-003. Five are Verified complete within repo/CI limits; two remain Confirmed with residual work (SRC-012 and SCR-003); one remains Implemented — verification pending (DOC-008); 89 records await individual review. This task continues because the user explicitly authorized it. The universal Wave 0 prerequisite remains retired by PR #140.

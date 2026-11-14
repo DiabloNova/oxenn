@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — historical aggregate counts at `main@9ac5fe0` are retained for provenance and are not current-main dispositions. PR #140 retired the blanket Wave 0 gate. The user explicitly authorized a full Wave 0 revalidation task on this branch; 2 findings (SRC-012 and SRC-017) have detailed evidence on current `main@7e9145a`, with 95 still awaiting individual current-base revalidation. This is a task-specific audit, not a universal prerequisite for unrelated remediations.
+**Current overall status:** PARTIAL — historical aggregate counts at `main@9ac5fe0` are provenance only. PR #140 retired the blanket Wave 0 gate. The user explicitly authorized this full task-specific revalidation; 8 findings have individual current-main reviews on `main@7e9145a` (5 Verified complete, 2 Confirmed with residual scope, 1 Implemented — verification pending), while 89 remain to be reviewed. This is not a universal prerequisite for unrelated remediations.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -15,15 +15,16 @@
 | Metric | Current Wave 0 task value |
 |---|---:|
 | Individual finding records | 97 |
-| Fully revalidated against current `main@7e9145a` in this pass | 2 (SRC-012, SRC-017) |
-| Records still awaiting current-main revalidation | 95 |
-| Verified complete in this pass | 1 (SRC-017; repository/CI scope only) |
-| Confirmed with residual scope in this pass | 1 (SRC-012; per-tenant concurrency/token/cost budgets remain outstanding) |
+| Individually revalidated against current `main@7e9145a` in this pass | 8 (SRC-012, SRC-017, SRC-013, TST-002, TST-003, DOC-007, DOC-008, SCR-003) |
+| Records still awaiting individual current-main revalidation | 89 |
+| Verified complete in this pass | 5 (SRC-017, SRC-013, TST-002, TST-003, DOC-007; repository/CI scope only) |
+| Confirmed with residual scope | 2 (SRC-012: per-tenant AI budgets; SCR-003: CLI pool shutdown and cleanup tests) |
+| Implemented — verification pending | 1 (DOC-008: reverse Platform Admin-to-Workspace boundary test) |
 | Historical aggregate snapshot | 77/97 at `main@9ac5fe0`; provenance only, not a current count |
 | Wave 0 task status | IN PROGRESS — NOT COMPLETE |
 | Sequencing policy | Blanket Wave 0 prerequisite retired by PR #140; this full audit continues on the user's explicit request |
 
-The previous ledger's aggregate category totals and dispositions remain historical until each record is revalidated against `7e9145a...`. Do not use those totals as current completion metrics. A path-impact match or a passing unrelated CI job is not a Finding status transition. The project-wide inventory is not a prerequisite for unrelated, independently approved work.
+The historical category totals remain historical until each record is revalidated. A path-impact match or passing unrelated CI is not a status transition. This audit is task-specific and is not a prerequisite for other independently approved work.
 
 **This tracker does not itself authorize code changes.** The narrowly scoped DOC-001 investigation was separately authorized and is recorded below. Under [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md), completion of the unrelated project-wide Wave 0 inventory is not a universal entry gate; each finding still requires explicit user approval, task-specific revalidation, directly relevant dependencies, and applicable safeguards. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
 
@@ -96,8 +97,8 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [DOC-004](./findings/018-DOC-004.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [DOC-005](./findings/019-DOC-005.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [DOC-006](./findings/020-DOC-006.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Needs decision | — | main@9ac5fe0; Wave 0 log 001–020|
-| [DOC-007](./findings/021-DOC-007.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started | — | — |
-| [DOC-008](./findings/022-DOC-008.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Not started | — | — |
+| [DOC-007](./findings/021-DOC-007.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`7e9145a`](https://github.com/DiabloNova/oxenn/commit/7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6) | AST call-site/registry/docs reconciliation; canonical schema/caller check; exact main core CI #43570097349; documentation scope only, not SQL enforcement |
+| [DOC-008](./findings/022-DOC-008.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | — | Separate role authorities and fail-closed trusted Platform Admin identity; reverse Admin-principal-to-Workspace-session negative test still required; exact main core CI #43570097349 passed |
 | [DOC-009](./findings/023-DOC-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [FNT-001](./findings/024-FNT-001.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [FNT-002](./findings/025-FNT-002.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
@@ -117,7 +118,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [PUB-006](./findings/039-PUB-006.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Not started | — | — |
 | [SCR-001](./findings/040-SCR-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; registry/verifier/matrix tests; live enforcement unknown |
 | [SCR-002](./findings/041-SCR-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
-| [SCR-003](./findings/042-SCR-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
+| [SCR-003](./findings/042-SCR-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | Shared wrapper rolls back/releases leased client; CLI success still lacks `closePools()` and tests do not assert pool shutdown/release; exact main core CI #43570097349 passed existing tests |
 | [SCR-004](./findings/043-SCR-004.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SCR-005](./findings/044-SCR-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SCR-006](./findings/045-SCR-006.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
@@ -134,7 +135,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [SRC-010](./findings/056-SRC-010.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SRC-011](./findings/057-SRC-011.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SRC-012](./findings/058-SRC-012.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@7e9145a; PR #137 merged; request-size/metadata/chunk/RAG limits and direct API CI passed; per-tenant concurrency/token/cost budgets remain outstanding |
-| [SRC-013](./findings/059-SRC-013.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | Owner policy: registered + signed-in; SECURITY_MODEL.md; route auth gap remains |
+| [SRC-013](./findings/059-SRC-013.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`a9f22b6`](https://github.com/DiabloNova/oxenn/commit/a9f22b6f794ee9ff6640fad78b581e51b9e385cf) | PR #135 authenticated bounded internal HTTP audit, per-user/IP/global quotas, idempotency, SSRF-safe redirects, explicit Free Audit Demo UI; exact merge core CI #43444406157 and latest main core CI #43570097349 passed; no deployment claim |
 | [SRC-014](./findings/060-SRC-014.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SRC-015](./findings/061-SRC-015.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started | — | — |
 | [SRC-016](./findings/062-SRC-016.md) | Wave 2 (persistence/expiry) + Wave 4 (localized UI/email workflow) | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
@@ -149,8 +150,8 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [SRC-025](./findings/071-SRC-025.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [SRC-026](./findings/072-SRC-026.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [TST-001](./findings/073-TST-001.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
-| [TST-002](./findings/074-TST-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; migration 0014; prior PR CI passed on earlier head; updated PR CI + post-merge main CI pending; live DB unknown |
-| [TST-003](./findings/075-TST-003.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | [`9ac5fe0`](https://github.com/DiabloNova/oxenn/commit/9ac5fe016f11bddad789153efcaaa3f3fef93b44) | main@9ac5fe0; reviewed registry + verifier; independent test-only 56-table oracle and mutation tests added; updated PR CI + post-merge main CI pending |
+| [TST-002](./findings/074-TST-002.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`7e9145a`](https://github.com/DiabloNova/oxenn/commit/7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6) | Five tenant junctions tested for unset/cross-tenant read/write/update/delete and mismatched parent refs; PR #130 core CI #43061982552 and latest main core CI #43570097349 passed; ephemeral PostgreSQL only |
+| [TST-003](./findings/075-TST-003.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`7e9145a`](https://github.com/DiabloNova/oxenn/commit/7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6) | Independent 56-table oracle and omission mutation tests; policy coverage separate; PR #130 core CI #43061982552 and latest main core CI #43570097349 passed; no live DB claim |
 | [TST-004](./findings/076-TST-004.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [TST-005](./findings/077-TST-005.md) | Wave 5 — Test discovery, CI supply chain, and developer tooling | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [TST-006](./findings/078-TST-006.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
@@ -739,3 +740,14 @@ The project is complete only when every in-scope finding is either verified comp
 - PR #140 merged; PR #136 and #137 merged; PR #117 remains closed/unmerged; issues #115/#116 remain open. No issue/PR state changes were made.
 - No persistent database connection or migration was used. CI isolation evidence uses only the existing disposable PostgreSQL service. VER-005/VER-006 scripts remain DO NOT RUN. No Production action/deployment, external provider/payment side effect, or merge into main occurred.
 - Wave 0 remains IN PROGRESS — NOT COMPLETE. This task continues at the user's explicit request; policy sequencing changes do not retroactively alter historical finding statuses or grant Wave 1 implementation approval.
+
+
+### Wave 0 follow-on revalidation batch — 2026-11-14 (current base `7e9145a`)
+
+- Review branch: `wave0/revalidate-current-main-20261113`; synced merge head at batch start `a1c09b431e1b893442e1db6e31a6be43415c1d47`; exact main base `7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6`.
+- Individually reviewed: DOC-007, DOC-008, SCR-003, SRC-013, TST-002 and TST-003, in addition to SRC-012/SRC-017 already recorded in this pass.
+- Status transitions: DOC-007 Not started → Verified complete; SRC-013 Confirmed → Verified complete; TST-002 and TST-003 Implemented — verification pending → Verified complete.
+- Partial dispositions: DOC-008 Implemented — verification pending (reverse Platform Admin-principal→Workspace-session negative test needed); SCR-003 Confirmed (shared wrapper rolls back/releases, but CLI success omits `closePools()` and tests do not assert pool shutdown/release).
+- Exact CI evidence: PR #135 merge `a9f22b6...` core jobs passed run #43444406157; PR #130 merge `9ac5fe0...` core jobs passed run #43061982552; exact latest main `7e9145a...` core jobs passed run #43570097349. Auxiliary `record-remediation-event` retries are separate from core CI.
+- No source code changed. Only review-branch Finding records, report and Tracker were updated. No Issue/PR state changed, no database accessed and no migration run. Isolation evidence is from CI disposable PostgreSQL service only.
+- Current task count: 8/97 individually revalidated on `7e9145a`; 5 Verified complete within repository/CI limits, 2 Confirmed with residual work (SRC-012/SCR-003), 1 Implemented — verification pending (DOC-008), 89 await review. Wave 0 remains IN PROGRESS. PR #140's universal gate retirement is not reinstated.
