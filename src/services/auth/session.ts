@@ -2,6 +2,7 @@ import { cookies as nextCookies } from "next/headers";
 import crypto from "crypto";
 import { User, Session } from "@/types/auth";
 import { TenantContextManager } from "@/core/database/tenant-context";
+import { lockActiveUser, lockActiveWorkspace } from "@/services/auth/workspace-locks";
 
 let cookiesFn = nextCookies;
 
@@ -35,6 +36,28 @@ export async function createSession(user: User): Promise<void> {
     if (!client) {
       throw new Error("Failed to get DB client in system context");
     }
+
+    // Serialize session creation with account deactivation so no new usable
+    // session can be committed after the account has been soft-deleted.
+    if (!(await lockActiveUser(client, user.id))) {
+      throw new Error("Cannot create a session for an inactive account.");
+    }
+
+    if (!(await lockActiveWorkspace(client, user.workspaceId))) {
+      throw new Error("Cannot create a session for an inactive workspace.");
+    }
+
+    const { rows: memberships } = await client.query(
+      `SELECT 1
+       FROM organization_members
+       WHERE organization_id = $1 AND user_id = $2
+       LIMIT 1`,
+      [user.workspaceId, user.id]
+    );
+    if (memberships.length === 0) {
+      throw new Error("Cannot create a session without an active workspace membership.");
+    }
+
     await client.query(`
       INSERT INTO sessions (
         user_id, token_hash, workspace_id, role_snapshot, expires_at

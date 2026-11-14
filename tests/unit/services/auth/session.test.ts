@@ -47,7 +47,12 @@ describe("server session lifecycle and error handling", () => {
       ) => callback()
     );
     getDbClientMock.mockReturnValue({ query: queryMock });
-    queryMock.mockResolvedValue({ rows: [] });
+    queryMock.mockImplementation(async (sql: string) => {
+      if (/SELECT\s+id\s+FROM\s+users/i.test(sql)) return { rows: [{ id: user.id }] };
+      if (/SELECT\s+id\s+FROM\s+organizations/i.test(sql)) return { rows: [{ id: user.workspaceId }] };
+      if (sql.includes("FROM organization_members")) return { rows: [{ "?column?": 1 }] };
+      return { rows: [] };
+    });
   });
 
   it("parses a valid database-backed session into the authenticated session shape", async () => {
@@ -81,9 +86,14 @@ describe("server session lifecycle and error handling", () => {
   it("creates opaque sessions with secure cookie attributes and stores only a token hash", async () => {
     await createSession(user);
 
-    expect(queryMock).toHaveBeenCalledTimes(1);
-    expect(queryMock.mock.calls[0][0]).toContain("INSERT INTO sessions");
-    const tokenHash = queryMock.mock.calls[0][1][1] as string;
+    expect(queryMock).toHaveBeenCalledTimes(4);
+    expect(queryMock.mock.calls[0][0]).toMatch(/SELECT\s+id\s+FROM\s+users/i);
+    expect(queryMock.mock.calls[0][0]).toContain("FOR UPDATE");
+    expect(queryMock.mock.calls[1][0]).toMatch(/SELECT\s+id\s+FROM\s+organizations/i);
+    expect(queryMock.mock.calls[1][0]).toContain("FOR UPDATE");
+    expect(queryMock.mock.calls[2][0]).toContain("FROM organization_members");
+    expect(queryMock.mock.calls[3][0]).toContain("INSERT INTO sessions");
+    const tokenHash = queryMock.mock.calls[3][1][1] as string;
     expect(tokenHash).toMatch(/^[a-f0-9]{64}$/);
 
     const [sessionName, rawToken, sessionOptions] = cookieStore.set.mock.calls[0];
@@ -107,6 +117,39 @@ describe("server session lifecycle and error handling", () => {
       user.id,
       expect.objectContaining({ httpOnly: true, sameSite: "strict", path: "/" })
     );
+  });
+
+  it("refuses to create a session for an inactive account", async () => {
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await expect(createSession(user)).rejects.toThrow("Cannot create a session for an inactive account.");
+    expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    expect(queryMock.mock.calls[0][0]).toContain("FOR UPDATE");
+  });
+
+  it("refuses to create a session after workspace membership is revoked", async () => {
+    queryMock.mockImplementation(async (sql: string) => {
+      if (/SELECT\s+id\s+FROM\s+users/i.test(sql)) return { rows: [{ id: user.id }] };
+      if (/SELECT\s+id\s+FROM\s+organizations/i.test(sql)) return { rows: [{ id: user.workspaceId }] };
+      if (sql.includes("FROM organization_members")) return { rows: [] };
+      return { rows: [] };
+    });
+
+    await expect(createSession(user)).rejects.toThrow("Cannot create a session without an active workspace membership.");
+    expect(cookieStore.set).not.toHaveBeenCalled();
+  });
+
+  it("refuses to create a session for a closed workspace", async () => {
+    queryMock.mockImplementation(async (sql: string) => {
+      if (/SELECT\s+id\s+FROM\s+users/i.test(sql)) return { rows: [{ id: user.id }] };
+      if (/SELECT\s+id\s+FROM\s+organizations/i.test(sql)) return { rows: [] };
+      return { rows: [] };
+    });
+
+    await expect(createSession(user)).rejects.toThrow("Cannot create a session for an inactive workspace.");
+    expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(queryMock).toHaveBeenCalledTimes(2);
   });
 
   it("revokes the current database session and deletes all session cookies on invalidation", async () => {

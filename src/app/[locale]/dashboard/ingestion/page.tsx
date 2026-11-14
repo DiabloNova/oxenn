@@ -5,7 +5,6 @@ import { useTheme } from "@/components/ThemeProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
-import { ingestDocumentAction } from "@/app/actions/ingestion";
 import {
   Database,
   UploadCloud,
@@ -30,6 +29,8 @@ interface IngestionStats {
 export default function DocumentIngestionPage() {
   const { language, direction } = useTheme();
   const isRtl = language === "fa";
+  const maxUploadBytes = 3 * 1024 * 1024;
+  const maxRequestPayloadBytes = 4 * 1024 * 1024;
 
   const [text, setText] = useState("");
   const [fileText, setFileText] = useState("");
@@ -54,7 +55,7 @@ export default function DocumentIngestionPage() {
     uploadZoneDesc: isRtl
       ? "فایل خود با فرمت .txt، .md یا .json را به اینجا بکشید یا برای مرور کلیک کنید"
       : "Drag and drop your .txt, .md, or .json file here, or click to browse",
-    uploadLimit: isRtl ? "حداکثر حجم قابل پذیرش: ۵ مگابایت" : "Maximum supported size: 5MB",
+    uploadLimit: isRtl ? "حداکثر حجم قابل پذیرش: ۳ مگابایت" : "Maximum supported size: 3MB",
     textInputTitle: isRtl ? "ورودی متنی جایگزین" : "Alternative Direct Text Input",
     textInputPlaceholder: isRtl
       ? "در صورتی که فایل ندارید، متن خام گزارش یا سند خود را مستقیماً در این بخش کپی و پیست کنید..."
@@ -101,11 +102,11 @@ export default function DocumentIngestionPage() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > maxUploadBytes) {
       setActionError(
         isRtl
-          ? "حجم فایل بیشتر از ۵ مگابایت است."
-          : "File exceeds maximum size limit of 5MB."
+          ? "حجم فایل بیشتر از ۳ مگابایت است."
+          : "File exceeds maximum size limit of 3MB."
       );
       return;
     }
@@ -182,20 +183,66 @@ export default function DocumentIngestionPage() {
           locale: language,
         },
         chunkingOptions: {
-          maxChunkSize: 500,
-          overlap: 50
+          maxChunkSize: 4_000,
+          overlap: 1_000
         }
       };
 
-      const response = await ingestDocumentAction(payload);
+      const payloadBytes = new TextEncoder().encode(JSON.stringify(payload)).byteLength;
+      if (payloadBytes > maxRequestPayloadBytes) {
+        setActionError(
+          isRtl
+            ? "حجم داده ارسالی پس از کدگذاری از سقف مجاز ۴ مگابایت بیشتر است."
+            : "The encoded request exceeds the 4 MiB upload limit."
+        );
+        return;
+      }
 
-      if (!response.success) {
-        setActionError(response.error || strings.errorTitle);
-      } else if (response.result) {
-        setSuccessResult(response.result);
-        // Clear forms on success
+      try {
+        const response = await fetch("/api/v1/ingest/document", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          const chunkErrors = Array.isArray(result?.errors)
+            ? result.errors
+                .filter(
+                  (entry: unknown): entry is { chunkIndex: number; error: string } =>
+                    typeof entry === "object" &&
+                    entry !== null &&
+                    typeof (entry as { chunkIndex?: unknown }).chunkIndex === "number" &&
+                    typeof (entry as { error?: unknown }).error === "string"
+                )
+                .slice(0, 5)
+                .map((entry: { chunkIndex: number; error: string }) =>
+                  `${isRtl ? "بخش" : "Chunk"} ${entry.chunkIndex + 1}: ${entry.error}`
+                )
+            : [];
+          const additionalErrorCount = Array.isArray(result?.errors)
+            ? Math.max(0, result.errors.length - chunkErrors.length)
+            : 0;
+          const errorDetails = chunkErrors.length
+            ? `${chunkErrors.join("; ")}${additionalErrorCount ? `; ${additionalErrorCount} ${isRtl ? "خطای دیگر" : "more errors"}` : ""}`
+            : typeof result?.error === "string"
+              ? result.error
+              : strings.errorTitle;
+          setActionError(chunkErrors.length ? `${strings.errorTitle}: ${errorDetails}` : errorDetails);
+          return;
+        }
+
+        setSuccessResult(result as IngestionStats);
         setText("");
         clearSelectedFile();
+      } catch {
+        setActionError(
+          isRtl
+            ? "ارتباط با سرویس ورود اسناد برقرار نشد. دوباره تلاش کنید."
+            : "Could not reach the document ingestion service. Please try again."
+        );
       }
     });
   };

@@ -63,7 +63,7 @@ export async function requireWorkspaceMembership(userId: string, workspaceId: st
  * - workspace_admin = 2
  * - viewer = 1
  */
-export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: string): Promise<void> {
+export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: string): Promise<UserRole> {
   const session = await requireSession();
   if (!session.user) {
     throw new AuthorizationError(401, "Unauthorized: No active session user.");
@@ -115,6 +115,8 @@ export async function requireRole(requiredRole: UserRole, targetWorkspaceId?: st
   if (userRoleValue < requiredRoleValue) {
     throw new AuthorizationError(403, `Forbidden: Insufficient privileges. Required role: "${requiredRole}".`);
   }
+
+  return activeRole;
 }
 
 /**

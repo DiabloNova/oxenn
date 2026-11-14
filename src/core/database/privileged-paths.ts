@@ -12,6 +12,7 @@ export type PrivilegedPurposeTag =
   | "sys-free-audit"
   | "api-key-issue"
   | "api-key-revoke"
+  | "sys-grant-super-admin"
   | "sys-admin-run"
   | "test-req";
 
@@ -64,7 +65,7 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     "Validates the persisted session and verifies membership in the requested workspace."
   ),
   "sys-auth-role-check": definePath(
-    ["organizations", "organization_members"],
+    ["users", "organizations", "organization_members"],
     ["src/services/auth/authorization.ts"],
     "Reads the authoritative workspace role from organization_members.role; it does not use the frozen-legacy roles table."
   ),
@@ -75,22 +76,22 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     "unreferenced"
   ),
   "sys-create-workspace": definePath(
-    ["organizations", "organization_members"],
+    ["users", "organizations", "organization_members"],
     ["src/app/actions/workspace.ts"],
     "Creates a workspace (organizations) and its initial membership (organization_members)."
   ),
   "sys-list-workspaces": definePath(
     ["organizations", "organization_members"],
-    ["src/app/actions/workspace.ts", "src/app/actions/account.ts"],
+    ["src/app/actions/workspace.ts"],
     "Lists a user's workspace memberships and associated organization details."
   ),
   "sys-accept-invitation": definePath(
-    ["organization_invitations", "organization_members"],
+    ["users", "organization_invitations", "organization_members", "organizations"],
     ["src/app/actions/workspace.ts"],
     "Resolves a pending organization invitation and creates the accepted user's membership."
   ),
   "sys-switch-workspace": definePath(
-    ["organization_members", "sessions"],
+    ["users", "organizations", "organization_members", "sessions"],
     ["src/app/actions/workspace.ts"],
     "Re-reads the target workspace role, creates the replacement session, and revokes the previous session."
   ),
@@ -117,16 +118,20 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     ["scripts/api/revoke-key.ts"],
     "CLI operation that revokes an API key by its identifier."
   ),
+  "sys-grant-super-admin": definePath(
+    ["users", "organizations", "organization_members", "audit_records"],
+    ["scripts/auth/grant-super-admin.ts"],
+    "Dedicated operator-only purpose tag for granting Workspace super_admin. The recorded table list is audit metadata, not SQL access enforcement; the operation serializes on the parent organization and preserves at least one active workspace_admin."
+  ),
   "sys-admin-run": definePath(
     ["*"],
     [
-      "scripts/auth/grant-super-admin.ts",
       "tests/features/public-api/public-api.test.ts",
       "tests/features/ai-intelligence/tenant-pipeline.test.ts",
       "tests/features/ai-intelligence/run-all.ts",
       "tests/features/admin/run-all.ts"
     ],
-    "Broad system-context purpose used by test runners and the explicit super-admin grant CLI; the existing runtime test/verification gate remains authoritative."
+    "Broad system-context purpose used by legacy test runners; the existing runtime test/verification gate remains authoritative."
   ),
   "test-req": definePath(
     ["*"],

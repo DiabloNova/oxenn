@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { chunkText } from '@/services/ai/text-chunker';
 import { TenantContextManager } from '@/core/database/tenant-context';
 import { authorizationErrorResponse, authorizeApiRequest } from '@/services/auth/authorization';
-
-// Input validation schema
-const requestSchema = z.object({
-  text: z.string().min(1, 'Text to chunk must be provided'),
-  maxChunkSize: z.number().int().positive().optional().default(500),
-  overlap: z.number().int().nonnegative().optional().default(50),
-});
+import {
+  chunkRequestSchema,
+  MAX_CHUNK_REQUEST_BYTES,
+  readBoundedJson,
+} from '@/services/ai/resource-limits';
 
 export async function POST(req: NextRequest) {
   try {
     const { tenantId, userId } = await authorizeApiRequest(req);
-    const body = await req.json();
-    const parsed = requestSchema.safeParse(body);
+    const bodyResult = await readBoundedJson(req, MAX_CHUNK_REQUEST_BYTES);
+    if (!bodyResult.ok) {
+      return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+    }
 
+    const parsed = chunkRequestSchema.safeParse(bodyResult.data);
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Bad Request', details: parsed.error.format() },
@@ -25,27 +25,25 @@ export async function POST(req: NextRequest) {
     }
 
     const { text, maxChunkSize, overlap } = parsed.data;
-
-    // Strict Tenant Context Isolation wrapping
     const requestId = req.headers.get('x-request-id') || `req-${Date.now()}`;
 
     const chunks = await TenantContextManager.runWithTenantContext(
       tenantId,
       userId,
       requestId,
-      async () => {
-        return chunkText(text, maxChunkSize, overlap);
-      }
+      async () => chunkText(text, maxChunkSize, overlap)
     );
 
     return NextResponse.json({ chunks });
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+    if (error instanceof RangeError) {
+      return NextResponse.json({ error: 'Invalid chunking input.' }, { status: 400 });
+    }
     console.error('[API Chunk Route Error]:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Internal Server Error', message },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }

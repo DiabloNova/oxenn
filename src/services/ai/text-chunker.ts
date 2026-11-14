@@ -1,129 +1,203 @@
 /**
  * Persian Text Chunking Utility
- * Optimised specifically for Persian syntax rules:
- * - Sentence boundaries: '.', '؟', '؛', '!', '\n', '\r'
- * - Persian quotes: '«', '»'
- * - Zero-width non-joiner (نیم‌فاصله): '\u200C' (Do NOT break words at this character)
- * - Sentence boundary preservation & overlap for RAG
+ * - Preserves sentence boundaries where practical.
+ * - Avoids splitting Persian zero-width non-joiners and short Persian quotes at boundaries.
+ * - Includes overlap inside the configured maximum chunk size.
  */
 
-export function chunkText(
-  text: string,
-  maxChunkSize: number,
-  overlap: number
-): string[] {
-  if (!text) return [];
-  if (maxChunkSize <= 0) return [text];
-  const actualOverlap = overlap >= maxChunkSize ? Math.floor(maxChunkSize / 2) : overlap;
+import {
+  MAX_CHUNK_COUNT,
+  MAX_INGESTION_TEXT_BYTES,
+  validateChunkingOptions,
+} from "./resource-limits";
 
-  // Pattern for split boundary detection
-  const sentenceBoundaryRegex = /([.؟؛!\n\r]+)/g;
+const ZERO_WIDTH_NON_JOINER = "\u200C";
 
-  // Split the text into segments including the delimiters so we can rebuild sentences perfectly
-  const parts = text.split(sentenceBoundaryRegex);
-  const sentences: string[] = [];
+function isHighSurrogate(code: number): boolean {
+  return code >= 0xd800 && code <= 0xdbff;
+}
 
-  for (let i = 0; i < parts.length; i += 2) {
-    const sentenceText = parts[i] || '';
-    const delimiterText = parts[i + 1] || '';
-    const combined = sentenceText + delimiterText;
-    if (combined.trim()) {
-      sentences.push(combined);
+function isLowSurrogate(code: number): boolean {
+  return code >= 0xdc00 && code <= 0xdfff;
+}
+
+function findSafeEnd(text: string, start: number, requestedEnd: number): number {
+  let end = requestedEnd;
+
+  if (
+    end < text.length &&
+    end > start &&
+    isHighSurrogate(text.charCodeAt(end - 1)) &&
+    isLowSurrogate(text.charCodeAt(end))
+  ) {
+    end -= 1;
+  }
+
+  if (
+    end < text.length &&
+    (text.charAt(end) === ZERO_WIDTH_NON_JOINER ||
+      text.charAt(end - 1) === ZERO_WIDTH_NON_JOINER)
+  ) {
+    while (
+      end > start &&
+      (text.charAt(end) === ZERO_WIDTH_NON_JOINER ||
+        text.charAt(end - 1) === ZERO_WIDTH_NON_JOINER)
+    ) {
+      // Never move a boundary into the middle of a preceding surrogate pair.
+      if (
+        end > start + 1 &&
+        isHighSurrogate(text.charCodeAt(end - 2)) &&
+        isLowSurrogate(text.charCodeAt(end - 1))
+      ) {
+        break;
+      }
+      end -= 1;
     }
   }
 
-  const chunks: string[] = [];
-  let currentChunk = '';
+  // Keep quoted Persian phrases intact when the closing quote fits in this chunk.
+  let preserveQuoteBoundary = false;
+  let openingQuote = text.indexOf("«", start);
+  while (openingQuote !== -1 && openingQuote < requestedEnd) {
+    const closingQuote = text.indexOf("»", openingQuote + 1);
+    if (closingQuote === -1) break;
 
-  for (let i = 0; i < sentences.length; i++) {
-    const sentence = sentences[i];
-
-    // Handle edge case: single sentence is extremely long and exceeds maxChunkSize
-    if (sentence.length > maxChunkSize) {
-      if (currentChunk) {
-        chunks.push(currentChunk.trim());
-        currentChunk = '';
+    if (closingQuote < requestedEnd) {
+      const lastSpaceInChunk = text.lastIndexOf(" ", end);
+      if (lastSpaceInChunk > openingQuote && lastSpaceInChunk < closingQuote) {
+        end = closingQuote + 1;
+        preserveQuoteBoundary = true;
+        break;
       }
+    } else if (openingQuote > start) {
+      end = openingQuote;
+      preserveQuoteBoundary = true;
+      break;
+    }
 
-      // Perform fallback safe-character splitting directly inside the giant sentence
-      let startIdx = 0;
-      while (startIdx < sentence.length) {
-        let endIdx = startIdx + maxChunkSize;
-        if (endIdx > sentence.length) {
-          endIdx = sentence.length;
-        } else {
-          // Prevent breaking right at a zero-width non-joiner (نیم‌فاصله)
-          if (sentence.charAt(endIdx) === '\u200C' || sentence.charAt(endIdx - 1) === '\u200C') {
-            // Adjust boundary backward safely
-            while (endIdx > startIdx && (sentence.charAt(endIdx) === '\u200C' || sentence.charAt(endIdx - 1) === '\u200C')) {
-              endIdx--;
-            }
-          }
-          // Prevent breaking inside a word if possible by moving back to a space
-          if (endIdx < sentence.length && sentence.charAt(endIdx) !== ' ' && sentence.charAt(endIdx - 1) !== ' ') {
-            const lastSpace = sentence.lastIndexOf(' ', endIdx);
-            if (lastSpace > startIdx) {
-              endIdx = lastSpace;
-            }
-          }
-        }
+    openingQuote = text.indexOf("«", closingQuote + 1);
+  }
 
-        const chunkSegment = sentence.substring(startIdx, endIdx);
-        if (chunkSegment.trim()) {
-          chunks.push(chunkSegment.trim());
-        }
+  if (!preserveQuoteBoundary && end > start && end < text.length) {
+    const lastSpace = text.lastIndexOf(" ", end);
+    if (lastSpace > start && lastSpace < end) end = lastSpace;
+  }
 
-        startIdx = endIdx === sentence.length ? sentence.length : endIdx - actualOverlap;
-        if (startIdx >= sentence.length || chunkSegment.length <= actualOverlap) {
-          // Avoid infinite loops
-          startIdx = endIdx;
-        }
+  // Always advance, including when a single long word has no safe space boundary.
+  if (end <= start) end = Math.min(start + (requestedEnd - start), text.length);
+  return end;
+}
+
+function splitLongSentence(sentence: string, maxLength: number): string[] {
+  const segments: string[] = [];
+  let start = 0;
+
+  while (start < sentence.length) {
+    const requestedEnd = Math.min(start + maxLength, sentence.length);
+    const end = findSafeEnd(sentence, start, requestedEnd);
+    const segment = sentence.slice(start, end).trim();
+
+    if (segment) segments.push(segment);
+    start = end;
+  }
+
+  return segments;
+}
+
+function getOverlapSuffix(text: string, maxLength: number): string {
+  let start = Math.max(0, text.length - maxLength);
+
+  while (start < text.length) {
+    const splitsSurrogatePair =
+      isLowSurrogate(text.charCodeAt(start)) && isHighSurrogate(text.charCodeAt(start - 1));
+    const splitsPersianJoin = text.charAt(start) === ZERO_WIDTH_NON_JOINER ||
+      text.charAt(start - 1) === ZERO_WIDTH_NON_JOINER;
+
+    if (!splitsSurrogatePair && !splitsPersianJoin) break;
+    start += 1;
+  }
+
+  return text.slice(start).trim();
+}
+
+export function chunkText(
+  text: string,
+  requestedMaxChunkSize: number,
+  requestedOverlap: number
+): string[] {
+  const { maxChunkSize, overlap } = validateChunkingOptions(
+    requestedMaxChunkSize,
+    requestedOverlap
+  );
+
+  if (!text) return [];
+
+  const textBytes = new TextEncoder().encode(text).byteLength;
+  if (textBytes > MAX_INGESTION_TEXT_BYTES) {
+    throw new RangeError(
+      `Text exceeds the maximum supported ingestion size of ${MAX_INGESTION_TEXT_BYTES} bytes.`
+    );
+  }
+
+  // Reserve room for both the overlap and the joining space in every subsequent chunk.
+  const actualOverlap = overlap;
+  const chunkCapacity = maxChunkSize - actualOverlap - (actualOverlap > 0 ? 1 : 0);
+  const sentenceBoundaryRegex = /([.؟؛!\n\r]+)/g;
+  const parts = text.split(sentenceBoundaryRegex);
+  const chunks: string[] = [];
+  let currentChunk = "";
+
+  const pushChunk = (value: string) => {
+    const normalized = value.trim();
+    if (!normalized) return;
+
+    chunks.push(normalized);
+    if (chunks.length > MAX_CHUNK_COUNT) {
+      throw new RangeError(
+        `Document exceeds the maximum supported chunk count of ${MAX_CHUNK_COUNT}.`
+      );
+    }
+  };
+
+  for (let i = 0; i < parts.length; i += 2) {
+    const sentence = (parts[i] || "") + (parts[i + 1] || "");
+    if (!sentence.trim()) continue;
+
+    if (sentence.length > chunkCapacity) {
+      if (currentChunk) {
+        pushChunk(currentChunk);
+        currentChunk = "";
+      }
+      for (const segment of splitLongSentence(sentence, chunkCapacity)) {
+        pushChunk(segment);
       }
       continue;
     }
 
-    // Normal chunk assembly
-    const potentialChunk = currentChunk ? currentChunk + ' ' + sentence : sentence;
-    if (potentialChunk.length <= maxChunkSize) {
-      currentChunk = potentialChunk;
+    const candidate = currentChunk ? `${currentChunk} ${sentence}` : sentence;
+    if (candidate.length <= chunkCapacity) {
+      currentChunk = candidate;
     } else {
-      if (currentChunk) {
-        chunks.push(currentChunk.trim());
-      }
+      if (currentChunk) pushChunk(currentChunk);
       currentChunk = sentence;
     }
   }
 
-  if (currentChunk) {
-    chunks.push(currentChunk.trim());
-  }
+  if (currentChunk) pushChunk(currentChunk);
 
-  // Handle overlap rebuild across consecutive chunks if necessary
-  if (actualOverlap > 0 && chunks.length > 1) {
-    const overlappingChunks: string[] = [];
-    overlappingChunks.push(chunks[0]);
+  if (actualOverlap === 0 || chunks.length < 2) return chunks;
 
-    for (let i = 1; i < chunks.length; i++) {
-      const prevChunk = chunks[i - 1];
-      const currentChunkText = chunks[i];
+  return chunks.map((chunk, index) => {
+    if (index === 0) return chunk;
 
-      // Retrieve suffix of overlap size from previous chunk
-      let overlapStartIndex = prevChunk.length - actualOverlap;
-      if (overlapStartIndex < 0) overlapStartIndex = 0;
+    const overlapText = getOverlapSuffix(chunks[index - 1], actualOverlap);
+    const combined = overlapText ? `${overlapText} ${chunk}` : chunk;
 
-      // Ensure we don't slice middle of \u200C
-      if (prevChunk.charAt(overlapStartIndex) === '\u200C' || prevChunk.charAt(overlapStartIndex - 1) === '\u200C') {
-        while (overlapStartIndex < prevChunk.length && (prevChunk.charAt(overlapStartIndex) === '\u200C' || prevChunk.charAt(overlapStartIndex - 1) === '\u200C')) {
-          overlapStartIndex++;
-        }
-      }
-
-      const overlapText = prevChunk.substring(overlapStartIndex).trim();
-      const prependedChunk = overlapText ? `${overlapText} ${currentChunkText}` : currentChunkText;
-      overlappingChunks.push(prependedChunk);
+    // This is an invariant guard: no chunk may exceed the public size contract.
+    if (combined.length > maxChunkSize) {
+      throw new Error("Chunking invariant violated: overlap exceeded maxChunkSize.");
     }
-    return overlappingChunks;
-  }
 
-  return chunks;
+    return combined;
+  });
 }
