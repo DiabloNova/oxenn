@@ -16,7 +16,7 @@ describe("POST /api/security/csp-report", () => {
     vi.restoreAllMocks();
   });
 
-  it("accepts a legacy CSP report and logs only sanitized fields", async () => {
+  it("accepts a legacy CSP report and logs only sanitized report fields", async () => {
     const request = new Request(PREVIEW_URL, {
       method: "POST",
       headers: { "content-type": "application/csp-report" },
@@ -46,6 +46,7 @@ describe("POST /api/security/csp-report", () => {
     expect(logged).not.toContain("private-value");
     expect(logged).not.toContain("must-not-be-logged");
     expect(logged).not.toContain("/fa/dashboard");
+    expect(logged).not.toContain("/_next/static/chunk.js");
   });
 
   it("accepts Reporting API batches and ignores non-CSP report types", async () => {
@@ -73,8 +74,34 @@ describe("POST /api/security/csp-report", () => {
     const response = await POST(request);
     expect(response.status).toBe(204);
     expect(infoSpy).toHaveBeenCalledOnce();
-    expect(String(infoSpy.mock.calls[0][1])).toContain("style-src-attr");
-    expect(String(infoSpy.mock.calls[0][1])).toContain('"blockedOrigin":"inline"');
+    const logged = String(infoSpy.mock.calls[0][1]);
+    expect(logged).toContain("style-src-attr");
+    expect(logged).toContain('"blockedOrigin":"inline"');
+    expect(logged).not.toContain("unrelated");
+  });
+
+  it("counts only CSP reports when enforcing the batch report limit", async () => {
+    const ignoredReports = Array.from({ length: 25 }, () => ({
+      type: "deprecation",
+      body: { id: "ignored-entry" },
+    }));
+    const request = new Request(PREVIEW_URL, {
+      method: "POST",
+      headers: { "content-type": "application/reports+json" },
+      body: JSON.stringify([
+        ...ignoredReports,
+        {
+          type: "csp-violation",
+          body: { effectiveDirective: "script-src", disposition: "report" },
+        },
+      ]),
+    });
+
+    expect((await POST(request)).status).toBe(204);
+    expect(infoSpy).toHaveBeenCalledOnce();
+    const logged = String(infoSpy.mock.calls[0][1]);
+    expect(logged).toContain('"reportCount":1');
+    expect(logged).not.toContain("ignored-entry");
   });
 
   it("accepts a single Reporting API CSP report object", async () => {
@@ -116,7 +143,7 @@ describe("POST /api/security/csp-report", () => {
     expect(infoSpy).not.toHaveBeenCalled();
   });
 
-  it("rejects malformed JSON and malformed report envelopes", async () => {
+  it("rejects malformed JSON and malformed top-level report envelopes", async () => {
     const malformedJson = new Request(PREVIEW_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -154,7 +181,7 @@ describe("POST /api/security/csp-report", () => {
     expect(infoSpy).not.toHaveBeenCalled();
   });
 
-  it("rejects batches that contain too many reports", async () => {
+  it("rejects batches that contain too many CSP reports", async () => {
     const reports = Array.from({ length: 21 }, () => ({
       type: "csp-violation",
       body: { effectiveDirective: "script-src" },
