@@ -6,25 +6,17 @@ export interface ResponseHeader {
 }
 
 /**
- * Builds a discovery-only CSP policy for a Vercel Preview deployment.
+ * Builds a narrow discovery-only CSP policy for a Vercel Preview request.
  *
- * The policy deliberately avoids inline-script/style allowances and third-party
- * wildcards so Preview can reveal the resources the current UI actually uses.
- * It is Report-Only and must not be promoted to enforcement without reviewing
- * reports from the final frontend.
+ * This helper is called from the request-time Proxy, not next.config.ts, so
+ * the Preview gate is evaluated for each request rather than frozen at build.
+ * The policy must not be promoted to enforcement without reviewing reports
+ * from the final frontend.
  */
 export function getPreviewCspHeaders(
   vercelEnv: string | undefined,
-  vercelUrl: string | undefined,
 ): ResponseHeader[] {
   if (vercelEnv !== "preview") {
-    return [];
-  }
-
-  // VERCEL_URL is only a deployment/Preview gate. The endpoint itself is an
-  // origin-relative path so branch aliases and custom Preview domains report
-  // back to the exact origin that served the document.
-  if (!isValidPreviewHost(vercelUrl)) {
     return [];
   }
 
@@ -56,31 +48,4 @@ export function getPreviewCspHeaders(
       value: policy,
     },
   ];
-}
-
-function isValidPreviewHost(vercelUrl: string | undefined): boolean {
-  if (
-    !vercelUrl ||
-    vercelUrl.length > 253 ||
-    vercelUrl !== vercelUrl.trim() ||
-    /[\\/?#@]/.test(vercelUrl)
-  ) {
-    return false;
-  }
-
-  try {
-    const parsed = new URL("https://" + vercelUrl);
-    return (
-      parsed.protocol === "https:" &&
-      !parsed.username &&
-      !parsed.password &&
-      !parsed.port &&
-      parsed.pathname === "/" &&
-      !parsed.search &&
-      !parsed.hash &&
-      parsed.hostname.toLowerCase() === vercelUrl.toLowerCase()
-    );
-  } catch {
-    return false;
-  }
 }
