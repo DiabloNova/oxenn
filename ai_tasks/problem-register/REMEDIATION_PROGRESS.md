@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against `main@9ac5fe0`; 20 remain Not started. The latest ledger records 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. SCR-002 was separately revalidated against `main@a9f22b6` on 2026-11-13 and is being implemented under the user's explicit single-finding exception. Wave 0 remains incomplete; this exception does not authorize other findings or Wave 1.
+**Current overall status:** PARTIAL — 77 of 97 individual findings were revalidated against `main@9ac5fe0`; 20 remain Not started. The current PR-branch ledger records 62 Confirmed, 4 Verified complete, 4 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. SCR-002 was separately revalidated against `main@a9f22b6` on 2026-11-13 and is being implemented under the user's explicit single-finding exception. Wave 0 remains incomplete; this exception does not authorize other findings or Wave 1.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -20,9 +20,9 @@
 | Findings with implementation started (cumulative) | 3 |
 | Findings currently in progress | 0 |
 | Findings with verified implementation complete | 4 |
-| Findings implemented — verification pending | 3 |
+| Findings implemented — verification pending | 4 |
 | Findings blocked / historical-only | 3 |
-| Findings with confirmed issues | 63 |
+| Findings with confirmed issues | 62 |
 | Findings already fixed in repository | 1 |
 | Findings needing a product/security decision | 3 |
 | Findings not started | 20 |
@@ -77,7 +77,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At `main@9ac5fe0`, 77 of 97 findings have been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The remaining 20 findings are Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. These finding-level dispositions do not satisfy the project-wide Wave 0 exit condition.
+The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. The baseline at `main@9ac5fe0` had 77 of 97 findings revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked; 20 remained Not started. This PR branch moves SCR-002 from Confirmed to Implemented — verification pending. The current 97-row branch ledger therefore records 62 Confirmed, 4 Verified complete, 4 Implemented — verification pending, 1 Already fixed, 3 Needs decision, 3 Blocked, and 20 Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. These finding-level dispositions do not satisfy the project-wide Wave 0 exit condition.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -799,3 +799,15 @@ The project is complete only when every in-scope finding is either verified comp
 - Current `main` had advanced to `83ffc56b48d19757572f5cd43b3b52852f61e3df` after PR #137 merged, while PR #139 remained based on `a9f22b6f794ee9ff6640fad78b581e51b9e385cf`. A three-way comparison identified `ai_tasks/problem-register/REMEDIATION_PROGRESS.md` as the only path changed on both sides since that base.
 - Reconciled that file using the exact PR base version, current `main`, and the PR branch version. Preserved current-main ledger updates and execution history, and retained the SCR-002 branch-specific status, approved-scope note, and execution log. The header and ledger now use the current-main counts consistently.
 - This is a progress-tracker reconciliation only. It does not merge PR #139, modify `main`, change unrelated source files, complete Wave 0, or authorize other findings. PR #139 remains open and unmerged pending its verification and review outcomes.
+
+
+### SCR-002 review hardening and verification — 2026-11-14
+
+- Repository: `DiabloNova/oxenn`; PR #139; branch: `investigation/041-scr-002-review-2026-11-13`; latest source/test commit: `856e7d064613bf6fb70080ec4dbb492c9aabdaea`. The progress ledger reflects the single-finding SCR-002 status transition and the unchanged project-wide Wave 0 state.
+- Additional review corrections: the unsupported/overriding database URL rejection test now asserts the `DB_PUSH_DATABASE_URL` error label; the invocation-marker test checks malformed nonce input rather than claiming tamper resistance; the marker now hashes only non-secret connection identity fields (protocol, host, port, database, login role, and TLS mode), never the password.
+- Additional defensive coverage added for symlinked marker files, group/world-readable marker files (skipped on Windows, where the mode check is not enforced), and `issuedAt` values more than five seconds in the future. Attestation parser failures now preserve a diagnostic reason while retaining the generic fail-closed context; marker file permissions, freshness, ownership, and type checks remain enforced.
+- `041-SCR-002.md` now enumerates concrete acceptance checks for target alias/identity, driver-effective host and TLS, independent catalog attestation, role grants/memberships, exact extensions, complete object inventory, fail-closed failures, wrapper invocation, and post-merge verification. It explicitly distinguishes the temporary CI PostgreSQL service from any persistent/reviewed `db:push` target.
+- GitHub Actions workflow-dispatch run [#43560940497](https://github.com/DiabloNova/oxenn/actions/runs/43560940497) was started for exact head `856e7d064613bf6fb70080ec4dbb492c9aabdaea`; its three jobs were still in progress at the time of this entry. Update this record only with the completed job conclusions.
+- Vercel Preview deployment [`dpl_Hk8z43cGPtU4jeWRpaQ78CNobng5`](https://vercel.com/oxenn/oxenn/Hk8z43cGPtU4jeWRpaQ78CNobng5) was created for the same exact head and reached `READY`; its branch alias was assigned. This is Preview evidence, not a production deployment or post-merge verification.
+- No persistent, production, Platform Admin, or reviewed disposable database was provisioned, connected, migrated, pushed, or modified. The regular CI Isolation Suite provisions a temporary PostgreSQL service and runs the normal Workspace migration chain; this job-scoped test database is not the reviewed `db:push` target.
+- SCR-002 remains `Implemented — verification pending`. `Verified complete` requires merge plus successful post-merge CI on the exact resulting `main` merge commit. No database `db:push` execution or live disposable-target validation is authorized or claimed.

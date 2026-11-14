@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, writeFileSync } from "node:fs";
+import { symlink } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import {
   assertDbPushGuardAttestation,
@@ -36,13 +37,35 @@ describe("db:push guard attestation", () => {
 
   it("rejects a marker bound to another target or connection URL", async () => {
     await issue();
-    expect(() => assertDbPushGuardAttestation("another-target", connectionString)).toThrow(/valid, fresh, private attestation/);
-    expect(() => assertDbPushGuardAttestation(targetId, "postgresql://other/db")).toThrow(/valid, fresh, private attestation/);
+    expect(() => assertDbPushGuardAttestation("another-target", connectionString)).toThrow(/valid, fresh, private invocation marker/);
+    expect(() => assertDbPushGuardAttestation(targetId, "postgresql://other/db")).toThrow(/valid, fresh, private invocation marker/);
   });
 
   it("rejects an expired invocation marker", async () => {
     await issue();
-    expect(() => assertDbPushGuardAttestation(targetId, connectionString, process.env, Date.now() + 60_001)).toThrow(/valid, fresh, private attestation/);
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString, process.env, Date.now() + 60_001)).toThrow(/valid, fresh, private invocation marker/);
+  });
+
+  it("rejects an issuedAt timestamp more than five seconds in the future", async () => {
+    const filePath = await issue();
+    const payload = JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
+    payload.issuedAt = Date.now() + 5_001;
+    writeFileSync(filePath, JSON.stringify(payload));
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/valid, fresh, private invocation marker/);
+  });
+
+  it("rejects a symlinked invocation marker file", async () => {
+    const filePath = await issue();
+    const symlinkPath = `${filePath}.link`;
+    await symlink(filePath, symlinkPath);
+    vi.stubEnv(DB_PUSH_GUARD_ATTESTATION_ENV, symlinkPath);
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/invalid attestation file type/);
+  });
+
+  it.skipIf(process.platform === "win32")("rejects a group/world-readable invocation marker file", async () => {
+    const filePath = await issue();
+    chmodSync(filePath, 0o644);
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/attestation file permissions are too broad/);
   });
 
   it("rejects a malformed invocation marker payload", async () => {
@@ -50,7 +73,7 @@ describe("db:push guard attestation", () => {
     const payload = JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
     payload.nonce = "not-a-valid-nonce";
     writeFileSync(filePath, JSON.stringify(payload));
-    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/valid, fresh, private attestation/);
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/valid, fresh, private invocation marker/);
   });
 
   it("does not persist or hash the database password in the invocation marker", async () => {

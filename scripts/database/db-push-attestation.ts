@@ -95,7 +95,11 @@ export function assertDbPushGuardAttestation(
     ) {
       throw new Error("attestation does not match the current target or is no longer fresh");
     }
-  } catch {
-    throw new Error("Drizzle db:push requires a valid, fresh, private attestation issued by the db:push guard.");
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : "unknown validation error";
+    throw new Error(
+      `Drizzle db:push requires a valid, fresh, private invocation marker (${reason}).`,
+      { cause: error },
+    );
   }
 }
