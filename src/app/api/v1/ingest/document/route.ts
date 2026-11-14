@@ -1,30 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { DocumentIngestionService } from "@/services/ingestion/document-ingestion";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
-
-// Request body validation schema
-const requestSchema = z.object({
-  text: z.string().min(1, "Text to ingest must be provided"),
-  metadata: z.record(z.string(), z.any()).optional().default(() => ({})),
-  chunkingOptions: z
-    .object({
-      maxChunkSize: z.number().int().positive().optional(),
-      overlap: z.number().int().nonnegative().optional(),
-    })
-    .optional(),
-});
+import {
+  ingestionRequestSchema,
+  MAX_INGESTION_REQUEST_BYTES,
+  readBoundedJson,
+} from "@/services/ai/resource-limits";
 
 export async function POST(req: NextRequest) {
   try {
     // Resolve identity from the validated server session; caller headers are ignored.
     const { userId, tenantId } = await authorizeApiRequest(req);
 
-    // 2. Parse and validate JSON request body
-    const body = await req.json();
-    const parsed = requestSchema.safeParse(body);
+    const bodyResult = await readBoundedJson(req, MAX_INGESTION_REQUEST_BYTES);
+    if (!bodyResult.ok) {
+      return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+    }
 
+    const parsed = ingestionRequestSchema.safeParse(bodyResult.data);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Bad Request", details: parsed.error.format() },
@@ -33,23 +27,16 @@ export async function POST(req: NextRequest) {
     }
 
     const { text, metadata, chunkingOptions } = parsed.data;
-
-    // 3. Initialize the Ingestion Service
     const ingestionService = new DocumentIngestionService();
-
-    // 4. Secure the execution inside a transactional Tenant Context
     const requestId = req.headers.get("x-request-id") || `req-ingest-${Date.now()}`;
 
     const result = await TenantContextManager.runWithTenantContext(
       tenantId,
       userId,
       requestId,
-      async () => {
-        return await ingestionService.ingestDocument(text, metadata, chunkingOptions);
-      }
+      async () => ingestionService.ingestDocument(text, metadata, chunkingOptions)
     );
 
-    // 5. Check if all chunks failed to process
     if (result.totalChunks > 0 && result.processedChunks === 0) {
       return NextResponse.json(
         {
@@ -63,15 +50,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Return successful (including partial success) response
     return NextResponse.json(result, { status: 200 });
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+    if (error instanceof RangeError) {
+      return NextResponse.json({ error: "Invalid ingestion input." }, { status: 400 });
+    }
     console.error("[API Document Ingestion Route Error]:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal Server Error", message },
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }

@@ -5,6 +5,7 @@
 
 import { PostgresClient } from "../../features/admin/infrastructure/persistence/postgres";
 import { DocumentEmbedding } from "../../features/ai-intelligence/domain/types";
+import { MAX_CHUNK_SIZE, validateMetadata, validateRagResultLimit } from "../ai/resource-limits";
 
 export class VectorStoreService {
   private pg: PostgresClient;
@@ -13,20 +14,19 @@ export class VectorStoreService {
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  /**
-   * Inserts a document chunk and its dense semantic vector embedding into PostgreSQL.
-   * Parameterised and transactional, ensuring compliance with our zero-trust isolation boundaries.
-   */
   public async insertEmbedding(
     tenantId: string,
     contentChunk: string,
     embedding: number[],
     metadata: Record<string, unknown>
   ): Promise<DocumentEmbedding> {
+    const safeMetadata = validateMetadata(metadata);
+    if (contentChunk.length > MAX_CHUNK_SIZE) {
+      throw new RangeError("Content chunk exceeds the maximum allowed size.");
+    }
+
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
-
-    // Format embedding array to standard pgvector format '[x,y,z...]'
     const vectorString = `[${embedding.join(",")}]`;
 
     const sql = `
@@ -39,20 +39,19 @@ export class VectorStoreService {
       id,
       tenantId,
       contentChunk,
-      JSON.stringify(metadata),
+      JSON.stringify(safeMetadata),
       vectorString,
       createdAt
     ];
 
     const res = await this.pg.query(sql, params);
 
-    // If running in offline simulation/test mode and no row is returned, return simulated result
     if (!res.rowCount || res.rowCount === 0) {
       return {
         id,
         tenantId,
         contentChunk,
-        metadata,
+        metadata: safeMetadata,
         embedding,
         createdAt
       };
@@ -63,22 +62,18 @@ export class VectorStoreService {
       id: row.id || id,
       tenantId: row.tenant_id || tenantId,
       contentChunk: row.content_chunk || contentChunk,
-      metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : (row.metadata || metadata),
+      metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : (row.metadata || safeMetadata),
       embedding,
       createdAt: row.created_at || createdAt
     };
   }
 
-  /**
-   * Performs high-speed multi-tenant similarity search using the Cosine Distance operator (<=>).
-   * Generates a distance property indicating the similarity of each matched chunk.
-   */
   public async findSimilarEmbeddings(
     tenantId: string,
     queryEmbedding: number[],
     limit: number
   ): Promise<(DocumentEmbedding & { distance: number })[]> {
-    // Format embedding array to standard pgvector format '[x,y,z...]'
+    const boundedLimit = validateRagResultLimit(limit);
     const vectorString = `[${queryEmbedding.join(",")}]`;
 
     const sql = `
@@ -95,12 +90,10 @@ export class VectorStoreService {
       LIMIT $3;
     `;
 
-    const params = [tenantId, vectorString, limit];
+    const params = [tenantId, vectorString, boundedLimit];
     const res = await this.pg.query(sql, params);
 
-    if (!res.rowCount || res.rowCount === 0) {
-      return [];
-    }
+    if (!res.rowCount || res.rowCount === 0) return [];
 
     interface DbVectorRow {
       id: string;
@@ -116,7 +109,7 @@ export class VectorStoreService {
       tenantId: row.tenant_id,
       contentChunk: row.content_chunk,
       metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata,
-      embedding: queryEmbedding, // Map query vector back
+      embedding: queryEmbedding,
       distance: Number(row.distance),
       createdAt: row.created_at
     }));

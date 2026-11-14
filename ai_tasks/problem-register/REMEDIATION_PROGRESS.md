@@ -1,35 +1,31 @@
 # Remediation Progress & Execution Log
 
 **Repository:** `DiabloNova/oxenn`  
-**Tracking branch:** `wave0-revalidate`  
+**Tracking branch:** `wave0/revalidate-current-main-20261113`  
 **Baseline architecture:** [OXENN_PRODUCT_ARCHITECTURE.md](../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)  
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current `main` at `9ac5fe0`; 20 remain Not started. The ledger records 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. Wave 0 remains incomplete; no Wave 1 authorization is implied.
+**Current overall status:** PARTIAL — historical aggregate counts at `main@9ac5fe0` are retained for provenance and are not current-main dispositions. PR #140 retired the blanket Wave 0 gate. The user explicitly authorized a full Wave 0 revalidation task on this branch; 2 findings (SRC-012 and SRC-017) have detailed evidence on current `main@7e9145a`, with 95 still awaiting individual current-base revalidation. This is a task-specific audit, not a universal prerequisite for unrelated remediations.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
 ## 1. Overall status
 
-| Metric | Current value |
+| Metric | Current Wave 0 task value |
 |---|---:|
 | Individual finding records | 97 |
-| Findings revalidated against current `main` | 77 |
-| Findings approved for implementation (cumulative) | 2 |
-| Findings with implementation started (cumulative) | 2 |
-| Findings with verified implementation complete | 4 |
-| Findings implemented — verification pending | 2 |
-| Findings blocked / historical-only | 3 |
-| Findings with confirmed issues | 64 |
-| Findings already fixed in repository | 1 |
-| Findings needing a product/security decision | 3 |
-| Findings not started | 20 |
-| Open implementation waves | 7 (not started) |
+| Fully revalidated against current `main@7e9145a` in this pass | 2 (SRC-012, SRC-017) |
+| Records still awaiting current-main revalidation | 95 |
+| Verified complete in this pass | 1 (SRC-017; repository/CI scope only) |
+| Confirmed with residual scope in this pass | 1 (SRC-012; per-tenant concurrency/token/cost budgets remain outstanding) |
+| Historical aggregate snapshot | 77/97 at `main@9ac5fe0`; provenance only, not a current count |
+| Wave 0 task status | IN PROGRESS — NOT COMPLETE |
+| Sequencing policy | Blanket Wave 0 prerequisite retired by PR #140; this full audit continues on the user's explicit request |
 
-*Approved and implementation-started values are cumulative historical counts; the other Finding Ledger counts reflect current primary dispositions.*
+The previous ledger's aggregate category totals and dispositions remain historical until each record is revalidated against `7e9145a...`. Do not use those totals as current completion metrics. A path-impact match or a passing unrelated CI job is not a Finding status transition. The project-wide inventory is not a prerequisite for unrelated, independently approved work.
 
-**This tracker does not itself authorize code changes.** The narrowly scoped DOC-001 investigation was separately authorized and is recorded below; it does not waive mandatory Wave 0 revalidation or user approval for the remaining findings, and it does not authorize starting Wave 1. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
+**This tracker does not itself authorize code changes.** The narrowly scoped DOC-001 investigation was separately authorized and is recorded below. Under [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md), completion of the unrelated project-wide Wave 0 inventory is not a universal entry gate; each finding still requires explicit user approval, task-specific revalidation, directly relevant dependencies, and applicable safeguards. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
 
 ## 2. Status definitions
 
@@ -76,7 +72,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At `main@9ac5fe0`, 77 of 97 findings have been revalidated: 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The remaining 20 findings are Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. These finding-level dispositions do not satisfy the project-wide Wave 0 exit condition.
+The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At `main@9ac5fe0`, 77 of 97 findings have been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The remaining 20 findings are Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. The historical project-wide Wave 0 exit condition remains incomplete; under [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md), it is not a universal prerequisite for independently approved, task-specific remediation.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -137,12 +133,12 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [SRC-009](./findings/055-SRC-009.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SRC-010](./findings/056-SRC-010.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SRC-011](./findings/057-SRC-011.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
-| [SRC-012](./findings/058-SRC-012.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
+| [SRC-012](./findings/058-SRC-012.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@7e9145a; PR #137 merged; request-size/metadata/chunk/RAG limits and direct API CI passed; per-tenant concurrency/token/cost budgets remain outstanding |
 | [SRC-013](./findings/059-SRC-013.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | Owner policy: registered + signed-in; SECURITY_MODEL.md; route auth gap remains |
 | [SRC-014](./findings/060-SRC-014.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 040–060|
 | [SRC-015](./findings/061-SRC-015.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Not started | — | — |
 | [SRC-016](./findings/062-SRC-016.md) | Wave 2 (persistence/expiry) + Wave 4 (localized UI/email workflow) | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
-| [SRC-017](./findings/063-SRC-017.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
+| [SRC-017](./findings/063-SRC-017.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Verified complete | [`ce0e3e4`](https://github.com/DiabloNova/oxenn/commit/ce0e3e40300f97104a51ac0af0234819697c4a36) | PR #136 merged; exact merge commit Build and Test, Unit Tests, Isolation Suite passed (Actions run 43559776614); repository/CI scope, no Production DB/deployment claim |
 | [SRC-018](./findings/064-SRC-018.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Needs decision | — | main@9ac5fe0; Wave 0 log 062–097|
 | [SRC-019](./findings/065-SRC-019.md) | Wave 4 — Commercial entitlements and real workflow execution | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
 | [SRC-020](./findings/066-SRC-020.md) | Wave 3 — AI provider behavior and evidence integrity | Confirmed | — | main@9ac5fe0; Wave 0 log 062–097|
@@ -641,22 +637,105 @@ At the end of each wave, provide a concise wave summary and wait for the require
 
 The project is complete only when every in-scope finding is either verified complete or has an explicitly approved disposition (deferred, superseded, already fixed, or out of scope), with evidence. The number of changed files or closed issues is not a completion metric.
 
-### Current-main revalidation — 2026-11-13 (in progress)
 
-- Branch: `wave0/revalidate-current-main-20261113`; base: `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`.
-- Detailed evidence and provisional dispositions are recorded in [WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md](./WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md).
-- The 9ac5fe0 ledger snapshot is historical; 52 commits and 66 changed paths separate it from current main.
-- This batch is partial. No canonical 97-row status transitions are made until all 97 current-main reviews are complete. Wave 0 remains IN PROGRESS; Wave 1 entry criteria are not met.
+### SRC-017 implementation — 2026-11-13
 
-### 52-commit path-delta mapping — 2026-11-13
+- Finding: [SRC-017](./findings/063-SRC-017.md). Current-main baseline: `main@ec86cfccd02abcea31be07782a56416529c08b2d`. Working branch: `review/063-src-017-20261113`; pre-sync working head: `0550095616c3801fd3e053b9ef881515b3ca1d96`.
+- Revalidation: confirmed. `removeMemberAction` and `updateMemberRoleAction` previously allowed the final active `workspace_admin` to be removed/demoted without a concurrency-safe shared lock. `deactivateAccountAction` soft-deleted the user first and retained a sole-admin membership, leaving an active workspace without an active admin.
+- Owner decision: use option 2. If deactivation would leave a workspace without an active `workspace_admin`, soft-deactivate that workspace in the same atomic transaction. Preserve membership rows for recovery/audit and revoke all sessions scoped to the closed workspace. If another active admin remains, remove only the deactivating user's membership.
+- Implementation: organization-row serialization lock shared by member removal, role changes, invitations, and account deactivation; deterministic organization lock order; active-user/workspace/member checks on session and workspace lifecycle paths; stable `LAST_WORKSPACE_ADMIN` domain response; removal of nested manual transaction boundaries inside managed transactions; privileged-path registry updated for newly accessed tables.
+- Files changed: `src/app/actions/workspace.ts`; `src/app/actions/account.ts`; `src/services/auth/session.ts`; `src/core/database/privileged-paths.ts`; `tests/unit/app/actions/workspace-membership.test.ts` (new); `tests/unit/app/actions/workspace-invitations.test.ts`; `tests/unit/app/actions/account.test.ts`; `tests/unit/services/auth/session.test.ts`; this finding record; this progress tracker.
+- Tests added/updated: last-admin removal/demotion including self-actions; allow changes if another active admin exists; reject inactive workspaces; account deactivation closes sole-admin workspaces and preserves memberships; reject invalid invitation roles; reject session creation for inactive/deleted users, closed workspaces, and revoked memberships.
+- Verification: focused tests, typecheck, lint, build, database/isolation suite, and GitHub CI **Not run yet**. No pass is claimed. No database connection, migration, production operation, deployment, or PR merge was performed.
+- Concurrency/rollback: the organization row is the shared serialization point; deactivation locks the user first and organizations in sorted ID order; workspace/session-creation paths also lock the user to prevent sessions or memberships racing account deactivation. Account mutations and audit writes are within one system-context transaction; a failed final user update throws to force rollback.
+- Safety decision: the user explicitly authorized bypassing Wave 0 for this SRC-017 implementation. The recorded project-wide Wave 0 state remains PARTIAL (77/97 previously revalidated); this action does not claim Wave 0 completion and does not change unrelated finding dispositions.
+- Status transition: SRC-017 `Confirmed` → `Implemented — verification pending`. Next permitted action: synchronize the working branch with current main, run focused and repository CI checks, review any failures, and update this record with exact outcomes.
 
-- Compared all 66 changed paths from `9ac5fe016f11bddad789153efcaaa3f3fef93b44` to `a9f22b6f794ee9ff6640fad78b581e51b9e385cf` against all 97 finding records. Seventeen records have direct path references in the delta: DOC-001, DOC-002, DOC-003, DOC-005, DOC-006, DOC-007, DOC-008, DOC-009, SRC-002, SRC-006, SRC-013, TST-002, TST-003, VER-002, PUB-001, GHA-001, and GHA-003.
-- The current-main dispositions and exact caveats are recorded in [WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md](./WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md). The other 80 findings are not automatically closed: their cited paths must be confirmed unchanged before their prior dispositions can be carried forward.
-- DOC-006 remains an owner decision; DOC-009, SRC-002, PUB-001, and GHA-003 remain confirmed; SRC-006 and GHA-001 are partially valid; SRC-013 and TST-002/TST-003 have repository/CI evidence of resolution; VER-002 remains historical-only.
-- Wave 0 remains IN PROGRESS. No aggregate status counts or canonical Finding Ledger statuses were changed in this partial path-mapping batch.
 
-### Closed PR reconciliation — 2026-11-13
+### Correction — SRC-017 branch-head and synchronization metadata — 2026-11-13
 
-- PR #108 is closed/unmerged. Its API-auth change is superseded by current-main `authorizeApiRequest` use, but the proposed login `returnTo` and locale-aware ProtectedRoute changes are absent; its direct authorization regression test was not proven present. Do not replay the whole PR.
-- PR #109 is closed/unmerged and contains only `verification/rls-state-contract.md`, absent from current main. Some principles appear in current docs, but the standalone contract is not current policy or live-database evidence.
-- Exact comparison and caveats are recorded in `WAVE0_CURRENT_MAIN_REVALIDATION_2026-11-13.md`.
+- Correction to the `SRC-017 implementation` entry above: the recorded pre-sync working/head SHA `0550095616c3801fd3e053b9ef881515b3ca1d96` was an intermediate commit, not the final pre-sync branch head. The exact pre-sync head was `cc77c750551b69c98d474b2a1429da0a4b339e77`, the commit that appended the initial SRC-017 execution log.
+- The implementation files, Finding record, and progress tracker were reapplied to a clean work branch based on current `main@ec86cfccd02abcea31be07782a56416529c08b2d`; the canonical working branch `review/063-src-017-20261113` was then moved with an expected-head check to that synchronized history.
+- Current branch comparison: `main...review/063-src-017-20261113` is 11 commits ahead and 0 commits behind. Changed paths remain limited to the SRC-017 source, tests, finding record, and tracker.
+- This correction supersedes only the inaccurate pre-sync SHA in the earlier entry; no implementation outcome, status, or test claim is changed.
+
+
+### SRC-017 operator-only role-grant path — 2026-11-13
+
+- Additional path found during final security review: `scripts/auth/grant-super-admin.ts` is the sole supported operator path for assigning Workspace `super_admin`. It previously updated the membership directly, which could convert the final active `workspace_admin` to `super_admin` and bypass the same invariant. It also issued nested manual `BEGIN/COMMIT/ROLLBACK` inside `runWithSystemContext`'s already-managed transaction.
+- Updated the CLI operation to lock the active parent organization, verify that the user and membership are active, count active workspace administrators before role conversion, reject conversion of the final active administrator, update the role, and write its audit event within the manager-owned transaction. No nested manual transaction commands remain in that CLI operation.
+- Exported the grant operation for focused unit tests while guarding CLI execution so importing the operation in Vitest does not run the command-line entrypoint.
+- Added `tests/unit/scripts/auth/grant-super-admin.test.ts` covering last-admin rejection, successful grant when another admin remains, inactive workspace, inactive/missing membership, and lock/update/audit ordering.
+- Additional changed paths: `scripts/auth/grant-super-admin.ts` and `tests/unit/scripts/auth/grant-super-admin.test.ts`. SRC-017 remains `Implemented — verification pending`; no tests or CI result are claimed as passing yet.
+
+
+### SRC-017 least-privilege operator purpose — 2026-11-13
+
+- Final security refinement: the grant CLI previously used `sys-admin-run`, which is guarded by `TenantContextManager` as a test/verification-only purpose. It now uses the dedicated `sys-grant-super-admin` tag so the operator command is not subject to that test-only execution gate.
+- The registry's `allowedTables` value records observed tables in audit metadata only. It does not constrain SQL access or change the privileges of the shared system database connection. The dedicated tag therefore improves purpose attribution; it is not a database-enforced table allowlist.
+- Verification status remains pending; this refinement has not yet been covered by a completed CI run.
+
+
+### SRC-017 CI verification and PostgreSQL concurrency regression — 2026-11-13
+
+- Additional integration coverage: `tests/isolation/suite.ts` now runs a concurrency probe against the disposable PostgreSQL database provisioned by CI. Two independent PostgreSQL transactions contend on the same parent `organizations` row. The second transaction is observed waiting in `pg_stat_activity`; after the first transaction removes one administrator and commits, the second obtains the lock and observes exactly one active administrator. It then models the guard rejecting the final removal. Cleanup removes the fixture organization and users.
+- CI run #805 on `9b20c92a661a242af49035211f6914dda32d30cc` completed successfully: Unit Tests (74 files passed, 1 skipped; 536 tests passed, 1 todo), UI Tests (4 files / 33 tests passed), Isolation Suite (4 files / 33 tests passed), and Build and Test including typecheck, lint, production build, reference-matrix generation, and generated-file no-drift check.
+- CI run #806 on `387e9818b36657b896aa4d4b4318146dad44285a`: Unit Tests and UI Tests passed (same 536 passed / 1 todo and 33 UI tests); Isolation Suite passed, with the explicit concurrency-probe success message and **56 tenant tables / 677 isolation assertions**. Build and Test passed dependency audit, audit regression tests, typecheck, lint, tenant schema/RLS checks, baseline and documentation checks, Drizzle migration check, and build/reference-matrix generation. The final generated-file no-drift step failed because the canonical matrix generator correctly discovered the new `tests/isolation/suite.ts` consumer of `organizations`.
+- Corrective documentation change: added `tests/isolation/suite.ts` to the `organizations` consumer list in `docs/database/reference-matrix.md` to match the generated output. The corresponding finding record now lists the isolation test and updated security/database documentation and describes the actual CI outcomes. This is not a source-code behavior change.
+- A fresh CI run for the corrected branch head is pending; do not treat run #806 as fully green. The Finding status remains **Implemented — verification pending** until the corrected final PR head passes CI and the exact merged commit later passes post-merge CI on `main`.
+- No schema migration, production database access, deployment, or PR merge occurred. The only real PostgreSQL concurrency test ran against the CI-created disposable `isolation_test_db`.
+- Current implementation scope remains SRC-017 only. The user explicitly waived Wave 0 for this finding; repository-wide Wave 0 remains partial and is not marked complete.
+
+
+### SRC-017 generated-matrix follow-up — 2026-11-13
+
+- CI run #809 confirmed that the concurrent isolation test is green and the PostgreSQL probe passes. Its Build and Test job again reached the generated-file check and found one additional expected consumer: `tests/isolation/suite.ts` also creates disposable `users` fixtures. This was separate from the previously identified `organizations` consumer.
+- Added `tests/isolation/suite.ts` to the `users` consumer list in `docs/database/reference-matrix.md`. The resulting GitHub contents blob SHA `887112d72475e36d889e8812d81a5db0d6a766fd` matches the generated blob SHA reported by CI run #809, indicating the checked-in matrix now matches canonical generator output for this final difference.
+- A new CI run is required on the corrected current head. Do not describe run #809 as fully green; its only remaining failure was generated reference-matrix drift. Source typecheck, lint, app build, unit/UI tests, and the disposable PostgreSQL isolation/concurrency suite passed.
+
+
+### SRC-017 automated-review corrections — 2026-11-13
+
+- Updated `deactivateAccountAction` so workspace closure is triggered only when the departing membership is the final active `workspace_admin`. A viewer cannot close a workspace that was already administrator-less.
+- Added shared auth helpers for active user/workspace row locks and the final-active-administrator guard. Membership removal, demotion, operator grant, and the PostgreSQL isolation probe now call the same final-admin guard.
+- Updated the PostgreSQL concurrency probe to execute the production guard after waiting for the organization lock and roll back the rejected competing removal.
+- Changed `requireRole` to return its authoritative database-verified role; workspace management actions reuse it after acquiring their tenant transaction rather than opening another system transaction while holding the workspace lock.
+- Strengthened account, membership and grant tests; removed assertions against transaction SQL that were vacuous under the mocked transaction manager.
+- Hardened CLI direct-invocation detection using canonical physical paths. Corrected security documentation and finding/progress claims so `allowedTables` is described strictly as audit metadata, not SQL enforcement.
+- Updated generated database reference-matrix consumers for the shared auth helper files.
+- Latest fully CI-verified implementation head: `7733f743a0dab4c16d6eff39adc8a98c35034211` on `review/063-src-017-20261113`. GitHub Actions CI run #837 completed successfully on that implementation head: Unit Tests (74 files passed, 1 skipped; 538 tests passed, 1 todo), UI tests (4 files / 33 tests passed), Isolation Suite (56 tenant tables / 677 assertions; production concurrent membership guard passed), and Build and Test (dependency/audit gates, typecheck, lint, tenant schema/RLS checks, documentation checks, Drizzle migration check, production build, reference-matrix generation, and generated-file no-drift check all passed). Subsequent branch commits only updated the Finding and progress records with those verification results; no implementation source, test, or generated reference-matrix file changed after the CI-verified implementation head.
+- All 18 review threads are resolved; the two remaining HeyDeer findings were answered and resolved after CI #837.
+- The separate GitHub commit status `Vercel – oxenn` reports failure with target `vercel.com/oxenn?upgradeToPro=build-rate-limit`, indicating the hosted Vercel build-rate limit; `DeepSource: Secrets` reports success. This external Vercel status is distinct from the successful GitHub Actions CI and is not represented as a successful deployment. No production database, migration, deployment, or merge was performed.
+- Status remains `Implemented — verification pending` until the PR is merged and successful post-merge CI is confirmed on the exact merge commit; repository-wide Wave 0 remains partial and unchanged.
+
+
+### SRC-017 follow-up review round — 2026-11-13
+
+- Addressed all five new inline review findings on `review/063-src-017-20261113`.
+- Added the omitted `authorization.ts` and both new auth helpers to the Finding's Changed paths list.
+- Updated `lockWorkspaceAndVerifyAdmin` to acquire the actor's active user row lock before the workspace lock. This matches account deactivation's user→workspace lock order and rejects an inactive actor before honoring a stale, previously verified `super_admin` role.
+- Changed `canChangeWorkspaceMember` to distinguish `allowed`, `last_admin`, and `target_not_found`; both removal and role-change actions now return `MEMBER_NOT_FOUND` for absent targets instead of reporting a successful no-op.
+- Added a cross-workspace assertion for the authoritative return value of `requireRole`, exact workspace-scoped session-revocation assertion, stale-super-admin race regression, missing-target action regressions, and updated invitation mocks for the shared active-user lock.
+- GitHub Actions CI run #859 passed on implementation head `29cc59e25adae41c08e0780624af2dc4b3c71733`: Unit Tests (76 files passed, 1 skipped; 555 tests passed, 1 todo), UI tests (4 files / 33 tests passed), Isolation Suite (56 tenant tables / 677 assertions; concurrent workspace-admin guard passed), and Build and Test including typecheck, lint, schema/RLS, documentation, migration, production build, reference-matrix generation, and generated-file no-drift verification.
+- All 23 PR review threads have been answered and are resolved. The separate `Vercel – oxenn` status remains a build-rate-limit failure; no deployment success is claimed.
+- At this checkpoint the branch is 88 commits ahead and 24 behind `main`; no base-branch synchronization was performed as part of this review request. PR #136 remains open and unmerged. No production database, schema migration, or deployment occurred.
+
+### Policy sequencing update — 2026-11-14 UTC
+
+- PR #140 updates the remediation entry policy: completion of the full 97-finding Wave 0 inventory is no longer a universal prerequisite for an independently approved, narrowly scoped task.
+- This is a policy clarification only. The existing finding ledger, counts, and dated execution records above remain historical evidence and were not retroactively rewritten.
+- Every new task still requires explicit user approval, exact-base-commit revalidation of the selected finding and relevant code, directly applicable dependency checks, preservation of architecture/security/data-safety invariants, and all task-specific safeguards.
+- `VER-005` and `VER-006` remain permanently DO NOT RUN. Production database operations, destructive actions, deployments, external-provider/payment side effects, and PR merge/close actions remain separately approval-gated.
+- Files changed in this policy update: `AI_REMEDIATION_AGENT_PROMPT.md`, `IMPLEMENTATION_SEQUENCE.md`, `WAVE0_POLICY_SUPERSESSION.md`, `README.md`, and this tracker. No finding disposition or verification claim is changed by this policy update.
+
+
+### Explicit Wave 0 task continuation and main resynchronization — 2026-11-14
+
+- Latest base: `main@7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6`, merge of PR #140. The branch common base is `a9f22b6f794ee9ff6640fad78b581e51b9e385cf`; main is 146 commits ahead of the pre-sync branch. The historical tracker baseline `9ac5fe0` is 198 commits and 109 changed paths behind this main.
+- The PR #140 `WAVE0_POLICY_SUPERSESSION.md` retires the blanket Wave 0 entry gate. The user separately and explicitly requested continuation of this full 97-record Wave 0 review. This audit is therefore continuing as an approved task; it is not being represented as a universal prerequisite for other remediation tasks.
+- The review branch is synced by a two-parent merge commit (review branch first parent; latest main second parent). Its tree is based on latest main. Current-main policy documents and tracker history were preserved; the dated audit report and two individually revalidated Finding records were added on this branch only.
+- Current pass: SRC-017 is Verified complete on exact PR #136 merge `ce0e3e40300f97104a51ac0af0234819697c4a36`; Build and Test, Unit Tests, and Isolation Suite all succeeded on that merge commit. SRC-012 remains Confirmed because per-tenant concurrency/token/cost budgets are not established, despite successful payload/metadata/chunk/RAG bounds and exact post-merge CI on PR #137's merge commit `83ffc56...`.
+- The 198-commit / 109-path historical delta maps to DOC-001–DOC-009, SCR-003, SRC-002, SRC-006, SRC-012, SRC-013, SRC-017, PUB-001, GHA-001/GHA-003, TST-002/TST-003, and VER-002, among related records. This mapping is a triage index, not an automatic disposition. The remaining 95 findings need individual acceptance-criteria review against `7e9145a...`.
+- PR #140 merged; PR #136 and #137 merged; PR #117 remains closed/unmerged; issues #115/#116 remain open. No issue/PR state changes were made.
+- No persistent database connection or migration was used. CI isolation evidence uses only the existing disposable PostgreSQL service. VER-005/VER-006 scripts remain DO NOT RUN. No Production action/deployment, external provider/payment side effect, or merge into main occurred.
+- Wave 0 remains IN PROGRESS — NOT COMPLETE. This task continues at the user's explicit request; policy sequencing changes do not retroactively alter historical finding statuses or grant Wave 1 implementation approval.

@@ -1,12 +1,13 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { getLLMClient, GeminiLLMClient, geminiFlashModel } from './llm-client';
+import { sentimentRequestSchema } from './resource-limits';
 
 export interface SentimentVO {
-  score: number; // -1 to 1
+  score: number;
   label: 'positive' | 'negative' | 'neutral';
-  confidence: number; // 0 to 1
-  emotions: string[]; // e.g., ['anger', 'joy', 'sadness']
+  confidence: number;
+  emotions: string[];
 }
 
 export const sentimentSchema = z.object({
@@ -32,37 +33,35 @@ Output: {"score": 0.9, "label": "positive", "confidence": 0.95, "emotions": ["jo
 Text: "خدمات مشتری افتضاح بود، دیگه خرید نمی‌کنم"
 Output: {"score": -0.8, "label": "negative", "confidence": 0.92, "emotions": ["anger"]}
 
-Now analyze this text:`;
+Now analyze the following text:`;
 
-/**
- * Analyzes the sentiment of a Persian text string.
- * Leverages structured output parsing with Vercel AI SDK when Gemini API is active,
- * or falls back to our robust MockLLMClient for testing and offline modes.
- */
 export async function analyzeSentiment(text: string): Promise<SentimentVO> {
+  const parsedInput = sentimentRequestSchema.safeParse({ text });
+  if (!parsedInput.success) {
+    throw new RangeError("Sentiment input is empty or exceeds the allowed size.");
+  }
+
+  const boundedText = parsedInput.data.text;
   const client = getLLMClient();
 
   if (client instanceof GeminiLLMClient && geminiFlashModel) {
     const result = await generateObject({
       model: geminiFlashModel,
       schema: sentimentSchema,
-      prompt: `${systemPrompt}\n\n"${text}"`,
+      prompt: `${systemPrompt}\n\n"${boundedText}"`,
     });
 
     return result.object;
   }
 
-  // Fallback to mock LLM responses or structured generation simulation
-  const generatedText = await client.generateText(text, {
+  const generatedText = await client.generateText(boundedText, {
     systemPrompt,
   });
 
   try {
     const parsed = JSON.parse(generatedText);
-    const validated = sentimentSchema.parse(parsed);
-    return validated;
+    return sentimentSchema.parse(parsed);
   } catch {
-    // Return standard neutral backup if parsing fails
     return {
       score: 0.0,
       label: 'neutral',

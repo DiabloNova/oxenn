@@ -3,6 +3,7 @@
  * Retrieves top-K relevant chunks with strict multi-tenant isolation boundaries.
  */
 
+import { validateRagResultLimit } from "../ai/resource-limits";
 import { VectorStoreService } from "../knowledge-graph/vector-store";
 
 export interface RetrievedChunk {
@@ -16,10 +17,6 @@ export interface RetrievedChunk {
   metadata: Record<string, unknown>;
 }
 
-/**
- * Retrieves the top-K relevant chunks for a given query embedding under a specific tenant.
- * Uses VectorStoreService's similarity search. Strictly enforces organization isolation.
- */
 export async function retrieveRelevantContext(
   queryEmbedding: number[],
   organizationId: string,
@@ -29,16 +26,15 @@ export async function retrieveRelevantContext(
     throw new Error("Tenant context violation: organizationId must be provided for context retrieval");
   }
 
+  const boundedLimit = validateRagResultLimit(limit);
   const vectorStore = new VectorStoreService();
-  const similar = await vectorStore.findSimilarEmbeddings(organizationId, queryEmbedding, limit);
+  const similar = await vectorStore.findSimilarEmbeddings(organizationId, queryEmbedding, boundedLimit);
 
   return similar.map((item) => {
-    // Standardize distance to similarity score: similarityScore = 1 - distance
     const similarityScore = 1 - item.distance;
-
-    // Gracefully parse sentiment from chunk metadata if present
     let sentiment: RetrievedChunk['sentiment'] = null;
     const meta = item.metadata as Record<string, unknown> | null;
+
     if (meta && typeof meta === 'object' && meta.sentiment) {
       const s = meta.sentiment as Record<string, unknown> | null;
       if (

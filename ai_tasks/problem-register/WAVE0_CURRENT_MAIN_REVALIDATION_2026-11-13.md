@@ -1,4 +1,6 @@
-# Wave 0 Current-Main Revalidation — 2026-11-13 (IN PROGRESS)
+# Wave 0 Current-Main Revalidation — 2026-11-14 (IN PROGRESS)
+
+> **Current baseline supersedes the earlier checkpoints below:** main is now `7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6`, the merge commit of PR #140. The 2026-11-13 findings and the `a9f22b6`/`83ffc56` reviews are preserved as historical evidence, not current-base dispositions. The latest main contains the Wave 0 Policy Supersession; this review continues because the user explicitly requested a full Wave 0 revalidation task, not because Wave 0 remains a universal prerequisite for unrelated work.
 
 - Repository: `DiabloNova/oxenn`.
 - Current-main baseline inspected: `a9f22b6f794ee9ff6640fad78b581e51b9e385cf` (merge of PR #135, 2026-11-13 14:36:53 UTC).
@@ -88,3 +90,45 @@ A path-to-record scan of all 97 current-main finding files against all 66 change
 | GHA-003 | Current `ci.yml` still lacks an explicit workflow-level `permissions:` block. Confirmed least-privilege permissions gap. |
 
 The 66-path change set also includes the hardened HTTP crawl provider and its tests. Issue #115's required complete inventory is not satisfied by one changed provider or an incomplete GitHub code-search response; keep the issue open pending a complete repository-wide call-site and redirect-hop review.
+
+
+## Current-main resynchronization — 2026-11-14 (PR #140 policy merge)
+
+- Exact current-main base: `7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6` (merge of PR #140, 2026-11-14 07:13:41 UTC); tree `d622e020252307d15045fa9a32b2e23860ca86e3`.
+- Common base with this review branch: `a9f22b6f794ee9ff6640fad78b581e51b9e385cf`. Current main is 146 commits ahead of the pre-sync branch; this branch has five unique audit commits. From the historical tracker base `9ac5fe0`, current main is 198 commits ahead with 109 changed paths.
+- PR #140 merged the new `WAVE0_POLICY_SUPERSESSION.md` and updated the AI prompt, implementation sequence, README, and progress tracker. The policy retires the blanket rule that all 97 Wave 0 records must be completed before any remediation task. It preserves exact-base revalidation for selected findings, directly relevant dependencies, explicit user approval, Production/database safeguards, and permanent VER-005/VER-006 prohibitions.
+- This branch continues the full 97-record Wave 0 review because the user explicitly directed this task to continue. That is a task-specific scope, not a claim that this review is a universal prerequisite for other remediation work.
+- The ordinary GitHub merge endpoint previously refused this branch because both sides had edited `REMEDIATION_PROGRESS.md`. The sync is therefore a true two-parent merge commit: review branch first parent, current main second parent. The tree is based on the latest main tree; main's current policy, code, README, tracker history, and all other source files are preserved. Only this branch's review report, task-specific progress append/update, and SRC-017/SRC-012 finding records are overlaid.
+
+### Full historical delta / finding impact reconciliation
+
+The 198-commit compare from `9ac5fe016f11bddad789153efcaaa3f3fef93b44` to current main contains 109 changed paths. Matching changed paths to all 97 latest finding records identified these impact groups:
+
+- **Documentation / security records:** DOC-001, DOC-002, DOC-003, DOC-004, DOC-005, DOC-006, DOC-007, DOC-008, DOC-009.
+- **Authorization / scripts / privileged DB paths:** SCR-003, SRC-002, SRC-013, SRC-017.
+- **Resource bounds / AI ingestion / RAG:** SRC-012 (PR #137), plus directly related tests and services.
+- **Test and historical verification records:** TST-002, TST-003, VER-002.
+- **Frontend / CI:** PUB-001, GHA-001, GHA-003.
+- **Other affected records:** SRC-006 and the crawler-related records already identified in the prior report.
+
+The matching evidence includes the current docs audit/index and RLS verifier, `docs/security/SECURITY_MODEL.md`, `docs/security/privileged-paths.md`, `src/core/database/privileged-paths.ts`, `scripts/auth/grant-super-admin.ts`, current auth/session and final-admin helpers, `src/services/ai/resource-limits.ts`, bounded chunk/sentiment/ingestion/RAG routes, `tests/isolation/suite.ts`, and their focused regression tests. Path matching is only triage: each affected Finding still requires its own acceptance-criteria review and an explicit disposition. It does not automatically close all IDs above or the other records.
+
+### Newly verified Finding evidence on current main
+
+- **SRC-017 — Verified complete (repository/CI scope).** PR #136 merged at `ce0e3e40300f97104a51ac0af0234819697c4a36`. On that exact merge commit, Build and Test, Unit Tests, and Isolation Suite all completed successfully (Actions run `43559776614`). The isolation suite included the concurrent final-workspace-administrator guard against the CI-provisioned disposable PostgreSQL service. Both explicit Finding acceptance criteria are met: no committed active workspace without an administrator, and concurrent operations cannot bypass the invariant. This is not evidence of a Production database inspection or successful deployment.
+- **SRC-012 — Confirmed, with substantial implementation now in main.** PR #137 merged at `83ffc56b48d19757572f5cd43b3b52852f61e3df`; exact-merge Build and Test, Unit Tests, and Isolation Suite succeeded (Actions run `43559859138`). Shared UTF-8 text, request-body streaming/byte, metadata, chunk, overlap/count and RAG result bounds are enforced before expensive route work; API routes require a server session before bounded-body parsing; direct-request regression tests cover oversize inputs and invalid bounds. However, per-tenant concurrency, token and cost budgets from the Finding's recommended solution are not established in the inspected code. Keep the Finding Confirmed for this remaining resource-budget requirement; do not mark it Verified complete.
+
+### Live PR and issue reconciliation
+
+- PR #140 is merged at `7e9145aa0550e49d96df2fbbbbfbbe42ed551cb6`; it supersedes the blanket Wave 0 sequencing gate only.
+- PR #136 (SRC-017) and PR #137 (SRC-012) are merged. Their exact merge-commit core CI outcomes are recorded above.
+- PR #117 is closed and unmerged; it is not integrated. PRs #108/#109 remain closed and unmerged under the earlier live checks; do not replay their full patches.
+- Issues #115 and #116 remain open. The changed HTTP crawler is not a substitute for a complete repository-wide SSRF/provider-bound fetch and redirect-hop inventory. Session membership checks are stronger, but Issue #116 still needs direct authorization-boundary and regression review. No issue state was changed.
+
+### Current-main safety and task status
+
+- `WAVE0_POLICY_SUPERSESSION.md` now governs sequence policy. This user-approved continuation is a full inventory task, so we continue tracking all 97 records as requested, but the task is not a mandatory gate for unrelated tasks.
+- No persistent repository/user database was connected or accessed; no migrations were run. Existing Isolation Suite evidence comes only from the CI-owned ephemeral PostgreSQL service. No Production state is inferred.
+- `verification/phase-0/probe-system-context.ts` and `verification/phase-0/run_rls_matrix.js` were not executed.
+- No Production action, external provider/payment action, deployment, issue/PR closure, or merge into main was performed. This merge is only latest main into the isolated review branch.
+- **Wave 0 task: IN PROGRESS, NOT COMPLETE.** Two findings have detailed revalidation on the latest source baseline; the remaining records still need individual dispositions. This does not reinstate the retired universal prerequisite.
