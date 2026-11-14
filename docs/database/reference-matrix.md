@@ -2482,7 +2482,7 @@
 - **Migration Coverage:** Not applicable (USER_OWNED)
 - **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/account.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
+- **Consumers:** `src/app/actions/account.ts`, `src/app/actions/auth.ts`, `src/app/actions/workspace.ts`, `src/services/auth/session.ts`
 
 ### Columns
 

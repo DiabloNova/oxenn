@@ -410,6 +410,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# PR #137 — Derived Chunk Overlap Remediation  **Date:** 2026-11-13   **Repository:** \`DiabloNova/oxenn\`   **Branch:** \`review/058-src-012\`   **Pull request:** [#137](https://github.com/DiabloNova/oxenn/pull/137)   **Review finding:** [discussion_r4564611228](https://github.com/DiabloNova/oxenn/pull/137#discussion_r4564611228)  ## Objective and invariant  Ensure an omitted overlap for custom chunk sizes remains proportional to the chunk size, preserves room for new content and the joining separa`
   },
   {
+    slug: "pr-138-email-verification-remediation",
+    titleEn: "PR #138 authentication remediation report",
+    titleFa: "PR #138 authentication remediation report",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# PR #138 authentication remediation report  ## Status  PARTIALLY IMPLEMENTED — the production email sender is now implemented for Maileroo's Email API, using the approved sender identity \`noreply@oxenn.ir\`. Provider-specific tests and environment documentation have been added. CI has not yet reported results for this revision, and the PR still has merge conflicts with \`main\`; do not merge or deploy until those gates are cleared.  ## Invariant  Only users who have verified control of their email`
+  },
+  {
     slug: "api-keys-prefix-index-reconciliation",
     titleEn: "Remove Redundant API-Key Prefix Index",
     titleFa: "Remove Redundant API-Key Prefix Index",
@@ -456,14 +464,6 @@ export const DOCS_INDEX: DocMeta[] = [
     category: "tasks_reports",
     categoryFa: "tasks_reports",
     snippet: `# PR #113 — Phase 0 Baseline and Documentation Link Guards  **Status:** SUCCESS — verification passed in CI run [#607](https://github.com/DiabloNova/oxenn/actions/runs/42088444363).   **Date:** 2026-11-05   **Branch:** \`mvp/phase-0-scope-baseline\`   **PR:** [#113](https://github.com/DiabloNova/oxenn/pull/113)   **Verified implementation commit:** \`97ba159c2f73536b42e3aad2d7f31c440254a586\`  ## Scope  Implement only the two documentation-quality suggestions raised during PR review:  1. Keep the Ph`
-  },
-  {
-    slug: "pr-138-email-verification-remediation",
-    titleEn: "PR #138 authentication remediation report",
-    titleFa: "PR #138 authentication remediation report",
-    category: "tasks_reports",
-    categoryFa: "tasks_reports",
-    snippet: `# PR #138 authentication remediation report  ## Status  PARTIALLY IMPLEMENTED — the production email sender is now implemented for Maileroo's Email API, using the approved sender identity \`noreply@oxenn.ir\`. Provider-specific tests and environment documentation have been added. CI has not yet reported results for this revision, and the PR still has merge conflicts with \`main\`; do not merge or deploy until those gates are cleared.  ## Invariant  Only users who have verified control of their email`
   },
   {
     slug: "audit-gate-stage3-regression-tests",
