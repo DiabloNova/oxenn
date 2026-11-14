@@ -100,8 +100,8 @@ AI Infrastructure is a separate product line and is not a dependency of this MVP
 - Sales channels (website, marketplace, social network, messaging, offline/direct, etc.) are separate from Offer nature. One Offer may use multiple channels.
 - A natural person may register and represent an Offer without inventing a formal company.
 - An OXENN Service SKU is a service the customer selects or activates; it is not the customer's Offer.
-- SEO, AEO, and GEO are independently selectable and usable services. The Digital Visibility Suite is optional. Product Assessment & Improvement is also optional.
-- Standalone SEO/AEO/GEO must use service-specific inputs, permissions, entitlement, and quota. They must not require a comprehensive PIP, Product Assessment & Improvement, or another SKU.
+- SEO, AEO, and GEO are independently selectable and usable services within a shared customer Workspace and its central dashboard. The Digital Visibility Suite is optional. Product Assessment & Improvement is also optional.
+- Standalone SEO/AEO/GEO must use service-specific inputs, permissions, entitlement, and quota. They must not require a comprehensive PIP, Product Assessment & Improvement, another SKU, or a separate Workspace.
 - Every service, including free/trial access, requires registration and a server-authenticated session. Registration alone does not grant every service entitlement.
 
 ### 3.3 Evidence, AI, and execution truth
@@ -168,6 +168,8 @@ The following order is recommended to minimize rework and prevent decisions bein
 
 ### WP-02 — Approve service boundaries and metric ownership
 
+Preserve one shared Workspace/dashboard as the customer operating context; service independence is enforced at the service entitlement and usage boundary, not by provisioning one Workspace per service.
+
 1. Define the distinct objective, unit of work, input scope, outputs, metric ownership, evidence, and exclusions for SEO, AEO, and GEO.
 2. For SEO, distinguish technical/site observations and authorized search-performance data.
 3. For AEO, define answer-readiness and observable answer-surface evidence, question/intent sampling, locale, and provider coverage.
@@ -178,6 +180,8 @@ The following order is recommended to minimize rework and prevent decisions bein
 **Deliverable:** approved SEO/AEO/GEO separation and metric-ownership matrix plus provider/surface inventory.
 
 ### WP-03 — Resolve commercial catalogue and entitlement policy
+
+Model multiple independently activated services under the same Workspace; keep per-service access, quota, usage and billing attribution separable without forcing separate Workspaces. Resolve whether usage attaches to the Workspace, an Offer, or both before schema design.
 
 1. Define versioned catalogue items and SKU identifiers separately from customer Offers.
 2. Specify standalone SEO/AEO/GEO access and the optional Digital Visibility Suite composition.
@@ -223,6 +227,8 @@ The following order is recommended to minimize rework and prevent decisions bein
 **Deliverable:** pilot PIP/assessment contract.
 
 ### WP-07 — Define workspace, roles, ownership, and approval
+
+Do not create a one-Workspace-per-service model; define how multiple service entitlements coexist in one dashboard while preserving least privilege and service-level authorization.
 
 1. Distinguish account holder, seller/provider, organization, workspace, member, and Offer owner.
 2. Support an individual seller without a fictitious legal entity.
@@ -282,6 +288,8 @@ For each decision, append: options considered, evidence and source links, recomm
 
 ## 7. Service separation and metric ownership — approval worksheet
 
+**Workspace operating direction:** one customer Workspace and central dashboard can host multiple independently selected SEO/AEO/GEO services. The following matrix separates service responsibilities, not customer Workspaces or identities. Each service remains independently entitled and metered within the shared Workspace; an optional bundle cannot be mandatory.
+
 | Dimension | SEO | AEO | GEO |
 |---|---|---|---|
 | Primary question | Technical/search discoverability and site health | Whether scoped content is ready and useful for answering user intent | How the Offer/brand is represented in observable generative-engine outputs |
@@ -321,6 +329,7 @@ The authoritative requirement wording is in the owner-approved Product Specifica
 - Verify cross-user and cross-workspace denial in a real supported test environment. Do not claim deployed RLS based on SQL or migration files alone.
 
 ### Commercial access and usage
+- Keep one shared Workspace as the customer dashboard context; allow multiple independently selected services inside it without a separate Workspace per SKU.
 - Enforce each SKU entitlement and quota server-side at run time.
 - Authentication, entitlement, source permission, and provider availability are separate gates.
 - Do not charge for an unselected or unauthorized service.
@@ -445,6 +454,13 @@ Do not rewrite or reorder prior entries. Append a new entry for every material a
 - node --test scripts/audit-gate.test.mjs: **PASS**, 14/14. Initial git diff --check: **PASS**. Local dependency installation was killed by the constrained audit shell; the TypeScript-dependent documentation verifier and application test/build commands are **NOT RUN locally**. Exact-base GitHub CI run #43582227215 passed Build and Test, Unit Tests and Isolation Suite on the same application-code SHA.
 - No application code, tests, schema, migrations, generated artifacts, providers, deployment, main, other branches, PRs, or issue states were changed. No live database/provider/production runtime was exercised.
 - **WP-00 status: COMPLETE.** Parent MVP-00 remains **IN PROGRESS**; WP-01 and owner decisions remain pending.
+
+### 2026-11-14 — Owner direction: shared Workspace with independent services
+
+- Owner confirmed the preferred operating model: customers use one Workspace and its dashboard as the shared environment, with SEO, AEO, and GEO independently selectable and usable inside that Workspace.
+- Recorded the distinction between the shared Workspace boundary (identity, membership, and dashboard context) and service-level access boundaries (SKU entitlement, quota, metering, permissions, and evidence). Separate Workspaces per service are not the intended model; optional bundles must not gate standalone services.
+- Updated the WP-00 baseline report and the MVP-00 service-boundary, commercial-entitlement, and workspace/role work-package guidance. Whether service usage attaches to the Workspace, an Offer, or both remains an explicit design item for WP-02/WP-03.
+- This is a product/architecture direction only. No application code, schema, migration, dashboard UI, or billing implementation was changed.
 
 ### Subsequent entries
 
