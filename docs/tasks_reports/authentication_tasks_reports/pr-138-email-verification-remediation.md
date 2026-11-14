@@ -26,7 +26,7 @@ Only users who have verified control of their email address may establish or ret
 ## Negative-path checks
 - An unverified database-backed session is revoked and returns `null`.
 - Unknown addresses and addresses whose delivery quota is exhausted receive the same success-shaped resend response.
-- Requester IP rate-limit keys are derived with HMAC using the server-side `SESSION_SECRET`, not a reversible unkeyed hash.
+- Requester IP rate-limit keys are derived with HMAC using the server-side `SESSION_SECRET`, not an unkeyed hash vulnerable to offline guessing.
 - Legacy verification tokens without the recipient fingerprint are rejected before database access.
 - A token bound to a previous email address is consumed without verifying the changed address.
 - Verification delivery exceptions after account commit are converted to `verificationEmailSent: false`.
