@@ -1,11 +1,10 @@
 import type { NextConfig } from "next";
-import { getPreviewCspHeaders } from "./src/config/csp-reporting";
 
 /**
  * Baseline security headers applied to every route.
- * CSP is enabled in Report-Only mode on Vercel Preview deployments only.
- * Production remains unchanged until reports from the redesigned frontend
- * have been reviewed and an enforcement policy is explicitly approved.
+ * CSP Report-Only is added at request time by src/proxy.ts only on Preview.
+ * Keeping the Preview gate out of this build-time config prevents a Preview
+ * policy from being frozen into an artifact that is later served in Production.
  */
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -16,18 +15,13 @@ const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];
 
-const previewCspHeaders = getPreviewCspHeaders(
-  process.env.VERCEL_ENV,
-  process.env.VERCEL_URL,
-);
-
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
     return [
       {
         source: "/:path*",
-        headers: [...securityHeaders, ...previewCspHeaders],
+        headers: securityHeaders,
       },
     ];
   },
