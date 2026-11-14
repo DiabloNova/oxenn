@@ -30,7 +30,7 @@ describe("db:push guard attestation", () => {
   });
 
   it("rejects direct Drizzle invocation without a guard-issued attestation", () => {
-    expect(() => assertDbPushGuardAttestation(targetId, connectionString, {})).toThrow(/requires a fresh attestation/);
+    expect(() => assertDbPushGuardAttestation(targetId, connectionString, { NODE_ENV: "test" })).toThrow(/requires a fresh attestation/);
   });
 
   it("rejects an attestation bound to another target or connection URL", async () => {
