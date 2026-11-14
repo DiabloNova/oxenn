@@ -12,12 +12,23 @@ interface DbPushGuardAttestation {
   version: number;
   nonce: string;
   targetId: string;
-  connectionStringHash: string;
+  connectionIdentityHash: string;
   issuedAt: number;
 }
 
-function hashConnectionString(connectionString: string): string {
-  return createHash("sha256").update(connectionString).digest("hex");
+function hashConnectionIdentity(connectionString: string): string {
+  const parsed = new URL(connectionString);
+  const identity = {
+    protocol: parsed.protocol,
+    host: parsed.hostname.toLowerCase(),
+    port: parsed.port || "5432",
+    database: decodeURIComponent(parsed.pathname.replace(/^\/+/, "")),
+    username: decodeURIComponent(parsed.username),
+    sslmode: parsed.searchParams.get("sslmode"),
+  };
+  // Never hash the complete connection URL: it contains a password and would
+  // turn a leftover temp marker into an offline password-guessing oracle.
+  return createHash("sha256").update(JSON.stringify(identity)).digest("hex");
 }
 
 export async function createDbPushGuardAttestation(
@@ -30,7 +41,7 @@ export async function createDbPushGuardAttestation(
     version: ATTESTATION_VERSION,
     nonce: randomBytes(32).toString("hex"),
     targetId,
-    connectionStringHash: hashConnectionString(connectionString),
+    connectionIdentityHash: hashConnectionIdentity(connectionString),
     issuedAt: Date.now(),
   };
 
@@ -78,7 +89,7 @@ export function assertDbPushGuardAttestation(
       attestation.version !== ATTESTATION_VERSION ||
       typeof attestation.nonce !== "string" || !/^[a-f0-9]{64}$/.test(attestation.nonce) ||
       attestation.targetId !== targetId ||
-      attestation.connectionStringHash !== hashConnectionString(connectionString) ||
+      attestation.connectionIdentityHash !== hashConnectionIdentity(connectionString) ||
       typeof attestation.issuedAt !== "number" || !Number.isSafeInteger(attestation.issuedAt) ||
       attestation.issuedAt > now + 5_000 || now - attestation.issuedAt > MAX_ATTESTATION_AGE_MS
     ) {

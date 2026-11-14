@@ -142,7 +142,7 @@ describe("db:push target resolution", () => {
     ["TLS downgrade", "postgresql://oxenn_db_push:secret@127.0.0.1:5432/oxenn_throwaway?sslmode=disable"],
     ["other driver options", "postgresql://oxenn_db_push:secret@127.0.0.1:5432/oxenn_throwaway?application_name=unreviewed"],
   ])("rejects %s before opening the database connection", (_description, connectionString) => {
-    expect(() => resolveConfiguredDbPushTarget({ ...baseEnv, DB_PUSH_DATABASE_URL: connectionString }, [target])).toThrow();
+    expect(() => resolveConfiguredDbPushTarget({ ...baseEnv, DB_PUSH_DATABASE_URL: connectionString }, [target])).toThrow(/DB_PUSH_DATABASE_URL/);
   });
 
   it.each([

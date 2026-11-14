@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import {
   assertDbPushGuardAttestation,
   createDbPushGuardAttestation,
@@ -44,11 +45,29 @@ describe("db:push guard attestation", () => {
     expect(() => assertDbPushGuardAttestation(targetId, connectionString, process.env, Date.now() + 60_001)).toThrow(/valid, fresh, private attestation/);
   });
 
-  it("rejects a modified invocation marker payload", async () => {
+  it("rejects a malformed invocation marker payload", async () => {
     const filePath = await issue();
     const payload = JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
-    payload.targetId = "another-target";
+    payload.nonce = "not-a-valid-nonce";
     writeFileSync(filePath, JSON.stringify(payload));
     expect(() => assertDbPushGuardAttestation(targetId, connectionString)).toThrow(/valid, fresh, private attestation/);
+  });
+
+  it("does not persist or hash the database password in the invocation marker", async () => {
+    const filePath = await issue();
+    const serialized = readFileSync(filePath, "utf8");
+    expect(serialized).not.toContain("secret");
+    const payload = JSON.parse(serialized) as Record<string, unknown>;
+    const nonSecretIdentity = {
+      protocol: "postgresql:",
+      host: "127.0.0.1",
+      port: "5432",
+      database: "oxenn_throwaway",
+      username: "oxenn_db_push",
+      sslmode: null,
+    };
+    const expectedHash = createHash("sha256").update(JSON.stringify(nonSecretIdentity)).digest("hex");
+    expect(payload.connectionIdentityHash).toBe(expectedHash);
+    expect(payload).not.toHaveProperty("connectionStringHash");
   });
 });
