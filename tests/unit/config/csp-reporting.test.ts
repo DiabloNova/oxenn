@@ -13,16 +13,13 @@ describe("Preview CSP reporting headers", () => {
     expect(getPreviewCspHeaders(undefined, previewUrl)).toEqual([]);
   });
 
-  it("emits an absolute same-origin Reporting API endpoint on Preview", () => {
+  it("uses an origin-relative reporting path on Preview aliases and custom domains", () => {
     const headers = getPreviewCspHeaders("preview", previewUrl);
 
     expect(headers).toHaveLength(2);
     expect(headers[0]).toEqual({
       key: "Reporting-Endpoints",
-      value:
-        'csp-endpoint="https://' +
-        previewUrl +
-        '/api/security/csp-report"',
+      value: 'csp-endpoint="/api/security/csp-report"',
     });
     expect(headers[1].key).toBe("Content-Security-Policy-Report-Only");
     expect(headers[1].value).toContain("default-src 'self'");
@@ -32,8 +29,9 @@ describe("Preview CSP reporting headers", () => {
     expect(headers[1].value).toContain("frame-ancestors 'none'");
     expect(headers[1].value).toContain("report-to csp-endpoint");
     expect(headers[1].value).toContain(
-      "report-uri https://" + previewUrl + "/api/security/csp-report",
+      "report-uri /api/security/csp-report",
     );
+    expect(headers[1].value).not.toContain("https://");
     expect(headers[1].value).not.toContain("unsafe-inline");
     expect(headers[1].value).not.toContain("unsafe-eval");
   });
