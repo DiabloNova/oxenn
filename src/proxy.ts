@@ -18,11 +18,17 @@ function shouldBypass(pathname: string): boolean {
   return pathname.split("/").some((segment) => segment.includes("."));
 }
 
-function withPreviewCspHeaders(response: NextResponse): NextResponse {
+function withPreviewCspHeaders(
+  response: NextResponse,
+  request: NextRequest,
+): NextResponse {
   // Read VERCEL_ENV while handling each request. Do not freeze this decision
   // into next.config.ts at build time, because a deployment can later serve a
   // different environment after a Vercel promotion.
-  for (const header of getPreviewCspHeaders(process.env.VERCEL_ENV)) {
+  for (const header of getPreviewCspHeaders(
+    process.env.VERCEL_ENV,
+    request.nextUrl.origin,
+  )) {
     response.headers.set(header.key, header.value);
   }
 
@@ -45,14 +51,14 @@ export function proxy(request: NextRequest) {
   const firstSegment = pathname.split("/").filter(Boolean)[0];
 
   if (firstSegment && isSupportedLocale(firstSegment)) {
-    return withPreviewCspHeaders(NextResponse.next());
+    return withPreviewCspHeaders(NextResponse.next(), request);
   }
 
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname =
     pathname === "/" ? `/${DEFAULT_LOCALE}` : `/${DEFAULT_LOCALE}${pathname}`;
 
-  return withPreviewCspHeaders(NextResponse.redirect(redirectUrl));
+  return withPreviewCspHeaders(NextResponse.redirect(redirectUrl), request);
 }
 
 export const config = {
