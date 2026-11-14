@@ -136,6 +136,27 @@ describe("db:push target resolution", () => {
     ).toThrow(`separate from ${variable}`);
   });
 
+  it.each([
+    ["host override", "postgresql://oxenn_db_push:secret@127.0.0.1:5432/oxenn_throwaway?host=other.example"],
+    ["duplicate TLS options", "postgresql://oxenn_db_push:secret@127.0.0.1:5432/oxenn_throwaway?sslmode=verify-full&sslmode=disable"],
+    ["TLS downgrade", "postgresql://oxenn_db_push:secret@127.0.0.1:5432/oxenn_throwaway?sslmode=disable"],
+    ["other driver options", "postgresql://oxenn_db_push:secret@127.0.0.1:5432/oxenn_throwaway?application_name=unreviewed"],
+  ])("rejects %s before opening the database connection", (_description, connectionString) => {
+    expect(() => resolveConfiguredDbPushTarget({ ...baseEnv, DB_PUSH_DATABASE_URL: connectionString }, [target])).toThrow();
+  });
+
+  it.each([
+    ["passwordless local identity", "postgresql://127.0.0.1:5433/other_database"],
+    ["hosted URL using sslmode=require", "postgresql://db.example.test:5433/other_database?sslmode=require"],
+  ])("compares %s without applying push-target authentication or TLS policy", (_description, configuredUrl) => {
+    expect(() => resolveConfiguredDbPushTarget({ ...baseEnv, DATABASE_URL: configuredUrl }, [target])).not.toThrow();
+  });
+
+  it("fails closed when a compared database URL contains a destination override", () => {
+    const ambiguousUrl = "postgresql://other.example:5432/other_database?host=127.0.0.1";
+    expect(() => resolveConfiguredDbPushTarget({ ...baseEnv, DATABASE_URL: ambiguousUrl }, [target])).toThrow(/database identity cannot be verified/);
+  });
+
   it("requires hostname-verifying TLS for a non-local target", () => {
     const remoteTarget: DisposableDbPushTarget = {
       ...target,
@@ -245,9 +266,9 @@ describe("db:push database guard", () => {
   });
 
   it.each([
-    ["pg_write_all_data"],
-    ["pg_execute_server_program"],
-    ["another_privileged_role"],
+    [["pg_write_all_data"]],
+    [["pg_execute_server_program"]],
+    [["another_privileged_role"]],
   ])("rejects any inherited or assumable PostgreSQL role: %j", async (memberships) => {
     const client = mockClient([catalogRow({ role_memberships: memberships })]);
     const result = await validateDbPushGuard({

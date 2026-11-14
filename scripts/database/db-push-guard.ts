@@ -30,6 +30,12 @@ interface ParsedDatabaseUrl {
   sslMode: string | null;
 }
 
+interface ParsedDatabaseIdentity {
+  host: string;
+  port: number;
+  database: string;
+}
+
 interface GuardClient {
   connect(): Promise<void>;
   query(text: string): Promise<{ rows: Array<Record<string, unknown>> }>;
@@ -172,11 +178,31 @@ function parseDatabaseUrl(connectionString: string, label: string): ParsedDataba
     throw new Error(`${label} must use the PostgreSQL protocol.`);
   }
 
+  // node-postgres applies URI query parameters after parsing the authority.
+  // Permit only the one TLS option whose value is checked below; rejecting all
+  // other and duplicate options prevents the driver from changing the host,
+  // port, database, role, or TLS mode after this URL has been validated.
+  const queryEntries = [...parsed.searchParams.entries()];
+  const queryNames = new Set<string>();
+  for (const [name] of queryEntries) {
+    const normalizedName = name.toLowerCase();
+    if (queryNames.has(normalizedName)) {
+      throw new Error(`${label} contains duplicate connection query parameters; refusing db:push.`);
+    }
+    queryNames.add(normalizedName);
+    if (name !== "sslmode") {
+      throw new Error(`${label} contains unsupported driver connection options; only sslmode=verify-full is permitted.`);
+    }
+  }
+
   const host = normalizeHost(parsed.hostname);
   const database = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
   const username = decodeURIComponent(parsed.username);
   const port = Number(parsed.port || "5432");
-  const sslMode = parsed.searchParams.get("sslmode")?.toLowerCase() ?? null;
+  const sslMode = parsed.searchParams.get("sslmode") ?? null;
+  if (sslMode !== null && sslMode !== "verify-full") {
+    throw new Error(`${label} must not disable or weaken database TLS; only sslmode=verify-full is permitted.`);
+  }
 
   if (
     !host ||
@@ -200,7 +226,43 @@ function parseDatabaseUrl(connectionString: string, label: string): ParsedDataba
   return { host, port, database, username, sslMode };
 }
 
-function sameDatabase(left: ParsedDatabaseUrl, right: ParsedDatabaseUrl): boolean {
+/**
+ * Parse only the database identity needed for alias comparison. This deliberately
+ * does not impose the disposable push target's password or TLS policy on URLs
+ * that are never used by this guard to open a connection.
+ */
+function parseDatabaseIdentityUrl(connectionString: string, label: string): ParsedDatabaseIdentity {
+  let parsed: URL;
+  try {
+    parsed = new URL(connectionString);
+  } catch {
+    throw new Error(`${label} must be a valid PostgreSQL connection URL.`);
+  }
+
+  if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+    throw new Error(`${label} must use the PostgreSQL protocol.`);
+  }
+
+  // A destination override makes the URL's authority/path insufficient to
+  // identify the database. Never treat such a URL as a distinct database.
+  const destinationOverrides = new Set(["host", "hostaddr", "port", "database", "dbname"]);
+  for (const [name] of parsed.searchParams.entries()) {
+    if (destinationOverrides.has(name.toLowerCase())) {
+      throw new Error(`${label} contains a destination override; its database identity is ambiguous.`);
+    }
+  }
+
+  const host = normalizeHost(parsed.hostname);
+  const database = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
+  const port = Number(parsed.port || "5432");
+  if (!host || !database || database.includes("/") || !Number.isInteger(port) || port < 1 || port > 65535 || parsed.hash) {
+    throw new Error(`${label} must identify an unambiguous database host, port, and name.`);
+  }
+
+  return { host, port, database };
+}
+
+function sameDatabase(left: ParsedDatabaseIdentity, right: ParsedDatabaseIdentity): boolean {
   return left.host === right.host && left.port === right.port && left.database === right.database;
 }
 
@@ -290,9 +352,9 @@ export function resolveConfiguredDbPushTarget(
     const configuredUrl = env[variableName];
     if (!configuredUrl?.trim()) continue;
 
-    let configuredIdentity: ParsedDatabaseUrl;
+    let configuredIdentity: ParsedDatabaseIdentity;
     try {
-      configuredIdentity = parseDatabaseUrl(configuredUrl, variableName);
+      configuredIdentity = parseDatabaseIdentityUrl(configuredUrl, variableName);
     } catch {
       throw new Error(`${variableName} is configured but its database identity cannot be verified; refusing db:push.`);
     }

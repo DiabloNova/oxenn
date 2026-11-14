@@ -1,10 +1,12 @@
 import { defineConfig } from "drizzle-kit";
+import { assertDbPushGuardAttestation } from "./scripts/database/db-push-attestation";
 import { resolveConfiguredDbPushTarget } from "./scripts/database/db-push-guard";
 
-// Importing this configuration fails unless the target ID and URL match an
-// explicitly reviewed disposable Workspace database. The package-script guard
-// performs the asynchronous catalog attestation before this CLI is launched.
-const { connectionString } = resolveConfiguredDbPushTarget();
+// This config cannot be invoked directly: the single db:push wrapper must first
+// complete asynchronous catalog attestation and issue a short-lived token bound
+// to the exact reviewed target ID and connection URL.
+const { target, connectionString } = resolveConfiguredDbPushTarget();
+assertDbPushGuardAttestation(target.id, connectionString);
 
 export default defineConfig({
   schema: "./database/schema/index.ts",

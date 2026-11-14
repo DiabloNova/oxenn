@@ -20,7 +20,7 @@
     "env:check": "pnpm exec tsx scripts/env-check.ts",
     "db:generate": "pnpm exec drizzle-kit generate",
     "db:migrate": "pnpm run env:check migrate && pnpm exec tsx src/core/database/migrator.ts",
-    "db:push": "pnpm exec tsx scripts/database/db-push-guard.ts && pnpm exec drizzle-kit push --config=drizzle.push.config.ts",
+    "db:push": "pnpm exec tsx scripts/database/db-push.ts",
     "test:isolation": "pnpm exec tsx tests/isolation/suite.ts",
     "docs:matrix": "pnpm exec tsx scripts/database/build-reference-matrix.ts",
     "docs": "pnpm run docs:matrix",

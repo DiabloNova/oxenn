@@ -44,6 +44,8 @@ const RULES: VarRule[] = [
     name: "DB_PUSH_TARGET_ID",
     modes: ["dev", "test"],
     required: false,
+    format: /^[a-z0-9][a-z0-9-]{0,63}$/,
+    formatDescription: "must be a lowercase reviewed target ID (1-64 letters, numbers, or hyphens)",
   },
   {
     name: "DB_PUSH_DATABASE_URL",
@@ -108,7 +110,7 @@ export function validateEnv(modeArg?: string) {
   for (const rule of activeRules) {
     const val = process.env[rule.name];
 
-    if (!val) {
+    if (!val?.trim()) {
       if (rule.required) {
         missing.push(rule.name);
       }
@@ -126,16 +128,10 @@ export function validateEnv(modeArg?: string) {
   if (mode === "dev" || mode === "test") {
     if (process.env.ALLOW_DB_PUSH === "true") {
       if (!process.env.DB_PUSH_TARGET_ID?.trim()) {
-        invalid.push({
-          name: "DB_PUSH_TARGET_ID",
-          reason: "is required when ALLOW_DB_PUSH=true",
-        });
+        missing.push("DB_PUSH_TARGET_ID");
       }
       if (!process.env.DB_PUSH_DATABASE_URL?.trim()) {
-        invalid.push({
-          name: "DB_PUSH_DATABASE_URL",
-          reason: "is required when ALLOW_DB_PUSH=true",
-        });
+        missing.push("DB_PUSH_DATABASE_URL");
       }
     }
   }
