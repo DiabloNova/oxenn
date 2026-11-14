@@ -5,12 +5,13 @@
 
 import { getLLMClient } from "../ai/llm-client";
 import { embedQuery } from "../ai/query-embedding";
+import { ragQueryRequestSchema } from "../ai/resource-limits";
 import { retrieveRelevantContext, RetrievedChunk } from "./context-retrieval";
 
 export interface RAGResponse {
   answer: string;
   sources: RetrievedChunk[];
-  confidence: number; // 0 to 1, based on similarity scores
+  confidence: number;
 }
 
 export const RAG_SYSTEM_PROMPT = `You are an expert brand intelligence analyst for Optimus AI.
@@ -31,10 +32,6 @@ Question: {question}
 
 Answer:`;
 
-/**
- * Answers a user's question using Retrieval-Augmented Generation (RAG).
- * Fully respects tenant isolation boundaries.
- */
 export async function answerQuestion(
   question: string,
   organizationId: string,
@@ -44,37 +41,32 @@ export async function answerQuestion(
     throw new Error("Tenant context violation: organizationId must be provided for RAG Query Service");
   }
 
-  // 1. Convert question to vector embedding (768 dimensions)
-  const queryEmbedding = await embedQuery(question);
-
-  // 2. Retrieve top-K relevant chunks under strict tenant isolation
-  const sources = await retrieveRelevantContext(queryEmbedding, organizationId, limit);
-
-  // 3. Compute overall confidence score based on the highest similarity score (Top 1)
-  const confidence = sources.length > 0 ? Math.max(0, Math.min(1, sources[0].similarityScore)) : 0;
-
-  // 4. Construct context text
-  let contextText = "No relevant context found in brand intelligence data.";
-  if (sources.length > 0) {
-    contextText = sources
-      .map((source, index) => `[Source ${index + 1}] ID: ${source.id}\nContent: ${source.content}`)
-      .join("\n\n");
+  const parsedInput = ragQueryRequestSchema.safeParse({ question, limit });
+  if (!parsedInput.success) {
+    throw new RangeError("RAG question or retrieval limit exceeds the allowed bounds.");
   }
 
-  // 5. Construct the prompt
+  const boundedQuestion = parsedInput.data.question;
+  const boundedLimit = parsedInput.data.limit;
+
+  const queryEmbedding = await embedQuery(boundedQuestion);
+  const sources = await retrieveRelevantContext(queryEmbedding, organizationId, boundedLimit);
+  const confidence = sources.length > 0 ? Math.max(0, Math.min(1, sources[0].similarityScore)) : 0;
+
+  const contextText = sources.length > 0
+    ? sources
+        .map((source, index) => `[Source ${index + 1}] ID: ${source.id}\nContent: ${source.content}`)
+        .join("\n\n")
+    : "No relevant context found in brand intelligence data.";
+
   const finalPrompt = RAG_SYSTEM_PROMPT
     .replace("{context}", contextText)
-    .replace("{question}", question);
+    .replace("{question}", boundedQuestion);
 
-  // 6. Execute LLM Call using abstract client
   const llm = getLLMClient();
   const answer = await llm.generateText(finalPrompt, {
-    temperature: 0.1, // Low temperature for factual RAG responses and minimal hallucination
+    temperature: 0.1,
   });
 
-  return {
-    answer,
-    sources,
-    confidence,
-  };
+  return { answer, sources, confidence };
 }

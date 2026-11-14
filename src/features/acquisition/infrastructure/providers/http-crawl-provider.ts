@@ -185,19 +185,28 @@ export class HttpCrawlProvider implements CrawlProvider {
       if (!robots) {
         robots = (async () => {
           await requestHost(url.asciiHost);
-          const response = await safeFetch(`${origin}/robots.txt`, {
-            policy: {
-              ...policy,
-              maxPages: 1,
-              allowedContentTypes: ["text/plain", "text/html"]
-            },
-            ...fetchOptions,
-            ...(isSeed
-              ? { allowCanonicalSeedRedirects: true }
-              : { allowedOrigin }),
-            beforeRedirect: target => requestHost(target.asciiHost)
-          });
-          return response.body.toString("utf8");
+          try {
+            const response = await safeFetch(`${origin}/robots.txt`, {
+              policy: {
+                ...policy,
+                maxPages: 1,
+                allowedContentTypes: ["text/plain", "text/html"]
+              },
+              ...fetchOptions,
+              ...(isSeed
+                ? { allowCanonicalSeedRedirects: true }
+                : { allowedOrigin }),
+              beforeRedirect: target => requestHost(target.asciiHost)
+            });
+            return response.body.toString("utf8");
+          } catch (error) {
+            // A 404 means no robots resource is published; it is not a crawl denial.
+            // Keep every other failure fail-closed (especially 5xx and SSRF errors).
+            if (error instanceof CrawlError && error.code === "HTTP_ERROR" && error.details.status === 404) {
+              return "";
+            }
+            throw error;
+          }
         })();
         robotsCache.set(origin, robots);
       }

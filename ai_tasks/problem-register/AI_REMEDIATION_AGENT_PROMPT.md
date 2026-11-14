@@ -8,40 +8,39 @@ Read these documents completely before acting:
 
 1. [OXENN Product Architecture](../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md) — target product and technical architecture.
 2. [Problem Register](./README.md) — scope and register rules.
-3. [Dependency-Based Implementation Sequence](./IMPLEMENTATION_SEQUENCE.md) — mandatory dependency order and Wave 0 safety gate.
-4. [Remediation Progress & Execution Log](./REMEDIATION_PROGRESS.md) — live status ledger and audit trail.
-5. The exact individual finding file(s) assigned to the current batch under [findings/](./findings/), including all related findings and their acceptance criteria.
-6. Relevant original audit reports, current source files, tests, migrations, and existing PRs/issues referenced by those finding records.
+3. [Wave 0 Policy Supersession](./WAVE0_POLICY_SUPERSESSION.md) — authoritative sequencing policy; it retires the blanket project-wide Wave 0 prerequisite while preserving task-specific safeguards.
+4. [Dependency-Based Implementation Sequence](./IMPLEMENTATION_SEQUENCE.md) — dependency map; apply prerequisites relevant to the selected finding, subject to the supersession policy.
+5. [Remediation Progress & Execution Log](./REMEDIATION_PROGRESS.md) — live status ledger and audit trail.
+6. The exact individual finding file(s) assigned to the current batch under [findings/](./findings/), including directly related findings and their acceptance criteria.
+7. Relevant original audit reports, current source files, tests, migrations, and existing PRs/issues referenced by those finding records.
 
-The individual finding files define the problem and recommended remediation. The architecture defines the intended boundaries. The implementation sequence defines the dependency order. The progress tracker defines the current verified state. If two documents conflict, stop and report the conflict; do not silently choose one.
+The individual finding files define the problem and recommended remediation. The architecture defines the intended boundaries. [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md) is authoritative for remediation sequencing and takes precedence over conflicting blanket Wave 0 wording in older documents. The implementation sequence defines dependency relationships, not a universal project-wide entry gate. The progress tracker defines recorded status. If a conflict remains after applying this explicit precedence, stop and report it; do not silently choose a policy.
 
 ## 2. Core operating rules
 
 - **Evidence before edits.** Re-open the current source, tests, configuration, database schema/migrations, and relevant history. A historical audit is a lead, not proof that the issue still exists.
-- **Revalidate against current main.** Before implementation, compare every finding with the exact current `main` commit. Record the SHA, branch, paths, and evidence in the progress tracker.
+- **Revalidate the selected scope.** Before implementation, compare each selected finding and its relevant implementation, tests, and call sites with the exact current base commit. Record the SHA, branch, paths, and evidence in the progress tracker. Do not revalidate unrelated findings as a blanket prerequisite.
 - **One finding at a time.** Work from the numbered finding records. Do not merge distinct findings into one undocumented task. A single coherent code change may address related findings, but each finding keeps its own acceptance criteria, status, and closure evidence.
-- **Respect dependency order.** Follow Wave 0 and the implementation waves in `IMPLEMENTATION_SEQUENCE.md`. Do not jump ahead because a change appears easy. If a dependency is missing, mark the finding blocked and explain the exact prerequisite.
+- **Respect relevant dependencies.** Use `IMPLEMENTATION_SEQUENCE.md` to identify dependencies that directly affect the selected finding. Do not skip a prerequisite whose absence would make that change unsafe or incorrect. The project-wide Wave 0 inventory is not a universal prerequisite; see `WAVE0_POLICY_SUPERSESSION.md`.
 - **No scope expansion.** Change only files needed for the approved finding(s). Do not perform opportunistic refactors, redesign unrelated modules, or change backend behavior during frontend-only work.
 - **No speculative implementation.** Do not invent product policy, security behavior, billing rules, data ownership, API contracts, or migration semantics. Mark unresolved matters as `Needs decision` and ask the user for the decision.
 - **No false completion.** A code edit is not a fix. A passing unit test is not proof of integration correctness. A skipped suite is not a pass. Report only commands and outcomes actually observed.
 - **Preserve existing work.** Inspect the current branch, uncommitted changes, open PRs/issues, and recent commits before editing. Never overwrite, discard, or duplicate another agent's work.
 - **Ask before crossing a boundary.** Obtain explicit user authorization before any production database operation, destructive action, deployment, external-provider side effect, payment operation, PR merge/close, or change outside the approved scope.
 
-## 3. Mandatory Wave 0 — Revalidation and safety
+## 3. Task-specific revalidation and safety prerequisites
 
-Wave 0 must be completed before any remediation code is changed.
+The historical project-wide Wave 0 inventory is not a universal prerequisite for an independently authorized remediation task. Before changing a selected finding:
 
-1. Record the exact current `main` SHA and the working branch/head SHA.
-2. Revalidate all 97 findings against current `main`. For each, record one of: Confirmed, Already fixed, Superseded, Needs decision, Blocked, or Deferred/out of scope. Include evidence and the relevant commit.
-3. Reconcile PR #108 and PR #109 with current main before modifying authentication or RLS areas.
-4. Reconcile issue #115 against all provider-bound URL/fetch call sites and issue #116 against current workspace membership authorization.
-5. Reconcile PR #117 before touching payment/invoice behavior. It was previously reported as open and unmerged; check its live status and code before deciding whether SRC-022 still applies. Never assume it merged, and never duplicate its patch.
-6. Verify the identity and disposable nature of any database target before running database tests or migrations. Production databases are prohibited for test or migration experiments.
-7. Recheck the time-bounded dependency advisory recorded in VER-013 against the exact candidate commit and its stated deadline.
-8. Treat VER-005 and VER-006 as historical safety warnings. **Do not execute** `verification/phase-0/probe-system-context.ts` or `verification/phase-0/run_rls_matrix.js`. If verification is still required, design a safe replacement that positively verifies a disposable database target, protects secrets, cleans up fixtures, and exits non-zero on failure.
-9. Update `REMEDIATION_PROGRESS.md` after each revalidation batch. Do not start Wave 1 until all 97 records have a current disposition and the user has approved the relevant implementation scope.
+1. Record the exact current base commit SHA and the working branch/head SHA.
+2. Revalidate the selected finding against that exact base commit. Inspect its relevant source, tests, call sites, directly related findings, and acceptance criteria; record evidence and paths.
+3. Reconcile prior PRs or issues only when they overlap the selected finding or affected code. In particular, check PRs #108/#109 for overlapping authentication or RLS work, issues #115/#116 for the corresponding SSRF or workspace-membership changes, and PR #117 before touching SRC-022/payment behavior. Never assume an earlier PR merged or duplicate its patch.
+4. Verify the identity and disposable nature of any database target before database tests or migrations. Production databases are prohibited for test or migration experiments.
+5. Recheck VER-013 only when its advisory dependency is relevant to the selected change and its stated deadline applies.
+6. Treat VER-005 and VER-006 as permanent historical safety warnings. **Do not execute** `verification/phase-0/probe-system-context.ts` or `verification/phase-0/run_rls_matrix.js`. Any replacement verification must positively verify a disposable database target, protect secrets, clean up fixtures, and exit non-zero on failure.
+7. Update `REMEDIATION_PROGRESS.md` for the selected finding or coherent batch, recording the exact base/head SHAs, evidence, files, checks, and status. Do not infer dispositions for unrelated findings.
 
-If a finding cannot be validated from available evidence, say so and leave it unresolved. Do not infer that it is fixed.
+If the selected finding cannot be validated from available evidence, leave it unresolved and explain the limitation. Task-specific dependencies and safeguards remain mandatory even though completion of the unrelated 97-finding inventory is not.
 
 ## 4. Implementation method for every finding
 
@@ -168,7 +167,7 @@ A finding is **Verified complete** only when:
 
 A wave is complete only when every in-scope finding is verified complete or has an explicitly approved disposition, all wave exit conditions are met, and the user receives a clear summary.
 
-**Do not start implementation simply because this prompt exists. Explicit user approval and the Wave 0 gate are mandatory.**
+**Do not start implementation simply because this prompt exists. Explicit user approval, task-specific revalidation, directly relevant dependencies, and the safeguards in `WAVE0_POLICY_SUPERSESSION.md` are mandatory. Completion of the project-wide Wave 0 inventory is not a prerequisite.**
 
 ## GitHub lifecycle evidence and automated status transitions
 
