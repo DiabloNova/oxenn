@@ -108,8 +108,18 @@ export class ProductionEmailSender implements EmailSender {
       throw new Error("Email action URL is required");
     }
 
+    let actionUrl: URL;
+    try {
+      actionUrl = new URL(email.params.url);
+    } catch {
+      throw new Error("Email action URL must be an absolute HTTP(S) URL");
+    }
+    if (actionUrl.protocol !== "https:" && actionUrl.protocol !== "http:") {
+      throw new Error("Email action URL must use HTTP or HTTPS");
+    }
+
     const content = buildEmailContent(email);
-    const safeUrl = escapeHtml(email.params.url);
+    const safeUrl = escapeHtml(actionUrl.toString());
     const safeHeading = escapeHtml(content.heading);
     const safeMessage = escapeHtml(content.message);
     const safeActionLabel = escapeHtml(content.actionLabel);
