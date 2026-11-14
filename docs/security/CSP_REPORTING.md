@@ -8,7 +8,7 @@ The Preview policy is a deliberately narrow discovery baseline. It permits same-
 
 ## Reporting endpoint
 
-The endpoint is `POST /api/security/csp-report`. The build derives an absolute, same-origin endpoint URL from Vercel's `VERCEL_URL` system variable. If the environment is not Preview or the deployment host is missing/invalid, the reporting headers are omitted.
+The endpoint is `POST /api/security/csp-report`. The build uses `VERCEL_URL` only to validate that the Preview environment has a valid Vercel deployment host. The advertised Reporting API endpoint is the origin-relative path `/api/security/csp-report`, so reports follow the exact document origin users opened, including branch aliases and custom Preview domains. If the environment is not Preview or the deployment host is missing/invalid, the reporting headers are omitted.
 
 The response advertises the endpoint using `Reporting-Endpoints` and selects it with `report-to`. The policy also includes `report-uri` for older CSP reporting implementations. Both modern Reporting API batches (`application/reports+json`) and the legacy CSP envelope (`application/csp-report`) are accepted. A JSON legacy envelope is also accepted for compatibility.
 
