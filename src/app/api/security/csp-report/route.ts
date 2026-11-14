@@ -152,10 +152,8 @@ async function readBoundedBody(request: Request): Promise<BodyReadResult> {
 
 function extractCspReports(payload: unknown): JsonRecord[] | null {
   if (Array.isArray(payload)) {
-    if (payload.length > MAX_REPORTS_PER_REQUEST) {
-      return payload as JsonRecord[];
-    }
-
+    // Ignore non-CSP Reporting API entries first; only accepted CSP entries
+    // count toward the per-batch report limit.
     return payload
       .filter(
         (entry): entry is JsonRecord =>
