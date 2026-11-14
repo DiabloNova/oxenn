@@ -713,6 +713,8 @@ The project is complete only when every in-scope finding is either verified comp
 
 ### SRC-017 implementation — 2026-11-13
 
+- **Entry metadata:** 2026-11-13T07:23:20Z (UTC); responsible repository actor/tool: `DiabloNova` via GitHub commit `897e752fa4603ea73fc7eee6b8434dc73eb89085`.
+
 - Finding: [SRC-017](./findings/063-SRC-017.md). Current-main baseline: `main@ec86cfccd02abcea31be07782a56416529c08b2d`. Working branch: `review/063-src-017-20261113`; pre-sync working head: `0550095616c3801fd3e053b9ef881515b3ca1d96`.
 - Revalidation: confirmed. `removeMemberAction` and `updateMemberRoleAction` previously allowed the final active `workspace_admin` to be removed/demoted without a concurrency-safe shared lock. `deactivateAccountAction` soft-deleted the user first and retained a sole-admin membership, leaving an active workspace without an active admin.
 - Owner decision: use option 2. If deactivation would leave a workspace without an active `workspace_admin`, soft-deactivate that workspace in the same atomic transaction. Preserve membership rows for recovery/audit and revoke all sessions scoped to the closed workspace. If another active admin remains, remove only the deactivating user's membership.
@@ -727,6 +729,8 @@ The project is complete only when every in-scope finding is either verified comp
 
 ### Correction — SRC-017 branch-head and synchronization metadata — 2026-11-13
 
+- **Entry metadata:** 2026-11-13T07:26:35Z (UTC); responsible repository actor/tool: `DiabloNova` via GitHub commit `4198266d76a054eac34f8e1e1745a94605d87e67`.
+
 - Correction to the `SRC-017 implementation` entry above: the recorded pre-sync working/head SHA `0550095616c3801fd3e053b9ef881515b3ca1d96` was an intermediate commit, not the final pre-sync branch head. The exact pre-sync head was `cc77c750551b69c98d474b2a1429da0a4b339e77`, the commit that appended the initial SRC-017 execution log.
 - The implementation files, Finding record, and progress tracker were reapplied to a clean work branch based on current `main@ec86cfccd02abcea31be07782a56416529c08b2d`; the canonical working branch `review/063-src-017-20261113` was then moved with an expected-head check to that synchronized history.
 - Current branch comparison: `main...review/063-src-017-20261113` is 11 commits ahead and 0 commits behind. Changed paths remain limited to the SRC-017 source, tests, finding record, and tracker.
@@ -734,6 +738,8 @@ The project is complete only when every in-scope finding is either verified comp
 
 
 ### SRC-017 operator-only role-grant path — 2026-11-13
+
+- **Entry metadata:** 2026-11-13T07:30:11Z (UTC); responsible repository actor/tool: `DiabloNova` via GitHub commit `652950338d99126e4d22b4b3c395c642a699f3b4`.
 
 - Additional path found during final security review: `scripts/auth/grant-super-admin.ts` is the sole supported operator path for assigning Workspace `super_admin`. It previously updated the membership directly, which could convert the final active `workspace_admin` to `super_admin` and bypass the same invariant. It also issued nested manual `BEGIN/COMMIT/ROLLBACK` inside `runWithSystemContext`'s already-managed transaction.
 - Updated the CLI operation to lock the active parent organization, verify that the user and membership are active, count active workspace administrators before role conversion, reject conversion of the final active administrator, update the role, and write its audit event within the manager-owned transaction. No nested manual transaction commands remain in that CLI operation.
@@ -744,12 +750,16 @@ The project is complete only when every in-scope finding is either verified comp
 
 ### SRC-017 least-privilege operator purpose — 2026-11-13
 
+- **Entry metadata:** 2026-11-13T07:35:36Z (UTC); responsible repository actor/tool: `DiabloNova` via GitHub commit `fd7c04b217aceb69821ae006ba0f3661ad2ede6d`.
+
 - Final security refinement: the grant CLI previously used `sys-admin-run`, which is guarded by `TenantContextManager` as a test/verification-only purpose. It now uses the dedicated `sys-grant-super-admin` tag so the operator command is not subject to that test-only execution gate.
 - The registry's `allowedTables` value records observed tables in audit metadata only. It does not constrain SQL access or change the privileges of the shared system database connection. The dedicated tag therefore improves purpose attribution; it is not a database-enforced table allowlist.
 - Verification status remains pending; this refinement has not yet been covered by a completed CI run.
 
 
 ### SRC-017 CI verification and PostgreSQL concurrency regression — 2026-11-13
+
+- **Entry metadata:** 2026-11-13T07:57:26Z (UTC); responsible repository actor/tool: `DiabloNova` via GitHub commit `6b617497b1c9fbe4959a2c7c0b8642804fc015cf`.
 
 - Additional integration coverage: `tests/isolation/suite.ts` now runs a concurrency probe against the disposable PostgreSQL database provisioned by CI. Two independent PostgreSQL transactions contend on the same parent `organizations` row. The second transaction is observed waiting in `pg_stat_activity`; after the first transaction removes one administrator and commits, the second obtains the lock and observes exactly one active administrator. It then models the guard rejecting the final removal. Cleanup removes the fixture organization and users.
 - CI run #805 on `9b20c92a661a242af49035211f6914dda32d30cc` completed successfully: Unit Tests (74 files passed, 1 skipped; 536 tests passed, 1 todo), UI Tests (4 files / 33 tests passed), Isolation Suite (4 files / 33 tests passed), and Build and Test including typecheck, lint, production build, reference-matrix generation, and generated-file no-drift check.
@@ -762,12 +772,16 @@ The project is complete only when every in-scope finding is either verified comp
 
 ### SRC-017 generated-matrix follow-up — 2026-11-13
 
+- **Entry metadata:** 2026-11-13T08:00:52Z (UTC); responsible repository actor/tool: `DiabloNova` via GitHub commit `ac8b1fe5902830f0da9bce1153750df0a48f8268`.
+
 - CI run #809 confirmed that the concurrent isolation test is green and the PostgreSQL probe passes. Its Build and Test job again reached the generated-file check and found one additional expected consumer: `tests/isolation/suite.ts` also creates disposable `users` fixtures. This was separate from the previously identified `organizations` consumer.
 - Added `tests/isolation/suite.ts` to the `users` consumer list in `docs/database/reference-matrix.md`. The resulting GitHub contents blob SHA `887112d72475e36d889e8812d81a5db0d6a766fd` matches the generated blob SHA reported by CI run #809, indicating the checked-in matrix now matches canonical generator output for this final difference.
 - A new CI run is required on the corrected current head. Do not describe run #809 as fully green; its only remaining failure was generated reference-matrix drift. Source typecheck, lint, app build, unit/UI tests, and the disposable PostgreSQL isolation/concurrency suite passed.
 
 
 ### SRC-017 automated-review corrections — 2026-11-13
+
+- **Entry metadata:** 2026-11-13T10:18:09Z (UTC); responsible repository actor/tool: `DiabloNova` via GitHub commit `419d2ccdd7e215ff590032038a36e20e41120a33`.
 
 - Updated `deactivateAccountAction` so workspace closure is triggered only when the departing membership is the final active `workspace_admin`. A viewer cannot close a workspace that was already administrator-less.
 - Added shared auth helpers for active user/workspace row locks and the final-active-administrator guard. Membership removal, demotion, operator grant, and the PostgreSQL isolation probe now call the same final-admin guard.
@@ -784,6 +798,8 @@ The project is complete only when every in-scope finding is either verified comp
 
 ### SRC-017 follow-up review round — 2026-11-13
 
+- **Entry metadata:** 2026-11-13T15:02:09Z (UTC); responsible repository actor/tool: `DiabloNova` via GitHub commit `dc1eba0ff74bed427eb5f5efeee7ab86689ba384`.
+
 - Addressed all five new inline review findings on `review/063-src-017-20261113`.
 - Added the omitted `authorization.ts` and both new auth helpers to the Finding's Changed paths list.
 - Updated `lockWorkspaceAndVerifyAdmin` to acquire the actor's active user row lock before the workspace lock. This matches account deactivation's user→workspace lock order and rejects an inactive actor before honoring a stale, previously verified `super_admin` role.
@@ -796,6 +812,8 @@ The project is complete only when every in-scope finding is either verified comp
 
 ### PR #139 progress-tracker reconciliation — 2026-11-14
 
+- **Entry metadata:** 2026-11-14T05:13:51Z (UTC); responsible agent/tool: ChatGPT (GPT-6) using the authenticated Composio GitHub integration; recorded GitHub commit `b5bac43fcebc355239d8e4911bf41bee2276db84` under repository actor `DiabloNova`.
+
 - Current `main` had advanced to `83ffc56b48d19757572f5cd43b3b52852f61e3df` after PR #137 merged, while PR #139 remained based on `a9f22b6f794ee9ff6640fad78b581e51b9e385cf`. A three-way comparison identified `ai_tasks/problem-register/REMEDIATION_PROGRESS.md` as the only path changed on both sides since that base.
 - Reconciled that file using the exact PR base version, current `main`, and the PR branch version. Preserved current-main ledger updates and execution history, and retained the SCR-002 branch-specific status, approved-scope note, and execution log. The header and ledger now use the current-main counts consistently.
 - This is a progress-tracker reconciliation only. It does not merge PR #139, modify `main`, change unrelated source files, complete Wave 0, or authorize other findings. PR #139 remains open and unmerged pending its verification and review outcomes.
@@ -803,11 +821,15 @@ The project is complete only when every in-scope finding is either verified comp
 
 ### SCR-002 review hardening and verification — 2026-11-14
 
-- Repository: `DiabloNova/oxenn`; PR #139; branch: `investigation/041-scr-002-review-2026-11-13`; latest source/test commit: `856e7d064613bf6fb70080ec4dbb492c9aabdaea`. The progress ledger reflects the single-finding SCR-002 status transition and the unchanged project-wide Wave 0 state.
+- **Entry metadata:** 2026-11-14T05:23:08Z (UTC); responsible agent/tool: ChatGPT (GPT-6) using the authenticated Composio GitHub integration; recorded GitHub commit `50aa30278ace210d5ede661e149441772ef3e648` under repository actor `DiabloNova`.
+
+- Repository: `DiabloNova/oxenn`; PR #139; branch: `investigation/041-scr-002-review-2026-11-13`; PR base `main@a9f22b6f794ee9ff6640fad78b581e51b9e385cf`; latest source/test and documentation commit at this entry `50aa30278ace210d5ede661e149441772ef3e648`; current-main tip observed during reconciliation `83ffc56b48d19757572f5cd43b3b52852f61e3df`. The progress ledger reflects the single-finding SCR-002 status transition and unchanged project-wide Wave 0 state.
 - Additional review corrections: the unsupported/overriding database URL rejection test now asserts the `DB_PUSH_DATABASE_URL` error label; the invocation-marker test checks malformed nonce input rather than claiming tamper resistance; the marker now hashes only non-secret connection identity fields (protocol, host, port, database, login role, and TLS mode), never the password.
+- Changed files (16): `.env.example`; `ai_tasks/problem-register/REMEDIATION_PROGRESS.md`; `ai_tasks/problem-register/findings/041-SCR-002.md`; `drizzle.config.ts`; `drizzle.push.config.ts`; `package.json`; `scripts/database/db-push-attestation.ts`; `scripts/database/db-push-guard.ts`; `scripts/database/db-push-targets.ts`; `scripts/database/db-push.ts`; `scripts/env-check.ts`; `tests/scripts/database/db-push-guard.test.ts`; `tests/unit/scripts/database/db-push-attestation.test.ts`; `tests/unit/scripts/database/db-push-guard.test.ts`; `tests/unit/scripts/database/db-push.test.ts`; `tests/unit/scripts/env-check.test.ts`.
 - Additional defensive coverage added for symlinked marker files, group/world-readable marker files (skipped on Windows, where the mode check is not enforced), and `issuedAt` values more than five seconds in the future. Attestation parser failures now preserve a diagnostic reason while retaining the generic fail-closed context; marker file permissions, freshness, ownership, and type checks remain enforced.
 - `041-SCR-002.md` now enumerates concrete acceptance checks for target alias/identity, driver-effective host and TLS, independent catalog attestation, role grants/memberships, exact extensions, complete object inventory, fail-closed failures, wrapper invocation, and post-merge verification. It explicitly distinguishes the temporary CI PostgreSQL service from any persistent/reviewed `db:push` target.
-- GitHub Actions workflow-dispatch run [#43560940497](https://github.com/DiabloNova/oxenn/actions/runs/43560940497) was started for exact head `856e7d064613bf6fb70080ec4dbb492c9aabdaea`; its three jobs were still in progress at the time of this entry. Update this record only with the completed job conclusions.
-- Vercel Preview deployment [`dpl_Hk8z43cGPtU4jeWRpaQ78CNobng5`](https://vercel.com/oxenn/oxenn/Hk8z43cGPtU4jeWRpaQ78CNobng5) was created for the same exact head and reached `READY`; its branch alias was assigned. This is Preview evidence, not a production deployment or post-merge verification.
-- No persistent, production, Platform Admin, or reviewed disposable database was provisioned, connected, migrated, pushed, or modified. The regular CI Isolation Suite provisions a temporary PostgreSQL service and runs the normal Workspace migration chain; this job-scoped test database is not the reviewed `db:push` target.
-- SCR-002 remains `Implemented — verification pending`. `Verified complete` requires merge plus successful post-merge CI on the exact resulting `main` merge commit. No database `db:push` execution or live disposable-target validation is authorized or claimed.
+- Final branch CI: GitHub Actions workflow-dispatch run [#43561290583](https://github.com/DiabloNova/oxenn/actions/runs/43561290583) completed successfully for exact head `50aa30278ace210d5ede661e149441772ef3e648`. **Unit Tests:** 77 files passed, 1 skipped; 598 tests passed, 1 todo; UI tests 4 files / 33 tests passed. **Isolation Suite:** passed on the CI-created ephemeral PostgreSQL service; 56 tenant tables and 677 assertions. **Build and Test:** passed dependency audit gate and regression tests, Typecheck, Lint, tenant schema verification, RLS migration coverage, MVP baseline/documentation checks, RLS documentation consistency, Drizzle migration-chain verification, application Build, Reference Matrix generation, and generated tracked-file no-drift check. Lint emitted a warning but the job succeeded. The successful run is branch-level verification only.
+- Vercel Preview deployment [`dpl_7Emk4emWyEnkLpAxQbvej3QhEJZh`](https://vercel.com/oxenn/oxenn/7Emk4emWyEnkLpAxQbvej3QhEJZh) was created for the same exact head `50aa30278ace210d5ede661e149441772ef3e648` and reached `READY` (`STAGED`); its branch alias was assigned. Preview URL: https://oxenn-6il9l2zre-oxenn.vercel.app. This is Preview evidence, not a production deployment or post-merge verification.
+- Verification commands executed by CI on exact head `50aa30278ace210d5ede661e149441772ef3e648`: `pnpm` dependency installation; Unit Tests and UI tests; CI Isolation Suite; dependency/audit gates; typecheck; lint; tenant schema/RLS/documentation/migration checks; app build; `Build Reference Matrix`; generated tracked-file no-drift verification. Exact outcomes are recorded in the CI run link above. No separate live `db:push` command was executed.
+- No persistent, production, Platform Admin, or reviewed disposable database was provisioned, connected, migrated, pushed, or modified. The regular CI Isolation Suite provisions a temporary PostgreSQL service, applies the normal Workspace migration chain, runs the 677 isolation assertions, and tears that service down; this job-scoped test database is not the reviewed `db:push` target.
+- SCR-002 remains `Implemented — verification pending`. `Verified complete` requires merge plus successful post-merge CI on the exact resulting `main` merge commit. No database `db:push` execution or live disposable-target validation is authorized or claimed. Earlier run [#43457642077](https://github.com/DiabloNova/oxenn/actions/runs/43457642077) passed on source-identical head `216bb2be0b9ec6f8d67e16ef03c274a2f93eccaa`; it is historical evidence for that earlier head and is not substituted for final run #43561290583.
