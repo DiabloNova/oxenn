@@ -39,17 +39,17 @@ The 94 original audit identifiers are preserved individually. Three additional a
 3. The recommended solution in each record is aligned with the current Oxenn architecture; unresolved product/security decisions are explicitly identified.
 4. The category files describe subject matter, not priority.
 5. The implementation sequence expresses dependencies and safe code order; it is not a full Roadmap or implementation authorization.
-6. Revalidate the selected finding against the exact current base branch and inspect the relevant implementation before code changes.
+6. Revalidate the selected finding against the exact current base commit and inspect the relevant implementation before code changes.
 7. No source code, schema, migration, CI workflow, dependency, deployment, PR, or production change is authorized merely by these documents.
 8. Historical verification probes marked do-not-run must remain unused.
 9. Preserve all task-specific security, data-safety, authorization, and approval controls in [Wave 0 Policy Supersession](./WAVE0_POLICY_SUPERSESSION.md).
 
 ## AI execution instructions and live progress
 
-- [AI Remediation Agent Prompt](./AI_REMEDIATION_AGENT_PROMPT.md) — operating instructions for evidence-driven remediation, dependency order, architecture invariants, implementation, verification, parallel-work boundaries, stop conditions, and definition of done. Its blanket project-wide Wave 0 prerequisite is superseded by [Wave 0 Policy Supersession](./WAVE0_POLICY_SUPERSESSION.md).
+- [AI Remediation Agent Prompt](./AI_REMEDIATION_AGENT_PROMPT.md) — operating instructions for evidence-driven remediation, task-specific revalidation, relevant dependencies, architecture invariants, implementation, verification, parallel-work boundaries, stop conditions, and definition of done. [Wave 0 Policy Supersession](./WAVE0_POLICY_SUPERSESSION.md) is authoritative if older blanket Wave 0 wording conflicts.
 - [Remediation Progress & Execution Log](./REMEDIATION_PROGRESS.md) — the live 97-finding ledger and dated execution history. Preserve prior entries as historical evidence; update it when a finding is actually worked on.
 
-The progress tracker remains the historical record of prior Wave 0 activity and its recorded statuses. Its previous counts and entries are not retroactively changed by the policy supersession.
+The progress tracker remains the historical record of prior Wave 0 activity and its recorded finding statuses. Its previous counts and dated entries are not retroactively changed by the policy supersession; the incomplete project-wide inventory is not a universal prerequisite for a separately approved task.
 
 ## Next gate
 

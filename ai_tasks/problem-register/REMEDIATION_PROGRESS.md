@@ -6,7 +6,7 @@
 **Execution order:** [IMPLEMENTATION_SEQUENCE.md](./IMPLEMENTATION_SEQUENCE.md)  
 **Agent instructions:** [AI_REMEDIATION_AGENT_PROMPT.md](./AI_REMEDIATION_AGENT_PROMPT.md)  
 **Initial status recorded:** 2026-11-07  
-**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current `main` at `9ac5fe0`; 20 remain Not started. The ledger records 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. Wave 0 remains incomplete; no Wave 1 authorization is implied.
+**Current overall status:** PARTIAL — 77 of 97 individual findings have been revalidated against current `main` at `9ac5fe0`; 20 remain Not started. The ledger records 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The historical project-wide Wave 0 inventory remains incomplete, but [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md) retires it as a universal prerequisite; each new task still requires explicit approval, exact-base revalidation, directly relevant dependencies, and task-specific safeguards.
 
 > This file is the single running record of remediation progress. It must be updated as work proceeds, not reconstructed at the end. A finding is not complete merely because code was changed or a command exited successfully.
 
@@ -29,7 +29,7 @@
 
 *Approved and implementation-started values are cumulative historical counts; the other Finding Ledger counts reflect current primary dispositions.*
 
-**This tracker does not itself authorize code changes.** The narrowly scoped DOC-001 investigation was separately authorized and is recorded below; it does not waive mandatory Wave 0 revalidation or user approval for the remaining findings, and it does not authorize starting Wave 1. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
+**This tracker does not itself authorize code changes.** The narrowly scoped DOC-001 investigation was separately authorized and is recorded below. Under [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md), completion of the unrelated project-wide Wave 0 inventory is not a universal entry gate; each finding still requires explicit user approval, task-specific revalidation, directly relevant dependencies, and applicable safeguards. The tracker must be updated after each finding or coherent batch, before moving to the next batch.
 
 ## 2. Status definitions
 
@@ -76,7 +76,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At `main@9ac5fe0`, 77 of 97 findings have been revalidated: 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The remaining 20 findings are Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. These finding-level dispositions do not satisfy the project-wide Wave 0 exit condition.
+The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At `main@9ac5fe0`, 77 of 97 findings have been revalidated: 64 Confirmed, 4 Verified complete, 2 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked. The remaining 20 findings are Not started. `VER-005` and `VER-006` remain historical-only and DO NOT RUN; `VER-013` is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. The historical project-wide Wave 0 exit condition remains incomplete; under [WAVE0_POLICY_SUPERSESSION.md](./WAVE0_POLICY_SUPERSESSION.md), that condition is not a universal prerequisite for independently approved, task-specific remediation.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -640,3 +640,12 @@ At the end of each batch, report:
 At the end of each wave, provide a concise wave summary and wait for the required user approval before proceeding if the scope or next wave has not already been authorized.
 
 The project is complete only when every in-scope finding is either verified complete or has an explicitly approved disposition (deferred, superseded, already fixed, or out of scope), with evidence. The number of changed files or closed issues is not a completion metric.
+
+
+### Policy sequencing update — 2026-11-14 UTC
+
+- PR #140 updates the remediation entry policy: completion of the full 97-finding Wave 0 inventory is no longer a universal prerequisite for an independently approved, narrowly scoped task.
+- This is a policy clarification only. The existing finding ledger, counts, and dated execution records above remain historical evidence and were not retroactively rewritten.
+- Every new task still requires explicit user approval, exact-base-commit revalidation of the selected finding and relevant code, directly applicable dependency checks, preservation of architecture/security/data-safety invariants, and all task-specific safeguards.
+- `VER-005` and `VER-006` remain permanently DO NOT RUN. Production database operations, destructive actions, deployments, external-provider/payment side effects, and PR merge/close actions remain separately approval-gated.
+- Files changed in this policy update: `AI_REMEDIATION_AGENT_PROMPT.md`, `IMPLEMENTATION_SEQUENCE.md`, `WAVE0_POLICY_SUPERSESSION.md`, `README.md`, and this tracker. No finding disposition or verification claim is changed by this policy update.
