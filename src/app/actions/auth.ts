@@ -11,6 +11,7 @@ import { revokeAllForUser } from "@/services/auth/session";
 import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/services/auth/passwords";
 
 import { PoolClient } from "pg";
+import { headers } from "next/headers";
 
 async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey: string, maxAttempts: number, windowMs: number): Promise<void> {
     const expiresAt = new Date(Date.now() + windowMs);
@@ -48,7 +49,7 @@ const LOCKOUT_DURATION_MINS = 15;
 /**
  * Authenticates user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function loginAction(email: string, password: string): Promise<User> {
+export async function loginAction(email: string, password: string): Promise<User | { errorCode: "EMAIL_NOT_VERIFIED" }> {
   if (!password) {
      throw new Error("Password is required");
   }
@@ -86,10 +87,6 @@ export async function loginAction(email: string, password: string): Promise<User
         throw new Error("Invalid credentials or user not found.");
     }
 
-
-    if (REQUIRE_EMAIL_VERIFICATION && !userRecord.email_verified_at) {
-        throw new Error("Email must be verified before logging in.");
-    }
 
     const { rows: credRows } = await client.query("SELECT * FROM user_credentials WHERE user_id = $1 FOR UPDATE", [userRecord.id]);
 
@@ -138,11 +135,19 @@ export async function loginAction(email: string, password: string): Promise<User
         [userRecord.id]
     );
 
-    // Clear rate-limit bucket for successful login
+    // Clear rate-limit bucket for a valid password, even if email verification is still pending.
     await client.query(
         "DELETE FROM auth_rate_limits WHERE endpoint = 'login' AND bucket_key = $1",
-        [`login:${email.toLowerCase().trim()}`]
+        [`login:${normalizedEmail}`]
     );
+
+    // A correct password does not grant access until ownership of the email address is proven.
+    if (!userRecord.email_verified_at) {
+        return {
+            error: "Email must be verified before logging in.",
+            errorCode: "EMAIL_NOT_VERIFIED" as const,
+        };
+    }
 
     const { rows: memberRows } = await client.query(`
         SELECT m.organization_id as "workspaceId", m.role, o.name as "workspaceName"
@@ -166,7 +171,10 @@ export async function loginAction(email: string, password: string): Promise<User
     };
   });
 
-  if (result && 'error' in result) {
+  if (result && "error" in result) {
+      if ("errorCode" in result && result.errorCode === "EMAIL_NOT_VERIFIED") {
+          return { errorCode: "EMAIL_NOT_VERIFIED" };
+      }
       throw new Error(result.error as string);
   }
 
@@ -177,7 +185,7 @@ export async function loginAction(email: string, password: string): Promise<User
 /**
  * Registers user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<User | { errorCode: "USER_EXISTS" | "TooManyRequests", error?: string }> {
+export async function registerAction(name: string, email: string, password: string, workspaceName?: string): Promise<(User & { verificationEmailSent: boolean }) | { errorCode: "USER_EXISTS" | "TooManyRequests", error?: string }> {
   if (!password || !validatePasswordRequirements(password)) {
      throw new Error("Password must be between 10 and 255 characters");
   }
@@ -253,42 +261,80 @@ export async function registerAction(name: string, email: string, password: stri
     };
   });
 
-  // Trigger verification email asynchronously (do not block the registration response)
-  if (!('errorCode' in result)) {
-      requestVerification(email).catch(console.error);
+  // Registration never creates a session. Await delivery so the UI can
+  // distinguish account creation from an email that could not be sent.
+  if ("errorCode" in result && result.errorCode === "USER_EXISTS") {
+    return { errorCode: "USER_EXISTS" };
   }
 
-  // DO NOT CREATE SESSION ON REGISTER per requirements
-  // await createSession(result);
-
-  return result;
+  // Account creation is already committed. A follow-up verification failure must
+  // not make registration appear to fail and encourage a duplicate-account retry.
+  const verification = await requestVerification(normalizedEmail).catch(() => ({ success: false }));
+  return { ...(result as User), verificationEmailSent: verification.success };
 }
-
-/**
- * Clears secure cookies and invalidates the session on logout.
- */
-
-const REQUIRE_EMAIL_VERIFICATION = false;
 
 export async function requestVerification(email: string): Promise<{ success: boolean, error?: string }> {
   const normalizedEmail = email.toLowerCase().trim();
-  // Try to find the user
+
+  // Limit each requester before looking up the supplied address. Unknown addresses
+  // must never consume another person's per-address delivery allowance.
+  const requestHeaders = await headers();
+  const requesterIp = requestHeaders.get("x-real-ip")?.trim();
+  if (!requesterIp) {
+    throw new Error("Unable to determine verification requester");
+  }
+  const requesterSecret = process.env.SESSION_SECRET;
+  if (!requesterSecret) {
+    throw new Error("SESSION_SECRET must be configured for verification rate limiting");
+  }
+  const requesterBucket = `verification-requester:${crypto.createHmac("sha256", requesterSecret).update(requesterIp).digest("hex")}`;
+  const requesterLimit = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+    try {
+      await enforceRateLimit(client, "email-verification-requester", requesterBucket, 10, 60 * 60 * 1000);
+      return null;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "TooManyRequests") return "TooManyRequests";
+      throw error;
+    }
+  });
+  if (requesterLimit === "TooManyRequests") {
+    return { success: false, error: "TooManyRequests" };
+  }
+
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    const { rows: userRows } = await client.query("SELECT id FROM users WHERE lower(email) = $1 AND deleted_at IS NULL", [normalizedEmail]);
+    const { rows: userRows } = await client.query(
+      "SELECT id, email, email_verified_at FROM users WHERE lower(email) = $1 AND deleted_at IS NULL",
+      [normalizedEmail]
+    );
     const userRecord = userRows[0];
 
-    if (!userRecord) {
-      return { success: true }; // Enumeration safe although less critical here than reset
+    if (!userRecord || userRecord.email_verified_at) {
+      return { success: true, rawToken: undefined, email: undefined };
     }
 
-    const rawToken = crypto.randomBytes(32).toString("hex");
+    // Apply the delivery quota only after confirming that the address belongs to
+    // an unverified account. The requester quota above protects this lookup path.
+    try {
+      await enforceRateLimit(client, "email-verification", `verification:${normalizedEmail}`, 5, 60 * 60 * 1000);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "TooManyRequests") {
+        // Keep the response indistinguishable from an unknown or already-verified address.
+        return { success: true, rawToken: undefined, email: undefined };
+      }
+      throw error;
+    }
+
+    // Bind the opaque token to the address that receives it, without a schema migration.
+    const emailFingerprint = crypto.createHash("sha256").update(String(userRecord.email).toLowerCase()).digest("hex");
+    const rawToken = `${crypto.randomBytes(32).toString("hex")}.${emailFingerprint}`;
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
 
-    // Invalidate previous unconsumed verification tokens
     await client.query(`
       UPDATE email_verification_tokens
       SET consumed_at = NOW()
@@ -300,40 +346,44 @@ export async function requestVerification(email: string): Promise<{ success: boo
       VALUES ($1, $2, $3)
     `, [userRecord.id, tokenHash, expiresAt.toISOString()]);
 
-    return { success: true, rawToken, email };
+    return { success: true, rawToken, email: String(userRecord.email) };
   });
 
-  if (result && result.rawToken) {
+  if (result?.rawToken && result.email) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     try {
       const sender = getEmailSender();
-      sender.send({
+      await sender.send({
         to: result.email,
         templateId: "verification",
         params: {
-          url: `${appUrl}/en/verify-email?token=${result.rawToken}`
+          url: `${appUrl}/en/verify-email?token=${encodeURIComponent(result.rawToken)}`
         }
-      }).catch((e) => console.error("Email send async error", e));
-    } catch(e) {
-      console.error("Email sender creation error", e);
+      });
+      return { success: true };
+    } catch {
+      console.error("Verification email delivery failed.");
+      return { success: false, error: "Verification email could not be sent. Please try again later." };
     }
-  }
-
-  if (result && ('error' in result)) {
-    return { success: false, error: (result as { error?: string }).error };
   }
 
   return { success: true };
 }
 
 export async function verifyEmailAction(token: string): Promise<{ success: boolean }> {
+  // New tokens carry a SHA-256 fingerprint of the email address they were sent to.
+  // Legacy tokens without this binding are intentionally rejected.
+  if (!/^[a-f0-9]{64}\.[a-f0-9]{64}$/i.test(token)) {
+    throw new Error("Invalid or expired token");
+  }
+  const emailFingerprint = token.split(".")[1].toLowerCase();
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
 
-    await client.query('BEGIN');
+    await client.query("BEGIN");
     try {
       const { rows } = await client.query(`
         UPDATE email_verification_tokens
@@ -347,17 +397,57 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
       }
 
       const userId = rows[0].user_id;
-
-      await client.query(`
-        UPDATE users
-        SET email_verified_at = NOW(), updated_at = NOW()
-        WHERE id = $1 AND email_verified_at IS NULL
+      const { rows: userRows } = await client.query(`
+        SELECT lower(email) AS email, email_verified_at AS "emailVerifiedAt"
+        FROM users
+        WHERE id = $1 AND deleted_at IS NULL
+        FOR UPDATE
       `, [userId]);
 
-      await client.query('COMMIT');
+      if (userRows.length === 0) {
+        throw new Error("Invalid or expired token");
+      }
+
+      const currentFingerprint = crypto.createHash("sha256").update(String(userRows[0].email)).digest("hex");
+      const matchesCurrentEmail = crypto.timingSafeEqual(
+        Buffer.from(currentFingerprint, "hex"),
+        Buffer.from(emailFingerprint, "hex")
+      );
+
+      if (!matchesCurrentEmail) {
+        // Consume stale links so a later email change cannot make an old link valid again.
+        await client.query("COMMIT");
+        return { success: false };
+      }
+
+      if (!userRows[0].emailVerifiedAt) {
+        const { rows: updatedUsers } = await client.query(`
+          UPDATE users
+          SET email_verified_at = NOW(), updated_at = NOW()
+          WHERE id = $1 AND email_verified_at IS NULL
+          RETURNING id
+        `, [userId]);
+
+        if (updatedUsers.length === 0) {
+          throw new Error("Unable to verify email address");
+        }
+      }
+
+      await client.query(`
+        UPDATE email_verification_tokens
+        SET consumed_at = NOW()
+        WHERE user_id = $1 AND consumed_at IS NULL
+      `, [userId]);
+      await client.query(`
+        UPDATE sessions
+        SET revoked_at = NOW()
+        WHERE user_id = $1 AND revoked_at IS NULL
+      `, [userId]);
+
+      await client.query("COMMIT");
       return { success: true };
     } catch (e) {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       throw e;
     }
   });
@@ -417,13 +507,13 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     try {
       const sender = getEmailSender();
-      sender.send({
+      await sender.send({
         to: result.email,
         templateId: "password_reset",
         params: {
-          url: `${appUrl}/en/forgot-password?token=${result.rawToken}`
+          url: `${appUrl}/en/forgot-password?token=${encodeURIComponent(result.rawToken)}`
         }
-      }).catch((e) => console.error("Email send async error", e));
+      });
     } catch(e) {
       console.error("Email sender creation error", e);
     }

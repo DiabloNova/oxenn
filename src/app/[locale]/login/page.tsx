@@ -22,6 +22,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Strings translations
@@ -34,6 +35,10 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     passwordPlaceholder: isFa ? "••••••••" : "••••••••",
     loginBtn: isFa ? "ورود به حساب کاربری" : "Sign In to Account",
     loading: isFa ? "در حال اعتبارسنجی..." : "Authenticating...",
+    emailNotVerified: isFa
+      ? "برای ورود به حساب کاربری، ابتدا باید ایمیل خود را تأیید کنید."
+      : "Verify your email address before signing in.",
+    resendVerification: isFa ? "ارسال مجدد لینک تأیید ایمیل" : "Resend verification email",
     forgotPassword: isFa ? "رمز عبور را فراموش کرده‌اید؟" : "Forgot your password?",
     noAccount: isFa ? "هنوز ثبت‌نام نکرده‌اید؟" : "New to the platform?",
     registerLink: isFa ? "ایجاد حساب کاربری سازمانی" : "Create enterprise account",
@@ -77,6 +82,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError("");
+    setEmailNotVerified(false);
 
     if (!validateForm()) return;
 
@@ -86,8 +92,14 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
       // Success redirect
       router.push(`/${locale}/dashboard`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
+      const code = (err as { code?: string })?.code;
+      const unverified = code === "EMAIL_NOT_VERIFIED";
+      setEmailNotVerified(unverified);
+      setSubmitError(
+        unverified
+          ? strings.emailNotVerified
+          : (isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.")
+      );
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +146,17 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
               {submitError && (
                 <div className="p-3.5 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs flex items-start gap-2 animate-shake">
                   <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                  <p className="font-bold">{submitError}</p>
+                  <div className="font-bold">
+                    <p>{submitError}</p>
+                    {emailNotVerified && (
+                      <Link
+                        href={`/${locale}/verify-email?resend=1`}
+                        className="mt-2 inline-flex items-center gap-1 underline underline-offset-2"
+                      >
+                        {strings.resendVerification}
+                      </Link>
+                    )}
+                  </div>
                 </div>
               )}
 

@@ -66,6 +66,7 @@ describe("server session lifecycle and error handling", () => {
         revokedAt: null,
         replacedBy: null,
         email: user.email,
+        emailVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
         name: user.name,
         role: user.role
       }]
@@ -81,6 +82,28 @@ describe("server session lifecycle and error handling", () => {
       "sys-auth-check",
       expect.any(Function)
     );
+  });
+
+  it("revokes an unverified user's session and returns null", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [{
+        id: "session-unverified",
+        userId: user.id,
+        workspaceId: user.workspaceId,
+        expiresAt: new Date("2027-01-01T00:00:00.000Z"),
+        revokedAt: null,
+        replacedBy: null,
+        email: user.email,
+        emailVerifiedAt: null,
+        name: user.name,
+        role: user.role,
+      }],
+    }).mockResolvedValueOnce({ rows: [] });
+
+    await expect(getSession()).resolves.toBeNull();
+    expect(queryMock).toHaveBeenCalledTimes(2);
+    expect(queryMock.mock.calls[1][0]).toContain("UPDATE sessions");
+    expect(queryMock.mock.calls[1][1]).toEqual(["session-unverified"]);
   });
 
   it("creates opaque sessions with secure cookie attributes and stores only a token hash", async () => {
@@ -189,6 +212,7 @@ describe("server session lifecycle and error handling", () => {
         workspaceId: "workspace-1",
         expiresAt: new Date("2027-01-01T00:00:00.000Z"),
         email: "user@example.com",
+        emailVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
         name: "Test User",
         role: "workspace_admin",
         ...state

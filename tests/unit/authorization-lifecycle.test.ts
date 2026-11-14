@@ -1,3 +1,11 @@
+vi.mock("next/headers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/headers")>();
+  return {
+    ...actual,
+    headers: vi.fn(async () => new Headers({ "x-real-ip": "203.0.113.11" })),
+  };
+});
+
 vi.mock("pg");
 vi.mock("../../src/services/auth/session", async (importOriginal) => {
     const mod = await importOriginal<typeof import("../../src/services/auth/session")>();
@@ -56,7 +64,7 @@ describe("Auth Lifecycle Tests", () => {
            capturedParams = params[4] as string;
            return { rowCount: 1 };
         }
-        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
+        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com", email_verified_at: new Date("2026-01-01T00:00:00.000Z") }], rowCount: 1 }; // Login: verified account
         if (sql.includes("SELECT * FROM user_credentials WHERE user_id")) {
            return { rows: [{
               user_id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
@@ -87,7 +95,11 @@ describe("Auth Lifecycle Tests", () => {
     expect((registeredUser as { id: string }).id).toBeDefined();
 
     // 2. Login
-    const loggedInUser = await loginAction("probe@example.com", "Password123");
+    const loginResult = await loginAction("probe@example.com", "Password123");
+    if ("errorCode" in loginResult) {
+      throw new Error(`Unexpected login result: ${loginResult.errorCode}`);
+    }
+    const loggedInUser = loginResult;
     expect(loggedInUser.email).toBe("probe@example.com");
 
     // 3. requireWorkspaceMembership (pass)
@@ -222,7 +234,7 @@ describe("Auth Lifecycle Tests", () => {
             bucketCleared = true;
             return { rowCount: 1 };
           }
-          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com" }], rowCount: 1 };
+          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com", email_verified_at: new Date("2026-01-01T00:00:00.000Z") }], rowCount: 1 };
           if (sql.includes("SELECT * FROM user_credentials")) {
              return { rows: [{
                 user_id: "usr-1",
@@ -243,14 +255,14 @@ describe("Auth Lifecycle Tests", () => {
       for (let i = 0; i < 10; i++) {
           const res = await loginAction("trip@example.com", "Password123");
           expect(res).toBeDefined();
-          if (res && typeof res === 'object' && 'error' in res) {
+          if (res && typeof res === 'object' && 'errorCode' in res) {
              throw new Error("Unexpected error");
           }
       }
       // 11th should still succeed because the bucket is cleared every time
       const res = await loginAction("trip@example.com", "Password123");
       expect(res).toBeDefined();
-      if (res && typeof res === 'object' && 'error' in res) {
+      if (res && typeof res === 'object' && 'errorCode' in res) {
          throw new Error("Unexpected error");
       }
       expect(bucketCleared).toBe(true);

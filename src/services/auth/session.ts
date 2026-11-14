@@ -116,7 +116,7 @@ export async function getSession(): Promise<Session | null> {
       }
       const { rows } = await client.query(`
         SELECT s.id, s.user_id as "userId", s.workspace_id as "workspaceId", s.expires_at as "expiresAt", s.revoked_at as "revokedAt", s.replaced_by as "replacedBy",
-               u.email, u.name,
+               u.email, u.name, u.email_verified_at AS "emailVerifiedAt",
                m.role
         FROM sessions s
         JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
@@ -125,7 +125,17 @@ export async function getSession(): Promise<Session | null> {
         WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
       `, [tokenHash]);
 
-      return rows[0];
+      const candidate = rows[0];
+      if (candidate && !candidate.emailVerifiedAt) {
+        await client.query(`
+          UPDATE sessions
+          SET revoked_at = NOW()
+          WHERE id = $1 AND revoked_at IS NULL
+        `, [candidate.id]);
+        return null;
+      }
+
+      return candidate;
     });
 
     if (!sessionData) return null;
