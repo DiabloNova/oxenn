@@ -241,7 +241,7 @@ export async function registerAction(name: string, email: string, password: stri
         role: "workspace_admin" as UserRole,
         workspaceId: orgId,
     };
-  });
+  }) as User | { errorCode: "USER_EXISTS" };
 
   // The account is created independently of mail delivery. Do not issue a
   // session here; report delivery accurately so the UI can offer a resend.
@@ -322,7 +322,7 @@ async function issueVerification(email: string): Promise<boolean> {
     };
   });
 
-  if (!("rawToken" in tokenResult)) {
+  if (!("rawToken" in tokenResult) || typeof tokenResult.rawToken !== "string") {
     // Unknown accounts are not treated as a successful new registration delivery.
     return tokenResult.success;
   }

@@ -27,11 +27,12 @@ describe("EmailSender factory and SMTP adapter", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     process.env = { ...originalEnv };
   });
 
   function configureProduction() {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     process.env.EMAIL_PROVIDER = "smtp";
     process.env.SMTP_HOST = "smtp.example.com";
     process.env.SMTP_PORT = "587";
@@ -43,17 +44,17 @@ describe("EmailSender factory and SMTP adapter", () => {
   }
 
   it("returns the capture sender in tests", () => {
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
     expect(getEmailSender()).toBeInstanceOf(CaptureEmailSender);
   });
 
   it("returns the development sender only in development", () => {
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
     expect(getEmailSender()).toBeInstanceOf(DevEmailSender);
   });
 
   it("does not log an invitation token in development while the acceptance route is absent", async () => {
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
     const sender = getEmailSender();
     await expect(sender.send({
       to: "user@example.com",
