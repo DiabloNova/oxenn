@@ -1,5 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
+import { readFileSync } from "node:fs";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,18 +8,16 @@ import { isSupportedLocale, SUPPORTED_LOCALES, type Locale } from "@/config/i18n
 export const dynamic = "force-static";
 export const dynamicParams = false;
 
-const PUBLIC_DOCUMENT_PATHS: Record<Locale, string> = {
-  fa: "docs/public/fa/README.md",
-  en: "docs/public/en/README.md",
-};
-
 interface PublicDocsPageProps {
   params: Promise<{ locale: string }>;
 }
 
 function readPublicDocument(locale: Locale): string {
-  // Only these two fixed, allowlisted Markdown sources are exposed by this route.
-  return fs.readFileSync(path.join(process.cwd(), PUBLIC_DOCUMENT_PATHS[locale]), "utf8");
+  // Keep both source paths literal so the build tracer can include only these files.
+  if (locale === "fa") {
+    return readFileSync("docs/public/fa/README.md", "utf8");
+  }
+  return readFileSync("docs/public/en/README.md", "utf8");
 }
 
 export function generateStaticParams(): Array<{ locale: Locale }> {
@@ -35,7 +32,7 @@ export async function generateMetadata({ params }: PublicDocsPageProps): Promise
   const isPersian = locale === "fa";
   const title = isPersian ? "مستندات عمومی OXENN" : "OXENN Public Documentation";
   const description = isPersian
-    ? "معرفی محصول، خدمات و مفاهیم اصلی پلتفرم OXENN."
+    ? "مرجع معرفی محصولات، خدمات و مفاهیم اصلی OXENN."
     : "An overview of OXENN products, services, and core concepts.";
 
   return {
