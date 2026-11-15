@@ -28,6 +28,18 @@ function resolveLink(href: string, locale: Locale): { href: string; external: bo
   return null;
 }
 
+function findLinkClosingParen(source: string, start: number): number {
+  let nestedDepth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source[index] === "(") nestedDepth += 1;
+    if (source[index] === ")") {
+      if (nestedDepth === 0) return index;
+      nestedDepth -= 1;
+    }
+  }
+  return -1;
+}
+
 function renderInline(source: string, locale: Locale, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   let cursor = 0;
@@ -41,7 +53,7 @@ function renderInline(source: string, locale: Locale, keyPrefix: string): ReactN
 
     if (source.startsWith("[", cursor)) {
       const labelEnd = source.indexOf("](", cursor + 1);
-      const urlEnd = labelEnd >= 0 ? source.indexOf(")", labelEnd + 2) : -1;
+      const urlEnd = labelEnd >= 0 ? findLinkClosingParen(source, labelEnd + 2) : -1;
       if (labelEnd >= 0 && urlEnd > labelEnd + 2) {
         const label = source.slice(cursor + 1, labelEnd);
         const link = resolveLink(source.slice(labelEnd + 2, urlEnd), locale);
