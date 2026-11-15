@@ -1,7 +1,7 @@
 # Canonical Table Ownership Registry
 
 **Status:** SCR-001 Stage 2  
-**Workspace source:** database/schema/index.ts and its canonical modular exports  
+**Workspace source:** database/schema/index.ts and its canonical modular schema sources, including database/schema/organization-table.ts, database/schema/api-keys.ts, and the standalone database/schema/user-profile.ts input  
 **Platform Admin source:** database/platform-admin/schema/index.ts
 
 ## Purpose and authority
@@ -25,13 +25,15 @@ status distinguishes current schema contracts from legacy records and unresolved
 
 ## Inventory coverage
 
-- Workspace schema: 70 tables, all declared in database/schema/index.ts or its canonical organization-table.ts and api-keys.ts exports.
-- Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 5 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
+- Workspace schema: 71 tables, declared by database/schema/index.ts and its canonical modular schema sources. The standalone user_profiles declaration lives in database/schema/user-profile.ts and is explicitly included in drizzle.config.ts and the ownership-registry test.
+- Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 6 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
 - Platform Admin schema: 7 tables in database/platform-admin/schema/index.ts, backed by its own database, configuration, migration directory, and migration history.
 - The Platform Admin Drizzle migration ledger is infrastructure metadata, not an application table, and is not included in the seven-table application inventory.
 - database/schema/_legacy/ is quarantined and is not an authoritative schema source.
 
-The focused unit test compares the Workspace registry against all canonical Drizzle table declarations and the latest Workspace migration snapshot, and compares the Platform Admin registry against its separate Drizzle schema. Missing or stale entries fail the test. Unknown table lookups throw instead of falling back to Global.
+The Workspace migration journal records SQL migration execution order, while Drizzle snapshots represent generated schema states. A custom SQL-only migration does not necessarily have a same-index snapshot. In particular, 0005_force_rls.sql is the custom RLS migration between snapshots 0004 and 0006; 0006_snapshot.json correctly links to 0004_snapshot.json through prevId. This is an intentional snapshot-index gap, not a missing migration or a reason to manufacture an empty snapshot.
+
+The latest Workspace schema snapshot includes user_profiles. Its schema declaration, migration SQL, snapshot table definition, and explicit USER_OWNED registry entry must remain aligned. The focused unit test verifies the latest generated snapshot lineage, schema/snapshot table parity, and ownership-registry coverage.
 
 ## Explicit unresolved Workspace entries
 

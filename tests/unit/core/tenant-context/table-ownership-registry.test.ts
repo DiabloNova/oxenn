@@ -29,25 +29,75 @@ describe("Canonical table ownership registry", () => {
       "database/schema/user-profile.ts",
     ];
     const schemaNames = readTableNames(workspaceSources);
+    const migrationDirectory = path.join(repositoryRoot, "database/drizzle");
+    const metadataDirectory = path.join(migrationDirectory, "meta");
     const journal = JSON.parse(
-      fs.readFileSync(
-        path.join(repositoryRoot, "database/drizzle/meta/_journal.json"),
-        "utf8",
-      ),
-    ) as { entries: Array<{ idx: number }> };
-    const latestEntry = journal.entries[journal.entries.length - 1];
-    const snapshotPath = path.join(
-      repositoryRoot,
-      "database/drizzle/meta",
-      String(latestEntry.idx).padStart(4, "0") + "_snapshot.json",
+      fs.readFileSync(path.join(metadataDirectory, "_journal.json"), "utf8"),
+    ) as {
+      version: string;
+      dialect: string;
+      entries: Array<{ idx: number; tag: string }>;
+    };
+    const snapshotPathFor = (index: number) =>
+      path.join(metadataDirectory, String(index).padStart(4, "0") + "_snapshot.json");
+
+    // The journal is authoritative for SQL execution order. SQL-only entries may
+    // legitimately have no Drizzle snapshot, so snapshot lineage follows the
+    // nearest preceding generated snapshot rather than assuming idx - 1.
+    expect(journal.entries.map((entry) => entry.idx)).toEqual(
+      journal.entries.map((_, index) => index),
     );
-    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8")) as {
+    for (const entry of journal.entries) {
+      expect(fs.existsSync(path.join(migrationDirectory, entry.tag + ".sql"))).toBe(true);
+    }
+
+    const latestSnapshotEntry = [...journal.entries]
+      .reverse()
+      .find((entry) => fs.existsSync(snapshotPathFor(entry.idx)));
+    if (!latestSnapshotEntry) {
+      throw new Error("Workspace migration journal has no matching Drizzle snapshot.");
+    }
+
+    const snapshot = JSON.parse(
+      fs.readFileSync(snapshotPathFor(latestSnapshotEntry.idx), "utf8"),
+    ) as {
+      id: string;
+      prevId: string;
+      version: string;
+      dialect: string;
       tables: Record<string, { name: string }>;
     };
-    const snapshotNames = Object.values(snapshot.tables).map((table) => table.name);
 
+    const previousSnapshotEntry = journal.entries
+      .filter((entry) => entry.idx < latestSnapshotEntry.idx)
+      .reverse()
+      .find((entry) => fs.existsSync(snapshotPathFor(entry.idx)));
+    if (!previousSnapshotEntry) {
+      throw new Error("Latest Workspace snapshot has no preceding generated snapshot.");
+    }
+    const previousSnapshot = JSON.parse(
+      fs.readFileSync(snapshotPathFor(previousSnapshotEntry.idx), "utf8"),
+    ) as { id: string };
+
+    const snapshotNames = Object.values(snapshot.tables).map((table) => table.name);
+    const userProfilesOwnership = getTableOwnershipEntry("workspace", "user_profiles");
+
+    expect(snapshot.version).toBe(journal.version);
+    expect(snapshot.dialect).toBe(journal.dialect);
+    expect(snapshot.prevId).toBe(previousSnapshot.id);
     expect(new Set(schemaNames).size).toBe(schemaNames.length);
     expect([...schemaNames].sort()).toEqual([...snapshotNames].sort());
+    expect(snapshotNames).toContain("user_profiles");
+    expect(userProfilesOwnership).toMatchObject({
+      scope: "USER_OWNED",
+      status: "current",
+    });
+    expect(userProfilesOwnership.evidence).toEqual(
+      expect.arrayContaining([
+        "database/schema/user-profile.ts: userProfiles.userId references users.id; lower(username) has a unique index",
+        "database/drizzle/meta/0016_snapshot.json: canonical Workspace snapshot",
+      ]),
+    );
     expect(getOwnershipRegistryDrift("workspace", schemaNames)).toEqual({
       missingRegistryEntries: [],
       staleRegistryEntries: [],
