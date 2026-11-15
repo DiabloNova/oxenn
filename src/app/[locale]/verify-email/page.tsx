@@ -127,7 +127,22 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 p-3 text-xs text-[var(--color-error)]"><AlertCircle size={15} className="mt-0.5 shrink-0"/><span>{error}</span></div>}
                 <form onSubmit={handleVerify} className="space-y-4">
                   <Input type="email" inputMode="email" label={t.email} value={email} onChange={(event) => setEmail(event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={isVerifying} required />
-                  <Input label={t.code} value={code} onChange={(event) => setCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 8))} inputMode="numeric" autoComplete="one-time-code" maxLength={8} disabled={isVerifying} required className="text-center text-lg tracking-[0.35em]" />
+                  <Input
+                    label={t.code}
+                    value={code}
+                    onChange={(event) => {
+                      const asciiDigits = event.target.value
+                        .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+                        .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
+                      setCode(asciiDigits.replace(/[^0-9]/g, "").slice(0, 8));
+                    }}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={8}
+                    disabled={isVerifying}
+                    required
+                    className="text-center text-lg tracking-[0.35em]"
+                  />
                   <Button type="submit" variant="primary" disabled={isVerifying} className="w-full py-3">{isVerifying ? t.verifying : <span className="inline-flex items-center justify-center gap-2"><CheckCircle2 size={15}/>{t.verify}</span>}</Button>
                 </form>
                 <div className="border-t border-[var(--border)] pt-4 text-center">

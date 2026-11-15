@@ -103,7 +103,7 @@ export const PASSWORD_MAX_LENGTH = 255;
 
 export function validatePasswordRequirements(password: string): boolean {
   if (!password || password.length < 10 || password.length > PASSWORD_MAX_LENGTH) return false;
-  if (!/^[\x21-\x7E]+$/.test(password)) return false;
+  if (!/^[\x20-\x7E]+$/.test(password)) return false;
   if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) return false;
-  return (password.match(/[^A-Za-z0-9]/g) ?? []).length >= 2;
+  return (password.match(/[^A-Za-z0-9\s]/g) ?? []).length >= 2;
 }

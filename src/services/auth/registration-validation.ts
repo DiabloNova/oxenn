@@ -28,10 +28,10 @@ export function getPasswordValidationError(password: string): PasswordValidation
   if (!password) return "PASSWORD_REQUIRED";
   if (password.length < 10) return "PASSWORD_TOO_SHORT";
   if (password.length > 255) return "PASSWORD_TOO_LONG";
-  if (!/^[\x21-\x7E]+$/.test(password)) return "PASSWORD_ENGLISH_ONLY";
+  if (!/^[\x20-\x7E]+$/.test(password)) return "PASSWORD_ENGLISH_ONLY";
   if (!/[A-Z]/.test(password)) return "PASSWORD_UPPERCASE_REQUIRED";
   if (!/[0-9]/.test(password)) return "PASSWORD_NUMBER_REQUIRED";
-  if ((password.match(/[^A-Za-z0-9]/g) ?? []).length < 2) return "PASSWORD_TWO_SPECIAL_REQUIRED";
+  if ((password.match(/[^A-Za-z0-9\s]/g) ?? []).length < 2) return "PASSWORD_TWO_SPECIAL_REQUIRED";
   return null;
 }
 

@@ -31,6 +31,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const liveEmailValidationError = getEmailValidationError(email);
 
   const t = {
     title: isFa ? "ایجاد حساب کاربری" : "Create your account",
@@ -46,6 +47,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     haveAccount: isFa ? "قبلاً حساب دارید؟" : "Already have an account?",
     login: isFa ? "ورود" : "Sign in",
     localUpperWarning: isFa ? "حروف بزرگ در بخش ابتدایی ایمیل مجاز است؛ آدرس هنگام ذخیره‌سازی یکسان‌سازی می‌شود." : "Uppercase letters in the part before @ are allowed; the address is normalized when saved.",
+    domainUpperError: isFa ? "حروف بزرگ در بخش دامنه ایمیل مجاز نیست. دامنه را کاملاً با حروف کوچک بنویسید." : "Uppercase letters are not allowed in the email domain. Use lowercase letters only.",
     passwordUpperWarning: isFa ? "حروف بزرگ در رمز عبور مجاز و الزامی است؛ صفحه‌کلید را در حالت حروف کوچک نگه دارید و حداقل یک حرف بزرگ وارد کنید." : "Uppercase is allowed and required in the password. Keep the keyboard in lowercase mode and include at least one uppercase letter.",
     passwordHint: isFa ? "حداقل ۱۰ نویسه انگلیسی، یک حرف بزرگ، یک عدد و دو کاراکتر خاص." : "At least 10 ASCII characters, one uppercase letter, one number and two special characters.",
   };
@@ -121,8 +123,29 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
                 <Input label={t.firstName} value={firstName} onChange={(e) => setFirstName(e.target.value)} error={fieldErrors.firstName} disabled={isLoading} required autoComplete="given-name" />
                 <Input label={t.lastName} value={lastName} onChange={(e) => setLastName(e.target.value)} error={fieldErrors.lastName} disabled={isLoading} required autoComplete="family-name" />
               </div>
-              <Input type="email" inputMode="email" label={t.email} value={email} onChange={(e) => setEmail(e.target.value)} error={fieldErrors.email} disabled={isLoading} required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
-              {!fieldErrors.email && emailLocalPartHasUppercase(email) && <p className="text-xs text-amber-600">{t.localUpperWarning}</p>}
+              <Input
+                type="email"
+                inputMode="email"
+                label={t.email}
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setFieldErrors((previous) => ({ ...previous, email: "" }));
+                }}
+                error={fieldErrors.email}
+                disabled={isLoading}
+                required
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              {!fieldErrors.email && liveEmailValidationError === "EMAIL_DOMAIN_UPPERCASE" && (
+                <p role="alert" className="text-xs text-[var(--color-error)]">{t.domainUpperError}</p>
+              )}
+              {!fieldErrors.email && emailLocalPartHasUppercase(email) && (
+                <p className="text-xs text-amber-600">{t.localUpperWarning}</p>
+              )}
               <Input type="password" label={t.password} value={password} onChange={(e) => setPassword(e.target.value)} error={fieldErrors.password} disabled={isLoading} required autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
               <p className="text-xs text-[var(--text-muted)]">{t.passwordHint}</p>
               {passwordHasUppercase(password) && <p className="text-xs text-amber-600">{t.passwordUpperWarning}</p>}

@@ -4,6 +4,7 @@ import { User, Session, UserRole } from "@/types/auth";
 import { createSession, invalidateSession, getSession } from "@/services/auth/session";
 import { TenantContextManager } from "@/core/database/tenant-context";
 import { randomUUID } from "crypto";
+import { generateUserId } from "@/services/auth/user-id";
 import crypto from "crypto";
 import { getEmailSender } from "@/services/email/adapters";
 import { revokeAllForUser } from "@/services/auth/session";
@@ -45,16 +46,31 @@ async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey:
 
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MINS = 15;
+const REQUIRE_EMAIL_VERIFICATION = true;
+
+function hashEmailVerificationCode(email: string, code: string): string {
+  const configuredSecret = process.env.SESSION_SECRET;
+  const secret = configuredSecret ||
+    (process.env.NODE_ENV === "test" ? "oxenn-test-only-verification-secret-32-chars" : "");
+  if (secret.length < 32 || secret === "change-this-to-a-secure-32-character-secret-in-production") {
+    throw new Error("SESSION_SECRET must be a unique, non-placeholder secret of at least 32 characters before email verification can run.");
+  }
+  return crypto.createHmac("sha256", secret).update(email + ":" + code).digest("hex");
+}
+
 
 /**
  * Authenticates user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
 export async function loginAction(email: string, password: string): Promise<User> {
-  if (!password) {
-     throw new Error("Password is required");
+  if (typeof email !== "string" || getEmailValidationError(email)) {
+    throw new Error("Invalid email address.");
+  }
+  if (typeof password !== "string" || !password) {
+    throw new Error("Password is required");
   }
 
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = email.trim().toLowerCase();
 
   const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
       const c = TenantContextManager.getDbClient();
@@ -181,7 +197,6 @@ export async function loginAction(email: string, password: string): Promise<User
  * A newly registered account remains inactive until its email code is verified.
  * The user and workspace are provisioned atomically by the outer system-context transaction.
  */
-const REQUIRE_EMAIL_VERIFICATION = true;
 
 export type RegisterActionResult =
   | { success: true; verificationEmailSent: boolean }
@@ -195,6 +210,15 @@ export async function registerAction(
   username: string,
   locale: "fa" | "en",
 ): Promise<RegisterActionResult> {
+  if (
+    typeof firstName !== "string" ||
+    typeof lastName !== "string" ||
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    typeof username !== "string" ||
+    (locale !== "fa" && locale !== "en")
+  ) return { errorCode: "INVALID_REGISTRATION" };
+
   const normalizedFirstName = firstName.trim();
   const normalizedLastName = lastName.trim();
   const normalizedUsername = username.trim();
@@ -230,23 +254,19 @@ export async function registerAction(
       const client = TenantContextManager.getDbClient();
       if (!client) throw new Error("Failed to get DB client in system context");
 
-      const { rows: existingRows } = await client.query(
-        `SELECT u.id, p.username
-         FROM users u
-         LEFT JOIN user_profiles p ON p.user_id = u.id
-         WHERE lower(u.email) = $1 OR lower(p.username) = lower($2)
-         LIMIT 1`,
-        [normalizedEmail, normalizedUsername],
+      const { rows: existingEmail } = await client.query(
+        "SELECT id FROM users WHERE lower(email) = $1 LIMIT 1",
+        [normalizedEmail],
       );
-      if (existingRows.length > 0) {
-        return {
-          errorCode: existingRows[0].username && existingRows[0].username.toLowerCase() === normalizedUsername.toLowerCase()
-            ? "USERNAME_EXISTS" as const
-            : "USER_EXISTS" as const,
-        };
-      }
+      if (existingEmail.length > 0) return { errorCode: "USER_EXISTS" as const };
 
-      const userId = `usr-${randomUUID()}`;
+      const { rows: existingUsername } = await client.query(
+        "SELECT user_id FROM user_profiles WHERE lower(username) = lower($1) LIMIT 1",
+        [normalizedUsername],
+      );
+      if (existingUsername.length > 0) return { errorCode: "USERNAME_EXISTS" as const };
+
+      const userId = generateUserId();
       const orgId = randomUUID();
       const passwordHash = await hashPassword(password);
       const workspaceName = `${normalizedUsername}'s Workspace`;
@@ -270,7 +290,8 @@ export async function registerAction(
   } catch (error: unknown) {
     const databaseError = error as { code?: string; constraint?: string };
     if (databaseError?.code === "23505") {
-      return { errorCode: databaseError.constraint?.includes("username") ? "USERNAME_EXISTS" : "USER_EXISTS" };
+      if (databaseError.constraint?.toLowerCase().includes("username")) return { errorCode: "USERNAME_EXISTS" };
+      if (databaseError.constraint?.toLowerCase().includes("email")) return { errorCode: "USER_EXISTS" };
     }
     throw error;
   }
@@ -278,17 +299,22 @@ export async function registerAction(
   // Duplicate detection is returned from inside the transaction without creating partial records.
   if ("errorCode" in createdUser) return { errorCode: createdUser.errorCode };
 
-  const verification = await requestVerification(normalizedEmail, locale);
-  // Account/workspace creation has succeeded. A delivery failure is surfaced in the UI
-  // and the user can safely request a new code from the verification screen.
-  return { success: true, verificationEmailSent: verification.success };
+  let verificationEmailSent = false;
+  try {
+    const verification = await requestVerification(normalizedEmail, locale);
+    verificationEmailSent = verification.success;
+  } catch (error) {
+    console.error("Initial verification request failed.", error instanceof Error ? error.message : "Unknown verification error");
+  }
+  return { success: true, verificationEmailSent };
 }
 
 /**
- * Sends a short-lived, single-use numeric email code. The database stores only its SHA-256 hash.
+ * Sends a short-lived, single-use numeric email code. The database stores only its keyed HMAC digest.
  */
 export async function requestVerification(email: string, locale: "fa" | "en" = "en"): Promise<{ success: boolean; errorCode?: string }> {
-  if (getEmailValidationError(email)) return { success: false, errorCode: "INVALID_EMAIL" };
+  if (typeof email !== "string" || getEmailValidationError(email)) return { success: false, errorCode: "INVALID_EMAIL" };
+  if (locale !== "fa" && locale !== "en") return { success: false, errorCode: "INVALID_LOCALE" };
   const normalizedEmail = email.trim().toLowerCase();
 
   const rateLimitResult = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
@@ -316,7 +342,7 @@ export async function requestVerification(email: string, locale: "fa" | "en" = "
     if (!user || user.email_verified_at) return null; // Enumeration-safe; do not resend for verified accounts.
 
     const rawCode = crypto.randomInt(0, 100_000_000).toString().padStart(8, "0");
-    const tokenHash = crypto.createHash("sha256").update(`${normalizedEmail}:${rawCode}`).digest("hex");
+    const tokenHash = hashEmailVerificationCode(normalizedEmail, rawCode);
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await client.query(
       "UPDATE email_verification_tokens SET consumed_at = NOW() WHERE user_id = $1 AND consumed_at IS NULL",
@@ -336,14 +362,10 @@ export async function requestVerification(email: string, locale: "fa" | "en" = "
     return { success: true };
   } catch (error) {
     console.error("Verification email delivery failed.", error instanceof Error ? error.message : "Unknown email error");
-    // A code that was never delivered must not remain valid.
     await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
       const client = TenantContextManager.getDbClient();
       if (!client) throw new Error("Failed to get DB client in system context");
-      await client.query(
-        "UPDATE email_verification_tokens SET consumed_at = NOW() WHERE user_id = $1 AND token_hash = $2 AND consumed_at IS NULL",
-        [tokenResult.userId, tokenResult.tokenHash],
-      );
+      await client.query("UPDATE email_verification_tokens SET consumed_at = NOW() WHERE user_id = $1 AND token_hash = $2 AND consumed_at IS NULL", [tokenResult.userId, tokenResult.tokenHash]);
     });
     return { success: false, errorCode: "EMAIL_DELIVERY_FAILED" };
   }
@@ -353,9 +375,14 @@ export async function requestVerification(email: string, locale: "fa" | "en" = "
  * Consumes the one-time code, marks the email verified, then establishes a DB-backed session.
  */
 export async function verifyEmailAction(email: string, code: string): Promise<{ success: boolean; sessionCreated: boolean }> {
-  if (getEmailValidationError(email) || !/^\d{8}$/.test(code)) return { success: false, sessionCreated: false };
+  if (
+    typeof email !== "string" ||
+    getEmailValidationError(email) ||
+    typeof code !== "string" ||
+    !/^\d{8}$/.test(code)
+  ) return { success: false, sessionCreated: false };
   const normalizedEmail = email.trim().toLowerCase();
-  const tokenHash = crypto.createHash("sha256").update(`${normalizedEmail}:${code}`).digest("hex");
+  const tokenHash = hashEmailVerificationCode(normalizedEmail, code);
 
   const verificationResult = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
@@ -382,7 +409,7 @@ export async function verifyEmailAction(email: string, code: string): Promise<{ 
       [userId],
     );
     const user = userRows[0];
-    if (!user) return null;
+    if (!user) throw new Error("Verified account could not be loaded.");
 
     const { rows: membershipRows } = await client.query(`
       SELECT m.organization_id AS "workspaceId", m.role, p.username
@@ -394,7 +421,7 @@ export async function verifyEmailAction(email: string, code: string): Promise<{ 
       LIMIT 1
     `, [userId]);
     const membership = membershipRows[0];
-    if (!membership) return null;
+    if (!membership) throw new Error("Verified account has no active workspace membership.");
 
     return {
       id: user.id as string,
@@ -417,7 +444,8 @@ export async function verifyEmailAction(email: string, code: string): Promise<{ 
 }
 
 export async function requestPasswordReset(email: string): Promise<{ success: boolean, error?: string }> {
-  const normalizedEmail = email.toLowerCase().trim();
+  if (typeof email !== "string" || getEmailValidationError(email)) return { success: false, error: "INVALID_EMAIL" };
+  const normalizedEmail = email.trim().toLowerCase();
 
   const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
       const c = TenantContextManager.getDbClient();
@@ -487,10 +515,10 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
 }
 
 export async function confirmPasswordReset(token: string, newPassword: string): Promise<{ success: boolean }> {
-  if (!newPassword || !validatePasswordRequirements(newPassword)) {
-     throw new Error("Password must be between 10 and 255 characters");
+  if (typeof token !== "string" || token.length < 32 || token.length > 256) throw new Error("Invalid or expired token");
+  if (typeof newPassword !== "string" || !validatePasswordRequirements(newPassword)) {
+    throw new Error("Password does not meet the security requirements.");
   }
-
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
   const hashResult = await hashPassword(newPassword);
 
