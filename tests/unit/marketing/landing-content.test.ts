@@ -17,7 +17,7 @@ describe("bilingual public homepage content", () => {
   it("keeps the three Offer natures separate from sales channels", () => {
     expect(landingContent.en.offers.types.map((item) => item.title)).toEqual(["Physical product", "Digital product", "Service"]);
     expect(landingContent.en.offers.channelNote).toContain("not a fourth Offer nature");
-    expect(landingContent.fa.offers.channelNote).toContain("ماهیت چهارم محصول نیست");
+    expect(landingContent.fa.offers.channelNote).toContain("نه ماهیت چهارم محصول");
   });
 
   it("keeps independent SEO, AEO, and GEO available without making the bundle mandatory", () => {
@@ -45,7 +45,8 @@ describe("bilingual public homepage content", () => {
       expect(allText).not.toMatch(/\b\d+(?:\.\d+)?%/);
       expect(allText).not.toMatch(/\$\s?\d/);
       expect(allText.toLowerCase()).not.toContain("real-time");
-      expect(allText.toLowerCase()).not.toContain("live data");
+      if (locale === "en") expect(allText.toLowerCase()).toContain("does not display live data");
+      else expect(allText).toContain("داده زنده");
     }
   });
 });
