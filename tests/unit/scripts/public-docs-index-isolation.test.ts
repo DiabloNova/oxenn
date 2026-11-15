@@ -21,15 +21,16 @@ describe("public documentation isolation from the engineering docs index", () =>
     const publicEn = path.join(docsRoot, "public", "en");
     const productDocs = path.join(docsRoot, "product");
     const outputFile = path.join(temporaryRoot, "docsIndex.ts");
+    const newline = String.fromCharCode(10);
 
     mkdirSync(publicFa, { recursive: true });
     mkdirSync(publicEn, { recursive: true });
     mkdirSync(productDocs, { recursive: true });
 
-    writeFileSync(path.join(docsRoot, "public", "README.md"), "# Public docs\n");
-    writeFileSync(path.join(publicFa, "README.md"), "# مستندات عمومی\n");
-    writeFileSync(path.join(publicEn, "README.md"), "# Public documentation\n");
-    writeFileSync(path.join(productDocs, "guide.md"), "# Engineering guide\n\nInternal implementation notes.");
+    writeFileSync(path.join(docsRoot, "public", "README.md"), ["# Public docs", ""].join(newline));
+    writeFileSync(path.join(publicFa, "README.md"), ["# مستندات عمومی", ""].join(newline));
+    writeFileSync(path.join(publicEn, "README.md"), ["# Public documentation", ""].join(newline));
+    writeFileSync(path.join(productDocs, "guide.md"), ["# Engineering guide", "", "Internal implementation notes."].join(newline));
 
     generateDocsIndex({ docsDirectory: docsRoot, outputFile });
     const generatedIndex = readFileSync(outputFile, "utf8");

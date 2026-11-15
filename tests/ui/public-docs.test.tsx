@@ -5,10 +5,9 @@ import MarkdownContent from "@/components/public-docs/MarkdownContent";
 
 describe("public documentation Markdown renderer", () => {
   it("renders headings, emphasis, paragraphs, and lists", () => {
-    render(
-      <MarkdownContent locale="en"
-        markdown={"# Public docs\n\nA **clear** and *useful* overview.\n\n- First item\n- Second item"} />,
-    );
+    const newline = String.fromCharCode(10);
+    const markdown = ["# Public docs", "", "A **clear** and *useful* overview.", "", "- First item", "- Second item"].join(newline);
+    render(<MarkdownContent locale="en" markdown={markdown} />);
     expect(screen.getByRole("heading", { level: 1, name: "Public docs" })).toBeInTheDocument();
     expect(screen.getByText("clear").tagName).toBe("STRONG");
     expect(screen.getByText("useful").tagName).toBe("EM");
