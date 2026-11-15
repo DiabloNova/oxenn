@@ -311,7 +311,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Canonical Table Ownership Registry",
     category: "database",
     categoryFa: "Database",
-    snippet: `# Canonical Table Ownership Registry  **Status:** SCR-001 Stage 2   **Workspace source:** database/schema/index.ts and its canonical modular exports   **Platform Admin source:** database/platform-admin/schema/index.ts  ## Purpose and authority  scripts/database/table-ownership-registry.ts is the explicit, reviewed ownership inventory for the application's canonical database tables. Each table has a scope, lifecycle status, rationale, and evidence. Classification is based on repository domain/schema`
+    snippet: `# Canonical Table Ownership Registry  **Status:** SCR-001 Stage 2   **Workspace source:** database/schema/index.ts and its canonical modular schema sources, including database/schema/organization-table.ts, database/schema/api-keys.ts, and the standalone database/schema/user-profile.ts input   **Platform Admin source:** database/platform-admin/schema/index.ts  ## Purpose and authority  scripts/database/table-ownership-registry.ts is the explicit, reviewed ownership inventory for the application's`
   },
   {
     slug: "OXENN_MVP_PRODUCT_SPECIFICATION",
@@ -424,6 +424,14 @@ export const DOCS_INDEX: DocMeta[] = [
     category: "tasks_reports",
     categoryFa: "tasks_reports",
     snippet: `# Remove Redundant API-Key Prefix Index  ## Finding  The api_keys prefix column already has a uniqueness constraint, which PostgreSQL backs with a unique index. A separate non-unique index on the same prefix column duplicates that index for the same leading-column lookup pattern. This change removes only the redundant non-unique index and preserves the uniqueness guarantee.  ## Implementation  - Removed the standalone prefix index declaration from the current Drizzle schema. - Added migration 0013`
+  },
+  {
+    slug: "registration-migration-0016-snapshot-ownership-integrity",
+    titleEn: "Registration Migration 0016: Snapshot and Ownership Integrity",
+    titleFa: "Registration Migration 0016: Snapshot and Ownership Integrity",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# Registration Migration 0016: Snapshot and Ownership Integrity  ## Scope  Audited only the Workspace migration journal, Drizzle snapshot lineage, migration 0016, the user_profiles schema declaration, and the canonical table-ownership registry on the registration-verification branch.  ## Findings  - The current database/drizzle/meta/_journal.json parses as valid JSON. Its 17 entries have sequential indexes 0 through 16, and every journal tag has a corresponding SQL migration file. - The current `
   },
   {
     slug: "phase-2-code-security",
