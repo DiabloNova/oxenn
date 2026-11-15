@@ -12,7 +12,7 @@ function resolveLink(href: string, locale: Locale): { href: string; external: bo
   if (normalizedHref.startsWith("#")) {
     return { href: normalizedHref, external: false };
   }
-  if (/^https?:\/\//i.test(normalizedHref)) {
+  if (normalizedHref.startsWith("https://") || normalizedHref.startsWith("http://")) {
     return { href: normalizedHref, external: true };
   }
   if (normalizedHref.startsWith("../") || normalizedHref.startsWith("./") || normalizedHref.startsWith("/")) {
@@ -25,7 +25,7 @@ function resolveLink(href: string, locale: Locale): { href: string; external: bo
 
 function renderInline(source: string, locale: Locale, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const tokenPattern = /(\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*)/g;
+  const tokenPattern = /( \[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*)/g;
   let cursor = 0;
   let match: RegExpExecArray | null;
   let tokenIndex = 0;
