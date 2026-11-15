@@ -47,8 +47,26 @@ describe("resolveMode", () => {
 describe("validateEnv db:push settings", () => {
   function stubBaseEnvironment(mode: "dev" | "test") {
     vi.stubEnv("DATABASE_URL", "postgresql://app:secret@127.0.0.1:5432/oxenn");
-    if (mode === "dev") vi.stubEnv("SESSION_SECRET", "a-session-secret-long-enough");
+    if (mode === "dev") vi.stubEnv("SESSION_SECRET", "a-session-secret-with-at-least-32-characters");
   }
+
+  it("rejects a session secret shorter than 32 characters in dev mode", () => {
+    stubBaseEnvironment("dev");
+    vi.stubEnv("SESSION_SECRET", "too-short-secret");
+    const result = validateEnv("dev");
+    expect(result.invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "SESSION_SECRET" }),
+    ]));
+  });
+
+  it("rejects the example SESSION_SECRET placeholder in dev mode", () => {
+    stubBaseEnvironment("dev");
+    vi.stubEnv("SESSION_SECRET", "change-this-to-a-secure-32-character-secret-in-production");
+    const result = validateEnv("dev");
+    expect(result.invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "SESSION_SECRET" }),
+    ]));
+  });
 
   it.each(["dev", "test"] as const)("reports missing paired db:push settings as missing in %s mode", (mode) => {
     stubBaseEnvironment(mode);

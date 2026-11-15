@@ -31,7 +31,8 @@ describe("registration validation", () => {
     expect(getPasswordValidationError("Aa123456!!")).toBeNull();
     expect(getPasswordValidationError("aa123456!!")).toBe("PASSWORD_UPPERCASE_REQUIRED");
     expect(getPasswordValidationError("Aaabcdef!!")).toBe("PASSWORD_NUMBER_REQUIRED");
-    expect(getPasswordValidationError("Aa123456!")).toBe("PASSWORD_TWO_SPECIAL_REQUIRED");
+    expect(getPasswordValidationError("Aa1234567!")).toBe("PASSWORD_TWO_SPECIAL_REQUIRED");
+    expect(getPasswordValidationError("Aa12345 !!")).toBeNull();
     expect(getPasswordValidationError("Aa123456!پ")).toBe("PASSWORD_ENGLISH_ONLY");
     expect(getPasswordValidationError("Aa123!")).toBe("PASSWORD_TOO_SHORT");
     expect(passwordHasUppercase("Aa123456!!")).toBe(true);

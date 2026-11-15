@@ -74,10 +74,11 @@ describe("Password Service", () => {
   it("enforces the complete registration password policy", () => {
     expect(validatePasswordRequirements("1234567890")).toBe(false);
     expect(validatePasswordRequirements("Aa123456!!")).toBe(true);
+    expect(validatePasswordRequirements("Aa12345 !!")).toBe(true);
     expect(validatePasswordRequirements("aa123456!!")).toBe(false);
     expect(validatePasswordRequirements("AAabcdef!!")).toBe(false);
-    expect(validatePasswordRequirements("Aa123456!")).toBe(false);
-    expect(validatePasswordRequirements("Aa123456 !!")).toBe(false);
+    expect(validatePasswordRequirements("Aa1234567!")).toBe(false);
+    expect(validatePasswordRequirements("Aa123456! ")).toBe(false);
     expect(validatePasswordRequirements("Aa123456!پ")).toBe(false);
     expect(validatePasswordRequirements("A1!!" + "a".repeat(251))).toBe(true);
     expect(validatePasswordRequirements("A1!!" + "a".repeat(252))).toBe(false);

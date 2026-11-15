@@ -8,13 +8,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Dialog } from "@/components/Dialog";
-import { Check, Sparkles, ChevronRight, AlertCircle } from "lucide-react";
+import { Check, Sparkles, ChevronRight } from "lucide-react";
 
 export default function PricingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { language, direction } = useTheme();
-  const { session, register } = useAuth();
+  const { session } = useAuth();
   const isRtl = language === "fa";
 
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -25,11 +25,6 @@ export default function PricingPage() {
 
   // Authentication gate states for non-registered users in the pricing conversion flow
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authName, setAuthName] = useState("");
-  const [authEmail, setAuthEmail] = useState("");
-  const [authPassword, setAuthPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   const handlePlanSelection = React.useCallback((planName: string) => {
     setSelectedPlan(planName);
@@ -52,29 +47,6 @@ export default function PricingPage() {
       });
     }
   }, [searchParams, handlePlanSelection]);
-
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError("");
-    setIsAuthLoading(true);
-
-    try {
-      if (!authName.trim() || !authEmail.trim() || !authPassword.trim()) {
-        throw new Error(isRtl ? "لطفاً تمام فیلدها را پر کنید." : "Please fill in all details.");
-      }
-
-      await register(authName, authEmail, authPassword);
-
-      // Successfully authenticated, close auth modal and open Workspace Creation modal!
-      setIsAuthOpen(false);
-      setIsWorkspaceOpen(true);
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      setAuthError(errMsg);
-    } finally {
-      setIsAuthLoading(false);
-    }
-  };
 
   const handleWorkspaceCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,63 +246,28 @@ export default function PricingPage() {
 
       {/* 1. AUTHENTICATION GATE MODAL */}
       <Dialog isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} title={strings.registerTitle}>
-        <form onSubmit={handleAuthSubmit} className="space-y-4">
+        <div className="space-y-4">
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            {strings.registerDesc}
+            {isRtl
+              ? "برای ادامه، ثبت‌نام را در فرم رسمی انجام دهید. پس از تأیید ایمیل، به صفحه حساب کاربری منتقل می‌شوید."
+              : "Complete registration on the secure registration page. After email verification, you will be taken to your account page."}
           </p>
-
-          {authError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl flex items-center gap-2">
-              <AlertCircle size={14} className="shrink-0" />
-              <span className="font-bold">{authError}</span>
-            </div>
-          )}
-
-          <Input
-            label={isRtl ? "نام و نام خانوادگی" : "Full Name"}
-            placeholder="e.g. Seyed"
-            value={authName}
-            onChange={(e) => setAuthName(e.target.value)}
-            disabled={isAuthLoading}
-            required
-          />
-
-          <Input
-            type="email"
-            label={isRtl ? "ایمیل سازمانی" : "Enterprise Email"}
-            placeholder="e.g. business@company.com"
-            value={authEmail}
-            onChange={(e) => setAuthEmail(e.target.value)}
-            disabled={isAuthLoading}
-            required
-          />
-
-          <Input
-            type="password"
-            label={isRtl ? "رمز عبور" : "Password"}
-            placeholder="••••••••"
-            value={authPassword}
-            onChange={(e) => setAuthPassword(e.target.value)}
-            disabled={isAuthLoading}
-            required
-          />
-
-          <div className="flex items-center gap-3 justify-end pt-4 border-t border-[var(--border)]">
-            <Button variant="outline" type="button" onClick={() => setIsAuthOpen(false)} disabled={isAuthLoading}>
+          <div className="flex items-center justify-end gap-3 border-t border-[var(--border)] pt-4">
+            <Button variant="outline" type="button" onClick={() => setIsAuthOpen(false)}>
               {isRtl ? "انصراف" : "Cancel"}
             </Button>
-            <Button variant="primary" type="submit" disabled={isAuthLoading}>
-              {isAuthLoading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-1.5" />
-                  <span>{isRtl ? "در حال ثبت‌نام..." : "Creating..."}</span>
-                </>
-              ) : (
-                <span>{strings.registerBtn}</span>
-              )}
+            <Button
+              variant="primary"
+              type="button"
+              onClick={() => {
+                setIsAuthOpen(false);
+                router.push("/" + language + "/register");
+              }}
+            >
+              {strings.registerBtn}
             </Button>
           </div>
-        </form>
+        </div>
       </Dialog>
 
       {/* 2. WORKSPACE CREATION MODAL */}

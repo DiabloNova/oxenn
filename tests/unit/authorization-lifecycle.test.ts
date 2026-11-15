@@ -49,14 +49,18 @@ describe("Auth Lifecycle Tests", () => {
         const sql = typeof sqlOrObj === 'string' ? sqlOrObj : (sqlOrObj as {text?: string}).text || String(sqlOrObj);
 
         if (sql.includes("INSERT INTO users")) return { rowCount: 1 };
-        if (sql.includes("SELECT id FROM users WHERE email")) return { rows: [], rowCount: 0 }; // Register unique
+        if (sql.includes("SELECT id FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 }; // Registration email unique
+        if (sql.includes("SELECT user_id FROM user_profiles")) return { rows: [], rowCount: 0 }; // Username unique
+        if (sql.includes("SELECT id, email_verified_at FROM users")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", email_verified_at: null }], rowCount: 1 }; // Verification user lookup
+        if (sql.includes("INSERT INTO email_verification_tokens")) return { rows: [], rowCount: 1 };
+        if (sql.includes("UPDATE email_verification_tokens")) return { rows: [], rowCount: 1 };
         if (sql.includes("INSERT INTO auth_rate_limits")) return { rows: [{ attempts: 1 }], rowCount: 1 };
         if (sql.includes("INSERT INTO user_credentials")) {
            capturedHash = params[2] as string;
            capturedParams = params[4] as string;
            return { rowCount: 1 };
         }
-        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
+        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com", email_verified_at: new Date() }], rowCount: 1 }; // Verified login
         if (sql.includes("SELECT * FROM user_credentials WHERE user_id")) {
            return { rows: [{
               user_id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
@@ -83,11 +87,11 @@ describe("Auth Lifecycle Tests", () => {
 
   it("completes full auth lifecycle", async () => {
     // 1. Register
-    const registeredUser = await registerAction("Probe", "probe@example.com", "Password123");
-    expect((registeredUser as { id: string }).id).toBeDefined();
+    const registeredUser = await registerAction("Probe", "User", "probe@example.com", "Password123!!", "probeuser", "en");
+    expect(registeredUser).toMatchObject({ success: true, verificationEmailSent: true });
 
     // 2. Login
-    const loggedInUser = await loginAction("probe@example.com", "Password123");
+    const loggedInUser = await loginAction("probe@example.com", "Password123!!");
     expect(loggedInUser.email).toBe("probe@example.com");
 
     // 3. requireWorkspaceMembership (pass)

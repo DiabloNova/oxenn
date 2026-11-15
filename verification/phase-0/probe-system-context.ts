@@ -62,14 +62,12 @@ async function runProbe() {
   });
 
   // 2. registerAction
-  await testFunction("registerAction('Probe', 'probe@example.com', '***')", () =>
-    registerAction("Probe", "probe@example.com", "Password123")
+  await testFunction("registerAction('Probe', 'User', 'probe@example.com', '***', 'probeuser', 'en')", () =>
+    registerAction("Probe", "User", "probe@example.com", "Password123!!", "probeuser", "en")
   );
 
-  // 3. loginAction
-  await testFunction("loginAction('probe@example.com', '***')", () =>
-    loginAction("probe@example.com", "Password123")
-  );
+  // 3. Login is intentionally deferred until the verification code sent after registration is consumed.
+  console.log("3. loginAction: deferred until the probe email is verified; unverified accounts must not receive a session.");
 
   // Set up mock session for session-dependent functions
   const mockUser = {

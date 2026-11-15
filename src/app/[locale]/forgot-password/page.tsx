@@ -9,6 +9,7 @@ import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle, Mail, KeyRound } from "lucide-react";
 import { requestPasswordReset, confirmPasswordReset } from "@/app/actions/auth";
 import { useSearchParams } from "next/navigation";
+import { getEmailValidationError, getPasswordValidationError } from "@/services/auth/registration-validation";
 
 
 export default function ForgotPasswordPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -57,23 +58,52 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
 
   const validateForm = () => {
     if (isConfirmMode) {
-      if (!password || password.length < 10) {
-        setPasswordError(isFa ? "رمز عبور باید حداقل ۱۰ کاراکتر باشد." : "Password must be at least 10 characters.");
+      const errorCode = getPasswordValidationError(password);
+      if (errorCode) {
+        const messages: Record<string, string> = isFa ? {
+          PASSWORD_REQUIRED: "رمز عبور الزامی است.",
+          PASSWORD_TOO_SHORT: "رمز عبور باید حداقل ۱۰ نویسه باشد.",
+          PASSWORD_TOO_LONG: "رمز عبور نمی‌تواند بیشتر از ۲۵۵ نویسه باشد.",
+          PASSWORD_ENGLISH_ONLY: "رمز عبور باید فقط از نویسه‌های انگلیسی و ASCII استفاده کند.",
+          PASSWORD_UPPERCASE_REQUIRED: "رمز عبور باید حداقل یک حرف بزرگ انگلیسی داشته باشد.",
+          PASSWORD_NUMBER_REQUIRED: "رمز عبور باید حداقل یک عدد داشته باشد.",
+          PASSWORD_TWO_SPECIAL_REQUIRED: "رمز عبور باید حداقل دو کاراکتر خاص داشته باشد.",
+        } : {
+          PASSWORD_REQUIRED: "Password is required.",
+          PASSWORD_TOO_SHORT: "Password must contain at least 10 characters.",
+          PASSWORD_TOO_LONG: "Password cannot exceed 255 characters.",
+          PASSWORD_ENGLISH_ONLY: "Password must use English ASCII characters only.",
+          PASSWORD_UPPERCASE_REQUIRED: "Password must include at least one uppercase letter.",
+          PASSWORD_NUMBER_REQUIRED: "Password must include at least one number.",
+          PASSWORD_TWO_SPECIAL_REQUIRED: "Password must include at least two special characters.",
+        };
+        setPasswordError(messages[errorCode]);
         return false;
       }
       setPasswordError("");
       return true;
-    } else {
-      if (!email) {
-        setEmailError(isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.");
-        return false;
-      } else if (!/\S+@\S+\.\S+/.test(email)) {
-        setEmailError(isFa ? "لطفاً یک ایمیل معتبر وارد کنید." : "Please enter a valid email address.");
-        return false;
-      }
-      setEmailError("");
-      return true;
     }
+
+    const errorCode = getEmailValidationError(email);
+    if (errorCode) {
+      const messages: Record<string, string> = isFa ? {
+        EMAIL_REQUIRED: "وارد کردن ایمیل الزامی است.",
+        EMAIL_ENGLISH_ONLY: "ایمیل باید فقط شامل نویسه‌های انگلیسی باشد.",
+        EMAIL_DOMAIN_UPPERCASE: "دامنه ایمیل باید با حروف کوچک نوشته شود.",
+        EMAIL_HYPHEN_NOT_ALLOWED: "استفاده از خط فاصله در ایمیل مجاز نیست.",
+        EMAIL_INVALID_FORMAT: "قالب ایمیل باید مانند x@x.x باشد.",
+      } : {
+        EMAIL_REQUIRED: "Email is required.",
+        EMAIL_ENGLISH_ONLY: "Email must contain English ASCII characters only.",
+        EMAIL_DOMAIN_UPPERCASE: "The email domain must use lowercase letters only.",
+        EMAIL_HYPHEN_NOT_ALLOWED: "Hyphens are not allowed in email addresses.",
+        EMAIL_INVALID_FORMAT: "Email must use the x@x.x format.",
+      };
+      setEmailError(messages[errorCode]);
+      return false;
+    }
+    setEmailError("");
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,10 +116,20 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
     try {
       if (isConfirmMode && token) {
         await confirmPasswordReset(token, password);
+        setIsSuccess(true);
       } else {
-        await requestPasswordReset(email);
+        const result = await requestPasswordReset(email);
+        if (!result.success) {
+          const message = result.error === "EMAIL_DELIVERY_FAILED"
+            ? (isFa ? "ارسال ایمیل بازیابی ناموفق بود. لطفاً بعداً دوباره تلاش کنید." : "The recovery email could not be delivered. Please try again later.")
+            : result.error === "TooManyRequests"
+              ? (isFa ? "تعداد درخواست‌ها بیش از حد مجاز است. بعداً تلاش کنید." : "Too many requests. Try again later.")
+              : (isFa ? "آدرس ایمیل معتبر نیست." : "The email address is invalid.");
+          setSubmitError(message);
+        } else {
+          setIsSuccess(true);
+        }
       }
-      setIsSuccess(true);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("Invalid or expired token")) {
         setSubmitError(isFa ? "لینک بازیابی نامعتبر یا منقضی شده است." : "The reset link is invalid or has expired.");
@@ -167,6 +207,9 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
                     error={passwordError}
                     disabled={isLoading}
                     required
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                 ) : (
                   <Input
@@ -178,6 +221,9 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
                     error={emailError}
                     disabled={isLoading}
                     required
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                 )}
 

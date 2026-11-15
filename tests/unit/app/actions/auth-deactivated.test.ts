@@ -50,7 +50,7 @@ describe('Auth handling for deactivated users', () => {
 
     vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
 
-    const result = await registerAction('Deleted User', 'deleted@example.com', 'Password123');
+    const result = await registerAction('Deleted', 'User', 'deleted@example.com', 'Password123!!', 'deleteduser', 'en');
     expect(result).toEqual({ errorCode: 'USER_EXISTS' });
   });
 });

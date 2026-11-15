@@ -30,8 +30,8 @@ const RULES: VarRule[] = [
     name: "SESSION_SECRET",
     modes: ["dev", "build"],
     required: true,
-    format: /^.{16,}$/,
-    formatDescription: "must be at least 16 characters long",
+    format: /^(?!change-this-to-a-secure-32-character-secret-in-production$).{32,}$/,
+    formatDescription: "must be a unique non-placeholder secret of at least 32 characters",
   },
   {
     name: "ALLOW_DB_PUSH",
