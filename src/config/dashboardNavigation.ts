@@ -9,7 +9,8 @@ import {
   Network,
   LineChart,
   Receipt,
-  HelpCircle
+  HelpCircle,
+  UserRound
 } from "lucide-react";
 import React from "react";
 
@@ -185,6 +186,13 @@ export const dashboardNavigation: NavigationSection[] = [
     titleEn: "Administration",
     titleFa: "مدیریت سیستم",
     items: [
+      {
+        id: "profile",
+        labelEn: "My Account",
+        labelFa: "حساب کاربری",
+        href: "/dashboard/profile",
+        icon: UserRound
+      },
       {
         id: "settings",
         labelEn: "Workspace Settings",

@@ -10,7 +10,7 @@ const { target, connectionString } = resolveConfiguredDbPushTarget();
 assertDbPushGuardAttestation(target.id, connectionString);
 
 export default defineConfig({
-  schema: "./database/schema/index.ts",
+  schema: ["./database/schema/index.ts", "./database/schema/user-profile.ts"],
   out: "./database/drizzle",
   dialect: "postgresql",
   dbCredentials: { url: connectionString },

@@ -102,8 +102,8 @@ export async function verifyPassword(password: string, storedHash: string, store
 export const PASSWORD_MAX_LENGTH = 255;
 
 export function validatePasswordRequirements(password: string): boolean {
-  if (!password) return false;
-  if (password.length < 10) return false;
-  if (password.length > PASSWORD_MAX_LENGTH) return false;
-  return true;
+  if (!password || password.length < 10 || password.length > PASSWORD_MAX_LENGTH) return false;
+  if (!/^[\x21-\x7E]+$/.test(password)) return false;
+  if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) return false;
+  return (password.match(/[^A-Za-z0-9]/g) ?? []).length >= 2;
 }

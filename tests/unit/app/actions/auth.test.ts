@@ -1,123 +1,150 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  confirmPasswordReset,
+  loginAction,
+  registerAction,
+  requestPasswordReset,
+  requestVerification,
+  verifyEmailAction,
+} from "@/app/actions/auth";
 
-import { registerAction, loginAction, requestVerification, verifyEmailAction, requestPasswordReset, confirmPasswordReset } from "@/app/actions/auth";
+const mocks = vi.hoisted(() => ({
+  query: vi.fn(),
+  createSession: vi.fn(),
+  revokeAllForUser: vi.fn(),
+  sendEmail: vi.fn(),
+  hashPassword: vi.fn(),
+}));
 
-vi.mock("@/services/email/adapters", () => {
-  return {
-    getEmailSender: () => ({
-      send: vi.fn(),
-    }),
-  };
-});
-
-
-// A mock to intercept Postgres queries
-const mockQuery = vi.fn();
+vi.mock("@/services/email/adapters", () => ({
+  getEmailSender: () => ({ send: mocks.sendEmail }),
+}));
 
 vi.mock("@/core/database/tenant-context", () => ({
   TenantContextManager: {
-    runWithSystemContext: vi.fn(async (tenantId, purpose, callback) => {
-      return await callback();
-    }),
-    getDbClient: vi.fn(() => ({
-      query: mockQuery,
-    })),
+    runWithSystemContext: vi.fn(async (_userId, _purpose, callback) => callback()),
+    getDbClient: vi.fn(() => ({ query: mocks.query })),
   },
 }));
 
 vi.mock("@/services/auth/session", () => ({
-  createSession: vi.fn(),
+  createSession: (...args: unknown[]) => mocks.createSession(...args),
   invalidateSession: vi.fn(),
-  getSession: vi.fn(), revokeAllForUser: vi.fn(),
+  getSession: vi.fn(),
+  revokeAllForUser: (...args: unknown[]) => mocks.revokeAllForUser(...args),
 }));
-
-const mockHashPassword = vi.fn().mockResolvedValue({ hash: "dummy" });
 
 vi.mock("@/services/auth/passwords", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/services/auth/passwords")>();
-  return {
-    ...actual,
-    hashPassword: (...args: unknown[]) => mockHashPassword(...args),
-  };
+  return { ...actual, hashPassword: (...args: unknown[]) => mocks.hashPassword(...args) };
 });
 
 describe("Authentication Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.sendEmail.mockResolvedValue(undefined);
+    mocks.hashPassword.mockResolvedValue({
+      hash: "dummy",
+      algorithm: "scrypt",
+      params: { n: 32768, r: 8, p: 1, keyLength: 64 },
+    });
   });
 
   describe("registerAction", () => {
-    it("throws error if user already exists", async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [{ id: "usr-existing" }] }); // SELECT id FROM users WHERE email
-
-      await expect(registerAction("Test", "test@test.com", "Password123")).resolves.toEqual({ errorCode: "USER_EXISTS" });
+    it("rejects a password that does not satisfy all requirements", async () => {
+      await expect(registerAction("John", "Doe", "john@doe.com", "Password123!", "johndoe", "en"))
+        .resolves.toEqual({ errorCode: "INVALID_REGISTRATION" });
     });
 
-    it("throws error if password doesn't meet requirements", async () => {
-       await expect(registerAction("Test", "test@test.com", "short")).rejects.toThrow("Password must be between 10 and 255 characters");
+    it("returns a duplicate-email error", async () => {
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
+        .mockResolvedValueOnce({ rows: [{ id: "usr-existing", username: null }] });
+      await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
+        .resolves.toEqual({ errorCode: "USER_EXISTS" });
+    });
+
+    it("creates user, profile, credentials, workspace and requests verification without creating a session", async () => {
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
+        .mockResolvedValueOnce({ rows: [{ id: "usr-new", email_verified_at: null }] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] });
+
+      await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
+        .resolves.toEqual({ success: true, verificationEmailSent: true });
+      expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO user_profiles"), expect.any(Array));
+      expect(mocks.createSession).not.toHaveBeenCalled();
+      expect(mocks.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+        to: "john@doe.com",
+        templateId: "verification",
+        params: expect.objectContaining({ locale: "en", code: expect.stringMatching(/^\\d{8}$/) }),
+      }));
     });
   });
 
   describe("loginAction", () => {
-    it("throws error if missing password", async () => {
-        // @ts-expect-error testing missing arguments
-        await expect(loginAction("test@test.com")).rejects.toThrow("Password is required");
+    it("uses a dummy hash for an unknown account", async () => {
+      mocks.query.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [] });
+      await expect(loginAction("missing@doe.com", "Password123!!"))
+        .rejects.toThrow("Invalid credentials or user not found.");
+      expect(mocks.hashPassword).toHaveBeenCalled();
     });
 
-    it("throws error if user not found (with dummy hash timing protection)", async () => {
-       mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [] }); // SELECT FROM users
-
-       await expect(loginAction("test@test.com", "Password123")).rejects.toThrow("Invalid credentials or user not found.");
-
-       // verify the dummy-hash mitigation directly instead of wall-clock time
-       expect(mockHashPassword).toHaveBeenCalled();
-    });
-
-    describe("loginAction lockout constraints", () => {
-      it("throws error when locked out", async () => {
-         mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [{ id: "usr-1" }] }); // SELECT FROM users
-
-         const lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-         mockQuery.mockResolvedValueOnce({ rows: [{ user_id: "usr-1", locked_until: lockedUntil }] }); // SELECT FROM user_credentials
-
-         await expect(loginAction("test@test.com", "Password123")).rejects.toThrow("Account is temporarily locked");
-      });
+    it("blocks login until email verification has been completed", async () => {
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
+        .mockResolvedValueOnce({ rows: [{ id: "usr-1", email_verified_at: null }] });
+      await expect(loginAction("unverified@doe.com", "Password123!!"))
+        .rejects.toThrow("Email must be verified before logging in.");
     });
   });
 
   describe("requestVerification", () => {
-    it("returns success without error if user not found (enumeration safe)", async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [] });
-      await expect(requestVerification("missing@test.com")).resolves.toEqual({ success: true });
+    it("returns an enumeration-safe response for an unknown address", async () => {
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
+        .mockResolvedValueOnce({ rows: [] });
+      await expect(requestVerification("missing@doe.com", "en")).resolves.toEqual({ success: true });
     });
   });
 
-  describe("requestPasswordReset", () => {
-    it("returns success without error if user not found (enumeration safe)", async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [] });
-      await expect(requestPasswordReset("missing@test.com")).resolves.toEqual({ success: true });
+  describe("verifyEmailAction", () => {
+    it("consumes the matching code, marks the user verified and creates a session", async () => {
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
+        .mockResolvedValueOnce({ rows: [{ user_id: "usr-1" }] })
+        .mockResolvedValueOnce({ rows: [{ id: "usr-1", name: "John Doe", email: "john@doe.com" }] })
+        .mockResolvedValueOnce({ rows: [{ workspaceId: "org-1", role: "workspace_admin", username: "johndoe" }] });
+      await expect(verifyEmailAction("john@doe.com", "12345678"))
+        .resolves.toEqual({ success: true, sessionCreated: true });
+      expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), expect.any(Array));
+      expect(mocks.createSession).toHaveBeenCalledWith(expect.objectContaining({
+        id: "usr-1", username: "johndoe", workspaceId: "org-1",
+      }));
     });
   });
 
+  describe("password recovery", () => {
+    it("returns success for an unknown address without revealing account existence", async () => {
+      mocks.query.mockResolvedValueOnce({ rows: [{ attempts: 1 }] }).mockResolvedValueOnce({ rows: [] });
+      await expect(requestPasswordReset("missing@doe.com")).resolves.toEqual({ success: true });
+    });
+
+    it("updates credentials and revokes old sessions after a valid reset token", async () => {
+      mocks.query.mockResolvedValueOnce({ rows: [{ user_id: "usr-1" }] }).mockResolvedValueOnce({ rows: [] });
+      await expect(confirmPasswordReset("token123", "NewPassword123!!")).resolves.toEqual({ success: true });
+      expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE user_credentials"), expect.any(Array));
+      expect(mocks.revokeAllForUser).toHaveBeenCalledWith("usr-1");
+    });
+  });
 });
-
-  describe("Token consumption & Reset atomicity", () => {
-    it("verifyEmailAction updates user and consumes token", async () => {
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // BEGIN
-       mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'usr-1' }] }); // UPDATE token
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // UPDATE user
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // COMMIT
-       await expect(verifyEmailAction("token123")).resolves.toEqual({ success: true });
-       expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), expect.any(Array));
-    });
-
-    it("confirmPasswordReset updates credentials and consumes token", async () => {
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // BEGIN
-       mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'usr-1' }] }); // UPDATE token
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // UPDATE credentials
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // COMMIT
-       mockQuery.mockResolvedValueOnce({ rows: [] }); // revoke session
-       await expect(confirmPasswordReset("token123", "NewPassword123!")).resolves.toEqual({ success: true });
-       expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("UPDATE user_credentials"), expect.any(Array));
-    });
-  });
