@@ -7,9 +7,10 @@ import { shouldSkipHomepageSessionLookup } from "@/lib/auth/route-policy";
 
 export function RouteAwareAuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const skipSessionCheck = shouldSkipHomepageSessionLookup(pathname);
 
   return (
-    <AuthProvider skipSessionCheck={shouldSkipHomepageSessionLookup(pathname)}>
+    <AuthProvider key={skipSessionCheck ? "public-home" : "workspace"} skipSessionCheck={skipSessionCheck}>
       {children}
     </AuthProvider>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, Session, UserRole } from "@/types/auth";
+import { Session, UserRole } from "@/types/auth";
 import { loginAction, logoutAction, getServerSessionAction, registerAction } from "@/app/actions/auth";
 
 interface AuthContextType {
@@ -13,6 +13,11 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const PUBLIC_UNAUTHENTICATED_SESSION: Session = {
+  user: null,
+  expiresAt: null,
+  status: "unauthenticated",
+};
 
 export function AuthProvider({
   children,
@@ -29,41 +34,33 @@ export function AuthProvider({
 
   useEffect(() => {
     if (skipSessionCheck) {
-      // The public homepage does not need Workspace-backed identity. Keep its
-      // context unauthenticated without calling the DB-backed session action.
+      // Public marketing pages do not need Workspace-backed identity.
       localStorage.removeItem("auth_session_user");
-      setSession({
-        user: null,
-        expiresAt: null,
-        status: "unauthenticated",
-      });
       return;
     }
 
-    // Check the authoritative server-side session first on auth/workspace routes.
+    let active = true;
     getServerSessionAction()
       .then((serverSession) => {
+        if (!active) return;
         if (serverSession.status === "authenticated" && serverSession.user) {
           localStorage.setItem("auth_session_user", JSON.stringify(serverSession.user));
           setSession(serverSession);
         } else {
           localStorage.removeItem("auth_session_user");
-          setSession({
-            user: null,
-            expiresAt: null,
-            status: "unauthenticated",
-          });
+          setSession(PUBLIC_UNAUTHENTICATED_SESSION);
         }
       })
       .catch((err) => {
+        if (!active) return;
         console.error("Failed to fetch authoritative server session:", err);
         localStorage.removeItem("auth_session_user");
-        setSession({
-          user: null,
-          expiresAt: null,
-          status: "unauthenticated",
-        });
+        setSession(PUBLIC_UNAUTHENTICATED_SESSION);
       });
+
+    return () => {
+      active = false;
+    };
   }, [skipSessionCheck]);
 
   const login = async (email: string, password: string) => {
@@ -78,7 +75,7 @@ export function AuthProvider({
         status: "authenticated",
       });
     } catch (e) {
-      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+      setSession(PUBLIC_UNAUTHENTICATED_SESSION);
       throw e;
     }
   };
@@ -91,9 +88,9 @@ export function AuthProvider({
       if ("errorCode" in result) {
         throw Object.assign(new Error("Registration failed."), { code: result.errorCode });
       }
-      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+      setSession(PUBLIC_UNAUTHENTICATED_SESSION);
     } catch (e) {
-      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+      setSession(PUBLIC_UNAUTHENTICATED_SESSION);
       throw e;
     }
   };
@@ -103,21 +100,23 @@ export function AuthProvider({
     await new Promise((resolve) => setTimeout(resolve, 400));
     localStorage.removeItem("auth_session_user");
     await logoutAction();
-    setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+    setSession(PUBLIC_UNAUTHENTICATED_SESSION);
   };
 
+  const effectiveSession = skipSessionCheck ? PUBLIC_UNAUTHENTICATED_SESSION : session;
+
   const hasPermission = (requiredRole: UserRole): boolean => {
-    if (!session.user) return false;
+    if (!effectiveSession.user) return false;
     const roleHierarchy: Record<UserRole, number> = {
       super_admin: 3,
       workspace_admin: 2,
       viewer: 1,
     };
-    return roleHierarchy[session.user.role] >= roleHierarchy[requiredRole];
+    return roleHierarchy[effectiveSession.user.role] >= roleHierarchy[requiredRole];
   };
 
   return (
-    <AuthContext.Provider value={{ session, login, register, logout, hasPermission }}>
+    <AuthContext.Provider value={{ session: effectiveSession, login, register, logout, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

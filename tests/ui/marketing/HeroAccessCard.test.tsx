@@ -20,18 +20,20 @@ describe("HeroAccessCard", () => {
     cleanup();
   });
 
-  it("offers the English email access form to unauthenticated visitors", () => {
+  it("offers the English account form to unauthenticated visitors", () => {
     render(<HeroAccessCard locale="en" />);
 
-    expect(screen.getByRole("heading", { name: "Access the workspace" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Business email" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Access live sandbox demo" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Start with your account" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Email" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue with email" })).toBeInTheDocument();
+    expect(screen.queryByText(/sandbox demo/i)).not.toBeInTheDocument();
   });
 
-  it("localizes the access heading in Farsi", () => {
+  it("localizes the account heading in Farsi", () => {
     render(<HeroAccessCard locale="fa" />);
 
-    expect(screen.getByRole("heading", { name: "ورود سریع به میز کار" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "با حساب کاربری خود شروع کنید" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "ایمیل" })).toBeInTheDocument();
   });
 
   it("sends authenticated Farsi visitors to their dashboard", () => {
@@ -50,7 +52,7 @@ describe("HeroAccessCard", () => {
     render(<HeroAccessCard locale="fa" />);
 
     expect(screen.getByText("owner@acme.test")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ورود به پیشخوان کاربری" })).toHaveAttribute("href", "/fa/dashboard");
-    expect(screen.queryByRole("textbox", { name: "ایمیل سازمانی" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ورود به فضای کاری" })).toHaveAttribute("href", "/fa/dashboard");
+    expect(screen.queryByRole("textbox", { name: "ایمیل" })).not.toBeInTheDocument();
   });
 });
