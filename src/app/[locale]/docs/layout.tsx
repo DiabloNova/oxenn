@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Search, Menu, X, Home } from "lucide-react";
 import { DOCS_INDEX } from "@/lib/docsIndex";
+import { encodeDocRouteToken } from "@/lib/docs-viewer-links";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 
 interface DocsLayoutProps {
@@ -41,7 +42,8 @@ export default function DocsLayout({ children, params }: DocsLayoutProps) {
 
   const categories = Object.keys(categoriesMap);
 
-  const isActiveDoc = (slug: string) => pathname?.includes(`/docs/${slug}`);
+  const isActiveDoc = (topic: (typeof DOCS_INDEX)[number]) =>
+    pathname?.endsWith(`/docs/${encodeDocRouteToken(topic.id)}`) || pathname?.endsWith(`/docs/${topic.slug}`);
 
   const renderSidebarContent = () => (
     <div className="flex flex-col h-full bg-slate-950 text-white border-r border-l border-white/10">
@@ -78,11 +80,11 @@ export default function DocsLayout({ children, params }: DocsLayoutProps) {
               </h3>
               <div className="space-y-1">
                 {categoryTopics.map((topic) => {
-                  const active = isActiveDoc(topic.slug);
+                  const active = isActiveDoc(topic);
                   return (
-                    <div key={topic.slug} className="mb-2">
+                    <div key={topic.id} className="mb-2">
                       <Link
-                        href={`/${locale}/docs/${topic.slug}`}
+                        href={`/${locale}/docs/${encodeDocRouteToken(topic.id)}`}
                         onClick={() => setMobileSidebarOpen(false)}
                         className={`flex flex-col gap-1.5 px-3 py-2.5 rounded-xl border transition-all ${
                           active

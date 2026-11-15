@@ -8,7 +8,7 @@ visibility: internal
 **Status:** Normative architecture contract for the documentation-registry workstream  
 **Prepared against:** `DiabloNova/oxenn` `main@b56517bc436a8cd03ef75bfac8adbf43c8567753`  
 **Scope:** Document structure, identity, canonical paths, collections, publication policy, compatibility, and implementation acceptance gates  
-**Implementation status:** Contract only. This document does not authorize runtime, UI, API, generator, dependency, deployment, or database changes.
+**Implementation status:** Stage 1 contract adopted. Stage 2 is authorized on the isolated branch `docs/documentation-registry-contract-2026-11-15`; no main merge, PR, production deployment, or database change is authorized by this status.
 
 ---
 
@@ -73,7 +73,7 @@ The `docs/project/` exclusion is a publication boundary for the legacy public-fa
 - Language-specific canonical sources currently include `docs/public/fa/README.md` and `docs/public/en/README.md`.
 - Route: `/[locale]/public-docs`.
 - This collection must not be inserted into the legacy engineering `DOCS_INDEX` or served through the legacy engineering docs API.
-- The existing dedicated public-docs implementation uses fixed, allowlisted source paths at static generation time. Preserve that separation.
+- The dedicated `/[locale]/public-docs` page resolves only the localized canonical IDs `product-public:fa/README.md` and `product-public:en/README.md` from the generated product-public registry. It performs no request-time filesystem access.
 
 A shared build orchestration process may validate or generate both collections, but their registries, publication decisions, route contracts, and client-facing indexes remain logically separate. A shared generator does not imply a shared public document list.
 
@@ -182,7 +182,10 @@ Full Markdown content belongs only in the server-side content registry. It must 
 
 Both generated outputs must be produced from the same validated source snapshot and carry the same schema version. A metadata entry must never point to missing or mismatched content.
 
-The final packaging shape (one server-only generated module versus multiple statically imported content modules) is intentionally deferred until the total approved corpus size and Next.js build-tracing behavior are measured. Whichever shape is selected must use statically analyzable imports/paths and must not reintroduce request-time directory discovery.
+The selected packaging shape is one statically imported server-only generated content module for the measured 65-document corpus. It must not reintroduce request-time directory discovery.
+
+**Stage 2 implementation decision:** The reviewed baseline contains 63 engineering documents and 2 product-public documents (65 published documents; approximately 520 KB of full Markdown content). A single generated src/lib/docsContent.ts server-only module is selected for this corpus. The client-safe src/lib/docsIndex.ts contains metadata and snippets only. Re-measure before splitting into static shards if the approved corpus grows materially.
+
 
 ## 7. Publication and visibility policy
 
@@ -219,6 +222,8 @@ Before enforcement, Stage 2 must:
 5. Compare old and new exposure sets. Any addition or removal must be individually explained and approved; the migration must not expand exposure by default.
 6. Only then switch the generator and runtime to the explicit fail-closed policy.
 
+**Stage 2 migration baseline:** The existing generated engineering DOCS_INDEX contained 63 source paths on main@b56517bc436a8cd03ef75bfac8adbf43c8567753. These exact paths are retained in scripts/docs-publication-baseline.ts; they remain public only as a reviewed legacy migration set. New or newly discovered documents require explicit visibility: public. The old API's slug-only README resolution was non-deterministic and collapsed multiple indexed README documents onto the first match; the canonical-ID API makes the already-indexed documents individually addressable. This behavior correction must not be interpreted as permission to add new source paths to the legacy baseline.
+
 Existing files without visibility metadata remain in a migration state until classified. They must not be silently assumed public merely because the legacy helper did so, and they must not be silently dropped without the baseline comparison and owner-visible disposition.
 
 ### 7.4 Defense in depth
@@ -248,7 +253,7 @@ Not-found responses for internal, draft, and nonexistent documents must not disc
 
 ### 9.1 Canonical lookup
 
-The preferred lookup selector is `id`. The API resolves that exact ID against the approved public registry and returns the existing response shape:
+The preferred lookup selector is id. The engineering UI uses an ID-derived route token so duplicate slugs remain independently addressable without relying on request-time filesystem paths. The API resolves that exact ID against the approved public registry and returns the existing response shape:
 
 ```json
 {
@@ -330,56 +335,50 @@ Implementation cannot be considered complete until all applicable gates pass:
 
 ## 12. Non-goals and explicit exclusions
 
-This contract does not authorize:
+The approved Stage 2 implementation does not authorize:
 
-- implementing the registry, changing the API, UI, generator, or visibility helper;
-- modifying the public-docs route or PR #145;
-- modifying the marketing homepage or PR #146;
-- taking over or force-claiming TASK-6, which is already claimed by Codex;
-- changing other branches, merging, opening a PR, or deploying;
-- deleting `docsData.ts` or other generated artifacts before consumer inventory;
-- adding a Markdown/YAML dependency;
+- modifying the marketing homepage, landing header/footer, or the separate homepage redesign task/PR #146;
+- modifying the PR #145 branch, merging PR #145, or changing main;
+- opening a PR, merging any branch, or deploying to production;
+- deleting docsData.ts or other legacy artifacts before a separate consumer-parity decision;
+- adding a Markdown/YAML parser dependency;
 - changing authentication, authorization, or database behavior;
-- broad documentation cleanup or renaming.
+- broad documentation cleanup, renaming, or unrelated refactoring.
 
-## 13. Implementation sequence after this contract
+## 13. Approved Stage 2 execution record
 
-The next implementation phase must start with a fresh read-only reconciliation of `main`, PR #145, the active branch/claim for TASK-6, and all docs-related consumers. The implementation branch must be isolated and its base selected from the then-current, verified merge candidate.
+The user approved the revised Stage 2 scope on 2026-11-15, with the explicit priority of delivering the public product documentation page on the site. Work is restricted to the existing Stage 1 branch, docs/documentation-registry-contract-2026-11-15. No branch creation, PR creation, merge, main update, or production deployment is authorized.
 
-Recommended sequence:
+The implementation sequence is:
 
-1. Inventory every source document, current API-visible document, route consumer, index consumer, and content-data consumer.
-2. Produce and review the explicit legacy publication migration map.
-3. Implement the versioned registry schema and generator outputs with parity tests.
-4. Migrate API lookup to exact ID while preserving unambiguous legacy selectors.
-5. Migrate UI and relative-link resolution to canonical IDs.
-6. Verify privacy boundaries, generated artifact drift, Next.js tracing, bundle size, and the full required test/build gates.
-7. Remove legacy data only after consumer parity and regression evidence prove it is safe.
+1. Reconcile the exact Stage 1 branch, current main, and open PR #145 without modifying PR #145.
+2. Port the bilingual public product documentation content and page into the Stage 1 branch.
+3. Extend the existing build-time generator to produce the client-safe metadata indexes and the server-only full-content registry from one validated snapshot.
+4. Keep engineering and product-public collections separate, using the explicit 63-path legacy engineering publication baseline and explicit visibility for new documents.
+5. Migrate the docs API and engineering UI to canonical IDs while retaining unambiguous legacy selectors and returning conflict for ambiguous slug-only selectors.
+6. Validate generated output parity, visibility, collection isolation, symlink/path safety, link resolution, static page generation, and the required test/build gates.
+7. Keep docsData.ts until a separate decision confirms that removal is safe.
 
-No implementation phase is authorized by this contract alone; it requires the user's separate approval.
-
----
+TASK-6 was force-claimed on 2026-11-15, but its original filesystem-tracing repair description remains distinct from the broader Stage 2 registry/page scope. Track Stage 2 separately rather than silently redefining TASK-6.
 
 ## 14. Repository evidence and unresolved items
 
-### Verified on the contract baseline
+### Verified during Stage 2 pre-implementation audit
 
-- `src/app/api/v1/docs/route.ts` uses runtime `fs.existsSync`, `fs.readdirSync`, and `fs.readFileSync` with breadth-first directory traversal.
-- `src/lib/docs-visibility.ts` treats documents as public unless it finds an explicit internal visibility declaration.
-- `tests/unit/api/v1/docs.test.ts` covers internal front matter, public documents, nested README/domain behavior, and relative Markdown link rewriting.
-- `scripts/docs-index-generator.ts` is part of the existing build-time generation path.
-- `src/lib/docsIndex.ts` is a generated metadata index; `src/lib/docsData.ts` is a separate content dataset.
-- PR #145 is open and includes public product docs, a public-docs route, and a change to exclude `docs/public` from the legacy generator. Its changes are not part of the recorded `main` baseline.
-- TASK-6 is still in progress and claimed by Codex. This contract does not supersede or take over that claim.
-- Next.js documentation explains that dynamically analyzed filesystem access can cause broad project tracing; explicit includes/excludes are available for exceptional tracing cases. The preferred contract is to avoid request-time dynamic discovery rather than paper over it with broad tracing includes.
+- The Stage 1 branch remains based on main@b56517bc436a8cd03ef75bfac8adbf43c8567753 and contained the contract commit only before Stage 2 changes.
+- PR #145 remains open and separate. Its bilingual public-docs content and renderer are being ported into the Stage 1 branch; the PR branch itself is not modified.
+- The old docs API used runtime filesystem traversal and returned the first README match before applying the README/domain branch, causing ambiguous README selectors.
+- The legacy engineering metadata index contained 63 source paths, including duplicate slugs. These 63 paths are retained as an explicit migration baseline; new documents without visibility metadata remain excluded.
+- The product-public collection contains two localized sources and is kept out of the engineering metadata index and API.
+- The audited source tree contained 530 code files. No executable consumer of DOCS_TOPICS from docsData.ts was found outside docsData.ts; this does not authorize deleting that file.
+- The measured published content set is 65 documents (63 engineering and 2 product-public), approximately 520 KB of Markdown content.
+- TASK-6 was force-claimed by the current implementation session; its original scope has not been rewritten.
 
-### Unresolved until implementation discovery
+### Remaining verification gates
 
-- The complete consumer set for `docsData.ts` has not yet been proven exhaustive.
-- The complete consumer set for all docs API selectors and `docs-viewer-links.ts` must be established before changing their contracts.
-- The exact approved public set for legacy engineering docs requires an explicit migration inventory and owner review.
-- The total size of the approved Markdown corpus must be measured before selecting one generated module or statically imported shards.
-- The final HTTP status/body for ambiguous legacy lookup must be fixed with consumer compatibility evidence.
-- PR #145 may change before merge; its final merged state must be re-inspected rather than assumed from this snapshot.
-
-These items are deliberate gates, not permission to guess. When evidence is incomplete, implementation must stop at the affected boundary and report the missing evidence.
+- Run the generator from the committed source in a clean checkout and confirm generated artifacts are byte-for-byte deterministic.
+- Run frozen-lockfile installation, focused unit/UI tests, full relevant test suites, typecheck, lint, and production build.
+- Verify Next.js tracing no longer reports request-time dynamic filesystem access for the docs API/public page.
+- Verify the public page is statically generated, publicly reachable without authentication, and renders Persian RTL/English LTR content correctly.
+- Inspect CI results and any preview deployment; no production deployment or merge is authorized.
+- The old marketing homepage/footer contains stale legacy docs links. They remain outside this Stage 2 scope because the homepage redesign is a separate active task.

@@ -1,3 +1,3 @@
-import { generateDocsIndex } from "./docs-index-generator";
+import { generateDocsRegistry } from "./docs-index-generator";
 
-generateDocsIndex();
+generateDocsRegistry();

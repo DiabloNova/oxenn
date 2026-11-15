@@ -1,12 +1,11 @@
 "use client";
 
 import React, { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { DOCS_INDEX } from "@/lib/docsIndex";
 import { ArrowLeft, Clock, Tag, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import DOMPurify from 'dompurify';
-import { rewriteRelativeMarkdownLinks } from "@/lib/docs-viewer-links";
+import { decodeDocRouteToken, rewriteRelativeMarkdownLinks } from "@/lib/docs-viewer-links";
 
 interface DocDetailPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -16,7 +15,7 @@ export default function DocDetailPage({ params }: DocDetailPageProps) {
   const resolvedParams = use(params);
   const locale = resolvedParams.locale;
   const slug = resolvedParams.slug;
-  const router = useRouter();
+  const requestedId = decodeDocRouteToken(slug);
   const isFa = locale === "fa";
 
   const [content, setContent] = useState<string | null>(null);
@@ -24,7 +23,9 @@ export default function DocDetailPage({ params }: DocDetailPageProps) {
   const [loading, setLoading] = useState(true);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-  const topicMeta = DOCS_INDEX.find((t) => t.slug === slug);
+  const topicMeta = requestedId
+    ? DOCS_INDEX.find((topic) => topic.id === requestedId)
+    : DOCS_INDEX.find((topic) => topic.slug === slug);
 
   useEffect(() => {
     async function loadContent() {
@@ -40,7 +41,10 @@ export default function DocDetailPage({ params }: DocDetailPageProps) {
            domain = "root";
         }
 
-        const res = await fetch(`/api/v1/docs?slug=${fetchSlug}&domain=${domain}`);
+        const selector = requestedId
+          ? `id=${encodeURIComponent(requestedId)}`
+          : `slug=${encodeURIComponent(fetchSlug)}&domain=${encodeURIComponent(domain)}`;
+        const res = await fetch(`/api/v1/docs?${selector}`);
         if (!res.ok) {
           setContent(null);
           setContentPath(null);
@@ -57,7 +61,7 @@ export default function DocDetailPage({ params }: DocDetailPageProps) {
       }
     }
     loadContent();
-  }, [slug]);
+  }, [slug, requestedId]);
 
   if (loading) {
     return <div className="p-10 animate-pulse bg-white/5 rounded-3xl h-64"></div>;

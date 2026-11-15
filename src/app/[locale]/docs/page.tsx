@@ -3,6 +3,7 @@
 import React, { use } from "react";
 import Link from "next/link";
 import { DOCS_INDEX } from "@/lib/docsIndex";
+import { encodeDocRouteToken } from "@/lib/docs-viewer-links";
 import { BookOpen, ShieldCheck, Cpu, Library, HelpCircle, ArrowRight, Server, Terminal, Lock, Box, Grid } from "lucide-react";
 
 export default function DocsIndexPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -73,8 +74,8 @@ export default function DocsIndexPage({ params }: { params: Promise<{ locale: st
                 <div className="grid grid-cols-2 gap-2 text-[10px]">
                   {categoryTopics.slice(0, 4).map((topic) => (
                     <Link
-                      key={topic.slug}
-                      href={`/${locale}/docs/${topic.slug}`}
+                      key={topic.id}
+                      href={`/${locale}/docs/${encodeDocRouteToken(topic.id)}`}
                       className="text-slate-400 hover:text-[var(--sky-blue-500)] truncate transition-colors"
                     >
                       • {isFa ? topic.titleFa : topic.titleEn}
