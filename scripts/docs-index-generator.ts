@@ -75,7 +75,8 @@ function getAllDocs(docsRoot: string, currentDirectory = docsRoot): DocMeta[] {
   for (const entry of entries) {
     const res = path.resolve(currentDirectory, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name !== "project" && entry.name !== "images") {
+      const isTopLevelPublicDocs = path.resolve(currentDirectory) === path.resolve(docsRoot) && entry.name === "public";
+      if (!isTopLevelPublicDocs && entry.name !== "project" && entry.name !== "images") {
         docs = docs.concat(getAllDocs(docsRoot, res));
       }
     } else if (entry.name.endsWith(".md")) {
