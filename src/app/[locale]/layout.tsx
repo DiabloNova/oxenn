@@ -1,7 +1,7 @@
 import React from "react";
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
-import { AuthProvider } from "@/components/AuthProvider";
+import { RouteAwareAuthProvider } from "@/components/auth/RouteAwareAuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { persianPrimary, persianDisplay } from "@/config/fonts";
 import { isSupportedLocale } from "@/config/i18n";
@@ -38,11 +38,11 @@ export default async function RootLayout({ children, params }: LayoutProps) {
     <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"} className={fontClasses} style={{ backgroundColor: "var(--background)" }}>
       <body>
         <ThemeProvider initialLanguage={locale}>
-          <AuthProvider>
+          <RouteAwareAuthProvider>
             {children}
             <FloatingSidebar />
             <GlobalNavigationControls />
-          </AuthProvider>
+          </RouteAwareAuthProvider>
         </ThemeProvider>
       </body>
     </html>

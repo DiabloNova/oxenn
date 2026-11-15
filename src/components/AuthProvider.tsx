@@ -14,25 +14,39 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session>(() => {
-    return {
-      user: null,
-      expiresAt: null,
-      status: "loading",
-    };
-  });
+export function AuthProvider({
+  children,
+  skipSessionCheck = false,
+}: {
+  children: React.ReactNode;
+  skipSessionCheck?: boolean;
+}) {
+  const [session, setSession] = useState<Session>(() => ({
+    user: null,
+    expiresAt: null,
+    status: "loading",
+  }));
 
   useEffect(() => {
-    // Check the authoritative server-side session first
+    if (skipSessionCheck) {
+      // The public homepage does not need Workspace-backed identity. Keep its
+      // context unauthenticated without calling the DB-backed session action.
+      localStorage.removeItem("auth_session_user");
+      setSession({
+        user: null,
+        expiresAt: null,
+        status: "unauthenticated",
+      });
+      return;
+    }
+
+    // Check the authoritative server-side session first on auth/workspace routes.
     getServerSessionAction()
       .then((serverSession) => {
         if (serverSession.status === "authenticated" && serverSession.user) {
-          // Synchronize local storage with the authoritative server identity
           localStorage.setItem("auth_session_user", JSON.stringify(serverSession.user));
           setSession(serverSession);
         } else {
-          // If no server session, clear client-controlled identity completely (fail closed)
           localStorage.removeItem("auth_session_user");
           setSession({
             user: null,
@@ -43,7 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((err) => {
         console.error("Failed to fetch authoritative server session:", err);
-        // Fallback safely to unauthenticated to prevent unauthorized layout bypass
         localStorage.removeItem("auth_session_user");
         setSession({
           user: null,
@@ -51,62 +64,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           status: "unauthenticated",
         });
       });
-  }, []);
+  }, [skipSessionCheck]);
 
   const login = async (email: string, password: string) => {
     setSession((prev) => ({ ...prev, status: "loading" }));
-
     try {
-      // Prepare for future backend API integration here
-      // e.g. const res = await fetch("/api/v1/auth/login", { ... })
       await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // Secure server-side login strictly on the server to prevent client-controlled spoofing
       const user = await loginAction(email, password);
-
       localStorage.setItem("auth_session_user", JSON.stringify(user));
-
       setSession({
         user,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         status: "authenticated",
       });
     } catch (e) {
-      setSession({
-        user: null,
-        expiresAt: null,
-        status: "unauthenticated",
-      });
+      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
       throw e;
     }
   };
 
   const register = async (name: string, email: string, password: string, workspaceName?: string) => {
     setSession((prev) => ({ ...prev, status: "loading" }));
-
     try {
-      // Prepare for future backend API integration here
-      // e.g. const res = await fetch("/api/v1/auth/register", { ... })
       await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // Secure server-side registration strictly on the server to prevent client-controlled spoofing
       const result = await registerAction(name, email, password, workspaceName);
       if ("errorCode" in result) {
         throw Object.assign(new Error("Registration failed."), { code: result.errorCode });
       }
-
-      // Do NOT sign in the user after register, because registration does not create a session
-      setSession({
-        user: null,
-        expiresAt: null,
-        status: "unauthenticated",
-      });
+      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
     } catch (e) {
-      setSession({
-        user: null,
-        expiresAt: null,
-        status: "unauthenticated",
-      });
+      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
       throw e;
     }
   };
@@ -114,32 +101,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setSession((prev) => ({ ...prev, status: "loading" }));
     await new Promise((resolve) => setTimeout(resolve, 400));
-
     localStorage.removeItem("auth_session_user");
-
-    // Clear secure server-side cookies
     await logoutAction();
-
-    setSession({
-      user: null,
-      expiresAt: null,
-      status: "unauthenticated",
-    });
+    setSession({ user: null, expiresAt: null, status: "unauthenticated" });
   };
 
   const hasPermission = (requiredRole: UserRole): boolean => {
     if (!session.user) return false;
-
     const roleHierarchy: Record<UserRole, number> = {
       super_admin: 3,
       workspace_admin: 2,
       viewer: 1,
     };
-
-    const userRoleValue = roleHierarchy[session.user.role];
-    const requiredRoleValue = roleHierarchy[requiredRole];
-
-    return userRoleValue >= requiredRoleValue;
+    return roleHierarchy[session.user.role] >= roleHierarchy[requiredRole];
   };
 
   return (
