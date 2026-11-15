@@ -23,7 +23,7 @@
 | Findings blocked / historical-only | 3 |
 | Findings with confirmed issues | 61 |
 | Findings already fixed in repository | 1 |
-| Findings needing a product/security decision | 3 |
+| Findings needing a product/security decision | 2 |
 | Findings not started | 20 |
 | Open implementation waves | 7 (not started) |
 
@@ -76,7 +76,7 @@ Never invent command output, test results, CI state, commit hashes, approval, or
 
 ## 4. Finding ledger — all 97 individual records
 
-The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At main@9ac5fe0, 77 of 97 findings had been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked; 20 remained Not started. PR #139 moves SCR-002 from Confirmed to Implemented — verification pending. The current 97-row ledger therefore records 61 Confirmed, 4 Verified complete, 5 Implemented — verification pending, 1 Already fixed, 3 Needs decision, 3 Blocked, and 20 Not started. VER-005 and VER-006 remain historical-only and DO NOT RUN; VER-013 is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. The historical project-wide Wave 0 exit condition remains incomplete; under WAVE0_POLICY_SUPERSESSION.md, it is not a universal prerequisite for independently approved, task-specific remediation.
+The wave column is a proposed dependency placement, not proof that a finding has been approved for implementation. At main@9ac5fe0, 77 of 97 findings had been revalidated: 63 Confirmed, 4 Verified complete, 3 Implemented — verification pending, 1 Already fixed, 3 Needs decision, and 3 Blocked; 20 remained Not started. PR #139 moves SCR-002 from Confirmed to Implemented — verification pending. The current audit-branch ledger therefore records 61 Confirmed, 4 Verified complete, 6 Implemented — verification pending, 1 Already fixed, 2 Needs decision, 3 Blocked, and 20 Not started. The two branch-only implementations counted here are SRC-018 and RF-009; both remain verification-pending and have not been revalidated against the synchronized main@b56517b yet. VER-005 and VER-006 remain historical-only and DO NOT RUN; VER-013 is blocked pending its 2026-11-19 advisory recheck. Repository/CI verification does not establish production database or runtime state. The historical project-wide Wave 0 exit condition remains incomplete; under WAVE0_POLICY_SUPERSESSION.md, it is not a universal prerequisite for independently approved, task-specific remediation.
 
 | Finding | Planned stage | Current status | Verified commit | Evidence / log |
 |---|---|---|---|---|
@@ -88,7 +88,7 @@ The wave column is a proposed dependency placement, not proof that a finding has
 | [RF-006](./findings/006-RF-006.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Implemented — verification pending | — | main@326403812756b815f5d9a7dc77e29097ff7dd6b0; PR #142 head `36cbd682`; CI run #913 and Preview READY; authenticated browser report still unverified |
 | [RF-007](./findings/007-RF-007.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [RF-008](./findings/008-RF-008.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
-| [RF-009](./findings/009-RF-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
+| [RF-009](./findings/009-RF-009.md) | Wave 6 — Frontend, product documentation, assets, and historical evidence | Implemented — verification pending | audit/064-src-018-email-verification-2026-11-14 | implementation branch; post-sync revalidation against main@b56517b pending |
 | [DB-001](./findings/010-DB-001.md) | Wave 1 — Security, tenant isolation, and safe access boundaries | Already fixed | `4e54e8b` | Migration 0014/0015 and ephemeral CI evidence; live DB unknown |
 | [DB-002](./findings/011-DB-002.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Confirmed | — | main@9ac5fe0; Wave 0 log 001–020|
 | [DB-003](./findings/012-DB-003.md) | Wave 2 — Canonical schema, persistence, and transaction contracts | Needs decision | — | main@9ac5fe0; Wave 0 log 001–020|
