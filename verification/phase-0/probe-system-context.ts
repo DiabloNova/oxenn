@@ -1,5 +1,5 @@
 import { TenantContextManager } from "../../src/core/database/tenant-context";
-import { loginAction, registerAction } from "../../src/app/actions/auth";
+import { registerAction } from "../../src/app/actions/auth";
 import { requireWorkspaceMembership, requireRole, authorizeApiRequest } from "../../src/services/auth/authorization";
 import {
   createWorkspaceAction,

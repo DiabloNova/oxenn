@@ -26,6 +26,7 @@ describe("Canonical table ownership registry", () => {
       "database/schema/index.ts",
       "database/schema/organization-table.ts",
       "database/schema/api-keys.ts",
+      "database/schema/user-profile.ts",
     ];
     const schemaNames = readTableNames(workspaceSources);
     const journal = JSON.parse(
@@ -51,7 +52,7 @@ describe("Canonical table ownership registry", () => {
       missingRegistryEntries: [],
       staleRegistryEntries: [],
     });
-    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(70);
+    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(71);
   });
 
   it("accounts for every table in the separate Platform Admin Drizzle schema", () => {

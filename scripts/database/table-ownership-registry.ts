@@ -38,14 +38,19 @@ function organizationScoped(
   };
 }
 
-function userOwned(rationale: string, schemaObject: string): TableOwnershipEntry {
+function userOwned(
+  rationale: string,
+  schemaObject: string,
+  schemaPath = "database/schema/index.ts",
+  snapshotPath = "database/drizzle/meta/0015_snapshot.json",
+): TableOwnershipEntry {
   return {
     scope: "USER_OWNED",
     status: "current",
     rationale,
     evidence: [
-      "database/schema/index.ts: " + schemaObject,
-      "database/drizzle/meta/0015_snapshot.json: canonical Workspace snapshot",
+      schemaPath + ": " + schemaObject,
+      snapshotPath + ": canonical Workspace snapshot",
     ],
   };
 }
@@ -84,7 +89,7 @@ function unresolved(
   return { scope: "UNRESOLVED", status, rationale, evidence };
 }
 
-/** The 70 Workspace tables in the canonical Drizzle schema and modular exports. */
+/** The 71 Workspace tables in the canonical Drizzle schema and modular exports. */
 const workspaceOwnership = {
   admin_users: workspaceGlobal(
     "Legacy Workspace-database administrator records are consumed by the existing Workspace admin Postgres adapter. They are not Platform Admin identities: the isolated Platform Admin authentication boundary explicitly does not read this table.",
@@ -213,6 +218,12 @@ const workspaceOwnership = {
   user_credentials: userOwned(
     "The unique required user_id foreign key binds the credential record to exactly one user identity.",
     "userCredentials.userId references users.id",
+  ),
+  user_profiles: userOwned(
+    "Each profile is globally owned by one user identity through its required user_id primary-key foreign key. Username is unique case-insensitively across the Workspace database and is not organization-scoped.",
+    "userProfiles.userId references users.id; lower(username) has a unique index",
+    "database/schema/user-profile.ts",
+    "database/drizzle/meta/0016_snapshot.json",
   ),
   users: userOwned(
     "The users table is the global identity directory; email is unique across the Workspace schema and dependent credentials/tokens/sessions reference users.id.",

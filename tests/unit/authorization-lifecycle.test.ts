@@ -226,7 +226,7 @@ describe("Auth Lifecycle Tests", () => {
             bucketCleared = true;
             return { rowCount: 1 };
           }
-          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com" }], rowCount: 1 };
+          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com", email_verified_at: new Date() }], rowCount: 1 };
           if (sql.includes("SELECT * FROM user_credentials")) {
              return { rows: [{
                 user_id: "usr-1",

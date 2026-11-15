@@ -37,10 +37,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshSession().catch((error) => {
-      console.error("Failed to fetch authoritative server session:", error);
-    });
-  }, [refreshSession]);
+    let active = true;
+
+    getServerSessionAction()
+      .then((serverSession) => {
+        if (!active) return;
+        if (serverSession.status === "authenticated" && serverSession.user) {
+          localStorage.setItem("auth_session_user", JSON.stringify(serverSession.user));
+        } else {
+          localStorage.removeItem("auth_session_user");
+        }
+        setSession(serverSession);
+      })
+      .catch((error) => {
+        if (!active) return;
+        localStorage.removeItem("auth_session_user");
+        setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+        console.error("Failed to fetch authoritative server session:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const login = async (email: string, password: string) => {
     setSession((previous) => ({ ...previous, status: "loading" }));

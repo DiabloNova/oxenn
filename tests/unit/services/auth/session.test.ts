@@ -31,6 +31,7 @@ describe("server session lifecycle and error handling", () => {
     id: "user-1",
     name: "Test User",
     email: "user@example.com",
+    username: null,
     role: "workspace_admin",
     workspaceId: "workspace-1"
   };
