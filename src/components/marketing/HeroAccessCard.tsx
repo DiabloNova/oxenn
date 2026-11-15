@@ -1,96 +1,95 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, LogIn, ShieldCheck, UserPlus } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/Button";
-import { Input } from "@/components/Input";
 
 /**
- * Session-aware hero access card: sends authenticated users to the dashboard
- * and hands everyone else off to registration with their email prefilled.
+ * Session-aware public entry card. Visitors can create an account or sign in;
+ * authenticated users are directed to their dashboard.
  */
 export function HeroAccessCard({ locale }: { locale: string }) {
   const { session } = useAuth();
-  const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const isFa = locale === "fa";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setIsLoading(true);
-    // Redirect to register with the email prefilled
-    window.location.href = `/${locale}/register?email=${encodeURIComponent(email)}`;
-    setIsLoading(false);
-  };
+  if (session.status === "loading") {
+    return (
+      <div
+        className="animated-border-glass p-6 sm:p-7"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-center text-sm text-[var(--text-muted)]">
+          {isFa ? "در حال بررسی وضعیت حساب کاربری..." : "Checking your account status..."}
+        </p>
+      </div>
+    );
+  }
 
-  return (
-    <div className="animated-border-glass p-6 sm:p-7">
-      {session.status === "authenticated" ? (
+  if (session.status === "authenticated" && session.user) {
+    return (
+      <div className="animated-border-glass p-6 sm:p-7">
         <div className="space-y-5 text-center">
           <div className="mx-auto grid place-items-center w-14 h-14 rounded-[var(--radius-lg)] neu-surface text-[var(--color-primary-600)] glow-ring">
             <ShieldCheck size={26} />
           </div>
           <div className="space-y-1">
             <h2 className="font-display font-bold text-lg text-[var(--text-primary)]">
-              {isFa ? "نشست شما فعال است" : "Your session is active"}
+              {isFa ? "حساب شما فعال است" : "You are signed in"}
             </h2>
             <p className="text-xs text-[var(--text-muted)] break-all">
-              {session.user?.email}
+              {session.user.email}
             </p>
           </div>
-          <Link href={`/${locale}/dashboard`} className="block">
+          <Link href={"/" + locale + "/dashboard"} className="block">
             <Button variant="primary" size="lg" className="w-full font-bold gap-2">
-              {isFa ? "ورود به پیشخوان کاربری" : "Enter admin console"}
+              {isFa ? "ورود به داشبورد" : "Open dashboard"}
               <ArrowRight size={18} className="rtl:-scale-x-100" />
             </Button>
           </Link>
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4 text-start">
-          <div className="space-y-1">
-            <h2 className="font-display font-bold text-lg text-[var(--text-primary)]">
-              {isFa ? "ورود سریع به میز کار" : "Access the workspace"}
-            </h2>
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              {isFa
-                ? "ایمیل سازمانی خود را برای مشاهده‌ی نسخه‌ی نمایشی وارد کنید."
-                : "Enter your business email to open the live sandbox demo."}
-            </p>
-          </div>
-          <Input
-            type="email"
-            placeholder={isFa ? "you@company.com" : "you@company.com"}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            aria-label={isFa ? "ایمیل سازمانی" : "Business email"}
-          />
+      </div>
+    );
+  }
+
+  return (
+    <div className="animated-border-glass p-6 sm:p-7">
+      <div className="space-y-4 text-start">
+        <div className="space-y-1">
+          <h2 className="font-display font-bold text-lg text-[var(--text-primary)]">
+            {isFa ? "برای شروع، حساب کاربری ایجاد کنید" : "Create your Oxenn account"}
+          </h2>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            {isFa
+              ? "اگر حساب کاربری دارید وارد شوید؛ در غیر این صورت ثبت‌نام کنید."
+              : "Create an account to get started, or sign in if you already have one."}
+          </p>
+        </div>
+
+        <Link href={"/" + locale + "/register"} className="block">
           <Button
-            type="submit"
             variant="primary"
             size="lg"
             className="w-full font-bold gap-2"
-            disabled={isLoading}
           >
-            {isLoading
-              ? isFa
-                ? "در حال اعتبارسنجی..."
-                : "Validating secure session..."
-              : isFa
-                ? "ورود به نسخه‌ی دمو"
-                : "Access live sandbox demo"}
-            {!isLoading && <ArrowRight size={18} className="rtl:-scale-x-100" />}
+            <UserPlus size={17} />
+            <span>{isFa ? "ثبت‌نام" : "Create account"}</span>
+            <ArrowRight size={18} className="rtl:-scale-x-100" />
           </Button>
-          <p className="text-[11px] text-[var(--text-muted)] text-center pt-1">
-            {isFa
-              ? "بدون نیاز به کارت اعتباری — محیط آزمایشی امن"
-              : "No credit card required — secure sandbox environment"}
-          </p>
-        </form>
-      )}
+        </Link>
+
+        <Link
+          href={"/" + locale + "/login"}
+          className="flex items-center justify-center gap-2 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--sky-blue-500)] transition-colors"
+        >
+          <LogIn size={16} />
+          <span>
+            {isFa ? "قبلاً حساب ساخته‌اید؟ ورود" : "Already have an account? Sign in"}
+          </span>
+        </Link>
+      </div>
     </div>
   );
 }

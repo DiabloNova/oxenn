@@ -198,7 +198,7 @@ export function LandingHeader() {
 
             {/* Enterprise Action CTA Buttons */}
             <div className="flex items-center gap-2">
-              <Link href={`/${language}/dashboard`}>
+              <Link href={"/" + language + "/login"}>
                 <button className="px-4 h-9 text-xs font-bold rounded-[var(--radius-md)] border border-[var(--glass-border)] hover:bg-[var(--muted-surface)] text-[var(--text-primary)] transition-all flex items-center gap-1.5">
                   <LogIn size={14} />
                   <span>{isFa ? "ورود" : "Login"}</span>

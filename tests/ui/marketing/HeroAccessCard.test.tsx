@@ -20,18 +20,30 @@ describe("HeroAccessCard", () => {
     cleanup();
   });
 
-  it("offers the English email access form to unauthenticated visitors", () => {
+  it("offers direct registration and login routes to unauthenticated visitors", () => {
     render(<HeroAccessCard locale="en" />);
 
-    expect(screen.getByRole("heading", { name: "Access the workspace" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Business email" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Access live sandbox demo" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Create your Oxenn account" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create account" })).toHaveAttribute("href", "/en/register");
+    expect(screen.getByRole("link", { name: "Already have an account? Sign in" })).toHaveAttribute("href", "/en/login");
   });
 
-  it("localizes the access heading in Farsi", () => {
+  it("localizes both account-entry routes in Farsi", () => {
     render(<HeroAccessCard locale="fa" />);
 
-    expect(screen.getByRole("heading", { name: "ورود سریع به میز کار" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "برای شروع، حساب کاربری ایجاد کنید" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ثبت‌نام" })).toHaveAttribute("href", "/fa/register");
+    expect(screen.getByRole("link", { name: "قبلاً حساب ساخته‌اید؟ ورود" })).toHaveAttribute("href", "/fa/login");
+  });
+
+  it("does not show account-entry links while the authoritative session is loading", () => {
+    auth.session = { user: null, expiresAt: null, status: "loading" };
+
+    render(<HeroAccessCard locale="en" />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Checking your account status...");
+    expect(screen.queryByRole("link", { name: "Create account" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Already have an account? Sign in" })).not.toBeInTheDocument();
   });
 
   it("sends authenticated Farsi visitors to their dashboard", () => {
@@ -50,7 +62,7 @@ describe("HeroAccessCard", () => {
     render(<HeroAccessCard locale="fa" />);
 
     expect(screen.getByText("owner@acme.test")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ورود به پیشخوان کاربری" })).toHaveAttribute("href", "/fa/dashboard");
-    expect(screen.queryByRole("textbox", { name: "ایمیل سازمانی" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ورود به داشبورد" })).toHaveAttribute("href", "/fa/dashboard");
+    expect(screen.queryByRole("link", { name: "ثبت‌نام" })).not.toBeInTheDocument();
   });
 });
