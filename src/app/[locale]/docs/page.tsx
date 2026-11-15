@@ -4,7 +4,7 @@ import React, { use } from "react";
 import Link from "next/link";
 import { DOCS_INDEX } from "@/lib/docsIndex";
 import { encodeDocRouteToken } from "@/lib/docs-viewer-links";
-import { BookOpen, ShieldCheck, Cpu, Library, HelpCircle, ArrowRight, Server, Terminal, Lock, Box, Grid } from "lucide-react";
+import { BookOpen, ShieldCheck, Cpu, Library, Server, Terminal, Box, Grid } from "lucide-react";
 
 export default function DocsIndexPage({ params }: { params: Promise<{ locale: string }> }) {
   const resolvedParams = use(params);

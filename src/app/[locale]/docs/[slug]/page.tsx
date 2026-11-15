@@ -53,7 +53,7 @@ export default function DocDetailPage({ params }: DocDetailPageProps) {
           setContent(data.content);
           setContentPath(typeof data.path === "string" ? data.path : null);
         }
-      } catch (e) {
+      } catch {
         setContent(null);
         setContentPath(null);
       } finally {
