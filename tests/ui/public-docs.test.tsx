@@ -21,7 +21,7 @@ describe("public documentation Markdown renderer", () => {
 
 
   it("hides publication front matter from the rendered public page", () => {
-    const markdown = "---\\nvisibility: public\\n---\\n\\n# Public documentation";
+    const markdown = "---\nvisibility: public\n---\n\n# Public documentation";
     render(<MarkdownContent locale="en" markdown={markdown} />);
     expect(screen.getByRole("heading", { level: 1, name: "Public documentation" })).toBeInTheDocument();
     expect(screen.queryByText("visibility: public")).not.toBeInTheDocument();
