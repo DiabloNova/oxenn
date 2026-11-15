@@ -1,0 +1,180 @@
+export const landingContent = {
+  fa: {
+    nav: { tracks: "مسیرهای ارزیابی", method: "روش کار", offers: "محصول و مشتریان", evidence: "شواهد و اعتماد", login: "ورود", signup: "ساخت حساب", openMenu: "باز کردن منو", closeMenu: "بستن منو", themeLight: "تغییر به حالت روشن", themeDark: "تغییر به حالت تیره", switchLanguage: "Switch to English" },
+    hero: {
+      eyebrow: "هوشمندی محصول و بازار",
+      title: "محصولتان را بهتر بشناسید؛",
+      titleAccent: "برای بهبود، آگاهانه تصمیم بگیرید.",
+      body: "OXENN به کسب‌وکارها کمک می‌کند محصول یا خدمت موجود خود را در زمینه بازار، حضور دیجیتال و رقابت بهتر ارزیابی کنند؛ شواهد را از فرضیه‌ها جدا نگه دارند و فرصت‌های بهبود را به برنامه‌ای قابل بررسی تبدیل کنند.",
+      primary: "شروع با ساخت حساب", secondary: "آشنایی با روش کار",
+      accessNote: "برای استفاده از خدمات OXENN، ثبت‌نام و ورود به حساب کاربری لازم است.",
+      visualEyebrow: "نقشه سیگنال محصول",
+      visualNote: "تصویر مفهومی است؛ داده زنده، امتیاز یا نتیجه ارزیابی واقعی را نمایش نمی‌دهد.",
+      visualNodes: ["شناخت محصول", "شواهد و زمینه", "فرصت‌های بهبود"],
+    },
+    tracks: {
+      eyebrow: "دو مسیر ارزیابی مستقل و مرتبط", title: "از دیده‌شدن دیجیتال تا ارزش رقابتی",
+      body: "هر مسیر دامنه و ورودی‌های متناسب با خودش را دارد. می‌توانید با نیاز فعلی شروع کنید و بعداً مسیر دیگری را به آن اضافه کنید.",
+      items: [
+        { id: "digital", number: "01", title: "ارزیابی دیجیتال محصول", description: "بررسی اینکه محصول یا خدمت شما چگونه در محیط‌های دیجیتال پیدا، معرفی و درک می‌شود.",
+          points: ["SEO — دیده‌شدن و عملکرد در جست‌وجوی سنتی", "AEO — ساختار و کیفیت محتوا برای پاسخ به پرسش‌ها", "GEO — بازنمایی و ارجاع به برند یا محصول در محیط‌های هوش مصنوعی مولد"],
+          note: "SEO، AEO و GEO خدمات مستقلی هستند. بسته Digital Visibility Suite فقط یک ترکیب اختیاری از آن‌هاست." },
+        { id: "market", number: "02", title: "ارزیابی ارزش و رقابت‌پذیری", description: "بررسی ارزش پیشنهادی و جایگاه محصول یا خدمت در برابر نیاز مشتری و گزینه‌های قابل مقایسه.",
+          points: ["مخاطبان هدف، نیازها و موارد استفاده", "ویژگی‌ها، تمایزها و ادعاهای پشتیبانی‌شده با شواهد", "رقبا، جایگزین‌ها، بازخورد مشتری و کانال‌های فروش", "قیمت و زمینه ارزش، فقط در صورت وجود داده معتبر"],
+          note: "مقایسه باید متناسب با نوع محصول، بازار و شواهد موجود باشد؛ داده ناقص به نتیجه قطعی تبدیل نمی‌شود." },
+      ],
+    },
+    serviceModel: {
+      title: "انتخاب خدمت باید با نیاز شما شروع شود",
+      body: "برای استفاده مستقل از SEO، AEO یا GEO لازم نیست همه خدمات را تهیه کنید یا ابتدا ارزیابی جامع محصول را تکمیل کنید. هر خدمت فقط باید اطلاعات و مجوزهای لازم برای دامنه خودش را درخواست کند.",
+      bundle: "بسته ترکیبی اختیاری", standalone: "خدمات مستقل",
+      comprehensive: "مسیر جامع Product Assessment & Improvement نیز اختیاری است؛ پیش‌نیاز خدمات مستقل نیست.",
+    },
+    method: {
+      eyebrow: "روش کار", title: "اطلاعات را به فهم و برنامه تبدیل کنید",
+      body: "فرایند به‌صورت مرحله‌ای پیش می‌رود تا منشأ اطلاعات، تصمیم‌ها و موارد نیازمند بررسی روشن بماند.",
+      steps: [
+        { number: "01", title: "شناخت Offer", description: "محصول یا خدمت موجود، مشتریان، کاربردها و زمینه تجاری آن را مشخص کنید." },
+        { number: "02", title: "ساخت پروفایل هوشمندی محصول", description: "اطلاعات Offer و زمینه آن در یک PIP نسخه‌دار و قابل بازبینی سازمان‌دهی می‌شود." },
+        { number: "03", title: "ارزیابی و مقایسه", description: "وضعیت موجود با معیارهای متناسب و شواهد قابل ردیابی بررسی می‌شود." },
+        { number: "04", title: "شناسایی شکاف و فرصت", description: "تفاوت میان وضعیت پشتیبانی‌شده با شواهد و هدف مقایسه توضیح داده می‌شود." },
+        { number: "05", title: "برنامه‌ریزی و پیگیری", description: "پیشنهادها به برنامه‌ای قابل بررسی، تأیید و پیگیری تبدیل می‌شوند." },
+      ],
+    },
+    offers: {
+      eyebrow: "چه چیزی ارزیابی می‌شود؟", title: "ماهیت محصول را از کانال فروش جدا ببینید",
+      body: "OXENN برای ارزیابی محصول‌ها و خدماتی طراحی شده که از قبل وجود دارند و عرضه می‌شوند.",
+      types: [
+        { title: "محصول فیزیکی", description: "کالایی که به‌صورت فیزیکی تولید، عرضه یا تحویل می‌شود." },
+        { title: "محصول دیجیتال", description: "محصولی که ارزش آن از طریق محتوای دیجیتال، نرم‌افزار یا دسترسی دیجیتال ارائه می‌شود." },
+        { title: "خدمت", description: "خدمتی که برای مشتری انجام یا فراهم می‌شود." },
+      ],
+      audienceTitle: "برای فروشندگان و ارائه‌دهندگان",
+      audience: ["کسب‌وکارهای فروشنده محصولات فیزیکی", "فروشندگان محصولات دیجیتال", "ارائه‌دهندگان خدمات", "فروشندگان اجتماعی و چندکاناله"],
+      channelNote: "فروش اجتماعی یک نوع کانال فروش است، نه ماهیت چهارم محصول.",
+    },
+    evidence: {
+      eyebrow: "اعتماد از شفافیت می‌آید", title: "هر داده باید منشأ و سطح اطمینان خودش را داشته باشد",
+      body: "OXENN باید اطلاعات ارائه‌شده، مشاهده‌شده، نقل‌شده یا برآوردشده را از هم متمایز کند تا تصمیم‌گیری بر پایه شواهد قابل ارزیابی باشد.",
+      items: [
+        { title: "اطلاعات مشتری", description: "اطلاعاتی که مشتری وارد یا تأیید کرده است." },
+        { title: "مشاهده مستقیم", description: "چیزی که در یک منبع یا محیط مشخص مشاهده شده است." },
+        { title: "ادعای منبع ثالث", description: "اطلاعات منتسب به منبعی بیرون از OXENN یا مشتری." },
+        { title: "برآورد", description: "نتیجه‌ای وابسته به فرض‌ها و روش تخمین مشخص." },
+        { title: "فرضیه", description: "توضیحی که هنوز به شواهد کافی برای تأیید نرسیده است." },
+        { title: "شبیه‌سازی", description: "سناریو یا خروجی مدل‌شده، نه مشاهده یک نتیجه واقعی." },
+      ],
+      note: "UNKNOWN به معنی ZERO نیست. نبود داده باید به‌عنوان شکاف اطلاعاتی نمایش داده شود، نه امتیاز صفر یا واقعیت ساختگی.",
+    },
+    boundaries: {
+      eyebrow: "مرزهای روشن محصول", title: "پیشنهاد و پیگیری، جای تأیید و اقدام بیرونی را نمی‌گیرد",
+      items: [
+        "PIP یک توصیف نسخه‌دار و قابل بازبینی از Offer و زمینه تجاری آن است؛ با خط مبنای اندازه‌گیری‌شده یا Benchmark یکسان نیست.",
+        "برنامه‌ها و پیشنهادهای بهبود برای بررسی و تأیید مشتری ارائه می‌شوند؛ این موضوع به معنی اجرای خودکار اقدامات بیرونی نیست.",
+        "ایجاد محصول از یک ایده، تحقیق‌وتوسعه صنعتی و مدیریت تولید، در محدوده فعلی MVP قرار ندارند.",
+        "اشاره به یک قابلیت یا مسیر محصول، به‌تنهایی به معنی عرضه عمومی یا آمادگی عملیاتی آن نیست.",
+      ],
+    },
+    closing: {
+      eyebrow: "شروع شفاف و مرحله‌ای", title: "با یک نیاز مشخص شروع کنید.",
+      body: "حساب کاربری بسازید، خدمت متناسب با نیازتان را انتخاب کنید و دامنه ارزیابی را با اطلاعات و شواهد قابل دسترس پیش ببرید.",
+      primary: "ساخت حساب کاربری", secondary: "ورود به حساب",
+    },
+    footer: {
+      description: "پلتفرم هوشمندی ارزیابی و بهبود محصول و بازار؛ برای تصمیم‌های روشن‌تر و برنامه‌های مبتنی بر شواهد.",
+      tracks: "مسیرهای ارزیابی", principles: "اصول و شواهد", account: "حساب کاربری",
+      copyright: "تمامی حقوق محفوظ است.", strapline: "هوشمندی محصول و بازار",
+    },
+  },
+  en: {
+    nav: { tracks: "Assessment tracks", method: "How it works", offers: "Products & customers", evidence: "Evidence & trust", login: "Log in", signup: "Create account", openMenu: "Open menu", closeMenu: "Close menu", themeLight: "Switch to light theme", themeDark: "Switch to dark theme", switchLanguage: "تغییر زبان به فارسی" },
+    hero: {
+      eyebrow: "PRODUCT & MARKET INTELLIGENCE",
+      title: "Understand what you offer.",
+      titleAccent: "Make clearer improvement decisions.",
+      body: "OXENN helps businesses assess existing products and services in their market, digital presence, and competitive context; distinguish evidence from hypotheses; and turn improvement opportunities into plans that can be reviewed.",
+      primary: "Create an account", secondary: "Explore how it works",
+      accessNote: "Registration and an authenticated account are required to use OXENN services.",
+      visualEyebrow: "PRODUCT SIGNAL ATLAS",
+      visualNote: "Concept illustration only. It does not display live data, scores, or an actual assessment result.",
+      visualNodes: ["Offer context", "Evidence & signals", "Improvement options"],
+    },
+    tracks: {
+      eyebrow: "TWO DISTINCT ASSESSMENT TRACKS", title: "From digital visibility to competitive value",
+      body: "Each track has its own scope and inputs. Start with the need you have today and add another track when it becomes relevant.",
+      items: [
+        { id: "digital", number: "01", title: "Digital Product Assessment", description: "Assess how your product or service is discovered, represented, and understood across digital environments.",
+          points: ["SEO — discoverability and performance in traditional search", "AEO — content structure and quality for answering questions", "GEO — how a brand or product is represented and cited in generative AI environments"],
+          note: "SEO, AEO, and GEO are independent services. The Digital Visibility Suite is an optional combination of them." },
+        { id: "market", number: "02", title: "Product Value & Competitiveness Assessment", description: "Examine the value proposition and competitive position of an existing product or service against customer needs and comparable alternatives.",
+          points: ["Target customers, needs, and use cases", "Features, differentiation, and evidence-supported claims", "Competitors, substitutes, customer feedback, and sales channels", "Pricing and value context only where reliable data is available"],
+          note: "Comparisons must fit the offer, market, and available evidence. Missing data must not become a definitive conclusion." },
+      ],
+    },
+    serviceModel: {
+      title: "Choose a service around the need you have",
+      body: "Using SEO, AEO, or GEO independently does not require purchasing every service or completing a comprehensive product assessment first. Each service should request only the information and permissions needed for its own scope.",
+      bundle: "Optional bundle", standalone: "Independent services",
+      comprehensive: "Product Assessment & Improvement is also an optional comprehensive journey, not a prerequisite for standalone services.",
+    },
+    method: {
+      eyebrow: "HOW IT WORKS", title: "Turn information into understanding and a plan",
+      body: "The process is staged so that the origin of information, decisions, and items needing further review remain visible.",
+      steps: [
+        { number: "01", title: "Understand the Offer", description: "Describe the existing product or service, its customers, use cases, and commercial context." },
+        { number: "02", title: "Build the Product Intelligence Profile", description: "Organize the Offer and its context in a versioned, reviewable Product Intelligence Profile (PIP)." },
+        { number: "03", title: "Assess and compare", description: "Review the current state against relevant criteria and traceable evidence." },
+        { number: "04", title: "Identify gaps and opportunities", description: "Explain the difference between an evidence-supported current state and a justified comparison target." },
+        { number: "05", title: "Plan and track", description: "Turn recommendations into a plan that can be reviewed, approved, and tracked." },
+      ],
+    },
+    offers: {
+      eyebrow: "WHAT IS BEING ASSESSED?", title: "Separate the nature of an Offer from its sales channel",
+      body: "OXENN is designed to assess products and services that already exist and are being offered.",
+      types: [
+        { title: "Physical product", description: "A tangible product that is made, offered, or delivered." },
+        { title: "Digital product", description: "A product whose value is delivered through digital content, software, or digital access." },
+        { title: "Service", description: "A service performed or made available for a customer." },
+      ],
+      audienceTitle: "For sellers and service providers",
+      audience: ["Businesses selling physical products", "Digital product sellers", "Service providers", "Social-commerce and multichannel sellers"],
+      channelNote: "Social commerce is a sales channel, not a fourth Offer nature.",
+    },
+    evidence: {
+      eyebrow: "TRUST STARTS WITH TRANSPARENCY", title: "Every piece of information needs a source and confidence context",
+      body: "OXENN should distinguish information that is provided, observed, attributed, or estimated so decisions can be evaluated against their supporting evidence.",
+      items: [
+        { title: "Customer-provided information", description: "Information entered or confirmed by the customer." },
+        { title: "Direct observation", description: "Something observed in a specific source or environment." },
+        { title: "Third-party claim", description: "Information attributed to a source outside OXENN or the customer." },
+        { title: "Estimate", description: "A result that depends on explicit assumptions and an estimation method." },
+        { title: "Hypothesis", description: "An explanation that has not yet been supported by sufficient evidence." },
+        { title: "Simulation", description: "A modeled scenario or output, not an observed real-world result." },
+      ],
+      note: "UNKNOWN does not mean ZERO. Missing information should be shown as an information gap, not a zero score or a fabricated fact.",
+    },
+    boundaries: {
+      eyebrow: "CLEAR PRODUCT BOUNDARIES", title: "Recommendations and tracking do not replace approval or external action",
+      items: [
+        "The PIP is a versioned, reviewable description of an Offer and its commercial context; it is not the same as a measured baseline or benchmark.",
+        "Improvement plans and recommendations are presented for customer review and approval; they do not imply autonomous execution of external actions.",
+        "Creating a product from an idea, industrial R&D, and production management are outside the current MVP scope.",
+        "Mentioning a capability or product direction does not by itself mean it is released or operational.",
+      ],
+    },
+    closing: {
+      eyebrow: "A CLEAR, STAGED START", title: "Start with one well-defined need.",
+      body: "Create an account, select the service that matches your need, and define its assessment scope using the information and evidence available.",
+      primary: "Create an account", secondary: "Log in",
+    },
+    footer: {
+      description: "Product and market improvement intelligence for clearer decisions and evidence-grounded plans.",
+      tracks: "Assessment tracks", principles: "Evidence principles", account: "Account",
+      copyright: "All rights reserved.", strapline: "PRODUCT & MARKET INTELLIGENCE",
+    },
+  },
+} as const;
+
+export function getLandingContent(locale: string) {
+  return landingContent[locale === "fa" ? "fa" : "en"];
+}
