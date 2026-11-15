@@ -208,13 +208,19 @@ function main() {
   const schemaIndexTables = pgTables("database/schema/index.ts");
   const organizationTables = pgTables("database/schema/organization-table.ts");
   const apiKeyTables = pgTables("database/schema/api-keys.ts");
+  const userProfileTables = pgTables("database/schema/user-profile.ts");
   assert.equal(organizationTables.length, 1, "Expected one organizations table in its schema module");
   assert.equal(apiKeyTables.length, 1, "Expected one api_keys table in its schema module");
+  assert.equal(userProfileTables.length, 1, "Expected one user_profiles table in its schema module");
 
   const schemaIndex = readFile("database/schema/index.ts");
   assert.match(schemaIndex, /import\s*\{\s*organizations\s*\}\s*from\s*["']\.\/organization-table["']/);
   assert.match(schemaIndex, /export\s*\{\s*organizations\s*\}/);
   assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/api-keys["']/);
+
+  for (const configPath of ["drizzle.config.ts", "drizzle.push.config.ts"]) {
+    assert.match(readFile(configPath), /database\/schema\/user-profile\.ts/, configPath + " must include the global user profile schema module");
+  }
 
   const journal = JSON.parse(readFile("database/drizzle/meta/_journal.json"));
   assert.ok(Array.isArray(journal.entries) && journal.entries.length > 0, "Drizzle journal is empty");
@@ -223,7 +229,7 @@ function main() {
   const snapshot = JSON.parse(readFile(snapshotPath));
   assert.ok(snapshot.tables && typeof snapshot.tables === "object", "Latest Drizzle snapshot has no table map");
 
-  const schemaTables = [...schemaIndexTables, ...organizationTables, ...apiKeyTables];
+  const schemaTables = [...schemaIndexTables, ...organizationTables, ...apiKeyTables, ...userProfileTables];
   assert.equal(unique(schemaTables).length, schemaTables.length, "Duplicate canonical schema table declaration");
   const snapshotTables = Object.values(snapshot.tables).map((table) => table.name);
   assert.equal(unique(snapshotTables).length, snapshotTables.length, "Duplicate table name in latest snapshot");
@@ -270,7 +276,7 @@ function main() {
 
   const baselineMetrics = [
     ["Schema index pgTable declarations", localCount],
-    ["Additional modular schema declarations", organizationTables.length + apiKeyTables.length],
+    ["Additional modular schema declarations", organizationTables.length + apiKeyTables.length + userProfileTables.length],
     ["Effective schema table declarations", totalTables],
     ["Latest Drizzle snapshot tables", snapshotTables.length],
     ["Ordered migration journal entries", migrationCount],

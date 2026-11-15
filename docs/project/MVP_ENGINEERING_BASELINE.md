@@ -61,11 +61,11 @@ The following static inventory is tied to the recorded repository baseline commi
 | Inventory metric | Recorded value |
 |---|---:|
 | Schema index pgTable declarations | 68 |
-| Additional modular schema declarations | 2 |
-| Effective schema table declarations | 70 |
-| Latest Drizzle snapshot tables | 70 |
-| Ordered migration journal entries | 16 |
-| Unique migration-created tables | 70 |
+| Additional modular schema declarations | 3 |
+| Effective schema table declarations | 71 |
+| Latest Drizzle snapshot tables | 71 |
+| Ordered migration journal entries | 17 |
+| Unique migration-created tables | 71 |
 | Policy-bearing tables in latest snapshot | 56 |
 | Generated runtime tenant-table entries | 56 |
 | Cumulative migration RLS ENABLE coverage | 56 |
