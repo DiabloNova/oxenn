@@ -74,7 +74,7 @@ function isOrderedListLine(line: string): boolean {
 }
 
 function isBlockStart(line: string): boolean {
-  return /^#{1,3}\s+/.test(line) || /^\s*---\s*$/.test(line) ||
+  return /^#{1,3}\s+/.test(line) || /^\s*---+\s*$/.test(line) ||
     isUnorderedListLine(line) || isOrderedListLine(line);
 }
 
