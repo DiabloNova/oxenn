@@ -48,7 +48,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     login: isFa ? "ورود" : "Sign in",
     localUpperWarning: isFa ? "حروف بزرگ در بخش ابتدایی ایمیل مجاز است؛ آدرس هنگام ذخیره‌سازی یکسان‌سازی می‌شود." : "Uppercase letters in the part before @ are allowed; the address is normalized when saved.",
     domainUpperError: isFa ? "حروف بزرگ در بخش دامنه ایمیل مجاز نیست. دامنه را کاملاً با حروف کوچک بنویسید." : "Uppercase letters are not allowed in the email domain. Use lowercase letters only.",
-    passwordUpperWarning: isFa ? "حروف بزرگ در رمز عبور مجاز و الزامی است؛ صفحه‌کلید را در حالت حروف کوچک نگه دارید و حداقل یک حرف بزرگ وارد کنید." : "Uppercase is allowed and required in the password. Keep the keyboard in lowercase mode and include at least one uppercase letter.",
+    passwordUpperWarning: isFa ? "رمز عبور باید حداقل یک حرف بزرگ انگلیسی داشته باشد." : "Add at least one uppercase letter to your password.",
     passwordHint: isFa ? "حداقل ۱۰ نویسه انگلیسی، یک حرف بزرگ، یک عدد و دو کاراکتر خاص." : "At least 10 ASCII characters, one uppercase letter, one number and two special characters.",
   };
 
@@ -148,7 +148,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
               )}
               <Input type="password" label={t.password} value={password} onChange={(e) => setPassword(e.target.value)} error={fieldErrors.password} disabled={isLoading} required autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
               <p className="text-xs text-[var(--text-muted)]">{t.passwordHint}</p>
-              {passwordHasUppercase(password) && <p className="text-xs text-amber-600">{t.passwordUpperWarning}</p>}
+              {password.length > 0 && !passwordHasUppercase(password) && <p className="text-xs text-amber-600">{t.passwordUpperWarning}</p>}
               <Input label={t.username} value={username} onChange={(e) => setUsername(e.target.value)} error={fieldErrors.username} disabled={isLoading} required autoComplete="username" />
               <Button type="submit" variant="primary" disabled={isLoading} className="w-full py-3">
                 {isLoading ? t.loading : <span className="inline-flex items-center justify-center gap-2"><UserPlus size={15}/>{t.submit}</span>}
