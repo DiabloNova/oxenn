@@ -70,7 +70,7 @@ describe("production build email configuration", () => {
   });
 
   it("preserves literal hash fragments in runtime session secrets", () => {
-    stubBaseEnvironment("dev");
+    vi.stubEnv("DATABASE_URL", "postgresql://app:secret@127.0.0.1:5432/oxenn");
     vi.stubEnv("SESSION_SECRET", "runtime-secret-with-more-than-32-characters # retained");
     expect(validateEnv("dev")).toMatchObject({ missing: [], invalid: [], valid: true });
   });
