@@ -218,7 +218,8 @@ function main() {
   const schemaIndex = readFile("database/schema/index.ts");
   assert.match(schemaIndex, /import\s*\{\s*organizations\s*\}\s*from\s*["']\.\/organization-table["']/);
   assert.match(schemaIndex, /import\s*\{\s*users\s*\}\s*from\s*["']\.\/users["']/);
-  assert.match(schemaIndex, /export\s*\{[^}]*organizations[^}]*users[^}]*\}/);
+  assert.match(schemaIndex, /export\s*\{[^}]*\borganizations\b[^}]*\}/);
+  assert.match(schemaIndex, /export\s*\{[^}]*\busers\b[^}]*\}/);
   assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/api-keys["']/);
   assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/user-profile["']/);
 
