@@ -4,7 +4,7 @@ import React, { useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { getAccountEmailValidationError } from "@/services/auth/registration-validation";
+import { emailLocalPartHasUppercase, getAccountEmailValidationError } from "@/services/auth/registration-validation";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
@@ -42,6 +42,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     oauthGoogle: isFa ? "ورود یکپارچه با گوگل (Google)" : "Continue with Google Workspace",
     oauthMicrosoft: isFa ? "ورود یکپارچه با مایکروسافت" : "Continue with Microsoft Entra",
     validationEmailInvalid: isFa ? "قالب ایمیل معتبر نیست." : "Enter a valid email address.",
+    localPartCaseWarning: isFa ? "حروف بزرگ در بخش قبل از @ مجاز است؛ ایمیل هنگام ورود یکسان‌سازی می‌شود." : "Uppercase letters before @ are allowed; the address is normalized when you sign in.",
     validationPasswordRequired: isFa ? "وارد کردن رمز عبور الزامی است." : "Password is required.",
     validationPasswordLength: isFa ? "رمز عبور را وارد کنید." : "Enter your password.",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",

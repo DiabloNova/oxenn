@@ -184,13 +184,15 @@ describe("Auth Lifecycle Tests", () => {
       const PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
       const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
-      let calls = 0;
+      const callsByBucket = new Map<string, number>();
       const mockClient = {
         query: vi.fn().mockImplementation(async (sql: string, params: unknown[]) => {
           if (sql.includes("INSERT INTO auth_rate_limits")) {
-            calls++;
-            // Simulate threshold for login (10)
-            return { rows: [{ attempts: calls }], rowCount: 1 };
+            const bucket = `${String(params[0])}:${String(params[1])}`;
+            const attempts = (callsByBucket.get(bucket) ?? 0) + 1;
+            callsByBucket.set(bucket, attempts);
+            // Simulate the login account/IP bucket threshold independently from the IP-wide bucket.
+            return { rows: [{ attempts }], rowCount: 1 };
           }
           // Fail login deliberately to test rate limit tripping without clearing the bucket
         if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 };
