@@ -106,17 +106,37 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
 
   // Restore an audit that was interrupted by registration/email verification.
   useEffect(() => {
-    const pending = window.sessionStorage.getItem("oxenn.pending-free-audit");
+    const storageKey = "oxenn.pending-free-audit";
+    const pending = window.sessionStorage.getItem(storageKey);
     if (!pending) return;
-    window.sessionStorage.removeItem("oxenn.pending-free-audit");
+
+    let restoredUrl: string;
     try {
       const restored = JSON.parse(pending) as { url?: unknown };
-      if (typeof restored.url !== "string" || !auditService.validateUrl(restored.url)) return;
-      setUrl(restored.url);
-      setAuditState({ status: "auth-required", job: null, error: null, logs: [] });
+      if (typeof restored.url !== "string" || !auditService.validateUrl(restored.url)) {
+        window.sessionStorage.removeItem(storageKey);
+        return;
+      }
+      restoredUrl = restored.url;
     } catch {
-      // Ignore malformed, stale session-storage state.
+      // Discard malformed, stale session-storage state.
+      window.sessionStorage.removeItem(storageKey);
+      return;
     }
+
+    // Defer state updates to avoid a synchronous cascading render from the effect.
+    // Keep the pending value until the mounted panel has restored it.
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      window.sessionStorage.removeItem(storageKey);
+      setUrl(restoredUrl);
+      setAuditState({ status: "auth-required", job: null, error: null, logs: [] });
+    });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Auto-scroll the terminal logs
