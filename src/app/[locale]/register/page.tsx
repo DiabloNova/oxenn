@@ -2,7 +2,7 @@
 
 import React, { useState, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
@@ -22,7 +22,12 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
   const { locale } = use(params);
   const isFa = locale === "fa";
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register } = useAuth();
+  const requestedReturnTo = searchParams.get("returnTo");
+  const returnTo = requestedReturnTo && requestedReturnTo.startsWith(`/${locale}/`) && !requestedReturnTo.startsWith("//") && !requestedReturnTo.includes("\\")
+    ? requestedReturnTo
+    : "";
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -89,8 +94,10 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     setIsLoading(true);
     try {
       const result = await register(firstName.trim(), lastName.trim(), email.trim(), password, username.trim(), locale as "fa" | "en");
-      const delivery = result.verificationEmailSent ? "" : "&delivery=failed";
-      router.replace(`/${locale}/verify-email?email=${encodeURIComponent(email.trim())}${delivery}`);
+      const verificationParams = new URLSearchParams({ email: email.trim() });
+      if (!result.verificationEmailSent) verificationParams.set("delivery", "failed");
+      if (returnTo) verificationParams.set("returnTo", returnTo);
+      router.replace(`/${locale}/verify-email?${verificationParams.toString()}`);
     } catch (error) {
       const code = (error as { code?: string })?.code;
       const errors: Record<string, string> = isFa ? {
