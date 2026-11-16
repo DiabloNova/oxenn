@@ -4,8 +4,7 @@ export const SESSION_SECRET_MIN_LENGTH = 32;
 /**
  * Normalize surrounding whitespace only. Dotenv syntax (quotes/comments) is
  * parsed by env-check's parser before this helper is called; runtime process
- * environment values must otherwise remain byte-for-byte intact (notably
- * secrets containing " #").
+ * environment values must otherwise remain intact, including secrets with " #".
  */
 export function normalizeEnvValue(value: string | undefined): string {
   return value?.trim() ?? "";
