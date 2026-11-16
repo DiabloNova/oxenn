@@ -16,6 +16,7 @@ import { PoolClient } from "pg";
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { isIP } from "node:net";
+import { isValidSessionSecret, normalizeEnvValue } from "@/services/auth/session-secret";
 
 async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey: string, maxAttempts: number, windowMs: number): Promise<void> {
     const expiresAt = new Date(Date.now() + windowMs);
@@ -52,8 +53,8 @@ const LOCKOUT_DURATION_MINS = 15;
 const REQUIRE_EMAIL_VERIFICATION = true;
 
 function rateLimitSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (secret && secret.length >= 32 && secret !== "change-this-to-a-secure-32-character-secret-in-production") return secret;
+  const secret = normalizeEnvValue(process.env.SESSION_SECRET);
+  if (isValidSessionSecret(secret)) return secret;
   if (process.env.NODE_ENV !== "production") return "oxenn-local-only-rate-limit-secret-32-characters";
   throw new Error("SESSION_SECRET must be configured before authentication rate limiting can run.");
 }
@@ -80,10 +81,10 @@ async function trustedClientIp(): Promise<string> {
 }
 
 function hashEmailVerificationCode(email: string, code: string): string {
-  const configuredSecret = process.env.SESSION_SECRET;
+  const configuredSecret = normalizeEnvValue(process.env.SESSION_SECRET);
   const secret = configuredSecret ||
     (process.env.NODE_ENV === "test" ? "oxenn-test-only-verification-secret-32-chars" : "");
-  if (secret.length < 32 || secret === "change-this-to-a-secure-32-character-secret-in-production") {
+  if (!isValidSessionSecret(secret)) {
     throw new Error("SESSION_SECRET must be a unique, non-placeholder secret of at least 32 characters before email verification can run.");
   }
   return crypto.createHmac("sha256", secret).update(email + ":" + code).digest("hex");
