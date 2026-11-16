@@ -457,6 +457,36 @@ export async function requestVerification(email: string, locale: "fa" | "en" = "
 /**
  * Consumes the one-time code, marks the email verified, then establishes a DB-backed session.
  */
+async function completeEmailVerification(client: PoolClient, userId: string): Promise<User | null> {
+  const { rows: userRows } = await client.query(
+    "UPDATE users SET email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id, name, email",
+    [userId],
+  );
+  const user = userRows[0];
+  if (!user) return null;
+
+  const { rows: membershipRows } = await client.query(`
+    SELECT m.organization_id AS "workspaceId", m.role, p.username
+    FROM organization_members m
+    JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
+    LEFT JOIN user_profiles p ON p.user_id = m.user_id
+    WHERE m.user_id = $1
+    ORDER BY m.created_at ASC
+    LIMIT 1
+  `, [userId]);
+  const membership = membershipRows[0];
+  if (!membership) throw new Error("Verified account has no active workspace membership.");
+
+  return {
+    id: user.id as string,
+    name: user.name as string,
+    email: user.email as string,
+    username: (membership.username ?? null) as string | null,
+    role: membership.role as UserRole,
+    workspaceId: membership.workspaceId as string,
+  } satisfies User;
+}
+
 export async function verifyEmailAction(email: string, code: string): Promise<{ success: boolean; sessionCreated: boolean }> {
   if (
     typeof email !== "string" ||
@@ -491,33 +521,7 @@ export async function verifyEmailAction(email: string, code: string): Promise<{ 
     if (consumedTokens.length === 0) return null;
 
     const userId = consumedTokens[0].user_id as string;
-    const { rows: userRows } = await client.query(
-      "UPDATE users SET email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id, name, email",
-      [userId],
-    );
-    const user = userRows[0];
-    if (!user) throw new Error("Verified account could not be loaded.");
-
-    const { rows: membershipRows } = await client.query(`
-      SELECT m.organization_id AS "workspaceId", m.role, p.username
-      FROM organization_members m
-      JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
-      LEFT JOIN user_profiles p ON p.user_id = m.user_id
-      WHERE m.user_id = $1
-      ORDER BY m.created_at ASC
-      LIMIT 1
-    `, [userId]);
-    const membership = membershipRows[0];
-    if (!membership) throw new Error("Verified account has no active workspace membership.");
-
-    return {
-      id: user.id as string,
-      name: user.name as string,
-      email: user.email as string,
-      username: (membership.username ?? null) as string | null,
-      role: membership.role as UserRole,
-      workspaceId: membership.workspaceId as string,
-    } satisfies User;
+    return completeEmailVerification(client, userId);
   });
 
   if (!verificationResult) return { success: false, sessionCreated: false };
@@ -562,33 +566,7 @@ export async function verifyLegacyEmailAction(token: string): Promise<{ success:
     if (consumedTokens.length === 0) return null;
 
     const userId = consumedTokens[0].user_id as string;
-    const { rows: userRows } = await client.query(
-      "UPDATE users SET email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW() WHERE id = $1 RETURNING id, name, email",
-      [userId],
-    );
-    const user = userRows[0];
-    if (!user) throw new Error("Verified account could not be loaded.");
-
-    const { rows: membershipRows } = await client.query(`
-      SELECT m.organization_id AS "workspaceId", m.role, p.username
-      FROM organization_members m
-      JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
-      LEFT JOIN user_profiles p ON p.user_id = m.user_id
-      WHERE m.user_id = $1
-      ORDER BY m.created_at ASC
-      LIMIT 1
-    `, [userId]);
-    const membership = membershipRows[0];
-    if (!membership) throw new Error("Verified account has no active workspace membership.");
-
-    return {
-      id: user.id as string,
-      name: user.name as string,
-      email: user.email as string,
-      username: (membership.username ?? null) as string | null,
-      role: membership.role as UserRole,
-      workspaceId: membership.workspaceId as string,
-    } satisfies User;
+    return completeEmailVerification(client, userId);
   });
 
   if (!verificationResult) return { success: false, sessionCreated: false };

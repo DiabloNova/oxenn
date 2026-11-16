@@ -24,7 +24,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isLegacyVerifying, setIsLegacyVerifying] = useState(Boolean(legacyToken));
-  const legacyVerificationStarted = useRef(false);
+  const legacyVerificationStarted = useRef("");
   const [isResending, setIsResending] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [sessionError, setSessionError] = useState(false);
@@ -60,11 +60,16 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   // Preserve verification links already emailed by the previous SHA-256 token flow.
   // New registrations use the 8-digit code form below.
   useEffect(() => {
-    if (!legacyToken || legacyVerificationStarted.current) return;
-    legacyVerificationStarted.current = true;
+    if (!legacyToken || legacyVerificationStarted.current === legacyToken) return;
+    legacyVerificationStarted.current = legacyToken;
+    setIsLegacyVerifying(true);
+    setError("");
+    setIsVerified(false);
+    setSessionError(false);
     const verifyLegacyLink = async () => {
       try {
         const result = await verifyLegacyEmailAction(legacyToken);
+        if (legacyVerificationStarted.current !== legacyToken) return;
         if (!result.success) {
           setError(isFa ? "لینک تأیید نامعتبر یا منقضی شده است." : "This verification link is invalid or has expired.");
           return;
@@ -76,6 +81,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
         }
         try {
           const session = await refreshSession();
+          if (legacyVerificationStarted.current !== legacyToken) return;
           if (!session.user || session.status !== "authenticated") {
             setSessionError(true);
             return;
@@ -83,12 +89,14 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
           router.replace(`/${locale}/dashboard/profile`);
           router.refresh();
         } catch {
-          setSessionError(true);
+          if (legacyVerificationStarted.current === legacyToken) setSessionError(true);
         }
       } catch {
-        setError(isFa ? "تأیید لینک انجام نشد. ایمیل خود را وارد کنید و کد تازه بگیرید." : "The link could not be verified. Enter your email to request a new code.");
+        if (legacyVerificationStarted.current === legacyToken) {
+          setError(isFa ? "تأیید لینک انجام نشد. ایمیل خود را وارد کنید و کد تازه بگیرید." : "The link could not be verified. Enter your email to request a new code.");
+        }
       } finally {
-        setIsLegacyVerifying(false);
+        if (legacyVerificationStarted.current === legacyToken) setIsLegacyVerifying(false);
       }
     };
 

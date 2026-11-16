@@ -244,7 +244,11 @@ describe("Authentication Actions", () => {
         expect.stringContaining("lower(email) = $1 AND deleted_at IS NULL"),
         ["john@doe.com", expectedDigest],
       );
-      expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), expect.any(Array));
+      expect(mocks.query).toHaveBeenCalledWith(
+        expect.stringContaining("UPDATE users"),
+        expect.any(Array),
+      );
+      expect(mocks.query.mock.calls[3][0]).toContain("AND deleted_at IS NULL");
       expect(mocks.createSession).toHaveBeenCalledWith(expect.objectContaining({
         id: "usr-1", username: "johndoe", workspaceId: "org-1",
       }));
@@ -260,10 +264,11 @@ describe("Authentication Actions", () => {
 
       await expect(verifyLegacyEmailAction("a".repeat(64)))
         .resolves.toEqual({ success: true, sessionCreated: true });
-      expect(mocks.query).toHaveBeenCalledWith(
-        expect.stringContaining("users.deleted_at IS NULL"),
-        expect.any(Array),
-      );
+      const legacyConsumeQuery = mocks.query.mock.calls[0][0] as string;
+      expect(legacyConsumeQuery).toContain("consumed_at IS NULL");
+      expect(legacyConsumeQuery).toContain("expires_at > NOW()");
+      expect(legacyConsumeQuery).toContain("users.deleted_at IS NULL");
+      expect(mocks.query.mock.calls[1][0]).toContain("AND deleted_at IS NULL");
       expect(mocks.createSession).toHaveBeenCalledWith(expect.objectContaining({
         id: "usr-legacy", email: "legacy@doe.com", workspaceId: "org-legacy",
       }));
@@ -289,6 +294,9 @@ describe("Authentication Actions", () => {
 
     await expect(verifyEmailAction("john@doe.com", "12345678"))
       .resolves.toEqual({ success: false, sessionCreated: false });
+    const verificationQuery = mocks.query.mock.calls[2][0] as string;
+    expect(verificationQuery).toContain("consumed_at IS NULL");
+    expect(verificationQuery).toContain("expires_at > NOW()");
     expect(mocks.createSession).not.toHaveBeenCalled();
   });
 
