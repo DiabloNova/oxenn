@@ -27,6 +27,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
   const { register } = useAuth();
   const requestedReturnTo = searchParams.get("returnTo");
   const returnTo = getSafeLocaleReturnTo(requestedReturnTo, locale) ?? "";
+  const loginHref = returnTo ? `/${locale}/login?returnTo=${encodeURIComponent(returnTo)}` : `/${locale}/login`;
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
@@ -173,7 +174,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
               </Button>
             </form>
             <div className="mt-6 border-t border-[var(--border)] pt-4 text-center text-xs font-semibold">
-              <span className="text-[var(--text-muted)]">{t.haveAccount} </span><Link href={`/${locale}/login`} className="text-[var(--sky-blue-500)] hover:underline">{t.login}</Link>
+              <span className="text-[var(--text-muted)]">{t.haveAccount} </span><Link href={loginHref} className="text-[var(--sky-blue-500)] hover:underline">{t.login}</Link>
             </div>
           </CardContent>
         </Card>
