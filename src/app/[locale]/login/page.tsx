@@ -91,7 +91,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     try {
       const result = await login(email, password);
       if (result.errorCode === "EMAIL_NOT_VERIFIED") {
-        const verificationParams = new URLSearchParams({ email: email.trim() });
+        const verificationParams = new URLSearchParams({ email: email.trim(), recovery: "1" });
         if (returnTo) verificationParams.set("returnTo", returnTo);
         router.push(`/${locale}/verify-email?${verificationParams.toString()}`);
         return;
