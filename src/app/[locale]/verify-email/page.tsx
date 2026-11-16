@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect, useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
@@ -24,6 +24,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isLegacyVerifying, setIsLegacyVerifying] = useState(Boolean(legacyToken));
+  const legacyVerificationStarted = useRef(false);
   const [isResending, setIsResending] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [sessionError, setSessionError] = useState(false);
@@ -59,7 +60,8 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   // Preserve verification links already emailed by the previous SHA-256 token flow.
   // New registrations use the 8-digit code form below.
   useEffect(() => {
-    if (!legacyToken) return;
+    if (!legacyToken || legacyVerificationStarted.current) return;
+    legacyVerificationStarted.current = true;
     let active = true;
 
     const verifyLegacyLink = async () => {
