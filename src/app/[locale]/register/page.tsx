@@ -17,6 +17,7 @@ import {
   getUsernameValidationError,
   passwordHasUppercase,
 } from "@/services/auth/registration-validation";
+import { getSafeLocaleReturnTo } from "@/services/auth/return-to";
 
 export default function RegisterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -25,12 +26,10 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
   const searchParams = useSearchParams();
   const { register } = useAuth();
   const requestedReturnTo = searchParams.get("returnTo");
-  const returnTo = requestedReturnTo && requestedReturnTo.startsWith(`/${locale}/`) && !requestedReturnTo.startsWith("//") && !requestedReturnTo.includes("\\")
-    ? requestedReturnTo
-    : "";
+  const returnTo = getSafeLocaleReturnTo(requestedReturnTo, locale) ?? "";
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -64,8 +63,16 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     const emailError = getEmailValidationError(email);
     const passwordError = getPasswordValidationError(password);
     const usernameError = getUsernameValidationError(username);
-    if (firstError) next.firstName = isFa ? "نام باید به زبان فارسی وارد شود." : "Enter your first name using English letters only.";
-    if (lastError) next.lastName = isFa ? "نام خانوادگی باید به زبان فارسی وارد شود." : "Enter your last name using English letters only.";
+    if (firstError) next.firstName = firstError === "NAME_REQUIRED"
+      ? (isFa ? "وارد کردن نام الزامی است." : "First name is required.")
+      : firstError === "NAME_TOO_LONG"
+        ? (isFa ? "نام نمی‌تواند بیش از ۱۰۰ نویسه باشد." : "First name cannot exceed 100 characters.")
+        : (isFa ? "نام باید به زبان فارسی وارد شود." : "Enter your first name using English letters only.");
+    if (lastError) next.lastName = lastError === "NAME_REQUIRED"
+      ? (isFa ? "وارد کردن نام خانوادگی الزامی است." : "Last name is required.")
+      : lastError === "NAME_TOO_LONG"
+        ? (isFa ? "نام خانوادگی نمی‌تواند بیش از ۱۰۰ نویسه باشد." : "Last name cannot exceed 100 characters.")
+        : (isFa ? "نام خانوادگی باید به زبان فارسی وارد شود." : "Enter your last name using English letters only.");
     if (emailError) {
       const messages: Record<string, string> = isFa ? {
         EMAIL_REQUIRED: "ایمیل الزامی است.", EMAIL_ENGLISH_ONLY: "ایمیل باید فقط شامل نویسه‌های انگلیسی باشد.", EMAIL_DOMAIN_UPPERCASE: "حروف بزرگ در بخش دامنه ایمیل مجاز نیست؛ دامنه را با حروف کوچک وارد کنید.", EMAIL_HYPHEN_NOT_ALLOWED: "استفاده از خط فاصله در ایمیل مجاز نیست.", EMAIL_INVALID_FORMAT: "قالب ایمیل باید مانند x@x.x باشد.",
@@ -82,7 +89,9 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
       };
       next.password = messages[passwordError];
     }
-    if (usernameError) next.username = isFa ? "نام کاربری باید بین ۳ تا ۳۲ نویسه و بدون فاصله باشد." : "Username must be 3–32 characters and contain no spaces.";
+    if (usernameError) next.username = isFa
+      ? "نام کاربری باید ۳ تا ۳۲ نویسه و فقط شامل حروف، اعداد، نقطه، زیرخط یا خط تیره باشد."
+      : "Username must be 3–32 characters and use only letters, numbers, dots, underscores, or hyphens.";
     setFieldErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -137,7 +146,9 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
                 value={email}
                 onChange={(event) => {
                   setEmail(event.target.value);
-                  setFieldErrors((previous) => ({ ...previous, email: "" }));
+                  if (!getEmailValidationError(event.target.value)) {
+                    setFieldErrors((previous) => ({ ...previous, email: "" }));
+                  }
                 }}
                 error={fieldErrors.email}
                 disabled={isLoading}
@@ -148,7 +159,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
                 spellCheck={false}
               />
               {!fieldErrors.email && liveEmailValidationError === "EMAIL_DOMAIN_UPPERCASE" && (
-                <p role="alert" className="text-xs text-[var(--color-error)]">{t.domainUpperError}</p>
+                <p className="text-xs text-[var(--color-error)]">{t.domainUpperError}</p>
               )}
               {!fieldErrors.email && emailLocalPartHasUppercase(email) && (
                 <p className="text-xs text-amber-600">{t.localUpperWarning}</p>
