@@ -101,6 +101,8 @@ describe("Authentication Actions", () => {
         .resolves.toEqual({ success: true, verificationEmailSent: true });
       expect(mocks.sendEmail).not.toHaveBeenCalled();
       expect(mocks.createSession).not.toHaveBeenCalled();
+      expect(mocks.query).toHaveBeenCalledTimes(5);
+      expect(mocks.query.mock.calls[4][0]).toContain("INSERT INTO users");
     });
 
     it("still reports a username conflict when the email is not registered", async () => {
