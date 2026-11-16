@@ -9,6 +9,8 @@ export const persianPrimary = localFont({
   ],
   variable: "--font-persian-primary",
   display: "swap",
+  fallback: [],
+  adjustFontFallback: false,
 });
 
 // Legacy import compatibility; this is the exact same Yekan Bakh font, not a second family.
