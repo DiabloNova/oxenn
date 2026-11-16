@@ -150,7 +150,7 @@ describe("EmailSender factory and transactional email adapters", () => {
     expect(payload.text).toContain("Workspace: Research & Development");
     expect(payload.text).toContain("Invited by: Owner <Admin>");
     expect(payload.text).toContain("https://oxenn.example/en/accept-invite?token=secret");
-    expect(payload.html).toContain("href=\\"https://oxenn.example/en/accept-invite?token=secret\\"");
+    expect(payload.html).toContain('href="https://oxenn.example/en/accept-invite?token=secret"');
     expect(payload.html).toContain("Research &amp; Development");
     expect(payload.html).toContain("Owner &lt;Admin&gt;");
   });
