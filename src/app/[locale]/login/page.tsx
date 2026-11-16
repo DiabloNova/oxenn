@@ -2,9 +2,10 @@
 
 import React, { useState, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { emailLocalPartHasUppercase, getAccountEmailValidationError } from "@/services/auth/registration-validation";
+import { getSafeLocaleReturnTo } from "@/services/auth/return-to";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
@@ -16,6 +17,9 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const locale = resolvedParams.locale;
   const isFa = locale === "fa";
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = getSafeLocaleReturnTo(searchParams.get("returnTo"), locale);
+  const registerHref = returnTo ? `/${locale}/register?returnTo=${encodeURIComponent(returnTo)}` : `/${locale}/register`;
   const { login, session } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -87,10 +91,12 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     try {
       const result = await login(email, password);
       if (result.errorCode === "EMAIL_NOT_VERIFIED") {
-        router.push(`/${locale}/verify-email?email=${encodeURIComponent(email.trim())}`);
+        const verificationParams = new URLSearchParams({ email: email.trim() });
+        if (returnTo) verificationParams.set("returnTo", returnTo);
+        router.push(`/${locale}/verify-email?${verificationParams.toString()}`);
         return;
       }
-      router.push(`/${locale}/dashboard`);
+      router.push(returnTo ?? `/${locale}/dashboard`);
     } catch {
       setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
     } finally {
@@ -257,7 +263,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
             <div className="mt-6 pt-4 border-t border-[var(--border)] text-center text-xs font-bold">
               <span className="text-[var(--text-muted)] mr-1">{strings.noAccount}</span>
               <Link
-                href={`/${locale}/register`}
+                href={registerHref}
                 className="text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] hover:underline transition-colors"
               >
                 {strings.registerLink}
