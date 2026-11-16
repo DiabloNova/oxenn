@@ -620,6 +620,8 @@ function getApplicationOrigin(): string {
 export async function requestPasswordReset(email: string): Promise<{ success: boolean, error?: string }> {
   if (typeof email !== "string" || getAccountEmailValidationError(email)) return { success: false, error: "INVALID_EMAIL" };
   const normalizedEmail = email.trim().toLowerCase();
+  // Resolve the callback URL before minting a token, so missing configuration cannot leave an unreachable live token.
+  const applicationOrigin = getApplicationOrigin();
   const ipKey = privateRateLimitKey("ip", await trustedClientIp());
   const accountIpKey = privateRateLimitKey("password-reset-account-ip", `${normalizedEmail}\0${ipKey}`);
 
@@ -668,7 +670,6 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
   });
 
   if (result && result.rawToken) {
-    const applicationOrigin = getApplicationOrigin();
     after(async () => {
       try {
         const sender = getEmailSender();
