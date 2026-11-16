@@ -36,12 +36,14 @@ describe('Auth handling for deactivated users', () => {
     const PostgresClientModule = await import("../../../../src/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
+    const softDeletedUser = { id: 'usr-deleted', deleted_at: new Date('2026-01-01T00:00:00.000Z') };
+    const emailLookupSql = "SELECT id FROM users WHERE lower(email) = $1 LIMIT 1";
     const mockClient = {
       query: vi.fn().mockImplementation(async (sql: string, params: unknown) => {
         if (sql.includes('INSERT INTO auth_rate_limits')) return { rows: [{ attempts: 1 }] };
-        // Registration checks if user exists using lower(email). If they are soft deleted, the query without deleted_at IS NULL will still find them.
-        if (sql.includes('SELECT id FROM users WHERE lower(email)')) {
-          return { rows: [{ id: 'usr-deleted' }] };
+        // Return the soft-deleted account only for the unfiltered email lookup.
+        if (sql === emailLookupSql && JSON.stringify(params) === JSON.stringify(['deleted@example.com'])) {
+          return { rows: [softDeletedUser] };
         }
         return { rows: [] };
       }),
@@ -52,5 +54,6 @@ describe('Auth handling for deactivated users', () => {
 
     const result = await registerAction('Deleted', 'User', 'deleted@example.com', 'Password123!!', 'deleteduser', 'en');
     expect(result).toEqual({ success: true, verificationEmailSent: true });
+    expect(mockClient.query).toHaveBeenCalledWith(emailLookupSql, ['deleted@example.com']);
   });
 });
