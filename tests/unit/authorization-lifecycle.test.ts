@@ -1,30 +1,28 @@
 vi.mock("pg");
+const lifecycleSession = vi.hoisted(() => ({ user: null as null | { id: string; name: string; email: string; role: "workspace_admin"; workspaceId: string } }));
 vi.mock("../../src/services/auth/session", async (importOriginal) => {
     const mod = await importOriginal<typeof import("../../src/services/auth/session")>();
-
-    const mockSession = {
-        user: {
-            id: 'usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37',
-            name: 'Probe',
-            email: 'probe@example.com',
-            role: 'workspace_admin',
-            workspaceId: 'd4001873-8482-4977-b746-ab085a855012'
-        },
-        expiresAt: new Date(Date.now() + 3600000).toISOString(),
-        status: "authenticated"
-    };
-
+    const currentSession = () => ({
+      user: lifecycleSession.user ?? {
+        id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
+        name: "Probe", email: "probe@example.com", role: "workspace_admin" as const,
+        workspaceId: "d4001873-8482-4977-b746-ab085a855012",
+      },
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      status: "authenticated" as const,
+    });
     return {
       ...mod,
-      getSession: vi.fn().mockResolvedValue(mockSession),
-      requireSession: vi.fn().mockResolvedValue(mockSession),
-      createSession: vi.fn().mockResolvedValue(undefined),
-      invalidateSession: vi.fn().mockResolvedValue(undefined)
+      getSession: vi.fn(async () => currentSession()),
+      requireSession: vi.fn(async () => currentSession()),
+      createSession: vi.fn(async (user) => { lifecycleSession.user = user as typeof lifecycleSession.user; }),
+      invalidateSession: vi.fn().mockResolvedValue(undefined),
     };
 });
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { registerAction, loginAction } from "../../src/app/actions/auth";
+import { registerAction, loginAction, verifyEmailAction } from "../../src/app/actions/auth";
+import { CaptureEmailSender } from "../../src/services/email/adapters";
 import { requireWorkspaceMembership, requireRole } from "../../src/services/auth/authorization";
 import { switchWorkspaceAction } from "../../src/app/actions/workspace";
 
@@ -36,48 +34,80 @@ if (!process.env.DATABASE_URL) {
 describe("Auth Lifecycle Tests", () => {
   let PostgresClientModule: typeof import("../../src/features/admin/infrastructure/persistence/postgres");
 
-  beforeEach(async () => {
-    PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
+  let PostgresClientModule: typeof import("../../src/features/admin/infrastructure/persistence/postgres");
 
+  beforeEach(async () => {
+    process.env.SESSION_SECRET = "lifecycle-test-session-secret-with-32-chars";
+    lifecycleSession.user = null;
+    CaptureEmailSender.clear();
+    PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
-    let capturedHash = "";
-    let capturedParams = "";
+    let createdUserId = "";
+    let createdWorkspaceId = "";
+    let createdEmail = "";
+    let isEmailVerified = false;
+    let capturedPasswordHash = "";
+    let capturedPasswordParams = "";
+    let verificationTokenHash = "";
+    let verificationTokenUserId = "";
 
     const mockClient = {
-      query: vi.fn().mockImplementation(async (sqlOrObj: unknown, params: unknown[]) => {
-        const sql = typeof sqlOrObj === 'string' ? sqlOrObj : (sqlOrObj as {text?: string}).text || String(sqlOrObj);
-
-        if (sql.includes("INSERT INTO users")) return { rowCount: 1 };
-        if (sql.includes("SELECT id FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 }; // Registration email unique
-        if (sql.includes("SELECT user_id FROM user_profiles")) return { rows: [], rowCount: 0 }; // Username unique
-        if (sql.includes("SELECT id, email_verified_at FROM users")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", email_verified_at: null }], rowCount: 1 }; // Verification user lookup
-        if (sql.includes("INSERT INTO email_verification_tokens")) return { rows: [], rowCount: 1 };
-        if (sql.includes("UPDATE email_verification_tokens")) return { rows: [], rowCount: 1 };
+      query: vi.fn().mockImplementation(async (sqlOrObj: unknown, params: unknown[] = []) => {
+        const sql = typeof sqlOrObj === "string" ? sqlOrObj : (sqlOrObj as { text?: string }).text || String(sqlOrObj);
         if (sql.includes("INSERT INTO auth_rate_limits")) return { rows: [{ attempts: 1 }], rowCount: 1 };
+        if (sql.includes("SELECT id FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 };
+        if (sql.includes("SELECT user_id FROM user_profiles")) return { rows: [], rowCount: 0 };
+        if (sql.includes("INSERT INTO users")) {
+          createdUserId = String(params[0]); createdEmail = String(params[2]);
+          return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes("INSERT INTO user_profiles")) return { rows: [], rowCount: 1 };
         if (sql.includes("INSERT INTO user_credentials")) {
-           capturedHash = params[2] as string;
-           capturedParams = params[4] as string;
-           return { rowCount: 1 };
+          capturedPasswordHash = String(params[2]); capturedPasswordParams = String(params[4]);
+          return { rows: [], rowCount: 1 };
         }
-        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com", email_verified_at: new Date() }], rowCount: 1 }; // Verified login
+        if (sql.includes("INSERT INTO organizations")) {
+          createdWorkspaceId = String(params[0]); return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes("INSERT INTO organization_members")) return { rows: [], rowCount: 1 };
+        if (sql.includes("SELECT id, email_verified_at FROM users")) {
+          return { rows: [{ id: createdUserId, email_verified_at: isEmailVerified ? new Date() : null }], rowCount: 1 };
+        }
+        if (sql.includes("INSERT INTO email_verification_tokens")) {
+          verificationTokenUserId = String(params[0]); verificationTokenHash = String(params[1]);
+          return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes("UPDATE email_verification_tokens")) {
+          if (sql.includes("WHERE user_id = (SELECT id FROM users")) {
+            if (String(params[0]).toLowerCase() === createdEmail && String(params[1]) === verificationTokenHash && verificationTokenUserId === createdUserId) {
+              return { rows: [{ user_id: createdUserId }], rowCount: 1 };
+            }
+            return { rows: [], rowCount: 0 };
+          }
+          return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes("UPDATE users SET email_verified_at")) {
+          if (String(params[0]) !== createdUserId) return { rows: [], rowCount: 0 };
+          isEmailVerified = true;
+          return { rows: [{ id: createdUserId, name: "Probe User", email: createdEmail }], rowCount: 1 };
+        }
+        if (sql.includes("SELECT * FROM users WHERE lower(email)")) {
+          return { rows: [{ id: createdUserId, name: "Probe User", email: createdEmail, email_verified_at: isEmailVerified ? new Date() : null }], rowCount: 1 };
+        }
         if (sql.includes("SELECT * FROM user_credentials WHERE user_id")) {
-           return { rows: [{
-              user_id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
-              password_hash: capturedHash || "5X942op26r/rCdLWgb3HfA==:6nwvtKsXerwaU9lugHy4cE6FoYTBrqg0BWn/tg9aiRXradK2OPsdpRNRtMbQV1qFeL+ZEIcm/ZsoKeazAD2EvA==",
-              params: capturedParams ? JSON.parse(capturedParams) : { n: 32768, r: 8, p: 1, keyLength: 64 },
-              failed_attempts: 0
-           }], rowCount: 1 };
+          return { rows: [{ user_id: createdUserId, password_hash: capturedPasswordHash, params: JSON.parse(capturedPasswordParams), failed_attempts: 0 }], rowCount: 1 };
         }
-        if (sql.includes("UPDATE user_credentials")) return { rowCount: 1 };
-        if (sql.includes("SELECT m.organization_id")) return { rows: [{ workspaceId: "d4001873-8482-4977-b746-ab085a855012", role: "workspace_admin", workspaceName: "Probe's Workspace" }], rowCount: 1 };
-        if (sql.includes("organization_members")) return { rows: [{ id: "1", role: "workspace_admin" }], rowCount: 1 }; // Membership passes
-        if (sql.includes("organizations")) return { rows: [{ id: "d4001873-8482-4977-b746-ab085a855012" }], rowCount: 1 };
+        if (sql.includes("UPDATE user_credentials") || sql.includes("DELETE FROM auth_rate_limits")) return { rows: [], rowCount: 1 };
+        if (sql.includes("SELECT m.organization_id")) {
+          return { rows: [{ workspaceId: createdWorkspaceId, role: "workspace_admin", workspaceName: "Probe User's Workspace", username: "probeuser" }], rowCount: 1 };
+        }
+        if (sql.includes("organization_members")) return { rows: [{ id: "1", role: "workspace_admin" }], rowCount: 1 };
+        if (sql.includes("organizations")) return { rows: [{ id: createdWorkspaceId }], rowCount: 1 };
         return { rows: [], rowCount: 0 };
       }),
       release: vi.fn(),
     };
-
     vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
   });
 
@@ -85,25 +115,27 @@ describe("Auth Lifecycle Tests", () => {
     vi.restoreAllMocks();
   });
 
-  it("completes full auth lifecycle", async () => {
-    // 1. Register
+  it("completes registration, recipient-bound email verification, and login lifecycle", async () => {
     const registeredUser = await registerAction("Probe", "User", "probe@example.com", "Password123!!", "probeuser", "en");
     expect(registeredUser).toMatchObject({ success: true, verificationEmailSent: true });
 
-    // 2. Login
+    const verificationEmail = CaptureEmailSender.capturedEmails.find((message) => message.to === "probe@example.com");
+    expect(verificationEmail?.params.code).toMatch(/^\\d{8}$/);
+    expect(verificationEmail?.to).toBe("probe@example.com");
+    const verificationResult = await verifyEmailAction("probe@example.com", verificationEmail!.params.code!);
+    expect(verificationResult).toEqual({ success: true, sessionCreated: true });
+
     const loginResult = await loginAction("probe@example.com", "Password123!!");
     expect(loginResult.success).toBe(true);
     if (!loginResult.success) throw new Error("Expected the verified user to sign in.");
     const loggedInUser = loginResult.user;
     expect(loggedInUser.email).toBe("probe@example.com");
+    expect(loggedInUser.id).toBe(lifecycleSession.user?.id);
+    expect(loggedInUser.workspaceId).toBe(lifecycleSession.user?.workspaceId);
 
-    // 3. requireWorkspaceMembership (pass)
     await requireWorkspaceMembership(loggedInUser.id, loggedInUser.workspaceId);
-
-    // 4. requireRole returns the authoritative role for a different workspace.
     const crossWorkspaceRole = await requireRole("workspace_admin", "ws-cross-workspace");
     expect(crossWorkspaceRole).toBe("workspace_admin");
-
   });
 
   it("negative test: wrong workspace denied", async () => {
