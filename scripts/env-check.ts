@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { isValidSessionSecret, normalizeEnvValue } from "../src/services/auth/session-secret";
+import { isValidSessionSecret, normalizeRuntimeEnvValue } from "../src/services/auth/session-secret";
 
 type Mode = "dev" | "build" | "migrate" | "test";
 
@@ -148,7 +148,7 @@ export function validateEnv(modeArg?: string) {
     // target inputs are trimmed by the runtime guard; all other settings retain
     // their actual runtime representation so quotes cannot hide bad values.
     const val = rule.name === "SESSION_SECRET"
-      ? normalizeEnvValue(rawValue)
+      ? normalizeRuntimeEnvValue(rawValue)
       : rule.name === "DB_PUSH_TARGET_ID" || rule.name === "DB_PUSH_DATABASE_URL"
         ? rawValue.trim()
         : rawValue;
@@ -169,7 +169,7 @@ export function validateEnv(modeArg?: string) {
   }
 
   if (mode === "build" && process.env.NODE_ENV === "production") {
-    const provider = (process.env.EMAIL_PROVIDER ?? "maileroo").trim().toLowerCase();
+    const provider = (process.env.EMAIL_PROVIDER ?? "maileroo").toLowerCase();
     if (provider !== "maileroo" && provider !== "resend") {
       invalid.push({ name: "EMAIL_PROVIDER", reason: "must be maileroo or resend" });
     } else {
