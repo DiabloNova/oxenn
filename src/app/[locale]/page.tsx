@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: copy.title,
     description: copy.description,
     applicationName: "OXENN",
-    alternates: { languages: { fa: "/fa", en: "/en" } },
+    alternates: { canonical: `/${locale}`, languages: { fa: "/fa", en: "/en" } },
     openGraph: { title: copy.title, description: copy.description, siteName: "OXENN", type: "website" },
     twitter: { card: "summary", title: copy.title, description: copy.description },
   };

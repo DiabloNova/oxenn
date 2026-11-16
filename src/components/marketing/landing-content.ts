@@ -11,6 +11,10 @@ export const landingContent = {
       visualEyebrow: "نقشه سیگنال محصول",
       visualNote: "تصویر مفهومی است؛ داده زنده، امتیاز یا نتیجه ارزیابی واقعی را نمایش نمی‌دهد.",
       visualNodes: ["شناخت محصول", "شواهد و زمینه", "فرصت‌های بهبود"],
+      mapAriaLabel: "نمودار مفهومی از ارتباط محصول، شواهد و فرصت‌های بهبود",
+      mapKicker: "OX / SIGNAL MAP", mapIndex: "CONCEPT 01", mapCenterLabel: "OFFER", mapCenterTitle: "زمینه محصول",
+      mapLegend: { context: "زمینه", insight: "بینش", conceptual: "نمای مفهومی" },
+      bottomLabels: ["هوشمندی محصول", "زمینه بازار", "مسیر بهبود"],
     },
     tracks: {
       eyebrow: "دو مسیر ارزیابی مستقل و مرتبط", title: "از دیده‌شدن دیجیتال تا ارزش رقابتی",
@@ -83,7 +87,7 @@ export const landingContent = {
     footer: {
       description: "پلتفرم هوشمندی ارزیابی و بهبود محصول و بازار؛ برای تصمیم‌های روشن‌تر و برنامه‌های مبتنی بر شواهد.",
       tracks: "مسیرهای ارزیابی", principles: "اصول و شواهد", account: "حساب کاربری",
-      copyright: "تمامی حقوق محفوظ است.", strapline: "هوشمندی محصول و بازار",
+      copyright: "تمامی حقوق محفوظ است.", strapline: "هوشمندی محصول و بازار", about: "درباره OXENN", privacy: "حریم خصوصی و شرایط",
     },
   },
   en: {
@@ -98,6 +102,10 @@ export const landingContent = {
       visualEyebrow: "PRODUCT SIGNAL ATLAS",
       visualNote: "Concept illustration only. It does not display live data, scores, or an actual assessment result.",
       visualNodes: ["Offer context", "Evidence & signals", "Improvement options"],
+      mapAriaLabel: "Concept diagram connecting an offer, evidence, and improvement opportunities",
+      mapKicker: "OX / SIGNAL MAP", mapIndex: "CONCEPT 01", mapCenterLabel: "OFFER", mapCenterTitle: "Product context",
+      mapLegend: { context: "Context", insight: "Insight", conceptual: "Conceptual view" },
+      bottomLabels: ["PRODUCT INTELLIGENCE", "MARKET CONTEXT", "IMPROVEMENT DIRECTION"],
     },
     tracks: {
       eyebrow: "TWO DISTINCT ASSESSMENT TRACKS", title: "From digital visibility to competitive value",
@@ -170,7 +178,7 @@ export const landingContent = {
     footer: {
       description: "Product and market improvement intelligence for clearer decisions and evidence-grounded plans.",
       tracks: "Assessment tracks", principles: "Evidence principles", account: "Account",
-      copyright: "All rights reserved.", strapline: "PRODUCT & MARKET INTELLIGENCE",
+      copyright: "All rights reserved.", strapline: "PRODUCT & MARKET INTELLIGENCE", about: "About OXENN", privacy: "Privacy & Terms",
     },
   },
 } as const;

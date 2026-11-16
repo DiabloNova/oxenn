@@ -34,8 +34,7 @@ export function AuthProvider({
 
   useEffect(() => {
     if (skipSessionCheck) {
-      // Public marketing pages do not need Workspace-backed identity.
-      localStorage.removeItem("auth_session_user");
+      // Public marketing pages do not need Workspace-backed identity or browser storage.
       return;
     }
 

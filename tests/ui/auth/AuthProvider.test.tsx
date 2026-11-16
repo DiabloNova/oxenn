@@ -49,6 +49,6 @@ describe("AuthProvider public homepage isolation", () => {
     await waitFor(() => {
       expect(actions.getServerSessionAction).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByText("unauthenticated")).toBeInTheDocument();
+    expect(await screen.findByText("unauthenticated")).toBeInTheDocument();
   });
 });

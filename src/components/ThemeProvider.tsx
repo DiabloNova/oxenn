@@ -71,8 +71,7 @@ export function ThemeProvider({
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme") as Theme | null;
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const isPublicHomepage = pathname === "/fa" || pathname === "/en";
-    const initialTheme = storedTheme || (isPublicHomepage ? "light" : systemTheme);
+    const initialTheme = storedTheme || systemTheme;
 
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");

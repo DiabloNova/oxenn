@@ -14,24 +14,23 @@ function SectionHeading({ id, eyebrow, title, body }: { id: string; eyebrow: str
   );
 }
 
-function SignalMap({ locale, labels }: { locale: string; labels: readonly string[] }) {
-  const isFa = locale === "fa";
+function SignalMap({ labels, copy }: { labels: readonly string[]; copy: ReturnType<typeof getLandingContent>["hero"] }) {
   return (
-    <div className="atlas-map" role="img" aria-label={isFa ? "نمودار مفهومی از ارتباط محصول، شواهد و فرصت‌های بهبود" : "Concept diagram connecting an offer, evidence, and improvement opportunities"}>
+    <div className="atlas-map" role="img" aria-label={copy.mapAriaLabel}>
       <div className="atlas-map-topline">
-        <span className="atlas-map-kicker">OX / SIGNAL MAP</span>
-        <span className="atlas-map-index">CONCEPT 01</span>
+        <span className="atlas-map-kicker">{copy.mapKicker}</span>
+        <span className="atlas-map-index">{copy.mapIndex}</span>
       </div>
       <svg className="atlas-map-svg" viewBox="0 0 620 390" aria-hidden="true">
         <defs>
           <linearGradient id="atlas-line" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#167c80" stopOpacity="0.16" />
-            <stop offset="55%" stopColor="#167c80" stopOpacity="0.78" />
-            <stop offset="100%" stopColor="#d18b4e" stopOpacity="0.65" />
+            <stop offset="0%" stopColor="var(--atlas-teal)" stopOpacity="0.16" />
+            <stop offset="55%" stopColor="var(--atlas-teal)" stopOpacity="0.78" />
+            <stop offset="100%" stopColor="var(--atlas-amber)" stopOpacity="0.65" />
           </linearGradient>
           <radialGradient id="atlas-node">
-            <stop offset="0%" stopColor="#74c3bb" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#74c3bb" stopOpacity="0.04" />
+            <stop offset="0%" stopColor="var(--atlas-teal)" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="var(--atlas-teal)" stopOpacity="0.04" />
           </radialGradient>
         </defs>
         <g fill="none" stroke="url(#atlas-line)" strokeWidth="1.6">
@@ -47,24 +46,24 @@ function SignalMap({ locale, labels }: { locale: string; labels: readonly string
         <g fill="url(#atlas-node)">
           <circle cx="106" cy="90" r="35" /><circle cx="532" cy="72" r="35" /><circle cx="82" cy="310" r="35" /><circle cx="548" cy="306" r="35" />
         </g>
-        <g fill="none" stroke="#167c80" strokeWidth="1.5">
+        <g fill="none" stroke="var(--atlas-teal)" strokeWidth="1.5">
           <circle cx="106" cy="90" r="8" /><circle cx="532" cy="72" r="8" /><circle cx="82" cy="310" r="8" /><circle cx="548" cy="306" r="8" />
         </g>
         <circle cx="310" cy="184" r="92" fill="url(#atlas-node)" opacity="0.42" />
-        <circle cx="310" cy="184" r="62" fill="none" stroke="#167c80" strokeOpacity="0.45" strokeDasharray="3 7" />
-        <circle cx="310" cy="184" r="42" fill="#167c80" fillOpacity="0.12" stroke="#167c80" strokeWidth="1.6" />
-        <path d="M310 151 L343 184 L310 217 L277 184 Z" fill="#167c80" fillOpacity="0.16" stroke="#167c80" strokeWidth="1.4" />
-        <circle cx="310" cy="184" r="7" fill="#d18b4e" />
-        <g fill="#d18b4e"><circle cx="106" cy="90" r="3" /><circle cx="532" cy="72" r="3" /><circle cx="82" cy="310" r="3" /><circle cx="548" cy="306" r="3" /></g>
+        <circle cx="310" cy="184" r="62" fill="none" stroke="var(--atlas-teal)" strokeOpacity="0.45" strokeDasharray="3 7" />
+        <circle cx="310" cy="184" r="42" fill="var(--atlas-teal)" fillOpacity="0.12" stroke="var(--atlas-teal)" strokeWidth="1.6" />
+        <path d="M310 151 L343 184 L310 217 L277 184 Z" fill="var(--atlas-teal)" fillOpacity="0.16" stroke="var(--atlas-teal)" strokeWidth="1.4" />
+        <circle cx="310" cy="184" r="7" fill="var(--atlas-amber)" />
+        <g fill="var(--atlas-amber)"><circle cx="106" cy="90" r="3" /><circle cx="532" cy="72" r="3" /><circle cx="82" cy="310" r="3" /><circle cx="548" cy="306" r="3" /></g>
       </svg>
-      <div className="atlas-map-center"><span>OFFER</span><strong>{isFa ? "زمینه محصول" : "Product context"}</strong></div>
+      <div className="atlas-map-center"><span>{copy.mapCenterLabel}</span><strong>{copy.mapCenterTitle}</strong></div>
       <div className="atlas-map-label atlas-map-label-one"><span>01</span><strong>{labels[0]}</strong></div>
       <div className="atlas-map-label atlas-map-label-two"><span>02</span><strong>{labels[1]}</strong></div>
       <div className="atlas-map-label atlas-map-label-three"><span>03</span><strong>{labels[2]}</strong></div>
       <div className="atlas-map-footer">
-        <span><i className="atlas-dot atlas-dot-teal" /> {isFa ? "زمینه" : "Context"}</span>
-        <span><i className="atlas-dot atlas-dot-amber" /> {isFa ? "بینش" : "Insight"}</span>
-        <span className="atlas-concept-label">{isFa ? "نمای مفهومی" : "Conceptual view"}</span>
+        <span><i className="atlas-dot atlas-dot-teal" /> {copy.mapLegend.context}</span>
+        <span><i className="atlas-dot atlas-dot-amber" /> {copy.mapLegend.insight}</span>
+        <span className="atlas-concept-label">{copy.mapLegend.conceptual}</span>
       </div>
     </div>
   );
@@ -72,7 +71,6 @@ function SignalMap({ locale, labels }: { locale: string; labels: readonly string
 
 export function LandingSections({ locale }: LandingSectionsProps) {
   const t = getLandingContent(locale);
-  const isFa = locale === "fa";
   const tracks = t.tracks.items;
   const steps = t.method.steps;
   const offerTypes = t.offers.types;
@@ -96,14 +94,14 @@ export function LandingSections({ locale }: LandingSectionsProps) {
           </div>
           <div className="atlas-hero-visual">
             <div className="atlas-visual-caption"><span>{t.hero.visualEyebrow}</span><span>FA / EN · 01</span></div>
-            <SignalMap locale={locale} labels={t.hero.visualNodes} />
+            <SignalMap labels={t.hero.visualNodes} copy={t.hero} />
             <p className="atlas-visual-note">{t.hero.visualNote}</p>
           </div>
         </div>
         <div className="atlas-container atlas-hero-bottom" aria-hidden="true">
-          <span>{isFa ? "هوشمندی محصول" : "PRODUCT INTELLIGENCE"}</span><span className="atlas-bottom-line" />
-          <span>{isFa ? "زمینه بازار" : "MARKET CONTEXT"}</span><span className="atlas-bottom-line" />
-          <span>{isFa ? "مسیر بهبود" : "IMPROVEMENT DIRECTION"}</span>
+          <span>{t.hero.bottomLabels[0]}</span><span className="atlas-bottom-line" />
+          <span>{t.hero.bottomLabels[1]}</span><span className="atlas-bottom-line" />
+          <span>{t.hero.bottomLabels[2]}</span>
         </div>
       </section>
 

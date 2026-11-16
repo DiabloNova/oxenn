@@ -1,7 +1,7 @@
-/**
- * Public marketing routes are intentionally independent of Workspace session storage.
- * Keep this check narrow: localized auth and workspace routes must still validate sessions.
- */
+import { SUPPORTED_LOCALES } from "@/config/i18n";
+
+/** Public homepages do not need Workspace session storage; every other route does. */
 export function shouldSkipHomepageSessionLookup(pathname: string | null | undefined): boolean {
-  return pathname === "/fa" || pathname === "/fa/" || pathname === "/en" || pathname === "/en/";
+  if (!pathname) return false;
+  return SUPPORTED_LOCALES.some((locale) => pathname === `/${locale}` || pathname === `/${locale}/`);
 }
