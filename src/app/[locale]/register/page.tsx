@@ -54,7 +54,7 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     localUpperWarning: isFa ? "حروف بزرگ در بخش ابتدایی ایمیل مجاز است؛ آدرس هنگام ذخیره‌سازی یکسان‌سازی می‌شود." : "Uppercase letters in the part before @ are allowed; the address is normalized when saved.",
     domainUpperError: isFa ? "حروف بزرگ در بخش دامنه ایمیل مجاز نیست. دامنه را کاملاً با حروف کوچک بنویسید." : "Uppercase letters are not allowed in the email domain. Use lowercase letters only.",
     passwordUpperWarning: isFa ? "رمز عبور باید حداقل یک حرف بزرگ انگلیسی داشته باشد." : "Add at least one uppercase letter to your password.",
-    passwordHint: isFa ? "حداقل ۱۰ نویسه انگلیسی، یک حرف بزرگ، یک عدد و دو کاراکتر خاص." : "At least 10 ASCII characters, one uppercase letter, one number and two special characters.",
+    passwordHint: isFa ? "۱۰ تا ۲۵۵ نویسه انگلیسیِ قابل‌چاپ، بدون فاصله؛ شامل حداقل یک حرف بزرگ، یک عدد و دو نویسه خاص." : "Use 10–255 printable ASCII characters with no spaces, at least one uppercase letter, one number, and two special characters.",
   };
 
   const validate = () => {
