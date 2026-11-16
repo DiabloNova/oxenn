@@ -339,9 +339,14 @@ export async function registerAction(
     const databaseError = error as { code?: string; constraint?: string };
     if (databaseError?.code === "23505") {
       if (databaseError.constraint?.toLowerCase().includes("username")) return { errorCode: "USERNAME_EXISTS" };
-      if (databaseError.constraint?.toLowerCase().includes("email")) return { alreadyRegistered: true };
+      if (databaseError.constraint?.toLowerCase().includes("email")) {
+        createdUser = { alreadyRegistered: true };
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
     }
-    throw error;
   }
 
   // Duplicate-email outcomes (including concurrent unique-index conflicts) are indistinguishable
