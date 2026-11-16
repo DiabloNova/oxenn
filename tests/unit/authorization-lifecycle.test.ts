@@ -1,5 +1,8 @@
 vi.mock("pg");
-const lifecycleSession = vi.hoisted(() => ({ user: null as null | { id: string; name: string; email: string; role: "workspace_admin"; workspaceId: string } }));
+const lifecycleSession = vi.hoisted(() => ({
+  user: null as null | { id: string; name: string; email: string; role: "workspace_admin"; workspaceId: string },
+  registeredUserId: "",
+}));
 vi.mock("../../src/services/auth/session", async (importOriginal) => {
     const mod = await importOriginal<typeof import("../../src/services/auth/session")>();
     const currentSession = () => ({
@@ -24,7 +27,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { registerAction, loginAction, verifyEmailAction } from "../../src/app/actions/auth";
 import { CaptureEmailSender } from "../../src/services/email/adapters";
 import { requireWorkspaceMembership, requireRole } from "../../src/services/auth/authorization";
-import { switchWorkspaceAction } from "../../src/app/actions/workspace";
 
 // Ensure DATABASE_URL is set before importing PostgresClient
 if (!process.env.DATABASE_URL) {
@@ -38,6 +40,7 @@ describe("Auth Lifecycle Tests", () => {
   beforeEach(async () => {
     process.env.SESSION_SECRET = "lifecycle-test-session-secret-with-32-chars";
     lifecycleSession.user = null;
+    lifecycleSession.registeredUserId = "";
     CaptureEmailSender.clear();
     PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
@@ -58,7 +61,9 @@ describe("Auth Lifecycle Tests", () => {
         if (sql.includes("SELECT id FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 };
         if (sql.includes("SELECT user_id FROM user_profiles")) return { rows: [], rowCount: 0 };
         if (sql.includes("INSERT INTO users")) {
-          createdUserId = String(params[0]); createdEmail = String(params[2]);
+          createdUserId = String(params[0]);
+          lifecycleSession.registeredUserId = createdUserId;
+          createdEmail = String(params[2]);
           return { rows: [], rowCount: 1 };
         }
         if (sql.includes("INSERT INTO user_profiles")) return { rows: [], rowCount: 1 };
@@ -129,6 +134,7 @@ describe("Auth Lifecycle Tests", () => {
     if (!loginResult.success) throw new Error("Expected the verified user to sign in.");
     const loggedInUser = loginResult.user;
     expect(loggedInUser.email).toBe("probe@example.com");
+    expect(loggedInUser.id).toBe(lifecycleSession.registeredUserId);
     expect(loggedInUser.id).toBe(lifecycleSession.user?.id);
     expect(loggedInUser.workspaceId).toBe(lifecycleSession.user?.workspaceId);
 
