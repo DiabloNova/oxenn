@@ -85,15 +85,13 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
 
     setIsLoading(true);
     try {
-      await login(email, password);
-      // Success redirect
-      router.push(`/${locale}/dashboard`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("EMAIL_NOT_VERIFIED")) {
+      const result = await login(email, password);
+      if (result.errorCode === "EMAIL_NOT_VERIFIED") {
         router.push(`/${locale}/verify-email?email=${encodeURIComponent(email.trim())}`);
         return;
       }
+      router.push(`/${locale}/dashboard`);
+    } catch {
       setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
     } finally {
       setIsLoading(false);
