@@ -72,6 +72,39 @@ const RULES: VarRule[] = [
   },
 ];
 
+export function parseDotenvValue(source: string): string {
+  const value = source.trimStart();
+  if (!value || value.startsWith("#")) return "";
+
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    let closingQuote = -1;
+    let escaped = false;
+    for (let index = 1; index < value.length; index += 1) {
+      const character = value[index];
+      if (quote === '"' && character === "\\" && !escaped) {
+        escaped = true;
+        continue;
+      }
+      if (character === quote && !escaped) {
+        closingQuote = index;
+        break;
+      }
+      escaped = false;
+    }
+    if (closingQuote < 0) return value;
+    const trailing = value.slice(closingQuote + 1).trimStart();
+    if (trailing && !trailing.startsWith("#")) return value;
+    let parsed = value.slice(1, closingQuote);
+    if (quote === '"') {
+      parsed = parsed.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\(["\\])/g, "$1");
+    }
+    return parsed;
+  }
+
+  return value.replace(/\s+#.*$/, "").trimEnd();
+}
+
 function loadEnvFile(filePath: string) {
   if (!fs.existsSync(filePath)) return;
   const content = fs.readFileSync(filePath, "utf8");
@@ -80,8 +113,8 @@ function loadEnvFile(filePath: string) {
     if (!trimmed || trimmed.startsWith("#")) continue;
     const eqIdx = trimmed.indexOf("=");
     if (eqIdx === -1) continue;
-    const key = trimmed.slice(0, eqIdx).trim();
-    const val = normalizeEnvValue(trimmed.slice(eqIdx + 1));
+    const key = trimmed.slice(0, eqIdx).trim().replace(/^export\s+/, "");
+    const val = parseDotenvValue(trimmed.slice(eqIdx + 1));
     if (key && process.env[key] === undefined) {
       process.env[key] = val;
     }
@@ -110,9 +143,13 @@ export function validateEnv(modeArg?: string) {
   const activeRules = RULES.filter((r) => r.modes.includes(mode));
 
   for (const rule of activeRules) {
-    const val = normalizeEnvValue(process.env[rule.name]);
+    const rawValue = process.env[rule.name] ?? "";
+    // SESSION_SECRET is normalized by the application too. Other values must
+    // keep their runtime representation: stripping quotes here could make a
+    // malformed DATABASE_URL or provider setting look valid to this check.
+    const val = rule.name === "SESSION_SECRET" ? normalizeEnvValue(rawValue) : rawValue;
 
-    if (!val) {
+    if (!val.trim()) {
       if (rule.required) {
         missing.push(rule.name);
       }
@@ -128,15 +165,15 @@ export function validateEnv(modeArg?: string) {
   }
 
   if (mode === "build" && process.env.NODE_ENV === "production") {
-    const provider = (normalizeEnvValue(process.env.EMAIL_PROVIDER) || "maileroo").toLowerCase();
+    const provider = (process.env.EMAIL_PROVIDER || "maileroo").toLowerCase();
     if (provider !== "maileroo" && provider !== "resend") {
       invalid.push({ name: "EMAIL_PROVIDER", reason: "must be maileroo or resend" });
     } else {
       const keyName = provider === "maileroo" ? "MAILEROO_API_KEY" : "RESEND_API_KEY";
-      if (!normalizeEnvValue(process.env[keyName])) missing.push(keyName);
+      if (!process.env[keyName]) missing.push(keyName);
     }
 
-    const fromAddress = normalizeEnvValue(process.env.EMAIL_FROM_ADDRESS);
+    const fromAddress = process.env.EMAIL_FROM_ADDRESS ?? "";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)) {
       invalid.push({ name: "EMAIL_FROM_ADDRESS", reason: "must be a valid address on the verified sending domain" });
     }
