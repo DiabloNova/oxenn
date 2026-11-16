@@ -113,10 +113,14 @@ async function requiredOutput(root: string,operation: GitOperation): Promise<str
   return output;
 }
 
-export async function inspectGitRepository(startPath: string): Promise<GitSnapshot> {
+export async function resolveGitRepositoryRoot(startPath: string): Promise<string> {
   const start = await realpath(startPath);
   if (!(await stat(start)).isDirectory()) throw new Error("Repository inspection path must be a directory.");
-  const repositoryRoot = await realpath(await requiredOutput(start,"top-level"));
+  return realpath(await requiredOutput(start,"top-level"));
+}
+
+export async function inspectGitRepository(startPath: string): Promise<GitSnapshot> {
+  const repositoryRoot = await resolveGitRepositoryRoot(startPath);
   const [branchResult,headSha,mainResult,filterResult] = await Promise.all([
     runGit(repositoryRoot,"branch"),requiredOutput(repositoryRoot,"head"),runGit(repositoryRoot,"main").catch(() => undefined),runGit(repositoryRoot,"filters").catch(() => undefined)
   ]);

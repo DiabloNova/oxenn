@@ -5,7 +5,7 @@ This directory contains the first local-first Development Agent prototype. Versi
 ## Capabilities
 
 - Reads the current repository root, branch, HEAD SHA, local main SHA when available, and Git working-tree status.
-- Reads a bounded (32 KiB) task envelope from outside the selected repository; rejects repository-contained, symlinked and hard-linked task files. Validates scope, Git branch-ref syntax, SHA-1/SHA-256 object IDs, provider policy and path containment.
+- Resolves the canonical Git top-level before task intake, even when `--repo` points to a subdirectory. Reads a bounded (32 KiB) task envelope from outside that Git worktree root; rejects repository-contained, symlinked and hard-linked task files. Validates scope, Git branch-ref syntax, SHA-1/SHA-256 object IDs, provider policy and path containment.
 - Reads root and ancestor `AGENTS.md` files for file scopes, and the allowed directory's own plus nested `AGENTS.md` files for directory scopes. Discovery is bounded by 4,096 candidate paths, 256 actual instruction files, depth 32, 10,000 directory entries and 8 MiB aggregate instruction content; exceeding a limit blocks the plan.
 - Reads only the authoritative Markdown/source documents explicitly named by the task envelope. MVP-stage and remediation tasks additionally require their task-class minimum authority documents; missing documents produce `BLOCKED`.
   - `mvp-stage`: repository context, MVP product specification, MVP engineering baseline, roadmap README, and the stage brief matching the `MVP-XX` task ID.

@@ -12,7 +12,7 @@ Remediate the confirmed Gitar, HeyDeer and Cubic findings affecting the current 
 
 ## Review coverage
 
-The completed inline review set contained 39 comments: 2 Gitar, 6 HeyDeer and 31 Cubic. The Gitar/HeyDeer findings and 27 Cubic findings affecting the Development Agent runtime, tests, or Development Agent policy/reporting are addressed in this patch. Four Cubic comments remain deliberately deferred because they concern the preserved MVP-00 source artifacts: the WP-01 snapshot's branch-revalidation evidence detail, and the PDDG/owner-register metadata, stage-count and source-version wording.
+The completed inline review set contained 39 comments: 2 Gitar, 6 HeyDeer and 31 Cubic. The Gitar/HeyDeer findings and 27 Cubic findings affecting the Development Agent runtime, tests, or Development Agent policy/reporting are addressed in this patch. Gitar’s remaining suggestion on the updated head was also fixed by resolving Git top-level before task intake. Four Cubic comments remain deliberately deferred because they concern the preserved MVP-00 source artifacts: the WP-01 snapshot's branch-revalidation evidence detail, and the PDDG/owner-register metadata, stage-count and source-version wording.
 
 ## Implemented changes
 
@@ -22,6 +22,7 @@ The completed inline review set contained 39 comments: 2 Gitar, 6 HeyDeer and 31
 - Accept full SHA-1 (40 hex characters) and SHA-256 (64 hex characters) object IDs.
 - Reject an allowed path that is equal to or nested below a prohibited path, while preserving a permitted parent scope with a narrower prohibited child.
 - Require the task envelope to be a regular file outside the selected repository; reject symlink and hard-link task files.
+- Resolve the canonical Git top-level before the CLI reads the task file, so `--repo` pointing at a subdirectory cannot make an in-repository task file appear external.
 - Read at most 32 KiB through one verified file descriptor and reject file mutation during the read.
 - Require the task-class minimum authority documents before a plan can be `READY`: MVP-stage tasks need the repository context, product specification, engineering baseline, roadmap README and the stage brief matching the `MVP-XX` task ID; remediation tasks need the repository context, remediation prompt, Wave 0 supersession policy, implementation sequence, progress tracker and every finding record matching the finding IDs in the task ID.
 
@@ -53,7 +54,7 @@ The completed inline review set contained 39 comments: 2 Gitar, 6 HeyDeer and 31
 
 ### Tests and documentation
 
-- Added regression coverage for nested instruction discovery, file-vs-directory scopes, external symlinks, discovery limits, task-file location/size/link constraints, path containment, explicit wrong-branch/wrong-base planner blocking, Git filters/fsmonitor, global ignore preservation, large status output, rename counting, repository roots with whitespace, ledger hard links/symlinks, task mutation and branch/head changes before append.
+- Added regression coverage for nested instruction discovery, file-vs-directory scopes, external symlinks, discovery limits, task-file location/size/link constraints (including `--repo` subdirectory containment), path containment, explicit wrong-branch/wrong-base planner blocking, Git filters/fsmonitor, global ignore preservation, large status output, rename counting, repository roots with whitespace, ledger hard links/symlinks, task mutation and branch/head changes before append.
 - Increased only the affected planner/ledger test timeout to 15 seconds; no assertions were removed or weakened.
 - Updated the Development Agent specification, execution policy and runtime README to reflect shipped v1 behavior and to gate future patching, command execution, provider use, retry behavior and PR actions. The unsafe generic `pnpm test:isolation` recommendation is explicitly forbidden until that script is made target-aware and guarded.
 - Corrected the v1 implementation report's branch-ahead count from 8 to 9 at its recorded historical point.
@@ -68,7 +69,10 @@ The completed inline review set contained 39 comments: 2 Gitar, 6 HeyDeer and 31
 | Node native TypeScript syntax parse for 17 changed source/test files | PASS |
 | `git diff --check` on the working patch | PASS |
 | Full Vitest suite and repository TypeScript typecheck in the local sandbox | NOT RUN — the pinned pnpm workspace install timed out on repeated attempts; no package manifest or lockfile was changed |
-| GitHub CI on the updated PR head | PENDING — rerun after publishing this remediation |
+| First GitHub CI run on `5d3650d` | Typecheck, lint, build, Build Reference Matrix, Unit Tests, UI Tests and Isolation Suite passed; the job failed only at generated-file drift because the new task report had not yet been added to `src/lib/docsIndex.ts`. The exact repository generator has now regenerated that file; rerun pending. |
+| Gitar follow-up review | Completed successfully; its remaining Git-top-level/task-file suggestion is fixed in this follow-up patch. |
+| Cubic follow-up review | In progress at 94% when this report update was prepared; its new P2 comments duplicated fixes already present, and its remaining three P3 comments concern preserved MVP-00 documents. |
+| HeyDeer / DeepSource | HeyDeer skipped due once-per-PR policy; DeepSource skipped because analysis quota was exhausted. |
 
 The native smoke checks are targeted integration checks, not a substitute for the repository's full Vitest suite or TypeScript typecheck. CI must confirm those checks before merge.
 

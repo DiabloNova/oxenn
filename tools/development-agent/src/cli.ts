@@ -1,6 +1,7 @@
 import path from "node:path";
 import { appendRunLedger,defaultLedgerPath } from "./run-ledger";
 import { buildPlan } from "./planner";
+import { resolveGitRepositoryRoot } from "./git-inspector";
 import { readTaskEnvelopeFile } from "./task-intake";
 import type { RunLedgerRecord } from "./types";
 
@@ -26,8 +27,9 @@ function parseArguments(args: string[]): CliOptions {
 }
 async function main(args: string[]): Promise<void> {
   const options = parseArguments(args);
-  const task = await readTaskEnvelopeFile(options.taskFile,options.repositoryPath);
-  const plan = await buildPlan({repositoryPath:options.repositoryPath,task});
+  const repositoryRoot = await resolveGitRepositoryRoot(options.repositoryPath);
+  const task = await readTaskEnvelopeFile(options.taskFile,repositoryRoot);
+  const plan = await buildPlan({repositoryPath:repositoryRoot,task});
   const record: RunLedgerRecord = {
     schemaVersion:1,event:"plan",runId:plan.runId,createdAt:plan.createdAt,taskId:task.taskId,
     state:plan.status,branch:plan.repository.branch,headSha:plan.repository.headSha,baseSha:task.baseSha,
