@@ -24,7 +24,7 @@ export function LandingFooter() {
             </Link>
             <p>{t.footer.description}</p>
           </div>
-          <nav className="atlas-footer-nav" aria-label={language === "fa" ? "پیوندهای پایین صفحه" : "Footer navigation"}>
+          <nav className="atlas-footer-nav" aria-label={t.footer.navigationLabel}>
             <div><h2>{t.footer.tracks}</h2><Link href={sectionHref("#tracks")}>{t.nav.tracks}</Link><Link href={sectionHref("#approach")}>{t.nav.method}</Link><Link href={sectionHref("#offers")}>{t.nav.offers}</Link></div>
             <div><h2>{t.footer.principles}</h2><Link href={sectionHref("#evidence")}>{t.nav.evidence}</Link><Link href={sectionHref("#about")}>{t.footer.about}</Link></div>
             <div><h2>{t.footer.account}</h2><Link href={`/${language}/login`}>{t.nav.login}</Link><Link href={`/${language}/register`}>{t.nav.signup}<ArrowUpRight size={13} aria-hidden="true" /></Link><Link href={`/${language}/privacy`}>{t.footer.privacy}</Link></div>

@@ -115,11 +115,11 @@ export default function DashboardSidebar({
     return `/${language}${href === "/" ? "" : href}`;
   };
 
-  const isRouteActive = (href?: string) => {
+  const isRouteActive = (href?: string, exact = false) => {
     if (!href) return false;
     const pathOnly = href.split(/[?#]/, 1)[0];
     const localizedHref = getLocalizedHref(pathOnly);
-    if (pathOnly === "/dashboard") return pathname === localizedHref;
+    if (exact || pathOnly === "/dashboard") return pathname === localizedHref;
     return pathname === localizedHref || pathname?.startsWith(localizedHref + "/");
   };
 
@@ -132,7 +132,7 @@ export default function DashboardSidebar({
   };
 
   const isParentActive = (item: NavigationItem) => {
-    if (item.href) return isRouteActive(item.href);
+    if (item.href) return isRouteActive(item.href, item.exact);
     if (item.children) {
       return item.children.some((child) => isRouteActive(child.href));
     }

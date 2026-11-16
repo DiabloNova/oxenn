@@ -20,6 +20,7 @@ export interface NavigationItem {
   href?: string;
   icon: ComponentType<{ size?: number; className?: string }>;
   children?: NavigationSubItem[];
+  exact?: boolean;
 }
 
 export interface NavigationSection {
@@ -35,7 +36,7 @@ export const dashboardNavigation: NavigationSection[] = [
     items: [
       { id: "brand", labelEn: "Your brand", labelFa: "برند شما", href: "/dashboard/brand", icon: Building2 },
       { id: "aeo", labelEn: "AI Answer Insights (AEO)", labelFa: "بینش‌های پاسخ هوش مصنوعی (AEO)", href: "/dashboard/aeo", icon: Sparkles },
-      { id: "seo", labelEn: "SEO", labelFa: "سئو (SEO)", href: "/dashboard/seo", icon: Search },
+      { id: "seo", labelEn: "SEO", labelFa: "سئو (SEO)", href: "/dashboard/seo", icon: Search, exact: true },
       { id: "geo", labelEn: "Language Model Analytics (GEO)", labelFa: "تجزیه و تحلیل ماشین‌های زبانی (GEO)", href: "/dashboard/geo", icon: BrainCircuit },
       { id: "quick-analysis", labelEn: "Quick analysis", labelFa: "تحلیل سریع", href: "/dashboard/audit/free", icon: Zap },
     ],
@@ -54,7 +55,7 @@ export const dashboardNavigation: NavigationSection[] = [
     items: [
       { id: "content-studio", labelEn: "Content studio", labelFa: "استودیو محتوا", href: "/dashboard/content/studio", icon: PenTool },
       { id: "prompt-research", labelEn: "Prompt research", labelFa: "تحقیقات پرامپت", href: "/dashboard/query", icon: FlaskConical },
-      { id: "execution-plan", labelEn: "Execution plan", labelFa: "برنامه اجرایی", href: "/dashboard/optimization/technical", icon: ListChecks },
+      { id: "execution-plan", labelEn: "Execution plan", labelFa: "برنامه اجرایی", href: "/dashboard/planning", icon: ListChecks },
       { id: "marketing", labelEn: "Marketing", labelFa: "بازاریابی", href: "/dashboard/services", icon: Megaphone },
     ],
   },
@@ -63,7 +64,7 @@ export const dashboardNavigation: NavigationSection[] = [
     items: [
       { id: "search-ranking", labelEn: "Improve search rankings", labelFa: "بهبود رتبه در موتورهای جستجو", href: "/dashboard/seo/technical", icon: TrendingUp },
       { id: "site-health", labelEn: "Site health", labelFa: "سلامت سایت", href: "/dashboard/audit/premium", icon: HeartPulse },
-      { id: "technical-issues", labelEn: "Technical issues", labelFa: "مشکلات فنی", href: "/dashboard/optimization/technical", icon: Wrench },
+      { id: "technical-issues", labelEn: "Technical issues", labelFa: "مشکلات فنی", href: "/dashboard/technical-issues", icon: Wrench },
       { id: "product-review", labelEn: "Product review", labelFa: "بررسی محصول", href: "/dashboard/audits", icon: ClipboardCheck },
     ],
   },

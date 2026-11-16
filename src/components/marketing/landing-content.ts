@@ -87,7 +87,7 @@ export const landingContent = {
     footer: {
       description: "پلتفرم هوشمندی ارزیابی و بهبود محصول و بازار؛ برای تصمیم‌های روشن‌تر و برنامه‌های مبتنی بر شواهد.",
       tracks: "مسیرهای ارزیابی", principles: "اصول و شواهد", account: "حساب کاربری",
-      copyright: "تمامی حقوق محفوظ است.", strapline: "هوشمندی محصول و بازار", about: "درباره OXENN", privacy: "حریم خصوصی و شرایط",
+      copyright: "تمامی حقوق محفوظ است.", strapline: "هوشمندی محصول و بازار", about: "درباره OXENN", privacy: "حریم خصوصی و شرایط", navigationLabel: "پیوندهای پایین صفحه",
     },
   },
   en: {
@@ -178,7 +178,7 @@ export const landingContent = {
     footer: {
       description: "Product and market improvement intelligence for clearer decisions and evidence-grounded plans.",
       tracks: "Assessment tracks", principles: "Evidence principles", account: "Account",
-      copyright: "All rights reserved.", strapline: "PRODUCT & MARKET INTELLIGENCE", about: "About OXENN", privacy: "Privacy & Terms",
+      copyright: "All rights reserved.", strapline: "PRODUCT & MARKET INTELLIGENCE", about: "About OXENN", privacy: "Privacy & Terms", navigationLabel: "Footer navigation",
     },
   },
 } as const;
