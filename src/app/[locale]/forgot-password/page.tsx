@@ -37,7 +37,10 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
     emailLabel: isFa ? "آدرس ایمیل ثبت‌نام شده" : "Registered Email Address",
     emailPlaceholder: isFa ? "name@company.com" : "name@company.com",
     passwordLabel: isFa ? "رمز عبور جدید" : "New Password",
-    passwordPlaceholder: isFa ? "حداقل ۱۰ کاراکتر" : "At least 10 characters",
+    passwordPlaceholder: isFa ? "رمز عبور جدید را وارد کنید" : "Enter your new password",
+    passwordHint: isFa
+      ? "رمز عبور باید ۱۰ تا ۲۵۵ نویسه انگلیسیِ قابل‌چاپ، بدون فاصله، شامل حداقل یک حرف بزرگ، یک عدد و دو نویسه خاص باشد."
+      : "Use 10–255 printable ASCII characters with no spaces, at least one uppercase letter, one number, and two special characters.",
     submitBtn: isConfirmMode
       ? (isFa ? "تغییر رمز عبور" : "Change Password")
       : (isFa ? "ارسال لینک بازیابی" : "Send Reset Instructions"),
@@ -205,6 +208,7 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
                     autoCorrect="off"
                     spellCheck={false}
                   />
+                  <p className="text-xs leading-relaxed text-[var(--text-muted)]">{strings.passwordHint}</p>
                 ) : (
                   <Input
                     type="email"
