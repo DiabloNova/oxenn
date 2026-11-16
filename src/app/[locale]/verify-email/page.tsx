@@ -26,6 +26,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const postVerificationDestination = getSafeLocaleReturnTo(requestedReturnTo, locale) ?? `/${locale}/dashboard/profile`;
   const loginHref = `/${locale}/login?returnTo=${encodeURIComponent(postVerificationDestination)}`;
   const deliveryFailed = searchParams?.get("delivery") === "failed";
+  const recoveryRequested = searchParams?.get("recovery") === "1";
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isLegacyVerifying, setIsLegacyVerifying] = useState(Boolean(legacyToken));
@@ -33,7 +34,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [isResending, setIsResending] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [sessionError, setSessionError] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(60);
+  const [resendCooldown, setResendCooldown] = useState(recoveryRequested ? 0 : 60);
   const [resendMessage, setResendMessage] = useState("");
 
   useEffect(() => {
