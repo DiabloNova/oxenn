@@ -5,7 +5,7 @@ import { defineConfig } from "drizzle-kit";
  * Mutating push operations use drizzle.push.config.ts and the db:push guard.
  */
 export default defineConfig({
-  schema: ["./database/schema/index.ts", "./database/schema/user-profile.ts"],
+  schema: "./database/schema/index.ts",
   out: "./database/drizzle",
   dialect: "postgresql",
 });
