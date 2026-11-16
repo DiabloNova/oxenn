@@ -169,12 +169,12 @@ export function validateEnv(modeArg?: string) {
   }
 
   if (mode === "build" && process.env.NODE_ENV === "production") {
-    const provider = (process.env.EMAIL_PROVIDER || "maileroo").toLowerCase();
+    const provider = (process.env.EMAIL_PROVIDER ?? "maileroo").trim().toLowerCase();
     if (provider !== "maileroo" && provider !== "resend") {
       invalid.push({ name: "EMAIL_PROVIDER", reason: "must be maileroo or resend" });
     } else {
       const keyName = provider === "maileroo" ? "MAILEROO_API_KEY" : "RESEND_API_KEY";
-      if (!process.env[keyName]) missing.push(keyName);
+      if (!process.env[keyName]?.trim()) missing.push(keyName);
     }
 
     const fromAddress = process.env.EMAIL_FROM_ADDRESS ?? "";
