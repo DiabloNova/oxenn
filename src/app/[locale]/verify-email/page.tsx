@@ -9,7 +9,7 @@ import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Mail, RotateCw } from "lucide-react";
-import { requestVerification, verifyEmailAction } from "@/app/actions/auth";
+import { requestVerification, verifyEmailAction, verifyLegacyEmailAction } from "@/app/actions/auth";
 
 export default function VerifyEmailPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -19,9 +19,11 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const { refreshSession } = useAuth();
   const [email, setEmail] = useState(searchParams?.get("email") ?? "");
   const [code, setCode] = useState(searchParams?.get("code") ?? "");
+  const legacyToken = searchParams?.get("token") ?? "";
   const deliveryFailed = searchParams?.get("delivery") === "failed";
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isLegacyVerifying, setIsLegacyVerifying] = useState(Boolean(legacyToken));
   const [isResending, setIsResending] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [sessionError, setSessionError] = useState(false);
@@ -49,9 +51,51 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
     account: isFa ? "حساب شما تأیید شد؛ برای ورود به پیشخوان از گزینه زیر استفاده کنید." : "Your account is verified. Use the button below to open your dashboard account.",
     resendFailed: isFa ? "ارسال کد انجام نشد. لطفاً دوباره تلاش کنید." : "The code could not be sent. Please try again.",
     invalid: isFa ? "کد واردشده معتبر نیست یا منقضی شده است." : "The code is invalid or has expired.",
+    legacyPending: isFa ? "در حال بررسی لینک تأیید قدیمی..." : "Verifying your existing email confirmation link...",
     sessionFailed: isFa ? "ایمیل تأیید شد، اما ایجاد نشست خودکار موفق نشد. لطفاً وارد حساب خود شوید." : "Email was verified, but automatic sign-in could not be completed. Please sign in.",
     deliveryFailed: isFa ? "ارسال اولیه ایمیل ناموفق بود. می‌توانید کد را از این صفحه دوباره درخواست کنید." : "The initial email could not be delivered. You can request a new code here.",
   };
+
+  // Preserve verification links already emailed by the previous SHA-256 token flow.
+  // New registrations use the 8-digit code form below.
+  useEffect(() => {
+    if (!legacyToken) return;
+    let active = true;
+
+    const verifyLegacyLink = async () => {
+      try {
+        const result = await verifyLegacyEmailAction(legacyToken);
+        if (!active) return;
+        if (!result.success) {
+          setError(isFa ? "لینک تأیید نامعتبر یا منقضی شده است." : "This verification link is invalid or has expired.");
+          return;
+        }
+        setIsVerified(true);
+        if (!result.sessionCreated) {
+          setSessionError(true);
+          return;
+        }
+        try {
+          const session = await refreshSession();
+          if (!session.user || session.status !== "authenticated") {
+            setSessionError(true);
+            return;
+          }
+          router.replace(`/${locale}/dashboard/profile`);
+          router.refresh();
+        } catch {
+          setSessionError(true);
+        }
+      } catch {
+        if (active) setError(isFa ? "تأیید لینک انجام نشد. ایمیل خود را وارد کنید و کد تازه بگیرید." : "The link could not be verified. Enter your email to request a new code.");
+      } finally {
+        if (active) setIsLegacyVerifying(false);
+      }
+    };
+
+    void verifyLegacyLink();
+    return () => { active = false; };
+  }, [legacyToken, isFa, locale, refreshSession, router]);
 
   const handleVerify = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -121,6 +165,8 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                 {sessionError && <p role="alert" className="text-sm text-amber-600">{t.sessionFailed}</p>}
                 <Link href={sessionError ? `/${locale}/login` : `/${locale}/dashboard/profile`} className="block rounded-xl bg-[var(--sky-blue-500)] px-4 py-3 text-sm font-bold text-white">{sessionError ? t.login : (isFa ? "رفتن به حساب کاربری" : "Go to my account")}</Link>
               </div>
+            ) : isLegacyVerifying ? (
+              <p role="status" className="py-6 text-center text-sm text-[var(--text-muted)]">{t.legacyPending}</p>
             ) : (
               <div className="space-y-4">
                 {deliveryFailed && <p className="rounded-xl bg-amber-500/10 p-3 text-xs text-amber-700">{t.deliveryFailed}</p>}
