@@ -17,7 +17,9 @@ export function DeactivateAccountForm({ locale }: { locale: string }) {
     event.preventDefault();
     setError("");
     if (!password || confirmation !== expected || busy) return;
-    if (!window.confirm(isFa ? "آیا از غیرفعال‌سازی حساب خود مطمئن هستید؟ این عملیات نشست‌ها و عضویت‌های شما را لغو می‌کند." : "Deactivate your account? This revokes your sessions and removes your workspace memberships.")) return;
+    if (!window.confirm(isFa
+      ? "آیا از غیرفعال‌سازی حساب خود مطمئن هستید؟ این عملیات نشست‌های فعال شما را لغو می‌کند و اگر تنها مدیر فعال یک فضای کاری باشید، آن فضا برای همه اعضایش بسته می‌شود."
+      : "Deactivate your account? This revokes your active sessions. If you are the only active administrator of a workspace, that workspace will be closed for all of its members.")) return;
     setBusy(true);
     try {
       const result = await deactivateAccountAction(password);
@@ -41,7 +43,9 @@ export function DeactivateAccountForm({ locale }: { locale: string }) {
     <section className="space-y-4 rounded-2xl border border-red-500/30 bg-red-500/5 p-5">
       <div>
         <h2 className="text-lg font-bold text-red-600">{isFa ? "غیرفعال‌سازی حساب" : "Deactivate account"}</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">{isFa ? "با این کار نشست‌های فعال لغو و عضویت‌های فضای کاری شما حذف می‌شوند. در صورت تنها مدیر بودن، فضای کاری بدون مدیر باقی نمی‌ماند." : "This revokes active sessions and removes your workspace memberships. A workspace will not be left without an active administrator."}</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">{isFa
+          ? "با این کار نشست‌های فعال شما لغو و عضویت‌های فضای کاری‌تان حذف می‌شوند. اگر تنها مدیر فعال یک فضای کاری باشید، آن فضای کاری برای همه اعضا بسته می‌شود."
+          : "This revokes your active sessions and removes your workspace memberships. If you are the only active administrator of a workspace, that workspace will be closed for every member."}</p>
       </div>
       <form onSubmit={submit} className="space-y-3">
         <label className="block text-sm font-medium" htmlFor="deactivation-password">{isFa ? "برای تأیید، رمز عبور خود را وارد کنید" : "Confirm with your password"}</label>
