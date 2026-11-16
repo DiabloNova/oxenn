@@ -1,4 +1,5 @@
-import { lstat,readFile,realpath } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat,open } from "node:fs/promises";
 import path from "node:path";
 import type { TaskClass,TaskEnvelope } from "./types";
 import { normalizeRepoPath } from "./path-safety";
@@ -61,11 +62,20 @@ export function parseTaskEnvelope(value: unknown): TaskEnvelope {
 }
 export async function readTaskEnvelopeFile(taskFile: string): Promise<TaskEnvelope> {
   const absolutePath = path.resolve(taskFile);
-  const info = await lstat(absolutePath);
-  if (info.isSymbolicLink() || !info.isFile()) throw new Error("Task input must be a regular file, not a symlink.");
-  if (info.size > 32 * 1024) throw new Error("Task input exceeds the 32 KiB size limit.");
-  const resolved = await realpath(absolutePath);
-  const content = await readFile(resolved,"utf8");
+  // lstat is a fast fail for symlinks; O_NOFOLLOW closes the common lstat/open race on supported platforms.
+  const linkInfo = await lstat(absolutePath);
+  if (linkInfo.isSymbolicLink()) throw new Error("Task input must not be a symlink.");
+  const noFollow = constants.O_NOFOLLOW ?? 0;
+  const handle = await open(absolutePath,constants.O_RDONLY | noFollow);
+  let content: string;
+  try {
+    const fileInfo = await handle.stat();
+    if (!fileInfo.isFile()) throw new Error("Task input must be a regular file.");
+    if (fileInfo.size > 32 * 1024) throw new Error("Task input exceeds the 32 KiB size limit.");
+    content = await handle.readFile({encoding:"utf8"});
+  } finally {
+    await handle.close();
+  }
   let parsed: unknown;
   try { parsed = JSON.parse(content); } catch { throw new Error("Task input is not valid JSON."); }
   return parseTaskEnvelope(parsed);

@@ -15,7 +15,10 @@ export interface FileEvidence { path: string; sha256: string; }
 export interface DevelopmentPlan {
   schemaVersion: 1; runId: string; createdAt: string; status: "READY" | "BLOCKED";
   reasonCodes: string[];
-  task: { taskId: string; title: string; taskClass: TaskClass; objective: string };
+  task: {
+    taskId: string; title: string; taskClass: TaskClass; objective: string;
+    successCriteria: string[]; stopConditions: string[];
+  };
   repository: GitSnapshot; applicableInstructions: FileEvidence[];
   authoritativeDocuments: FileEvidence[]; allowedPaths: string[];
   prohibitedPaths: string[]; steps: string[]; forbiddenActions: string[];

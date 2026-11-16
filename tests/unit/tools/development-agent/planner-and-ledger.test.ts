@@ -1,4 +1,4 @@
-import { mkdtemp,mkdir,writeFile,readFile,rm } from "node:fs/promises";
+import { mkdtemp,mkdir,writeFile,readFile,rm,stat } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -18,7 +18,7 @@ async function makeRepository(): Promise<{root:string;head:string}> {
   };
   run(["init","--initial-branch=agent-test"]);
   await mkdir(path.join(root,"docs"));
-  await mkdir(path.join(root,"tools","example"));
+  await mkdir(path.join(root,"tools","example"),{recursive:true});
   await writeFile(path.join(root,"AGENTS.md"),"# Instructions\nRead only.");
   await writeFile(path.join(root,"docs","scope.md"),"# Approved scope");
   run(["add","--all"]);
@@ -45,6 +45,8 @@ describe("bounded planning and run ledger",() => {
     expect(plan.status).toBe("READY");
     expect(plan.applicableInstructions.map((item) => item.path)).toContain("AGENTS.md");
     expect(plan.authoritativeDocuments.map((item) => item.path)).toContain("docs/scope.md");
+    expect(plan.task.successCriteria).toContain("A clean, exact-base plan is ready.");
+    expect(plan.task.stopConditions).toContain("Stop if the repository is dirty or the base differs.");
     expect(plan.forbiddenActions.join(" ")).toContain("No arbitrary shell");
   });
   it("blocks a dirty worktree and preserves its contents",async () => {
@@ -56,7 +58,7 @@ describe("bounded planning and run ledger",() => {
     expect(plan.reasonCodes).toContain("DIRTY_WORKTREE");
     expect(await readFile(pathToPreserve,"utf8")).toBe("keep this change");
   });
-  it("appends a private JSONL record outside the repository",async () => {
+  it("appends a redacted, private JSONL record outside the repository",async () => {
     const fixture = await makeRepository();
     const plan = await buildPlan({repositoryPath:fixture.root,task:task(fixture.head)});
     const ledger = path.join(os.tmpdir(),"oxenn-dev-agent-ledger-"+plan.runId,"runs.jsonl");
@@ -66,10 +68,14 @@ describe("bounded planning and run ledger",() => {
       state:plan.status,branch:plan.repository.branch,headSha:plan.repository.headSha,baseSha:fixture.head,
       reasonCodes:plan.reasonCodes,instructionPaths:["AGENTS.md"],documentPaths:["docs/scope.md"]
     };
-    const actualPath = await appendRunLedger(record,fixture.root,ledger);
-    const lines = (await readFile(actualPath,"utf8")).trim().split("\n");
+    const contaminatedRecord = Object.assign({},record,{secret:"must not be persisted"}) as RunLedgerRecord;
+    const actualPath = await appendRunLedger(contaminatedRecord,fixture.root,ledger);
+    const content = await readFile(actualPath,"utf8");
+    const lines = content.trim().split("\n");
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]).taskId).toBe("DEV-AGENT-1");
+    expect(content).not.toContain("must not be persisted");
+    expect((await stat(actualPath)).mode & 0o777).toBe(0o600);
     await expect(appendRunLedger(record,fixture.root,path.join(fixture.root,".agent","runs.jsonl"))).rejects.toThrow(/outside the repository/);
   });
 });

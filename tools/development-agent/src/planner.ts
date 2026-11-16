@@ -17,7 +17,7 @@ export async function buildPlan(options: BuildPlanOptions): Promise<DevelopmentP
   let instructionFiles: FileEvidence[] = [];
   let referenceFiles: FileEvidence[] = [];
   try {
-    const instructions = await loadApplicableInstructions(repository.repositoryRoot,task.allowedPaths);
+    const instructions = await loadApplicableInstructions(repository.repositoryRoot,[...task.allowedPaths,...task.authoritativeDocs]);
     instructionFiles = instructions.files;
     if (!instructions.rootInstructionFound) reasonCodes.push("ROOT_INSTRUCTIONS_MISSING");
     const documents = await loadAuthoritativeDocuments(repository.repositoryRoot,task.authoritativeDocs);
@@ -29,14 +29,17 @@ export async function buildPlan(options: BuildPlanOptions): Promise<DevelopmentP
   return {
     schemaVersion:1,runId,createdAt,status:uniqueReasons.length === 0 ? "READY" : "BLOCKED",
     reasonCodes:uniqueReasons,
-    task:{taskId:task.taskId,title:task.title,taskClass:task.taskClass,objective:task.objective},
+    task:{
+      taskId:task.taskId,title:task.title,taskClass:task.taskClass,objective:task.objective,
+      successCriteria:task.successCriteria,stopConditions:task.stopConditions
+    },
     repository,applicableInstructions:instructionFiles,authoritativeDocuments:referenceFiles,
     allowedPaths:task.allowedPaths,prohibitedPaths:task.prohibitedPaths,
     steps:[
       "Confirm the inspected branch, HEAD SHA, and clean working tree.",
-      "Read only the applicable AGENTS.md files for the approved paths.",
+      "Read only the applicable AGENTS.md files for the approved paths and authoritative inputs.",
       "Read only the explicitly listed authoritative task documents.",
-      "Produce a bounded plan with prerequisites, evidence, and stop conditions."
+      "Produce a bounded plan with prerequisites, evidence, success criteria, and stop conditions."
     ],
     forbiddenActions:[
       "No repository file writes, patches, deletions, or generated-file updates.",
