@@ -84,7 +84,7 @@ describe("Auth Lifecycle Tests", () => {
         }
         if (sql.includes("UPDATE email_verification_tokens")) {
           if (sql.includes("WHERE user_id = (SELECT id FROM users")) {
-            if (String(params[0]).toLowerCase() === createdEmail && String(params[1]) === verificationTokenHash && verificationTokenUserId === createdUserId) {
+            if (String(params[0] ?? "").trim().toLowerCase() === createdEmail.trim().toLowerCase() && String(params[1]) === verificationTokenHash && verificationTokenUserId === createdUserId) {
               return { rows: [{ user_id: createdUserId }], rowCount: 1 };
             }
             return { rows: [], rowCount: 0 };
