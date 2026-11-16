@@ -94,9 +94,9 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
     } catch (error) {
       const code = (error as { code?: string })?.code;
       const errors: Record<string, string> = isFa ? {
-        USER_EXISTS: "این ایمیل قبلاً ثبت شده است.", USERNAME_EXISTS: "این نام کاربری قبلاً انتخاب شده است.", TooManyRequests: "تعداد درخواست‌ها بیش از حد مجاز است. بعداً تلاش کنید.", INVALID_REGISTRATION: "اطلاعات واردشده معتبر نیست.",
+        REGISTRATION_UNAVAILABLE: "ثبت‌نام با این اطلاعات ممکن نیست. اگر قبلاً حساب دارید، وارد شوید یا رمز عبور را بازیابی کنید.", USERNAME_EXISTS: "این نام کاربری قبلاً انتخاب شده است.", TooManyRequests: "تعداد درخواست‌ها بیش از حد مجاز است. بعداً تلاش کنید.", INVALID_REGISTRATION: "اطلاعات واردشده معتبر نیست.",
       } : {
-        USER_EXISTS: "This email is already registered.", USERNAME_EXISTS: "This username is already taken.", TooManyRequests: "Too many registration attempts. Try again later.", INVALID_REGISTRATION: "The registration details are invalid.",
+        REGISTRATION_UNAVAILABLE: "We could not complete registration. If you already have an account, sign in or reset your password.", USERNAME_EXISTS: "This username is already taken.", TooManyRequests: "Too many registration attempts. Try again later.", INVALID_REGISTRATION: "The registration details are invalid.",
       };
       setSubmitError((code && errors[code]) || (isFa ? "ثبت‌نام انجام نشد. اطلاعات را بررسی و دوباره تلاش کنید." : "Registration failed. Check your details and try again."));
     } finally {
