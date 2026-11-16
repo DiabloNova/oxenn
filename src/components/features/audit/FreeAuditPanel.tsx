@@ -104,6 +104,21 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
     }
   }, [url]);
 
+  // Restore an audit that was interrupted by registration/email verification.
+  useEffect(() => {
+    const pending = window.sessionStorage.getItem("oxenn.pending-free-audit");
+    if (!pending) return;
+    window.sessionStorage.removeItem("oxenn.pending-free-audit");
+    try {
+      const restored = JSON.parse(pending) as { url?: unknown };
+      if (typeof restored.url !== "string" || !auditService.validateUrl(restored.url)) return;
+      setUrl(restored.url);
+      setAuditState({ status: "auth-required", job: null, error: null, logs: [] });
+    } catch {
+      // Ignore malformed, stale session-storage state.
+    }
+  }, []);
+
   // Auto-scroll the terminal logs
   useEffect(() => {
     if (consoleEndRef.current) {
@@ -210,12 +225,14 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
     setAuthError(null);
     setIsAuthLoading(true);
     try {
-      if (!authEmail.trim() || !authPassword) {
+      if (!authEmail.trim() || !authPassword.trim()) {
         throw new Error(isRtl ? "لطفاً ایمیل و رمز عبور را وارد کنید." : "Enter your email and password.");
       }
       const result = await login(authEmail, authPassword);
       if (result.errorCode === "EMAIL_NOT_VERIFIED") {
-        router.push(`/${language}/verify-email?email=${encodeURIComponent(authEmail.trim())}`);
+        window.sessionStorage.setItem("oxenn.pending-free-audit", JSON.stringify({ url }));
+        const returnTo = window.location.pathname;
+        router.push(`/${language}/verify-email?email=${encodeURIComponent(authEmail.trim())}&returnTo=${encodeURIComponent(returnTo)}`);
         return;
       }
       // Successful login triggers the existing effect to resume the pending audit.
@@ -344,7 +361,11 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
                   type="button"
                   variant="primary"
                   className="w-full py-3 text-xs font-black"
-                  onClick={() => router.push("/" + language + "/register")}
+                  onClick={() => {
+                    window.sessionStorage.setItem("oxenn.pending-free-audit", JSON.stringify({ url }));
+                    const returnTo = window.location.pathname;
+                    router.push(`/${language}/register?returnTo=${encodeURIComponent(returnTo)}`);
+                  }}
                 >
                   <UserPlus size={14} />
                   <span>{strings.registerRedirectButton}</span>
