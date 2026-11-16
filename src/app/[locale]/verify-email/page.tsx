@@ -10,6 +10,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Mail, RotateCw } from "lucide-react";
 import { requestVerification, verifyEmailAction, verifyLegacyEmailAction } from "@/app/actions/auth";
+import { getSafeLocaleReturnTo } from "@/services/auth/return-to";
+import { normalizeVerificationCodeInput } from "@/services/auth/verification-code";
 
 export default function VerifyEmailPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -21,9 +23,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [code, setCode] = useState(searchParams?.get("code") ?? "");
   const legacyToken = searchParams?.get("token") ?? "";
   const requestedReturnTo = searchParams?.get("returnTo") ?? "";
-  const postVerificationDestination = requestedReturnTo.startsWith(`/${locale}/`) && !requestedReturnTo.startsWith("//") && !requestedReturnTo.includes("\\\\")
-    ? requestedReturnTo
-    : `/${locale}/dashboard/profile`;
+  const postVerificationDestination = getSafeLocaleReturnTo(requestedReturnTo, locale) ?? `/${locale}/dashboard/profile`;
   const deliveryFailed = searchParams?.get("delivery") === "failed";
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
@@ -187,10 +187,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                     label={t.code}
                     value={code}
                     onChange={(event) => {
-                      const asciiDigits = event.target.value
-                        .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
-                        .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
-                      setCode(asciiDigits.replace(/[^0-9]/g, "").slice(0, 8));
+                      setCode(normalizeVerificationCodeInput(event.target.value));
                     }}
                     inputMode="numeric"
                     autoComplete="one-time-code"
