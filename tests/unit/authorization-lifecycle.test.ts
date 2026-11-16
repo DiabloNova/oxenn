@@ -91,7 +91,10 @@ describe("Auth Lifecycle Tests", () => {
     expect(registeredUser).toMatchObject({ success: true, verificationEmailSent: true });
 
     // 2. Login
-    const loggedInUser = await loginAction("probe@example.com", "Password123!!");
+    const loginResult = await loginAction("probe@example.com", "Password123!!");
+    expect(loginResult.success).toBe(true);
+    if (!loginResult.success) throw new Error("Expected the verified user to sign in.");
+    const loggedInUser = loginResult.user;
     expect(loggedInUser.email).toBe("probe@example.com");
 
     // 3. requireWorkspaceMembership (pass)
@@ -248,16 +251,12 @@ describe("Auth Lifecycle Tests", () => {
       // 10 successful logins
       for (let i = 0; i < 10; i++) {
           const res = await loginAction("trip@example.com", "Password123");
-          expect(res).toBeDefined();
-          if (res && typeof res === 'object' && 'error' in res) {
-             throw new Error("Unexpected error");
-          }
+          expect(res.success).toBe(true);
+          if (!res.success) throw new Error("Expected verified user to sign in.");
       }
       // 11th should still succeed because the bucket is cleared every time
       const res = await loginAction("trip@example.com", "Password123");
-      expect(res).toBeDefined();
-      if (res && typeof res === 'object' && 'error' in res) {
-         throw new Error("Unexpected error");
-      }
+      expect(res.success).toBe(true);
+      if (!res.success) throw new Error("Expected verified user to sign in.");
       expect(bucketCleared).toBe(true);
     });
