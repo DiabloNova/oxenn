@@ -71,6 +71,7 @@ function SignalMap({ labels, copy }: { labels: readonly string[]; copy: ReturnTy
 
 export function LandingSections({ locale }: LandingSectionsProps) {
   const t = getLandingContent(locale);
+  const isFa = locale === "fa";
   const tracks = t.tracks.items;
   const steps = t.method.steps;
   const offerTypes = t.offers.types;
