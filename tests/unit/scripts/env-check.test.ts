@@ -55,6 +55,26 @@ describe("production build email configuration", () => {
     vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");
   }
 
+  it("rejects empty provider values instead of defaulting them", () => {
+    stubProductionBase();
+    vi.stubEnv("EMAIL_PROVIDER", "");
+    expect(validateEnv("build").invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "EMAIL_PROVIDER" }),
+    ]));
+  });
+
+  it("treats whitespace-only provider keys as missing", () => {
+    stubProductionBase();
+    vi.stubEnv("MAILEROO_API_KEY", "   ");
+    expect(validateEnv("build").missing).toContain("MAILEROO_API_KEY");
+  });
+
+  it("preserves literal hash fragments in runtime session secrets", () => {
+    stubBaseEnvironment("dev");
+    vi.stubEnv("SESSION_SECRET", "runtime-secret-with-more-than-32-characters # retained");
+    expect(validateEnv("dev")).toMatchObject({ missing: [], invalid: [], valid: true });
+  });
+
   it("requires the selected provider key and a valid sender address", () => {
     stubProductionBase();
     vi.stubEnv("MAILEROO_API_KEY", "");
