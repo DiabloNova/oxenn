@@ -59,6 +59,11 @@ vi.mock("@/components/marketing/SeorchableLogo", () => ({ SeorchableLogo: () => 
 
 import VerifyEmailPage from "@/app/[locale]/verify-email/page";
 
+const resolvedLocaleParams = Object.assign(Promise.resolve({ locale: "fa" }), {
+  status: "fulfilled" as const,
+  value: { locale: "fa" },
+}) as Promise<{ locale: string }>;
+
 describe("VerifyEmailPage localized code input", () => {
   afterEach(() => {
     cleanup();
@@ -68,14 +73,14 @@ describe("VerifyEmailPage localized code input", () => {
   });
 
   it("converts Persian digits typed into the actual code field to ASCII", async () => {
-    render(<React.Suspense fallback={<p>Loading verification form</p>}><VerifyEmailPage params={Promise.resolve({ locale: "fa" })} /></React.Suspense>);
+    render(<React.Suspense fallback={<p>Loading verification form</p>}><VerifyEmailPage params={resolvedLocaleParams} /></React.Suspense>);
     const codeInput = await screen.findByLabelText("کد تأیید ۸ رقمی");
     fireEvent.change(codeInput, { target: { value: "۱۲۳۴۵۶۷۸" } });
     expect(codeInput).toHaveValue("12345678");
   });
 
   it("converts Arabic-Indic digits typed into the actual code field to ASCII", async () => {
-    render(<React.Suspense fallback={<p>Loading verification form</p>}><VerifyEmailPage params={Promise.resolve({ locale: "fa" })} /></React.Suspense>);
+    render(<React.Suspense fallback={<p>Loading verification form</p>}><VerifyEmailPage params={resolvedLocaleParams} /></React.Suspense>);
     const codeInput = await screen.findByLabelText("کد تأیید ۸ رقمی");
     fireEvent.change(codeInput, { target: { value: "١٢٣٤٥٦٧٨" } });
     expect(codeInput).toHaveValue("12345678");
