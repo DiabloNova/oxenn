@@ -211,25 +211,7 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
 
   return { success: true };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  if (sender) {
-    // Do not await to avoid blocking response
-    sender.send({
-      to: result.email,
-      templateId: "workspace_invitation",
-      params: {
-        workspaceName: result.workspaceName,
-        inviterName: result.inviterName,
-        url: `${appUrl}/en/accept-invite?token=${result.token}` // Assuming some front-end route to handle it later
-      }
-    }).catch((e) => console.error("Email send async error", e));
 
-    return { success: true };
-  } else {
-    // Fallback: If no provider is available, we return the token in the response so admins can share it manually.
-    // This gates the email provider feature while preserving the prior acceptance loop logic in Production.
-    return { success: true, token: result.token };
-  }
 }
 
 export async function acceptInvitationAction(token: string) {
