@@ -1,7 +1,7 @@
 # Canonical Table Ownership Registry
 
 **Status:** SCR-001 Stage 2  
-**Workspace source:** database/schema/index.ts and its canonical modular schema sources, including database/schema/organization-table.ts, database/schema/api-keys.ts, and the standalone database/schema/user-profile.ts input  
+**Workspace source:** database/schema/index.ts and its canonical modular schema sources, including database/schema/users.ts, database/schema/organization-table.ts, database/schema/api-keys.ts, and database/schema/user-profile.ts. The canonical barrel re-exports every table; Drizzle configuration consumes the barrel only.  
 **Platform Admin source:** database/platform-admin/schema/index.ts
 
 ## Purpose and authority
@@ -25,7 +25,7 @@ status distinguishes current schema contracts from legacy records and unresolved
 
 ## Inventory coverage
 
-- Workspace schema: 71 tables, declared by database/schema/index.ts and its canonical modular schema sources. The standalone user_profiles declaration lives in database/schema/user-profile.ts and is explicitly included in drizzle.config.ts and the ownership-registry test.
+- Workspace schema: 71 tables, declared by database/schema/index.ts and its canonical modular schema sources. The user_profiles declaration lives in database/schema/user-profile.ts, references users from database/schema/users.ts, and is re-exported by database/schema/index.ts. Both Drizzle configurations and application consumers use the canonical barrel.
 - Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 6 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
 - Platform Admin schema: 7 tables in database/platform-admin/schema/index.ts, backed by its own database, configuration, migration directory, and migration history.
 - The Platform Admin Drizzle migration ledger is infrastructure metadata, not an application table, and is not included in the seven-table application inventory.
