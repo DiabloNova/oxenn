@@ -216,12 +216,17 @@ function main() {
   assert.equal(userTables.length, 1, "Expected one users table in its schema module");
 
   const schemaIndex = readFile("database/schema/index.ts");
-  assert.match(schemaIndex, /import\s*\{\s*organizations\s*\}\s*from\s*["']\.\/organization-table["']/);
-  assert.match(schemaIndex, /export\s*\{\s*organizations\s*\}/);
-  assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/api-keys["']/);
+  assert.match(schemaIndex, /import\\s*\\{\\s*organizations\\s*\\}\\s*from\\s*["']\\.\\/organization-table["']/);
+  assert.match(schemaIndex, /import\\s*\\{\\s*users\\s*\\}\\s*from\\s*["']\\.\\/users["']/);
+  assert.match(schemaIndex, /export\\s*\\{[^}]*organizations[^}]*users[^}]*\\}/);
+  assert.match(schemaIndex, /export\\s*\\*\\s*from\\s*["']\\.\\/api-keys["']/);
+  assert.match(schemaIndex, /export\\s*\\*\\s*from\\s*["']\\.\\/user-profile["']/);
 
   for (const configPath of ["drizzle.config.ts", "drizzle.push.config.ts"]) {
-    assert.match(readFile(configPath), /database\/schema\/user-profile\.ts/, configPath + " must include the global user profile schema module");
+    assert.ok(
+      readFile(configPath).includes('schema: "./database/schema/index.ts"'),
+      configPath + " must use the canonical schema barrel exactly once",
+    );
   }
 
   const journal = JSON.parse(readFile("database/drizzle/meta/_journal.json"));
