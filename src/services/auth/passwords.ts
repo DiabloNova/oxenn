@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { getPasswordValidationError, PASSWORD_MAX_LENGTH } from "./registration-validation";
 
 const N = 32768; // 2^15
 const r = 8;
@@ -99,11 +100,8 @@ export async function verifyPassword(password: string, storedHash: string, store
   });
 }
 
-export const PASSWORD_MAX_LENGTH = 255;
+export { PASSWORD_MAX_LENGTH };
 
 export function validatePasswordRequirements(password: string): boolean {
-  if (!password || password.length < 10 || password.length > PASSWORD_MAX_LENGTH) return false;
-  if (!/^[\x20-\x7E]+$/.test(password)) return false;
-  if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) return false;
-  return (password.match(/[^A-Za-z0-9\s]/g) ?? []).length >= 2;
+  return getPasswordValidationError(password) === null;
 }
