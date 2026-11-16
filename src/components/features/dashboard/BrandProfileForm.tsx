@@ -80,9 +80,7 @@ export function BrandProfileForm() {
       const content = groups.flatMap((group) => group.fields.map((field) => {
         const value = values[field.id]?.trim();
         return value ? labels[field.id] + ": " + value : "";
-      })).filter(Boolean).join("
-
-");
+      })).filter(Boolean).join("\n\n");
       if (!values.brandName?.trim()) throw new Error(isFa ? "نام برند را وارد کنید." : "Enter the brand name.");
       await ingestText(content, { source: "brand-profile-form", documentType: "brand-context" });
       setMessageKind("success");
