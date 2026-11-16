@@ -15,21 +15,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function synchronizeServerSession(): Promise<Session> {
+  try {
+    const serverSession = await getServerSessionAction();
+    if (serverSession.status === "authenticated" && serverSession.user) {
+      localStorage.setItem("auth_session_user", JSON.stringify(serverSession.user));
+    } else {
+      localStorage.removeItem("auth_session_user");
+    }
+    return serverSession;
+  } catch (error) {
+    localStorage.removeItem("auth_session_user");
+    throw error;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session>({ user: null, expiresAt: null, status: "loading" });
 
   const refreshSession = useCallback(async (): Promise<Session> => {
     try {
-      const serverSession = await getServerSessionAction();
-      if (serverSession.status === "authenticated" && serverSession.user) {
-        localStorage.setItem("auth_session_user", JSON.stringify(serverSession.user));
-      } else {
-        localStorage.removeItem("auth_session_user");
-      }
+      const serverSession = await synchronizeServerSession();
       setSession(serverSession);
       return serverSession;
     } catch (error) {
-      localStorage.removeItem("auth_session_user");
       const unauthenticated: Session = { user: null, expiresAt: null, status: "unauthenticated" };
       setSession(unauthenticated);
       throw error;
@@ -39,14 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    getServerSessionAction()
+    synchronizeServerSession()
       .then((serverSession) => {
         if (!active) return;
-        if (serverSession.status === "authenticated" && serverSession.user) {
-          localStorage.setItem("auth_session_user", JSON.stringify(serverSession.user));
-        } else {
-          localStorage.removeItem("auth_session_user");
-        }
         setSession(serverSession);
       })
       .catch((error) => {
