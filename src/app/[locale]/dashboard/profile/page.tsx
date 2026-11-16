@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { UserRound } from "lucide-react";
 import { getSession } from "@/services/auth/session";
+import { DeactivateAccountForm } from "@/components/DeactivateAccountForm";
 
 export default async function DashboardProfilePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -24,6 +25,7 @@ export default async function DashboardProfilePage({ params }: { params: Promise
       <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]">
         {rows.map(([label, value]) => <div key={label} className="grid gap-2 border-b border-[var(--border)] p-4 last:border-b-0 sm:grid-cols-[minmax(140px,0.7fr)_1.3fr]"><div className="text-sm font-semibold text-[var(--text-secondary)]">{label}</div><div className="break-all text-sm text-[var(--text-primary)]">{value}</div></div>)}
       </div>
+      <DeactivateAccountForm locale={locale} />
     </section>
   );
 }

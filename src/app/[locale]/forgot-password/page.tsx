@@ -9,7 +9,7 @@ import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle, Mail, KeyRound } from "lucide-react";
 import { requestPasswordReset, confirmPasswordReset } from "@/app/actions/auth";
 import { useSearchParams } from "next/navigation";
-import { getEmailValidationError, getPasswordValidationError } from "@/services/auth/registration-validation";
+import { getAccountEmailValidationError, getPasswordValidationError } from "@/services/auth/registration-validation";
 
 
 export default function ForgotPasswordPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -84,20 +84,14 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
       return true;
     }
 
-    const errorCode = getEmailValidationError(email);
+    const errorCode = getAccountEmailValidationError(email);
     if (errorCode) {
       const messages: Record<string, string> = isFa ? {
         EMAIL_REQUIRED: "وارد کردن ایمیل الزامی است.",
-        EMAIL_ENGLISH_ONLY: "ایمیل باید فقط شامل نویسه‌های انگلیسی باشد.",
-        EMAIL_DOMAIN_UPPERCASE: "دامنه ایمیل باید با حروف کوچک نوشته شود.",
-        EMAIL_HYPHEN_NOT_ALLOWED: "استفاده از خط فاصله در ایمیل مجاز نیست.",
         EMAIL_INVALID_FORMAT: "قالب ایمیل باید مانند x@x.x باشد.",
       } : {
         EMAIL_REQUIRED: "Email is required.",
-        EMAIL_ENGLISH_ONLY: "Email must contain English ASCII characters only.",
-        EMAIL_DOMAIN_UPPERCASE: "The email domain must use lowercase letters only.",
-        EMAIL_HYPHEN_NOT_ALLOWED: "Hyphens are not allowed in email addresses.",
-        EMAIL_INVALID_FORMAT: "Email must use the x@x.x format.",
+        EMAIL_INVALID_FORMAT: "Enter a valid email address.",
       };
       setEmailError(messages[errorCode]);
       return false;

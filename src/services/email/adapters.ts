@@ -29,39 +29,93 @@ export class CaptureEmailSender implements EmailSender {
 }
 
 export class ProductionEmailSender implements EmailSender {
+  private readonly provider: "maileroo" | "resend";
   private readonly apiKey: string;
-  private readonly from: string;
+  private readonly fromAddress: string;
+  private readonly fromName: string;
 
   constructor() {
-    if ((process.env.EMAIL_PROVIDER ?? "").toLowerCase() !== "resend") throw new Error("EMAIL_PROVIDER must be set to resend in production.");
-    this.apiKey = process.env.RESEND_API_KEY ?? "";
-    const fromAddress = process.env.EMAIL_FROM_ADDRESS ?? "";
-    const fromName = process.env.EMAIL_FROM_NAME?.trim() || "Oxenn";
-    if (!this.apiKey) throw new Error("RESEND_API_KEY is not configured.");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)) throw new Error("EMAIL_FROM_ADDRESS must be a valid address on a verified sending domain.");
-    this.from = `${fromName.replace(/[<>\r\n]/g, "")} <${fromAddress}>`;
+    const provider = (process.env.EMAIL_PROVIDER ?? "maileroo").toLowerCase();
+    if (provider !== "maileroo" && provider !== "resend") {
+      throw new Error("EMAIL_PROVIDER must be set to maileroo or resend in production.");
+    }
+    this.provider = provider;
+    this.apiKey = provider === "maileroo" ? process.env.MAILEROO_API_KEY ?? "" : process.env.RESEND_API_KEY ?? "";
+    if (!this.apiKey) throw new Error(`${provider === "maileroo" ? "MAILEROO_API_KEY" : "RESEND_API_KEY"} is not configured.`);
+    this.fromAddress = process.env.EMAIL_FROM_ADDRESS ?? "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.fromAddress)) {
+      throw new Error("EMAIL_FROM_ADDRESS must be a valid address on a verified sending domain.");
+    }
+    this.fromName = (process.env.EMAIL_FROM_NAME?.trim() || "Oxenn").replace(/[<>\r\n]/g, "") || "Oxenn";
   }
 
   async send({ to, templateId, params }: EmailSenderParams): Promise<void> {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error("A valid recipient email address is required.");
     const locale = params.locale === "fa" ? "fa" : "en";
     const verification = templateId === "verification";
-    const subject = verification ? (locale === "fa" ? "کد تأیید ایمیل Oxenn" : "Your Oxenn email verification code") : templateId === "password_reset" ? (locale === "fa" ? "بازیابی رمز عبور Oxenn" : "Reset your Oxenn password") : (locale === "fa" ? "دعوت‌نامه فضای کاری Oxenn" : "Your Oxenn workspace invitation");
-    let text: string;
+    const subject = verification
+      ? (locale === "fa" ? "کد تأیید ایمیل Oxenn" : "Your Oxenn email verification code")
+      : templateId === "password_reset"
+        ? (locale === "fa" ? "بازیابی رمز عبور Oxenn" : "Reset your Oxenn password")
+        : (locale === "fa" ? "دعوت‌نامه فضای کاری Oxenn" : "Your Oxenn workspace invitation");
+
+    let plain: string;
     let html: string;
     if (verification) {
-      const code = escapeHtml(params.code ?? "");
-      if (!/^\d{8}$/.test(params.code ?? "")) throw new Error("Verification email requires an 8-digit code.");
-      text = locale === "fa" ? `کد تأیید ایمیل شما: ${params.code}\nاین کد تا ۱۵ دقیقه معتبر است. اگر شما این درخواست را نداده‌اید، این پیام را نادیده بگیرید.` : `Your Oxenn verification code is ${params.code}. It expires in 15 minutes. If you did not request this, ignore this email.`;
-      html = locale === "fa" ? `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8"><h2>تأیید ایمیل</h2><p>برای تکمیل ثبت‌نام، کد زیر را در Oxenn وارد کنید:</p><div style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px;background:#f3f4f6;text-align:center">${code}</div><p>این کد تا ۱۵ دقیقه معتبر است.</p></div>` : `<div style="font-family:Arial,sans-serif;line-height:1.8"><h2>Verify your email</h2><p>Enter this code in Oxenn to finish creating your account:</p><div style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px;background:#f3f4f6;text-align:center">${code}</div><p>This code expires in 15 minutes.</p></div>`;
+      const rawCode = params.code ?? "";
+      if (!/^\d{8}$/.test(rawCode)) throw new Error("Verification email requires an 8-digit code.");
+      const code = escapeHtml(rawCode);
+      plain = locale === "fa"
+        ? `کد تأیید ایمیل شما: ${rawCode}\nاین کد تا ۱۵ دقیقه معتبر است. اگر شما این درخواست را نداده‌اید، این پیام را نادیده بگیرید.`
+        : `Your Oxenn verification code is ${rawCode}. It expires in 15 minutes. If you did not request this, ignore this email.`;
+      html = locale === "fa"
+        ? `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8"><h2>تأیید ایمیل</h2><p>برای تکمیل ثبت‌نام، کد زیر را در Oxenn وارد کنید:</p><div style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px;background:#f3f4f6;text-align:center">${code}</div><p>این کد تا ۱۵ دقیقه معتبر است.</p></div>`
+        : `<div style="font-family:Arial,sans-serif;line-height:1.8"><h2>Verify your email</h2><p>Enter this code in Oxenn to finish creating your account:</p><div style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px;background:#f3f4f6;text-align:center">${code}</div><p>This code expires in 15 minutes.</p></div>`;
     } else {
-      const url = escapeHtml(params.url ?? "");
-      if (!params.url || !/^https:\/\//i.test(params.url)) throw new Error("Email action requires an HTTPS URL.");
-      const action = templateId === "password_reset" ? (locale === "fa" ? "بازیابی رمز عبور" : "Reset password") : (locale === "fa" ? "پذیرفتن دعوت‌نامه" : "Accept invitation");
-      text = `${action}: ${params.url}`;
-      html = `<div style="font-family:Arial,sans-serif;line-height:1.8"><h2>${escapeHtml(subject)}</h2><p><a href="${url}">${escapeHtml(action)}</a></p></div>`;
+      let actionUrl: URL;
+      try { actionUrl = new URL(params.url ?? ""); }
+      catch { throw new Error("Email action requires a valid HTTPS URL."); }
+      if (actionUrl.protocol !== "https:") throw new Error("Email action requires an HTTPS URL.");
+      const action = templateId === "password_reset"
+        ? (locale === "fa" ? "بازیابی رمز عبور" : "Reset password")
+        : (locale === "fa" ? "پذیرفتن دعوت‌نامه" : "Accept invitation");
+      plain = `${action}: ${actionUrl.toString()}`;
+      html = `<div style="font-family:Arial,sans-serif;line-height:1.8"><h2>${escapeHtml(subject)}</h2><p><a href="${escapeHtml(actionUrl.toString())}">${escapeHtml(action)}</a></p></div>`;
     }
-    const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${this.apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: this.from, to: [to], subject, html, text }), signal: AbortSignal.timeout(10_000) });
-    if (!response.ok) throw new Error(`Resend email delivery failed with HTTP ${response.status}.`);
+
+    let response: Response;
+    if (this.provider === "maileroo") {
+      // Maileroo's documented REST API accepts multipart form data at /send
+      // and authenticates with X-API-Key (not Bearer authorization).
+      const body = new FormData();
+      body.set("from", `${this.fromName} <${this.fromAddress}>`);
+      body.set("to", to);
+      body.set("subject", subject);
+      body.set("plain", plain);
+      body.set("html", html);
+      response = await fetch("https://smtp.maileroo.com/send", {
+        method: "POST",
+        headers: { "X-API-Key": this.apiKey },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      });
+    } else {
+      response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: `${this.fromName} <${this.fromAddress}>`, to: [to], subject, html, text: plain }),
+        signal: AbortSignal.timeout(10_000),
+      });
+    }
+    if (!response.ok) throw new Error(`${this.provider} email delivery failed with HTTP ${response.status}.`);
+    if (this.provider === "maileroo") {
+      let result: unknown;
+      try { result = await response.json(); }
+      catch { throw new Error("Maileroo returned an invalid email API response."); }
+      if (!result || typeof result !== "object" || (result as { success?: unknown }).success !== true) {
+        throw new Error("Maileroo did not accept the email for delivery.");
+      }
+    }
   }
 }
 

@@ -2,6 +2,28 @@ export type RegistrationLocale = "fa" | "en";
 
 export type EmailValidationError = "EMAIL_REQUIRED" | "EMAIL_ENGLISH_ONLY" | "EMAIL_DOMAIN_UPPERCASE" | "EMAIL_HYPHEN_NOT_ALLOWED" | "EMAIL_INVALID_FORMAT";
 
+/**
+ * Compatibility validation for existing accounts and authentication flows.
+ * New registrations deliberately use the stricter policy below; login and
+ * recovery must not reject legacy addresses merely because they contain a
+ * hyphen or an uppercase domain.
+ */
+export function getAccountEmailValidationError(email: string): string | null {
+  const value = email.trim();
+  if (!value) return "EMAIL_REQUIRED";
+  if (value.length > 254 || !/^[\x21-\x7E]+$/.test(value)) return "EMAIL_INVALID_FORMAT";
+  const at = value.indexOf("@");
+  if (at <= 0 || at !== value.lastIndexOf("@") || at === value.length - 1) return "EMAIL_INVALID_FORMAT";
+  const local = value.slice(0, at);
+  const domain = value.slice(at + 1);
+  if (local.length > 64 || local.startsWith(".") || local.endsWith(".") || local.includes("..") ||
+      !/^[A-Za-z0-9.!#$%&'*+\/=?^_`{|}~-]+$/.test(local)) return "EMAIL_INVALID_FORMAT";
+  const labels = domain.split(".");
+  if (labels.length < 2 || labels.some((label) => label.length > 63 ||
+      !/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label))) return "EMAIL_INVALID_FORMAT";
+  return null;
+}
+
 export function getEmailValidationError(email: string): EmailValidationError | null {
   const value = email.trim();
   if (!value) return "EMAIL_REQUIRED";

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CaptureEmailSender, DevEmailSender, getEmailSender, ProductionEmailSender } from "@/services/email/adapters";
 
-describe("EmailSender factory and Resend adapter", () => {
+describe("EmailSender factory and transactional email adapters", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -65,4 +65,45 @@ describe("EmailSender factory and Resend adapter", () => {
       params: { code: "123", locale: "en" },
     })).rejects.toThrow("Verification email requires an 8-digit code.");
   });
+  it("defaults production delivery to Maileroo and fails closed without its API key", () => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true });
+    delete process.env.EMAIL_PROVIDER;
+    delete process.env.MAILEROO_API_KEY;
+    process.env.EMAIL_FROM_ADDRESS = "accounts@example.com";
+    expect(() => getEmailSender()).toThrow("MAILEROO_API_KEY is not configured.");
+  });
+
+  it("sends verification email through the documented Maileroo API contract", async () => {
+    process.env.EMAIL_PROVIDER = "maileroo";
+    process.env.MAILEROO_API_KEY = "test-maileroo-key";
+    process.env.EMAIL_FROM_ADDRESS = "accounts@example.com";
+    process.env.EMAIL_FROM_NAME = "Oxenn";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sender = new ProductionEmailSender();
+    await sender.send({ to: "user@example.com", templateId: "verification", params: { code: "12345678", locale: "en" } });
+
+    expect(fetchMock).toHaveBeenCalledWith("https://smtp.maileroo.com/send", expect.objectContaining({
+      method: "POST",
+      headers: { "X-API-Key": "test-maileroo-key" },
+      body: expect.any(FormData),
+    }));
+    const form = fetchMock.mock.calls[0][1].body as FormData;
+    expect(form.get("from")).toBe("Oxenn <accounts@example.com>");
+    expect(form.get("to")).toBe("user@example.com");
+    expect(form.get("plain")).toContain("12345678");
+    expect(form.get("html")).toContain("12345678");
+  });
+
+  it("rejects a Maileroo API response that does not confirm acceptance", async () => {
+    process.env.EMAIL_PROVIDER = "maileroo";
+    process.env.MAILEROO_API_KEY = "test-maileroo-key";
+    process.env.EMAIL_FROM_ADDRESS = "accounts@example.com";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: false }) }));
+    const sender = new ProductionEmailSender();
+    await expect(sender.send({ to: "user@example.com", templateId: "verification", params: { code: "12345678", locale: "en" } }))
+      .rejects.toThrow("Maileroo did not accept the email for delivery.");
+  });
+
 });

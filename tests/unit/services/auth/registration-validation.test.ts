@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   emailLocalPartHasUppercase,
+  getAccountEmailValidationError,
   getEmailValidationError,
   getPasswordValidationError,
   getPersonNameValidationError,
@@ -9,6 +10,14 @@ import {
 } from "@/services/auth/registration-validation";
 
 describe("registration validation", () => {
+  it("keeps existing account email syntax compatible with legacy addresses", () => {
+    expect(getAccountEmailValidationError("legacy-user@Legacy-Domain.com")).toBeNull();
+    expect(getAccountEmailValidationError("person+tag@sub.domain.example")).toBeNull();
+    expect(getAccountEmailValidationError("bad@@example.com")).toBe("EMAIL_INVALID_FORMAT");
+    expect(getAccountEmailValidationError("missing-domain@-")).toBe("EMAIL_INVALID_FORMAT");
+    expect(getEmailValidationError("legacy-user@Legacy-Domain.com")).not.toBeNull();
+  });
+
   it("accepts the x@x.x shape with a lowercase domain", () => {
     expect(getEmailValidationError("x@x.x")).toBeNull();
     expect(getEmailValidationError("User.Name+tag@sub.example.com")).toBeNull();

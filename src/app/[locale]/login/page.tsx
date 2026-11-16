@@ -4,7 +4,7 @@ import React, { useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { emailLocalPartHasUppercase, getEmailValidationError } from "@/services/auth/registration-validation";
+import { getAccountEmailValidationError } from "@/services/auth/registration-validation";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
@@ -41,11 +41,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     orOAuth: isFa ? "یا استفاده از ورود یکپارچه (OAuth)" : "Or connect via Single Sign-On",
     oauthGoogle: isFa ? "ورود یکپارچه با گوگل (Google)" : "Continue with Google Workspace",
     oauthMicrosoft: isFa ? "ورود یکپارچه با مایکروسافت" : "Continue with Microsoft Entra",
-    validationEmailInvalid: isFa ? "قالب ایمیل باید مانند x@x.x باشد." : "Email must use the x@x.x format.",
-    validationEmailEnglishOnly: isFa ? "ایمیل باید فقط با نویسه‌های انگلیسی نوشته شود." : "Email must contain English ASCII characters only.",
-    validationEmailDomainCase: isFa ? "دامنه ایمیل باید کاملاً با حروف کوچک نوشته شود." : "The email domain must use lowercase letters only.",
-    validationEmailHyphen: isFa ? "استفاده از خط فاصله در ایمیل مجاز نیست." : "Hyphens are not allowed in email addresses.",
-    localPartCaseWarning: isFa ? "حروف بزرگ در بخش قبل از @ مجاز است؛ ایمیل هنگام ورود یکسان‌سازی می‌شود." : "Uppercase letters before @ are allowed; the address is normalized when you sign in.",
+    validationEmailInvalid: isFa ? "قالب ایمیل معتبر نیست." : "Enter a valid email address.",
     validationPasswordRequired: isFa ? "وارد کردن رمز عبور الزامی است." : "Password is required.",
     validationPasswordLength: isFa ? "رمز عبور را وارد کنید." : "Enter your password.",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
@@ -57,11 +53,9 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
       setEmailError(isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.");
       isValid = false;
     } else {
-      const errorCode = getEmailValidationError(email);
+      const errorCode = getAccountEmailValidationError(email);
       const messages: Record<string, string> = {
-        EMAIL_ENGLISH_ONLY: strings.validationEmailEnglishOnly,
-        EMAIL_DOMAIN_UPPERCASE: strings.validationEmailDomainCase,
-        EMAIL_HYPHEN_NOT_ALLOWED: strings.validationEmailHyphen,
+        EMAIL_REQUIRED: isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.",
         EMAIL_INVALID_FORMAT: strings.validationEmailInvalid,
       };
       if (errorCode) {
@@ -95,6 +89,10 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
       router.push(`/${locale}/dashboard`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("EMAIL_NOT_VERIFIED")) {
+        router.push(`/${locale}/verify-email?email=${encodeURIComponent(email.trim())}`);
+        return;
+      }
       setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
     } finally {
       setIsLoading(false);

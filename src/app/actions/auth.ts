@@ -10,9 +10,11 @@ import { getEmailSender } from "@/services/email/adapters";
 import { revokeAllForUser } from "@/services/auth/session";
 
 import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/services/auth/passwords";
-import { getEmailValidationError, getPersonNameValidationError, getUsernameValidationError } from "@/services/auth/registration-validation";
+import { getAccountEmailValidationError, getEmailValidationError, getPersonNameValidationError, getUsernameValidationError } from "@/services/auth/registration-validation";
 
 import { PoolClient } from "pg";
+import { headers } from "next/headers";
+import { isIP } from "node:net";
 
 async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey: string, maxAttempts: number, windowMs: number): Promise<void> {
     const expiresAt = new Date(Date.now() + windowMs);
@@ -48,6 +50,34 @@ const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MINS = 15;
 const REQUIRE_EMAIL_VERIFICATION = true;
 
+function rateLimitSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (secret && secret.length >= 32 && secret !== "change-this-to-a-secure-32-character-secret-in-production") return secret;
+  if (process.env.NODE_ENV !== "production") return "oxenn-local-only-rate-limit-secret-32-characters";
+  throw new Error("SESSION_SECRET must be configured before authentication rate limiting can run.");
+}
+
+function privateRateLimitKey(scope: string, value: string): string {
+  return crypto.createHmac("sha256", rateLimitSecret()).update(`${scope}\0${value}`).digest("hex");
+}
+
+async function trustedClientIp(): Promise<string> {
+  try {
+    const requestHeaders = await headers();
+    // Vercel overwrites x-vercel-forwarded-for at its trusted edge. Do not use
+    // the left-most arbitrary x-forwarded-for value supplied by a client.
+    const candidates = [requestHeaders.get("x-vercel-forwarded-for"), requestHeaders.get("x-real-ip")];
+    for (const candidate of candidates) {
+      const address = candidate?.split(",")[0]?.trim();
+      if (address && isIP(address)) return address;
+    }
+  } catch {
+    if (process.env.NODE_ENV === "production") throw new Error("Trusted client IP is unavailable for authentication rate limiting.");
+  }
+  if (process.env.NODE_ENV === "production") throw new Error("Trusted client IP is unavailable for authentication rate limiting.");
+  return "127.0.0.1";
+}
+
 function hashEmailVerificationCode(email: string, code: string): string {
   const configuredSecret = process.env.SESSION_SECRET;
   const secret = configuredSecret ||
@@ -63,7 +93,7 @@ function hashEmailVerificationCode(email: string, code: string): string {
  * Authenticates user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
 export async function loginAction(email: string, password: string): Promise<User> {
-  if (typeof email !== "string" || getEmailValidationError(email)) {
+  if (typeof email !== "string" || getAccountEmailValidationError(email)) {
     throw new Error("Invalid email address.");
   }
   if (typeof password !== "string" || !password) {
@@ -71,17 +101,20 @@ export async function loginAction(email: string, password: string): Promise<User
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+  const ipKey = privateRateLimitKey("ip", await trustedClientIp());
+  const accountIpKey = privateRateLimitKey("login-account-ip", `${normalizedEmail}\0${ipKey}`);
 
   const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
-      const c = TenantContextManager.getDbClient();
-      if (!c) throw new Error("Failed to get DB client in system context");
-      try {
-          await enforceRateLimit(c, 'login', `login:${normalizedEmail}`, 10, 15 * 60 * 1000);
-          return null;
-      } catch (err: unknown) {
-          if (err instanceof Error && err.message === "TooManyRequests") return "TooManyRequests";
-          throw err;
-      }
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+    try {
+      await enforceRateLimit(client, "login-ip", `ip:${ipKey}`, 100, 15 * 60 * 1000);
+      await enforceRateLimit(client, "login", `account-ip:${accountIpKey}`, 10, 15 * 60 * 1000);
+      return null;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "TooManyRequests") return "TooManyRequests";
+      throw error;
+    }
   });
 
   if (rlError === "TooManyRequests") {
@@ -103,10 +136,6 @@ export async function loginAction(email: string, password: string): Promise<User
         throw new Error("Invalid credentials or user not found.");
     }
 
-
-    if (REQUIRE_EMAIL_VERIFICATION && !userRecord.email_verified_at) {
-        throw new Error("Email must be verified before logging in.");
-    }
 
     const { rows: credRows } = await client.query("SELECT * FROM user_credentials WHERE user_id = $1 FOR UPDATE", [userRecord.id]);
 
@@ -155,11 +184,17 @@ export async function loginAction(email: string, password: string): Promise<User
         [userRecord.id]
     );
 
-    // Clear rate-limit bucket for successful login
+    // Clear only this account+IP bucket after a valid password; raw PII is never stored.
     await client.query(
-        "DELETE FROM auth_rate_limits WHERE endpoint = 'login' AND bucket_key = $1",
-        [`login:${email.toLowerCase().trim()}`]
+      "DELETE FROM auth_rate_limits WHERE endpoint = 'login' AND bucket_key = $1",
+      [`account-ip:${accountIpKey}`],
     );
+
+    // Require verification only after password proof. Existing accounts can
+    // use the verification recovery flow without exposing account existence.
+    if (REQUIRE_EMAIL_VERIFICATION && !userRecord.email_verified_at) {
+      return { error: "EMAIL_NOT_VERIFIED" };
+    }
 
     const { rows: memberRows } = await client.query(`
         SELECT m.organization_id as "workspaceId", m.role, o.name as "workspaceName", p.username
@@ -235,11 +270,14 @@ export async function registerAction(
   const normalizedEmail = email.trim().toLowerCase();
   const fullName = `${normalizedFirstName} ${normalizedLastName}`;
 
+  const registerIpKey = privateRateLimitKey("ip", await trustedClientIp());
+  const registerAccountIpKey = privateRateLimitKey("register-account-ip", `${normalizedEmail}\0${registerIpKey}`);
   const rateLimitResult = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
     try {
-      await enforceRateLimit(client, "register", `register:${normalizedEmail}`, 5, 60 * 60 * 1000);
+      await enforceRateLimit(client, "register-ip", `ip:${registerIpKey}`, 20, 60 * 60 * 1000);
+      await enforceRateLimit(client, "register", `account-ip:${registerAccountIpKey}`, 5, 60 * 60 * 1000);
       return null;
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "TooManyRequests") return "TooManyRequests";
@@ -301,8 +339,7 @@ export async function registerAction(
 
   let verificationEmailSent = false;
   try {
-    const verification = await requestVerification(normalizedEmail, locale);
-    verificationEmailSent = verification.success;
+    verificationEmailSent = await sendVerificationCode(normalizedEmail, locale);
   } catch (error) {
     console.error("Initial verification request failed.", error instanceof Error ? error.message : "Unknown verification error");
   }
@@ -312,24 +349,27 @@ export async function registerAction(
 /**
  * Sends a short-lived, single-use numeric email code. The database stores only its keyed HMAC digest.
  */
-export async function requestVerification(email: string, locale: "fa" | "en" = "en"): Promise<{ success: boolean; errorCode?: string }> {
-  if (typeof email !== "string" || getEmailValidationError(email)) return { success: false, errorCode: "INVALID_EMAIL" };
-  if (locale !== "fa" && locale !== "en") return { success: false, errorCode: "INVALID_LOCALE" };
+async function sendVerificationCode(email: string, locale: "fa" | "en"): Promise<boolean> {
+  if (typeof email !== "string" || getAccountEmailValidationError(email)) return false;
+  if (locale !== "fa" && locale !== "en") return false;
   const normalizedEmail = email.trim().toLowerCase();
+  const ipKey = privateRateLimitKey("ip", await trustedClientIp());
+  const emailKey = privateRateLimitKey("verification-email", normalizedEmail);
 
   const rateLimitResult = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
     try {
-      await enforceRateLimit(client, "verification-send-minute", `verification:${normalizedEmail}`, 1, 60 * 1000);
-      await enforceRateLimit(client, "verification-send-hour", `verification:${normalizedEmail}`, 5, 60 * 60 * 1000);
+      await enforceRateLimit(client, "verification-send-ip", `ip:${ipKey}`, 20, 15 * 60 * 1000);
+      await enforceRateLimit(client, "verification-send-minute", `email:${emailKey}`, 1, 60 * 1000);
+      await enforceRateLimit(client, "verification-send-hour", `email:${emailKey}`, 5, 60 * 60 * 1000);
       return null;
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "TooManyRequests") return "TooManyRequests";
       throw error;
     }
   });
-  if (rateLimitResult === "TooManyRequests") return { success: false, errorCode: "TooManyRequests" };
+  if (rateLimitResult === "TooManyRequests") return false;
 
   const tokenResult = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
@@ -354,21 +394,36 @@ export async function requestVerification(email: string, locale: "fa" | "en" = "
     );
     return { userId: user.id as string, rawCode, tokenHash };
   });
-  if (!tokenResult) return { success: true };
+  if (!tokenResult) return false;
 
   try {
     const sender = getEmailSender();
     await sender.send({ to: normalizedEmail, templateId: "verification", params: { code: tokenResult.rawCode, locale } });
-    return { success: true };
+    return true;
   } catch (error) {
     console.error("Verification email delivery failed.", error instanceof Error ? error.message : "Unknown email error");
-    await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
-      const client = TenantContextManager.getDbClient();
-      if (!client) throw new Error("Failed to get DB client in system context");
-      await client.query("UPDATE email_verification_tokens SET consumed_at = NOW() WHERE user_id = $1 AND token_hash = $2 AND consumed_at IS NULL", [tokenResult.userId, tokenResult.tokenHash]);
-    });
-    return { success: false, errorCode: "EMAIL_DELIVERY_FAILED" };
+    try {
+      await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+        const client = TenantContextManager.getDbClient();
+        if (!client) throw new Error("Failed to get DB client in system context");
+        await client.query("UPDATE email_verification_tokens SET consumed_at = NOW() WHERE user_id = $1 AND token_hash = $2 AND consumed_at IS NULL", [tokenResult.userId, tokenResult.tokenHash]);
+      });
+    } catch (cleanupError) {
+      console.error("Failed to invalidate an undelivered verification token.", cleanupError instanceof Error ? cleanupError.message : "Unknown cleanup error");
+    }
+    return false;
   }
+}
+
+/**
+ * Public resend endpoint deliberately returns the same result for known,
+ * unknown, throttled and delivery-failed addresses.
+ */
+export async function requestVerification(email: string, locale: "fa" | "en" = "en"): Promise<{ success: boolean; errorCode?: string }> {
+  if (typeof email !== "string" || getAccountEmailValidationError(email)) return { success: false, errorCode: "INVALID_EMAIL" };
+  if (locale !== "fa" && locale !== "en") return { success: false, errorCode: "INVALID_LOCALE" };
+  await sendVerificationCode(email, locale);
+  return { success: true };
 }
 
 /**
@@ -377,18 +432,22 @@ export async function requestVerification(email: string, locale: "fa" | "en" = "
 export async function verifyEmailAction(email: string, code: string): Promise<{ success: boolean; sessionCreated: boolean }> {
   if (
     typeof email !== "string" ||
-    getEmailValidationError(email) ||
+    getAccountEmailValidationError(email) ||
     typeof code !== "string" ||
     !/^\d{8}$/.test(code)
   ) return { success: false, sessionCreated: false };
   const normalizedEmail = email.trim().toLowerCase();
   const tokenHash = hashEmailVerificationCode(normalizedEmail, code);
+  const ipKey = privateRateLimitKey("ip", await trustedClientIp());
+  const accountIpKey = privateRateLimitKey("verification-account-ip", `${normalizedEmail}\0${ipKey}`);
 
   const verificationResult = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
     if (!client) throw new Error("Failed to get DB client in system context");
     try {
-      await enforceRateLimit(client, "verification-attempt", `verification:${normalizedEmail}`, 8, 15 * 60 * 1000);
+      // An attacker cannot exhaust a victim's code-attempt quota from another IP.
+      await enforceRateLimit(client, "verification-attempt-ip", `ip:${ipKey}`, 30, 15 * 60 * 1000);
+      await enforceRateLimit(client, "verification-attempt", `account-ip:${accountIpKey}`, 8, 15 * 60 * 1000);
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "TooManyRequests") return null;
       throw error;
@@ -444,23 +503,24 @@ export async function verifyEmailAction(email: string, code: string): Promise<{ 
 }
 
 export async function requestPasswordReset(email: string): Promise<{ success: boolean, error?: string }> {
-  if (typeof email !== "string" || getEmailValidationError(email)) return { success: false, error: "INVALID_EMAIL" };
+  if (typeof email !== "string" || getAccountEmailValidationError(email)) return { success: false, error: "INVALID_EMAIL" };
   const normalizedEmail = email.trim().toLowerCase();
+  const ipKey = privateRateLimitKey("ip", await trustedClientIp());
+  const accountIpKey = privateRateLimitKey("password-reset-account-ip", `${normalizedEmail}\0${ipKey}`);
 
   const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
-      const c = TenantContextManager.getDbClient();
-      if (!c) throw new Error("Failed to get DB client in system context");
-      try {
-          await enforceRateLimit(c, 'password-reset', `reset:${normalizedEmail}`, 5, 60 * 60 * 1000);
-          return null;
-      } catch (err: unknown) {
-          if (err instanceof Error && err.message === "TooManyRequests") return "TooManyRequests";
-          throw err;
-      }
+    const client = TenantContextManager.getDbClient();
+    if (!client) throw new Error("Failed to get DB client in system context");
+    try {
+      await enforceRateLimit(client, "password-reset-ip", `ip:${ipKey}`, 20, 60 * 60 * 1000);
+      await enforceRateLimit(client, "password-reset", `account-ip:${accountIpKey}`, 5, 60 * 60 * 1000);
+      return null;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "TooManyRequests") return "TooManyRequests";
+      throw error;
+    }
   });
-  if (rlError === "TooManyRequests") {
-      return { success: false, error: "TooManyRequests" };
-  }
+  if (rlError === "TooManyRequests") return { success: true };
 
   const result = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
     const client = TenantContextManager.getDbClient();
@@ -493,24 +553,31 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
   });
 
   if (result && result.rawToken) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000");
+      const parsedAppUrl = new URL(appUrl);
+      if (process.env.NODE_ENV === "production" && parsedAppUrl.protocol !== "https:") throw new Error("NEXT_PUBLIC_APP_URL must use HTTPS in production.");
       const sender = getEmailSender();
       await sender.send({
         to: result.email,
         templateId: "password_reset",
-        params: { url: `${appUrl}/en/forgot-password?token=${result.rawToken}`, locale: "en" }
+        params: { url: `${parsedAppUrl.origin}/en/forgot-password?token=${result.rawToken}`, locale: "en" },
       });
-    } catch(e) {
-      console.error("Password-reset email delivery failed.", e instanceof Error ? e.message : "Unknown email error");
-      return { success: false, error: "EMAIL_DELIVERY_FAILED" };
+    } catch (error) {
+      console.error("Password-reset email delivery failed.", error instanceof Error ? error.message : "Unknown email error");
+      try {
+        await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+          const client = TenantContextManager.getDbClient();
+          if (!client) throw new Error("Failed to get DB client in system context");
+          await client.query("UPDATE password_reset_tokens SET consumed_at = NOW() WHERE token_hash = $1 AND consumed_at IS NULL", [crypto.createHash("sha256").update(result.rawToken).digest("hex")]);
+        });
+      } catch (cleanupError) {
+        console.error("Failed to invalidate an undelivered password-reset token.", cleanupError instanceof Error ? cleanupError.message : "Unknown cleanup error");
+      }
     }
   }
 
-  if (result && ('error' in result)) {
-    return { success: false, error: (result as { error?: string }).error };
-  }
-
+  // Unknown account, rate limit and provider failure all have the same public result.
   return { success: true };
 }
 
