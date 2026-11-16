@@ -6,6 +6,7 @@ import {
   requestPasswordReset,
   requestVerification,
   verifyEmailAction,
+  verifyLegacyEmailAction,
 } from "@/app/actions/auth";
 
 const mocks = vi.hoisted(() => ({
@@ -75,6 +76,35 @@ describe("Authentication Actions", () => {
         .mockResolvedValueOnce({ rows: [{ id: "usr-existing", username: null }] });
       await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
         .resolves.toEqual({ errorCode: "USER_EXISTS" });
+    });
+
+    it("keeps the account unverified and exposes delivery failure when the provider rejects the message", async () => {
+      mocks.sendEmail.mockRejectedValueOnce(new Error("provider unavailable"));
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration account/IP limit
+        .mockResolvedValueOnce({ rows: [] }) // email lookup
+        .mockResolvedValueOnce({ rows: [] }) // username lookup
+        .mockResolvedValueOnce({ rows: [] }) // insert user
+        .mockResolvedValueOnce({ rows: [] }) // insert profile
+        .mockResolvedValueOnce({ rows: [] }) // insert credentials
+        .mockResolvedValueOnce({ rows: [] }) // insert organization
+        .mockResolvedValueOnce({ rows: [] }) // insert membership
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // verification send IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // resend minute limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // resend hour limit
+        .mockResolvedValueOnce({ rows: [{ id: "usr-new", email_verified_at: null }] })
+        .mockResolvedValueOnce({ rows: [] }) // invalidate previous code
+        .mockResolvedValueOnce({ rows: [] }) // insert new digest
+        .mockResolvedValueOnce({ rows: [] }); // invalidate undelivered code
+
+      await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
+        .resolves.toEqual({ success: true, verificationEmailSent: false });
+      expect(mocks.createSession).not.toHaveBeenCalled();
+      expect(mocks.query).toHaveBeenLastCalledWith(
+        expect.stringContaining("UPDATE email_verification_tokens"),
+        expect.any(Array),
+      );
     });
 
     it("creates user, profile, credentials, workspace and requests verification without creating a session", async () => {
@@ -157,6 +187,47 @@ describe("Authentication Actions", () => {
         id: "usr-1", username: "johndoe", workspaceId: "org-1",
       }));
     });
+  });
+
+  describe("legacy email verification links", () => {
+    it("consumes a valid legacy link once and creates a session", async () => {
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ user_id: "usr-legacy" }] })
+        .mockResolvedValueOnce({ rows: [{ id: "usr-legacy", name: "Legacy User", email: "legacy@doe.com" }] })
+        .mockResolvedValueOnce({ rows: [{ workspaceId: "org-legacy", role: "workspace_admin", username: "legacy" }] });
+
+      await expect(verifyLegacyEmailAction("a".repeat(64)))
+        .resolves.toEqual({ success: true, sessionCreated: true });
+      expect(mocks.query).toHaveBeenCalledWith(
+        expect.stringContaining("users.deleted_at IS NULL"),
+        expect.any(Array),
+      );
+      expect(mocks.createSession).toHaveBeenCalledWith(expect.objectContaining({
+        id: "usr-legacy", email: "legacy@doe.com", workspaceId: "org-legacy",
+      }));
+    });
+
+    it("rejects malformed, expired, or already-consumed legacy links without creating a session", async () => {
+      await expect(verifyLegacyEmailAction("not-a-legacy-token"))
+        .resolves.toEqual({ success: false, sessionCreated: false });
+      expect(mocks.query).not.toHaveBeenCalled();
+
+      mocks.query.mockResolvedValueOnce({ rows: [] });
+      await expect(verifyLegacyEmailAction("b".repeat(64)))
+        .resolves.toEqual({ success: false, sessionCreated: false });
+      expect(mocks.createSession).not.toHaveBeenCalled();
+    });
+  });
+
+  it("rejects expired or previously consumed 8-digit verification codes", async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // IP attempt limit
+      .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // account/IP attempt limit
+      .mockResolvedValueOnce({ rows: [] }); // no active token (expired, consumed or wrong)
+
+    await expect(verifyEmailAction("john@doe.com", "12345678"))
+      .resolves.toEqual({ success: false, sessionCreated: false });
+    expect(mocks.createSession).not.toHaveBeenCalled();
   });
 
   describe("password recovery", () => {
