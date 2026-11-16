@@ -84,10 +84,13 @@ describe("Auth Lifecycle Tests", () => {
         }
         if (sql.includes("UPDATE email_verification_tokens")) {
           if (params.length > 1) {
-            if (String(params[0] ?? "").trim().toLowerCase() === createdEmail.trim().toLowerCase() && String(params[1]) === verificationTokenHash) {
-              return { rows: [{ user_id: createdUserId }], rowCount: 1 };
+            const emailMatches = String(params[0] ?? "").trim().toLowerCase() === createdEmail.trim().toLowerCase();
+            const hashMatches = String(params[1]) === verificationTokenHash;
+            const ownerMatches = verificationTokenUserId === createdUserId;
+            if (!emailMatches || !hashMatches || !ownerMatches) {
+              throw new Error(`Verification fixture binding mismatch: ${JSON.stringify({ emailMatches, hashMatches, ownerMatches, createdUserId, verificationTokenUserId, createdEmail, suppliedEmail: params[0] })}`);
             }
-            return { rows: [], rowCount: 0 };
+            return { rows: [{ user_id: verificationTokenUserId }], rowCount: 1 };
           }
           return { rows: [], rowCount: 1 };
         }
