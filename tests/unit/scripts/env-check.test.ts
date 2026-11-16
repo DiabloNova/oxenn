@@ -160,6 +160,39 @@ describe("validateEnv db:push settings", () => {
     expect(result.invalid.some((item) => item.name === "DB_PUSH_TARGET_ID" || item.name === "DB_PUSH_DATABASE_URL")).toBe(false);
   });
 
+  it("rejects quoted db:push approval values instead of treating them as enabled", () => {
+    stubBaseEnvironment("dev");
+    vi.stubEnv("ALLOW_DB_PUSH", "\"true\"");
+
+    const result = validateEnv("dev");
+    expect(result.invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "ALLOW_DB_PUSH" }),
+    ]));
+    expect(result.missing).not.toContain("DB_PUSH_TARGET_ID");
+    expect(result.missing).not.toContain("DB_PUSH_DATABASE_URL");
+  });
+
+  it("rejects quoted database URLs because the runtime would receive the quotes", () => {
+    stubBaseEnvironment("dev");
+    vi.stubEnv("DATABASE_URL", "\"postgresql://app:secret@127.0.0.1:5432/oxenn\"");
+
+    expect(validateEnv("dev").invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "DATABASE_URL" }),
+    ]));
+  });
+
+  it("trims db:push target values consistently with the runtime guard", () => {
+    stubBaseEnvironment("dev");
+    vi.stubEnv("ALLOW_DB_PUSH", "true");
+    vi.stubEnv("DB_PUSH_TARGET_ID", " reviewed-target ");
+    vi.stubEnv("DB_PUSH_DATABASE_URL", " postgresql://push:secret@127.0.0.1:5432/disposable ");
+
+    const result = validateEnv("dev");
+    expect(result.invalid.map((item) => item.name)).not.toEqual(expect.arrayContaining(["DB_PUSH_TARGET_ID", "DB_PUSH_DATABASE_URL"]));
+    expect(result.missing).not.toContain("DB_PUSH_TARGET_ID");
+    expect(result.missing).not.toContain("DB_PUSH_DATABASE_URL");
+  });
+
   it("reports malformed target IDs and push URLs as invalid", () => {
     stubBaseEnvironment("dev");
     vi.stubEnv("ALLOW_DB_PUSH", "true");
