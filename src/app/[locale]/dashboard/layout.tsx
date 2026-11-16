@@ -53,8 +53,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Topbar */}
           <DashboardTopbar
             onMenuTrigger={() => setMobileOpen(true)}
-            onHelpTrigger={() => setHelpOpen(true)}
-            showAccountMenu={false}
           />
 
           {/* Page Content viewport container */}

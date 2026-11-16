@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
 import { notifyNavigationStart } from "@/lib/navigation-transition";
+import { matchesDashboardNavigationSearch } from "@/config/dashboardNavigation";
 import { useAuth } from "@/components/AuthProvider";
 import {
   Menu,
@@ -25,13 +26,10 @@ import {
   AlertCircle,
   Inbox
 } from "lucide-react";
-import { Dropdown } from "@/components/Dropdown";
 import { Button } from "@/components/Button";
 
 interface DashboardTopbarProps {
   onMenuTrigger: () => void;
-  onHelpTrigger?: () => void;
-  showAccountMenu?: boolean;
 }
 
 interface Workspace {
@@ -42,12 +40,10 @@ interface Workspace {
 
 export default function DashboardTopbar({
   onMenuTrigger,
-  onHelpTrigger,
-  showAccountMenu = true,
 }: DashboardTopbarProps) {
   const router = useRouter();
   const { theme, setTheme, direction, language, setLanguage } = useTheme();
-  const { session, logout } = useAuth();
+  const { session } = useAuth();
   const isRtl = language === "fa";
 
   const getLocalizedHref = (href: string) => {
@@ -133,12 +129,9 @@ export default function DashboardTopbar({
     { id: "billing", labelEn: "Billing & Subscription Quota", labelFa: "مدیریت اشتراک و صورت‌حساب", href: "/dashboard/billing", icon: Receipt }
   ];
 
-  const filteredSearchItems = searchQuery.trim() === ""
-    ? searchItems
-    : searchItems.filter(item =>
-        item.labelEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.labelFa.includes(searchQuery)
-      );
+  const filteredSearchItems = searchItems.filter((item) =>
+    matchesDashboardNavigationSearch(item, searchQuery)
+  );
 
   // --- Notifications popover ---
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -161,38 +154,6 @@ export default function DashboardTopbar({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  // --- User Menu Dropdown ---
-  const userDropdownItems = [
-    {
-      label: isRtl ? "پروفایل کاربری" : "My Account Profile",
-      value: "profile",
-      onClick: () => navigateTo(`/${language}/profile`)
-    },
-    {
-      label: isRtl ? "تنظیمات فضای کاری" : "Workspace Settings",
-      value: "settings",
-      onClick: () => navigateTo(`/${language}/dashboard/settings`)
-    },
-    {
-      label: isRtl ? "اشتراک و صورت‌حساب" : "Billing & Invoices",
-      value: "billing",
-      onClick: () => navigateTo(`/${language}/dashboard/billing`)
-    },
-    {
-      label: isRtl ? "راهنما و پشتیبانی" : "Help & Documentation",
-      value: "help",
-      onClick: () => {
-        if (onHelpTrigger) onHelpTrigger();
-      }
-    },
-    {
-      label: isRtl ? "خروج از سیستم" : "Sign Out",
-      value: "logout",
-      onClick: async () => {
-        await logout();
-      }
-    }
-  ];
 
   return (
     <>
@@ -392,26 +353,7 @@ export default function DashboardTopbar({
             </AnimatePresence>
           </div>
 
-          {/* Account menu is pinned to the bottom of the shared sidebar. */}
-          {showAccountMenu && <Dropdown
-            align="right"
-            trigger={
-              <button
-                className="flex items-center gap-2 p-1 pe-2 rounded-full hover:bg-[var(--muted-surface)] transition-colors cursor-pointer outline-none focus:ring-1 focus:ring-[var(--sky-blue-500)]"
-                aria-label={isRtl ? "منوی کاربری" : "User menu"}
-              >
-                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--sky-blue-500)] to-[var(--orange-500)] text-white flex items-center justify-center text-xs font-bold uppercase">
-                  {session.user?.name?.slice(0, 1) || "U"}
-                </span>
-                <span className="hidden lg:flex flex-col items-start leading-none text-start">
-                  <span className="text-xs font-semibold text-[var(--text-primary)]">{session.user?.name || "User Admin"}</span>
-                  <span className="text-[10px] text-[var(--text-muted)]">{session.user?.email || "user@seorchable.ir"}</span>
-                </span>
-                <ChevronDown size={14} className="hidden lg:inline text-[var(--text-muted)]" />
-              </button>
-            }
-            items={userDropdownItems}
-          />}
+          {/* Account actions are provided once, at the bottom of DashboardSidebar. */}
         </div>
       </header>
 

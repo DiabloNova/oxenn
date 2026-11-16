@@ -3,6 +3,7 @@
  * Handles document chunking, semantic vector indexing, and background KG population with fail-safe error boundaries.
  */
 
+import { createHash } from "node:crypto";
 import { chunkText } from "../ai/text-chunker";
 import { generateEmbedding } from "../ai/embed-client";
 import { analyzeSentiment } from "../ai/sentiment-analysis";
@@ -35,6 +36,15 @@ export interface IngestionResult {
   processedChunks: number;
   failedChunks: number;
   errors: ChunkError[];
+  rolledBack?: boolean;
+  attemptedProcessedChunks?: number;
+}
+
+class DocumentReplacementFailure extends Error {
+  constructor(readonly result: IngestionResult) {
+    super("Document replacement did not process every chunk.");
+    this.name = "DocumentReplacementFailure";
+  }
 }
 
 export class DocumentIngestionService {
@@ -69,67 +79,129 @@ export class DocumentIngestionService {
       };
     }
 
-    let processedCount = 0;
-    let failedCount = 0;
-    const errors: ChunkError[] = [];
-
-    for (let i = 0; i < totalChunks; i++) {
-      const chunk = chunks[i];
-      let chunkId = `chunk_${tenantId}_${i}_${Date.now()}`;
-
-      try {
-        const embedding = await generateEmbedding(chunk);
-        const sentiment = await analyzeSentiment(chunk);
-
-        const chunkMetadata = {
-          ...validated.metadata,
-          chunkIndex: i,
-          sentiment: {
-            score: sentiment.score,
-            label: sentiment.label,
-            confidence: sentiment.confidence,
-          },
-        };
-
-        const insertResult = await this.vectorStore.insertEmbedding(
-          tenantId,
-          chunk,
-          embedding,
-          chunkMetadata
-        );
-
-        chunkId = (insertResult as { id?: string })?.id || chunkId;
-
-        try {
-          const extractedGraph = await extractGraphEntities(chunk);
-          await this.graphStore.upsertEntitiesAndRelationships(extractedGraph, chunkId);
-        } catch (kgErr: unknown) {
-          console.error(
-            `[DocumentIngestionService] Fail-safe active. KG population failed for chunk ${i} (ID: ${chunkId}):`,
-            kgErr instanceof Error ? kgErr.message : String(kgErr)
-          );
-        }
-
-        processedCount++;
-      } catch (err: unknown) {
-        failedCount++;
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        errors.push({ chunkIndex: i, error: errorMessage });
-
-        console.error(
-          `[DocumentIngestionService] Critical failure for chunk ${i}:`,
-          errorMessage
-        );
+    // Only the explicit brand-profile sources may replace existing documents.
+    // Supporting-file identities are derived on the server, never trusted from the client.
+    const source = validated.metadata.source;
+    const isLegacyBrandProfile = source === "brand-profile-form" && validated.metadata.documentType === "brand-context";
+    let documentId: string | null = null;
+    if (source === "brand-profile" || isLegacyBrandProfile) {
+      documentId = "brand-profile";
+    } else if (source === "brand-profile-file") {
+      const originalFilename = validated.metadata.originalFilename;
+      if (typeof originalFilename !== "string" || !originalFilename.trim()) {
+        throw new RangeError("A supporting-file name is required for safe replacement.");
       }
+      const normalizedFilename = originalFilename.normalize("NFKC").trim().toLowerCase();
+      const filenameDigest = createHash("sha256").update(normalizedFilename).digest("hex");
+      documentId = `brand-supporting-document:${filenameDigest}`;
     }
 
-    return {
-      success: processedCount > 0,
-      tenantId,
-      totalChunks,
-      processedChunks: processedCount,
-      failedChunks: failedCount,
-      errors,
+    const processChunks = async (): Promise<IngestionResult> => {
+      let processedCount = 0;
+      let failedCount = 0;
+      const errors: ChunkError[] = [];
+
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = chunks[i];
+        let chunkId = `chunk_${tenantId}_${i}_${Date.now()}`;
+
+        try {
+          const embedding = await generateEmbedding(chunk);
+          const sentiment = await analyzeSentiment(chunk);
+
+          const chunkMetadata = {
+            ...validated.metadata,
+            ...(documentId ? { documentId } : {}),
+            chunkIndex: i,
+            sentiment: {
+              score: sentiment.score,
+              label: sentiment.label,
+              confidence: sentiment.confidence,
+            },
+          };
+
+          const insertResult = await this.vectorStore.insertEmbedding(
+            tenantId,
+            chunk,
+            embedding,
+            chunkMetadata
+          );
+
+          chunkId = (insertResult as { id?: string })?.id || chunkId;
+
+          try {
+            const extractedGraph = await extractGraphEntities(chunk);
+            await this.graphStore.upsertEntitiesAndRelationships(extractedGraph, chunkId);
+          } catch (kgErr: unknown) {
+            if (documentId) throw kgErr;
+            console.error(
+              `[DocumentIngestionService] Fail-safe active. KG population failed for chunk ${i} (ID: ${chunkId}):`,
+              kgErr instanceof Error ? kgErr.message : String(kgErr)
+            );
+          }
+
+          processedCount++;
+        } catch (err: unknown) {
+          failedCount++;
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          errors.push({ chunkIndex: i, error: errorMessage });
+
+          console.error(
+            `[DocumentIngestionService] Critical failure for chunk ${i}:`,
+            errorMessage
+          );
+        }
+      }
+
+      return {
+        success: failedCount === 0 && processedCount === totalChunks,
+        tenantId,
+        totalChunks,
+        processedChunks: processedCount,
+        failedChunks: failedCount,
+        errors,
+      };
     };
+
+    if (!documentId) return processChunks();
+
+    const activeContext = TenantContextManager.getContext();
+    if (activeContext?.tenantId && activeContext.tenantId !== tenantId) {
+      throw new Error("Document replacement tenant does not match the active tenant context.");
+    }
+
+    try {
+      return await TenantContextManager.runWithTenantContext(
+        tenantId,
+        activeContext?.userId ?? null,
+        activeContext?.requestId ?? null,
+        async () => {
+          const legacyOriginalFilename =
+            source === "brand-profile-file" && typeof validated.metadata.originalFilename === "string"
+              ? validated.metadata.originalFilename
+              : undefined;
+          if (legacyOriginalFilename) {
+            await this.vectorStore.replaceDocument(tenantId, documentId, legacyOriginalFilename);
+          } else {
+            await this.vectorStore.replaceDocument(tenantId, documentId);
+          }
+          const result = await processChunks();
+          if (!result.success) throw new DocumentReplacementFailure(result);
+          return result;
+        },
+        { requireNewSavepoint: true },
+      );
+    } catch (error: unknown) {
+      if (error instanceof DocumentReplacementFailure) {
+        return {
+          ...error.result,
+          success: false,
+          rolledBack: true,
+          attemptedProcessedChunks: error.result.processedChunks,
+          processedChunks: 0,
+        };
+      }
+      throw error;
+    }
   }
 }

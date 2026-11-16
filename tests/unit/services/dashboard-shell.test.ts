@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { dashboardNavigation } from "@/config/dashboardNavigation";
-import type { Session } from "@/types/auth";
+import {
+  dashboardNavigation,
+  isDashboardRouteActive,
+  matchesDashboardNavigationSearch,
+} from "@/config/dashboardNavigation";
 
 describe("Dashboard Shell Architecture", () => {
   it("matches the four owner-defined dashboard groups and their exact entries", () => {
@@ -21,52 +24,27 @@ describe("Dashboard Shell Architecture", () => {
     }
   });
 
-  it("matches localized nested routes and respects exact-match navigation items", () => {
-    const isRouteActive = (pathname: string, itemHref?: string, language = "fa", exact = false) => {
-      if (!itemHref) return false;
-      const pathOnly = itemHref.split(/[?#]/, 1)[0];
-      const localizedHref = "/" + language + pathOnly;
-      if (exact || pathOnly === "/dashboard") return pathname === localizedHref;
-      return pathname === localizedHref || pathname.startsWith(localizedHref + "/");
-    };
+  it("matches localized nested routes using the production matcher", () => {
     const analytics = dashboardNavigation.find((section) => section.id === "analytics");
     const seoItem = analytics?.items.find((item) => item.id === "seo");
     const rankingItem = dashboardNavigation.find((section) => section.id === "on-page")?.items.find((item) => item.id === "search-ranking");
-    expect(isRouteActive("/fa/dashboard/seo", seoItem?.href, "fa", seoItem?.exact)).toBe(true);
-    expect(isRouteActive("/fa/dashboard/seo/technical", seoItem?.href, "fa", seoItem?.exact)).toBe(false);
-    expect(isRouteActive("/fa/dashboard/seo/technical", rankingItem?.href, "fa", rankingItem?.exact)).toBe(true);
-    expect(isRouteActive("/en/dashboard/reports/periodic", "/dashboard/reports/periodic", "en")).toBe(true);
-    expect(isRouteActive("/en/dashboard/reports/periodic", "/dashboard/reports/seo-users", "en")).toBe(false);
-    expect(isRouteActive("/en/dashboard/agent", "/dashboard", "en")).toBe(false);
+    expect(isDashboardRouteActive("/fa/dashboard/seo", seoItem?.href, "fa", seoItem?.exact)).toBe(true);
+    expect(isDashboardRouteActive("/fa/dashboard/seo/technical", seoItem?.href, "fa", seoItem?.exact)).toBe(false);
+    expect(isDashboardRouteActive("/fa/dashboard/seo/technical", rankingItem?.href, "fa", rankingItem?.exact)).toBe(true);
+    expect(isDashboardRouteActive("/en/dashboard/reports/periodic", "/dashboard/reports/periodic", "en")).toBe(true);
+    expect(isDashboardRouteActive("/en/dashboard/reports/periodic", "/dashboard/reports/seo-users", "en")).toBe(false);
+    expect(isDashboardRouteActive("/en/dashboard/agent", "/dashboard", "en")).toBe(false);
   });
 
-  it("preserves authenticated user identity without hardcoded fallback values", () => {
-    const mockUserSession: Session = {
-      user: {
-        id: "usr-custom-777",
-        name: "Faramarz Yazdani",
-        email: "faramarz@brandgraph.ai",
-        role: "workspace_admin",
-        workspaceId: "ws-tehran"
-      },
-      expiresAt: new Date(Date.now() + 100000).toISOString(),
-      status: "authenticated"
-    };
-    expect(mockUserSession.user).toBeDefined();
-    expect(mockUserSession.user?.name).not.toBe("John Doe");
-    expect(mockUserSession.user?.name).toBe("Faramarz Yazdani");
-  });
-
-  it("keeps command palette search filtering case-insensitive", () => {
-    const searchQuery = "technical";
-    const mockSearchItems = [
-      { labelEn: "Technical SEO", labelFa: "سئوی تکنیکال" },
-      { labelEn: "Schema Markups", labelFa: "طرح‌واره‌ها" }
+  it("uses the production command-palette search predicate", () => {
+    const searchItems = [
+      { labelEn: "Technical SEO Audit", labelFa: "بهینه‌سازی فنی سئو" },
+      { labelEn: "Schema Markups", labelFa: "طرح‌واره و متا داتا" },
     ];
-    const filtered = mockSearchItems.filter((item) =>
-      item.labelEn.toLowerCase().includes(searchQuery.toLowerCase()) || item.labelFa.includes(searchQuery)
-    );
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0].labelEn).toBe("Technical SEO");
+    expect(searchItems.filter((item) => matchesDashboardNavigationSearch(item, "technical"))).toHaveLength(1);
+    expect(matchesDashboardNavigationSearch(searchItems[0], "فنی")).toBe(true);
+    expect(searchItems.filter((item) => matchesDashboardNavigationSearch(item, "unknown"))).toHaveLength(0);
+    expect(searchItems.filter((item) => matchesDashboardNavigationSearch(item, "  "))).toHaveLength(2);
   });
+
 });

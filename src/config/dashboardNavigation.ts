@@ -30,6 +30,28 @@ export interface NavigationSection {
   items: NavigationItem[];
 }
 
+export function isDashboardRouteActive(
+  pathname: string | null,
+  href: string | undefined,
+  language: string,
+  exact = false,
+): boolean {
+  if (!href) return false;
+  const pathOnly = href.split(/[?#]/, 1)[0];
+  const localizedHref = `/${language}${pathOnly === "/" ? "" : pathOnly}`;
+  if (exact || pathOnly === "/dashboard") return pathname === localizedHref;
+  return pathname === localizedHref || Boolean(pathname?.startsWith(localizedHref + "/"));
+}
+
+export function matchesDashboardNavigationSearch(
+  item: { labelEn: string; labelFa: string },
+  query: string,
+): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  return item.labelEn.toLowerCase().includes(normalizedQuery) || item.labelFa.includes(query.trim());
+}
+
 export const dashboardNavigation: NavigationSection[] = [
   {
     id: "analytics", titleEn: "Analytics", titleFa: "تجزیه و تحلیل",

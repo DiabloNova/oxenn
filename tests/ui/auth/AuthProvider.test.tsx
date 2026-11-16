@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 
 const actions = vi.hoisted(() => ({
@@ -16,13 +16,14 @@ const actions = vi.hoisted(() => ({
 vi.mock("@/app/actions/auth", () => actions);
 
 function SessionStatus() {
-  const { session } = useAuth();
-  return <output>{session.status}</output>;
+  const { session, logout } = useAuth();
+  return <><output>{session.status}</output><button type="button" onClick={() => void logout()}>Sign out</button></>;
 }
 
 describe("AuthProvider public homepage isolation", () => {
   afterEach(() => {
     cleanup();
+    window.localStorage.removeItem("auth_session_user");
     vi.clearAllMocks();
   });
 
@@ -33,7 +34,7 @@ describe("AuthProvider public homepage isolation", () => {
       </AuthProvider>
     );
 
-    expect(screen.getByText("unauthenticated")).toBeInTheDocument();
+    expect(await screen.findByText("unauthenticated")).toBeInTheDocument();
     await waitFor(() => {
       expect(actions.getServerSessionAction).not.toHaveBeenCalled();
     });
@@ -51,4 +52,19 @@ describe("AuthProvider public homepage isolation", () => {
     });
     expect(await screen.findByText("unauthenticated")).toBeInTheDocument();
   });
+  it("clears the legacy cached user after a successful server logout", async () => {
+    window.localStorage.setItem("auth_session_user", JSON.stringify({ name: "Legacy user" }));
+    render(
+      <AuthProvider>
+        <SessionStatus />
+      </AuthProvider>
+    );
+
+    await screen.findByText("unauthenticated");
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await waitFor(() => {
+      expect(window.localStorage.getItem("auth_session_user")).toBeNull();
+    });
+  });
+
 });

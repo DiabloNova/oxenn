@@ -68,6 +68,56 @@ export class VectorStoreService {
     };
   }
 
+  /**
+   * Removes one tenant-owned document and its source-linked graph relationships.
+   * Call only inside TenantContextManager.runWithTenantContext so the delete and
+   * subsequent inserts are protected by the same transaction/savepoint.
+   */
+  public async replaceDocument(
+    tenantId: string,
+    documentId: string,
+    legacyOriginalFilename?: string,
+  ): Promise<void> {
+    if (!tenantId || !documentId.trim()) {
+      throw new RangeError("A tenant and stable document ID are required for replacement.");
+    }
+
+    // Serialize concurrent updates to the same document without blocking other documents.
+    await this.pg.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+      [tenantId, documentId],
+    );
+
+    const documentPredicate = `(
+      metadata ->> 'documentId' = $2
+      OR ($2 = 'brand-profile' AND metadata ->> 'source' = 'brand-profile-form')
+      OR ($3::text IS NOT NULL AND metadata ->> 'source' = 'brand-profile-file'
+          AND metadata ->> 'originalFilename' = $3)
+    )`;
+    const params = [tenantId, documentId, legacyOriginalFilename ?? null];
+    const existing = await this.pg.query(
+      `SELECT id FROM document_embeddings WHERE tenant_id = $1 AND ${documentPredicate}`,
+      params,
+    );
+    const chunkIds = existing.rows.map((row) => String(row.id));
+
+    if (chunkIds.length > 0) {
+      // Relationships carry source_chunk_id for provenance. Remove only edges
+      // sourced by this document; shared knowledge-graph entities are retained.
+      await this.pg.query(
+        `DELETE FROM kg_relationships
+         WHERE tenant_id = $1
+           AND properties ->> 'source_chunk_id' = ANY($2::text[])`,
+        [tenantId, chunkIds],
+      );
+    }
+
+    await this.pg.query(
+      `DELETE FROM document_embeddings WHERE tenant_id = $1 AND ${documentPredicate}`,
+      params,
+    );
+  }
+
   public async findSimilarEmbeddings(
     tenantId: string,
     queryEmbedding: number[],

@@ -11,8 +11,8 @@ interface ReportPageProps { params: Promise<{ locale: string; reportType: string
 
 export default async function ReportPage({ params }: ReportPageProps) {
   const { locale, reportType } = await params;
+  if (!Object.prototype.hasOwnProperty.call(reportTypes, reportType)) notFound();
   const report = reportTypes[reportType as keyof typeof reportTypes];
-  if (!report) notFound();
   const isFa = locale === "fa";
   return (
     <div className="space-y-4" dir={isFa ? "rtl" : "ltr"}>

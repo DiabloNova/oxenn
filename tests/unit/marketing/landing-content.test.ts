@@ -49,4 +49,15 @@ describe("bilingual public homepage content", () => {
       else expect(allText).toContain("داده زنده");
     }
   });
+  it("keeps accessibility labels in the matching locale and provides both method baselines", () => {
+    expect(landingContent.fa.nav.skipToContent).toBe("رفتن به محتوای اصلی");
+    expect(landingContent.fa.nav.mainNavigationLabel).toBe("ناوبری اصلی");
+    expect(landingContent.fa.nav.mobileNavigationLabel).toBe("ناوبری موبایل");
+    expect(landingContent.en.nav.skipToContent).toBe("Skip to main content");
+    expect(landingContent.en.nav.mainNavigationLabel).toBe("Main navigation");
+    expect(landingContent.en.nav.mobileNavigationLabel).toBe("Mobile navigation");
+    expect(landingContent.fa.method.baseline).toBeTruthy();
+    expect(landingContent.en.method.baseline).toBeTruthy();
+  });
+
 });

@@ -1103,7 +1103,9 @@ input:focus, textarea:focus {
   .atlas-mobile-nav a { padding: 12px; border-radius: 8px; color: var(--atlas-ink); font-size: .88rem; font-weight: 700; }
   .atlas-mobile-nav a:hover:not(.atlas-mobile-signup) { background: var(--atlas-panel); }
   .atlas-mobile-nav .atlas-mobile-signup { color: #fff; background: #176f6d; }
-  .dark .atlas-mobile-nav .atlas-mobile-signup { color: #102423; background: #82c9bd; }\n.atlas-mobile-nav .atlas-mobile-signup:hover { color: #fff; background: #125c5a; }\n.dark .atlas-mobile-nav .atlas-mobile-signup:hover { color: #102423; background: #a0ddd2; }
+  .dark .atlas-mobile-nav .atlas-mobile-signup { color: #102423; background: #82c9bd; }
+  .atlas-mobile-nav .atlas-mobile-signup:hover { color: #fff; background: #125c5a; }
+  .dark .atlas-mobile-nav .atlas-mobile-signup:hover { color: #102423; background: #a0ddd2; }
   .atlas-hero { padding-block-start: 56px; }
   .atlas-hero h1 { font-size: clamp(2.25rem, 9vw, 3.35rem); }
   .atlas-hero-actions { align-items: stretch; }

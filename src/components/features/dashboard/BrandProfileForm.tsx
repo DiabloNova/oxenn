@@ -69,7 +69,19 @@ export function BrandProfileForm() {
       body: JSON.stringify({ text, metadata: { ...metadata, locale: language, brandName: values.brandName || "" } }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok || body.success === false) throw new Error(body.error || (isFa ? "ثبت محتوا انجام نشد." : "Content ingestion failed."));
+    if (!response.ok || body.success !== true || Number(body.failedChunks ?? 0) > 0) {
+      if (body.rolledBack) {
+        throw new Error(isFa
+          ? `ثبت کامل انجام نشد؛ نسخه قبلی حفظ شد. ${body.failedChunks ?? 0} قطعه ناموفق بود. پس از بررسی محتوا دوباره تلاش کنید.`
+          : `The replacement was not completed; the previous version was preserved. ${body.failedChunks ?? 0} chunks failed. Review the content and retry.`);
+      }
+      if (Number(body.failedChunks ?? 0) > 0) {
+        throw new Error(isFa
+          ? `ثبت محتوا ناقص بود؛ ${body.processedChunks ?? 0} قطعه ثبت و ${body.failedChunks} قطعه ناموفق شد.`
+          : `Content ingestion was partial: ${body.processedChunks ?? 0} chunks were stored and ${body.failedChunks} failed.`);
+      }
+      throw new Error(body.error || (isFa ? "ثبت محتوا انجام نشد." : "Content ingestion failed."));
+    }
     return body;
   };
 
@@ -82,9 +94,9 @@ export function BrandProfileForm() {
         return value ? labels[field.id] + ": " + value : "";
       })).filter(Boolean).join("\n\n");
       if (!values.brandName?.trim()) throw new Error(isFa ? "نام برند را وارد کنید." : "Enter the brand name.");
-      await ingestText(content, { source: "brand-profile-form", documentType: "brand-context" });
+      await ingestText(content, { source: "brand-profile", documentType: "brand-context" });
       setMessageKind("success");
-      setMessage(isFa ? "اطلاعات به مخزن دانش فضای کاری افزوده شد. این عملیات نسخه رسمی و نسخه‌دار PIP ایجاد نمی‌کند." : "The information was added to the workspace knowledge store. This does not create an official versioned PIP record.");
+      setMessage(isFa ? "اطلاعات پروفایل برند در مخزن دانش فضای کاری به‌روزرسانی شد. این عملیات نسخه رسمی و نسخه‌دار PIP ایجاد نمی‌کند." : "The brand profile was updated in the workspace knowledge store. This does not create an official versioned PIP record.");
     } catch (error) {
       setMessageKind("error"); setMessage(error instanceof Error ? error.message : (isFa ? "خطای پیش‌بینی‌نشده رخ داد." : "An unexpected error occurred."));
     } finally { setBusy(false); }
@@ -100,10 +112,15 @@ export function BrandProfileForm() {
         if (!ACCEPTED_EXTENSIONS.has(extension)) throw new Error(isFa ? "قالب " + file.name + " پشتیبانی نمی‌شود؛ فقط فایل متنی انتخاب کنید." : file.name + " is not supported. Choose a text-based file.");
         if (file.size > MAX_TEXT_BYTES) throw new Error(isFa ? "حجم " + file.name + " از ۳ مگابایت بیشتر است." : file.name + " exceeds 3 MB.");
         const text = await file.text();
-        await ingestText(text, { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: file.name, contentType: file.type || "text/plain" });
-        setUploadedNames((current) => [...current, file.name]);
+        await ingestText(text, {
+          source: "brand-profile-file",
+          documentType: "brand-supporting-document",
+          originalFilename: file.name,
+          contentType: file.type || "text/plain",
+        });
+        setUploadedNames((current) => current.includes(file.name) ? current : [...current, file.name]);
       }
-      setMessageKind("success"); setMessage(isFa ? "فایل‌های انتخاب‌شده به مخزن دانش افزوده شدند." : "The selected files were added to the knowledge store.");
+      setMessageKind("success"); setMessage(isFa ? "فایل‌های انتخاب‌شده به مخزن دانش افزوده یا به‌روزرسانی شدند." : "The selected files were added or updated in the knowledge store.");
     } catch (error) {
       setMessageKind("error"); setMessage(error instanceof Error ? error.message : (isFa ? "بارگذاری فایل انجام نشد." : "File upload failed."));
     } finally { setBusy(false); event.target.value = ""; }
@@ -144,9 +161,10 @@ export function BrandProfileForm() {
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 md:p-7 space-y-4">
           <div>
             <h2 className="text-base font-extrabold text-[var(--text-primary)]">{isFa ? "بارگذاری فایل‌های پشتیبان" : "Upload supporting files"}</h2>
-            <p className="mt-2 text-xs leading-6 text-[var(--text-muted)]">{isFa ? "فایل‌های متنی TXT، MD، CSV، JSON، HTML، XML و YAML تا سقف ۳ مگابایت برای هر فایل پذیرفته می‌شوند. متن فایل پردازش می‌شود؛ فایل خام در این مسیر ذخیره نمی‌شود." : "Text files (TXT, MD, CSV, JSON, HTML, XML and YAML) up to 3 MB each are accepted. File text is processed; the original binary file is not stored by this endpoint."}</p>
+            <p id="brand-supporting-files-help" className="mt-2 text-xs leading-6 text-[var(--text-muted)]">{isFa ? "فایل‌های متنی TXT، MD، CSV، JSON، HTML، XML و YAML تا سقف ۳ مگابایت برای هر فایل پذیرفته می‌شوند. متن فایل پردازش می‌شود؛ فایل خام در این مسیر ذخیره نمی‌شود." : "Text files (TXT, MD, CSV, JSON, HTML, XML and YAML) up to 3 MB each are accepted. File text is processed; the original binary file is not stored by this endpoint."}</p>
           </div>
-          <input type="file" multiple accept=".txt,.md,.csv,.json,.html,.xml,.yaml,.yml,text/plain,text/markdown,text/csv,application/json,text/html,application/xml,text/yaml" onChange={handleFiles} disabled={busy} className="block w-full text-sm text-[var(--text-secondary)] file:me-3 file:rounded-lg file:border-0 file:bg-[var(--muted-surface)] file:px-4 file:py-2.5 file:text-xs file:font-bold file:text-[var(--text-primary)] disabled:opacity-50" />
+          <label htmlFor="brand-supporting-files" className="block text-xs font-bold text-[var(--text-secondary)]">{isFa ? "انتخاب فایل‌های پشتیبان" : "Choose supporting files"}</label>
+          <input id="brand-supporting-files" type="file" aria-describedby="brand-supporting-files-help" multiple accept=".txt,.md,.csv,.json,.html,.xml,.yaml,.yml,text/plain,text/markdown,text/csv,application/json,text/html,application/xml,text/yaml" onChange={handleFiles} disabled={busy} className="block w-full text-sm text-[var(--text-secondary)] file:me-3 file:rounded-lg file:border-0 file:bg-[var(--muted-surface)] file:px-4 file:py-2.5 file:text-xs file:font-bold file:text-[var(--text-primary)] disabled:opacity-50" />
           {uploadedNames.length > 0 && <ul className="list-disc ps-5 text-xs text-[var(--text-muted)]">{uploadedNames.map((name, index) => <li key={name + "-" + index}>{name}</li>)}</ul>}
         </section>
 

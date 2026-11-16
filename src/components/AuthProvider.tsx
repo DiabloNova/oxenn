@@ -94,6 +94,11 @@ export function AuthProvider({
     setSession((prev) => ({ ...prev, status: "loading" }));
     await new Promise((resolve) => setTimeout(resolve, 400));
     await logoutAction();
+    try {
+      window.localStorage.removeItem("auth_session_user");
+    } catch {
+      // Storage may be unavailable; the authoritative server session is already invalidated.
+    }
     setSession(PUBLIC_UNAUTHENTICATED_SESSION);
   };
 

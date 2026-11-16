@@ -1,9 +1,5 @@
-import { OwnerDefinedPage, type OwnerPageSection } from "@/components/features/dashboard/OwnerDefinedPage";
-
-const sections: OwnerPageSection[] = [
-  { id: "technical-issues", titleFa: "مشکلات فنی", titleEn: "Technical issues" },
-];
+import { OwnerDefinedPage } from "@/components/features/dashboard/OwnerDefinedPage";
 
 export default function TechnicalIssuesPage() {
-  return <OwnerDefinedPage titleFa="مشکلات فنی" titleEn="Technical issues" sections={sections} />;
+  return <OwnerDefinedPage titleFa="مشکلات فنی" titleEn="Technical issues" />;
 }

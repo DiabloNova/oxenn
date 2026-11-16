@@ -13,7 +13,9 @@ const mocks = vi.hoisted(() => ({
     totalChunks: 1,
     processedChunks: 1,
     failedChunks: 0,
-    errors: [],
+    errors: [] as Array<{ chunkIndex: number; error: string }>,
+    rolledBack: false,
+    attemptedProcessedChunks: undefined as number | undefined,
   })),
 }));
 
@@ -60,4 +62,44 @@ describe("POST /api/v1/ingest/document resource limits", () => {
     expect(response.status).toBe(413);
     expect(mocks.ingest).not.toHaveBeenCalled();
   });
+
+  it("returns an explicit client error when a document replacement was rolled back", async () => {
+    mocks.ingest.mockResolvedValueOnce({
+      success: false,
+      tenantId: "tenant-test",
+      totalChunks: 2,
+      processedChunks: 0,
+      failedChunks: 1,
+      errors: [{ chunkIndex: 1, error: "embedding provider unavailable" }],
+      rolledBack: true,
+      attemptedProcessedChunks: 1,
+    });
+
+    const response = await POST(makeRequest({ text: "valid brand profile text", metadata: { source: "brand-profile", documentId: "brand-profile" } }));
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body).toMatchObject({ success: false, rolledBack: true, processedChunks: 0, failedChunks: 1 });
+  });
+
+
+  it("returns multi-status when a non-atomic ingestion has failed chunks", async () => {
+    mocks.ingest.mockResolvedValueOnce({
+      success: false,
+      tenantId: "tenant-test",
+      totalChunks: 2,
+      processedChunks: 1,
+      failedChunks: 1,
+      errors: [{ chunkIndex: 1, error: "provider unavailable" }],
+      rolledBack: false,
+      attemptedProcessedChunks: undefined,
+    });
+
+    const response = await POST(makeRequest({ text: "valid document text" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(207);
+    expect(body).toMatchObject({ success: false, totalChunks: 2, processedChunks: 1, failedChunks: 1 });
+  });
+
 });

@@ -1,10 +1,10 @@
 ---
 visibility: internal
 owner: product
-status: authoritative-partial-requirements
+status: PLANNED
+authority: OWNER_APPROVED
+completeness: PARTIAL
 date: 2026-11-16
-supersedes:
-  - FRONTEND_INFORMATION_ARCHITECTURE_AND_DESIGN_SYSTEM_2026-11-16.md
 source_decision: KNOW-95
 ---
 

@@ -37,6 +37,10 @@ export async function POST(req: NextRequest) {
       async () => ingestionService.ingestDocument(text, metadata, chunkingOptions)
     );
 
+    if (result.rolledBack) {
+      return NextResponse.json(result, { status: 422 });
+    }
+
     if (result.totalChunks > 0 && result.processedChunks === 0) {
       return NextResponse.json(
         {
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(result, { status: result.failedChunks > 0 ? 207 : 200 });
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;

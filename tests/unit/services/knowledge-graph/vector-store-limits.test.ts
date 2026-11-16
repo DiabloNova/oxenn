@@ -33,4 +33,63 @@ describe("VectorStoreService resource boundary", () => {
 
     expect(query).not.toHaveBeenCalled();
   });
+
+  it("serializes and removes only the selected tenant document and its source-linked edges", async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes("SELECT id FROM document_embeddings")) {
+        return { rowCount: 2, rows: [{ id: "chunk-a" }, { id: "chunk-b" }] };
+      }
+      return { rowCount: 2, rows: [] };
+    });
+    const store = new VectorStoreService({ query } as unknown as PostgresClient);
+
+    await store.replaceDocument("tenant-a", "brand-profile");
+
+    expect(query).toHaveBeenCalledTimes(4);
+    expect(query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("pg_advisory_xact_lock"),
+      ["tenant-a", "brand-profile"],
+    );
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("metadata ->> 'source' = 'brand-profile-form'"),
+      ["tenant-a", "brand-profile", null],
+    );
+    expect(query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining("properties ->> 'source_chunk_id' = ANY($2::text[])"),
+      ["tenant-a", ["chunk-a", "chunk-b"]],
+    );
+    expect(query).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining("DELETE FROM document_embeddings"),
+      ["tenant-a", "brand-profile", null],
+    );
+  });
+
+
+  it("uses the original filename to clean up legacy supporting-file chunks", async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes("SELECT id FROM document_embeddings")) {
+        return { rowCount: 1, rows: [{ id: "legacy-file-chunk" }] };
+      }
+      return { rowCount: 1, rows: [] };
+    });
+    const store = new VectorStoreService({ query } as unknown as PostgresClient);
+
+    await store.replaceDocument("tenant-a", "brand-supporting-document:abc123", "Market Notes.md");
+
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("metadata ->> 'originalFilename' = $3"),
+      ["tenant-a", "brand-supporting-document:abc123", "Market Notes.md"],
+    );
+    expect(query).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining("DELETE FROM document_embeddings"),
+      ["tenant-a", "brand-supporting-document:abc123", "Market Notes.md"],
+    );
+  });
+
 });

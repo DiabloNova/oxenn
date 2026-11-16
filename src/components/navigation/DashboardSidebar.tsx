@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
@@ -8,6 +8,7 @@ import { notifyNavigationStart } from "@/lib/navigation-transition";
 import { useAuth } from "@/components/AuthProvider";
 import {
   dashboardNavigation,
+  isDashboardRouteActive,
   NavigationItem,
   NavigationSubItem
 } from "@/config/dashboardNavigation";
@@ -58,17 +59,51 @@ export default function DashboardSidebar({
 
   // Trap focus for mobile drawer
   const drawerRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const accountTriggerRef = useRef<HTMLButtonElement>(null);
 
   // Support Escape key to close mobile menu
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && mobileOpen) {
+      if (e.key === "Escape" && mobileOpen && !accountMenuOpen) {
         setMobileOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [mobileOpen, setMobileOpen]);
+  }, [mobileOpen, accountMenuOpen, setMobileOpen]);
+
+  // Dismiss the account menu when pointer or keyboard focus moves outside it.
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const handleOutsidePointer = (event: PointerEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const handleOutsideFocus = (event: FocusEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const handleAccountEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setAccountMenuOpen(false);
+      accountTriggerRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", handleOutsidePointer);
+    document.addEventListener("focusin", handleOutsideFocus);
+    window.addEventListener("keydown", handleAccountEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsidePointer);
+      document.removeEventListener("focusin", handleOutsideFocus);
+      window.removeEventListener("keydown", handleAccountEscape);
+    };
+  }, [accountMenuOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) setAccountMenuOpen(false);
+  }, [mobileOpen]);
 
   // Trap focus implementation for mobile drawer
   useEffect(() => {
@@ -115,13 +150,8 @@ export default function DashboardSidebar({
     return `/${language}${href === "/" ? "" : href}`;
   };
 
-  const isRouteActive = (href?: string, exact = false) => {
-    if (!href) return false;
-    const pathOnly = href.split(/[?#]/, 1)[0];
-    const localizedHref = getLocalizedHref(pathOnly);
-    if (exact || pathOnly === "/dashboard") return pathname === localizedHref;
-    return pathname === localizedHref || pathname?.startsWith(localizedHref + "/");
-  };
+  const isRouteActive = (href?: string, exact = false) =>
+    isDashboardRouteActive(pathname, href, language, exact);
 
   const navigateTo = (href: string) => {
     const destination = getLocalizedHref(href);
@@ -300,7 +330,7 @@ export default function DashboardSidebar({
           )}
         </nav>
 
-        <div className="relative p-3 border-t border-[var(--border)] bg-[rgba(15,23,42,0.15)] shrink-0">
+        <div ref={accountMenuRef} className="relative p-3 border-t border-[var(--border)] bg-[rgba(15,23,42,0.15)] shrink-0">
           {accountMenuOpen && (
             <div className="absolute bottom-full left-2 right-2 mb-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-2xl z-[120]" role="menu">
               <button type="button" role="menuitem" onClick={() => navigateTo("/profile")} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
@@ -321,14 +351,15 @@ export default function DashboardSidebar({
               </button>
             </div>
           )}
-          <button type="button"
+          <button ref={accountTriggerRef} type="button"
             onClick={() => { if (collapsed && !isMobileState) setCollapsed(false); setAccountMenuOpen((open) => !open); }}
             className={"w-full flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white/[0.02] px-2.5 py-2 text-start hover:bg-[var(--muted-surface)] " + (showLabels ? "" : "justify-center")}
             aria-expanded={accountMenuOpen} aria-haspopup="menu"
-            aria-label={isRtl ? "منوی حساب کاربری" : "Account menu"}>
+            >
             <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--sky-blue-500)] to-[var(--orange-500)] text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
               {session.user?.name?.slice(0, 1) || (isRtl ? "ک" : "U")}
             </span>
+            {!showLabels && <span className="sr-only">{accountName}, {accountEmail}</span>}
             {showLabels && <span className="min-w-0 flex-1">
               <span className="block text-xs font-black text-[var(--text-primary)] truncate">{accountName}</span>
               <span className="block text-[10px] text-[var(--text-muted)] truncate">{accountEmail}</span>
