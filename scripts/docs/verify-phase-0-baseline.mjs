@@ -269,6 +269,7 @@ function main() {
   const localCount = schemaIndexTables.length;
   const migrationCount = journal.entries.length;
   const migrationTableCount = unique(migrationTables).length;
+  const modularCount = organizationTables.length + apiKeyTables.length + userProfileTables.length;
 
   assert.match(baseline, /^# OXENN.*MVP Engineering Baseline/m, "Current MVP engineering baseline heading is missing");
   assert.match(baseline, /Repository snapshot|Repository implementation snapshot/i, "Engineering baseline must identify its repository snapshot");
@@ -276,7 +277,7 @@ function main() {
 
   const baselineMetrics = [
     ["Schema index pgTable declarations", localCount],
-    ["Additional modular schema declarations", organizationTables.length + apiKeyTables.length + userProfileTables.length],
+    ["Additional modular schema declarations", modularCount],
     ["Effective schema table declarations", totalTables],
     ["Latest Drizzle snapshot tables", snapshotTables.length],
     ["Ordered migration journal entries", migrationCount],
@@ -307,7 +308,7 @@ function main() {
 
   console.log(
     "MVP engineering baseline verification passed: " +
-      totalTables + " schema/snapshot/migration tables (" + localCount + " + 2 modular), " +
+      totalTables + " schema/snapshot/migration tables (" + localCount + " + " + modularCount + " modular), " +
       migrationCount + " migration files, " +
       rlsCount + " RLS tables aligned across snapshot/runtime/ENABLE/FORCE, " +
       projectIndexLinks.length + " project-index links, " +
