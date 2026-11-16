@@ -243,7 +243,7 @@ export async function loginAction(email: string, password: string): Promise<Logi
 
 export type RegisterActionResult =
   | { success: true; verificationEmailSent: boolean }
-  | { errorCode: "REGISTRATION_UNAVAILABLE" | "USERNAME_EXISTS" | "TooManyRequests" | "INVALID_REGISTRATION" };
+  | { errorCode: "USERNAME_EXISTS" | "TooManyRequests" | "INVALID_REGISTRATION" };
 
 export async function registerAction(
   firstName: string,
@@ -294,7 +294,7 @@ export async function registerAction(
   });
   if (rateLimitResult === "TooManyRequests") return { errorCode: "TooManyRequests" };
 
-  let createdUser: User | { errorCode: "REGISTRATION_UNAVAILABLE" | "USERNAME_EXISTS" };
+  let createdUser: User | { alreadyRegistered: true } | { errorCode: "USERNAME_EXISTS" };
   try {
     createdUser = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
       const client = TenantContextManager.getDbClient();
@@ -304,13 +304,14 @@ export async function registerAction(
         "SELECT id FROM users WHERE lower(email) = $1 LIMIT 1",
         [normalizedEmail],
       );
+      // Existing emails receive the same public success response as new registrations.
+      // Do not query or report username availability for an existing email.
+      if (existingEmail.length > 0) return { alreadyRegistered: true as const };
+
       const { rows: existingUsername } = await client.query(
         "SELECT user_id FROM user_profiles WHERE lower(username) = lower($1) LIMIT 1",
         [normalizedUsername],
       );
-
-      // Do not make account existence discoverable through the public register action.
-      if (existingEmail.length > 0) return { errorCode: "REGISTRATION_UNAVAILABLE" as const };
       if (existingUsername.length > 0) return { errorCode: "USERNAME_EXISTS" as const };
 
       const userId = generateUserId();
@@ -338,12 +339,14 @@ export async function registerAction(
     const databaseError = error as { code?: string; constraint?: string };
     if (databaseError?.code === "23505") {
       if (databaseError.constraint?.toLowerCase().includes("username")) return { errorCode: "USERNAME_EXISTS" };
-      if (databaseError.constraint?.toLowerCase().includes("email")) return { errorCode: "REGISTRATION_UNAVAILABLE" };
+      if (databaseError.constraint?.toLowerCase().includes("email")) return { alreadyRegistered: true };
     }
     throw error;
   }
 
-  // Duplicate detection is returned from inside the transaction without creating partial records.
+  // Duplicate-email outcomes (including concurrent unique-index conflicts) are indistinguishable
+  // from successful registration. No account or verification state is disclosed to the caller.
+  if ("alreadyRegistered" in createdUser) return { success: true, verificationEmailSent: true };
   if ("errorCode" in createdUser) return { errorCode: createdUser.errorCode };
 
   let verificationEmailSent = false;

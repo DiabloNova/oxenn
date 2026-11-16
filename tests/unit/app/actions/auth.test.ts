@@ -74,13 +74,26 @@ describe("Authentication Actions", () => {
         .resolves.toEqual({ errorCode: "INVALID_REGISTRATION" });
     });
 
-    it("returns a duplicate-email error", async () => {
+    it("returns the generic registration success for an existing email without checking username availability", async () => {
       mocks.query
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration IP limit
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration account/IP limit
-        .mockResolvedValueOnce({ rows: [{ id: "usr-existing" }] }) // email lookup\n        .mockResolvedValueOnce({ rows: [] }); // username lookup
+        .mockResolvedValueOnce({ rows: [{ id: "usr-existing" }] }); // email lookup
       await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
-        .resolves.toEqual({ errorCode: "REGISTRATION_UNAVAILABLE" });
+        .resolves.toEqual({ success: true, verificationEmailSent: true });
+      expect(mocks.query).toHaveBeenCalledTimes(3);
+      expect(mocks.createSession).not.toHaveBeenCalled();
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it("still reports a username conflict when the email is not registered", async () => {
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration account/IP limit
+        .mockResolvedValueOnce({ rows: [] }) // email lookup
+        .mockResolvedValueOnce({ rows: [{ user_id: "usr-existing" }] }); // username lookup
+      await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
+        .resolves.toEqual({ errorCode: "USERNAME_EXISTS" });
     });
 
     it("keeps the account unverified and exposes delivery failure when the provider rejects the message", async () => {
