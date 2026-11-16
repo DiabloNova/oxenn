@@ -14,6 +14,7 @@ import { getAccountEmailValidationError, getEmailValidationError, getPersonNameV
 
 import { PoolClient } from "pg";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { isIP } from "node:net";
 
 async function enforceRateLimit(client: PoolClient, endpoint: string, bucketKey: string, maxAttempts: number, windowMs: number): Promise<void> {
@@ -92,7 +93,11 @@ function hashEmailVerificationCode(email: string, code: string): string {
 /**
  * Authenticates user, resolves identity/workspace strictly on the server, and establishes a secure signed session.
  */
-export async function loginAction(email: string, password: string): Promise<User> {
+export type LoginActionResult =
+  | { success: true; user: User }
+  | { success: false; errorCode: "EMAIL_NOT_VERIFIED" };
+
+export async function loginAction(email: string, password: string): Promise<LoginActionResult> {
   if (typeof email !== "string" || getAccountEmailValidationError(email)) {
     throw new Error("Invalid email address.");
   }
@@ -220,12 +225,15 @@ export async function loginAction(email: string, password: string): Promise<User
     };
   });
 
-  if (result && 'error' in result) {
-      throw new Error(result.error as string);
+  if (result && "error" in result) {
+    if (result.error === "EMAIL_NOT_VERIFIED") {
+      return { success: false, errorCode: "EMAIL_NOT_VERIFIED" };
+    }
+    throw new Error(result.error as string);
   }
 
   await createSession(result as User);
-  return result as User;
+  return { success: true, user: result as User };
 }
 
 /**
@@ -349,11 +357,11 @@ export async function registerAction(
 /**
  * Sends a short-lived, single-use numeric email code. The database stores only its keyed HMAC digest.
  */
-async function sendVerificationCode(email: string, locale: "fa" | "en"): Promise<boolean> {
+async function sendVerificationCode(email: string, locale: "fa" | "en", clientIp?: string): Promise<boolean> {
   if (typeof email !== "string" || getAccountEmailValidationError(email)) return false;
   if (locale !== "fa" && locale !== "en") return false;
   const normalizedEmail = email.trim().toLowerCase();
-  const ipKey = privateRateLimitKey("ip", await trustedClientIp());
+  const ipKey = privateRateLimitKey("ip", clientIp ?? await trustedClientIp());
   const emailKey = privateRateLimitKey("verification-email", normalizedEmail);
 
   const rateLimitResult = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
@@ -422,7 +430,18 @@ async function sendVerificationCode(email: string, locale: "fa" | "en"): Promise
 export async function requestVerification(email: string, locale: "fa" | "en" = "en"): Promise<{ success: boolean; errorCode?: string }> {
   if (typeof email !== "string" || getAccountEmailValidationError(email)) return { success: false, errorCode: "INVALID_EMAIL" };
   if (locale !== "fa" && locale !== "en") return { success: false, errorCode: "INVALID_LOCALE" };
-  await sendVerificationCode(email, locale);
+
+  // Capture the trusted request IP before scheduling. The public response is
+  // identical and does not wait on account lookup, quotas or provider delivery.
+  const clientIp = await trustedClientIp();
+  after(async () => {
+    try {
+      await sendVerificationCode(email, locale, clientIp);
+    } catch (error) {
+      console.error("Verification resend failed.", error instanceof Error ? error.message : "Unknown verification error");
+    }
+  });
+
   return { success: true };
 }
 
