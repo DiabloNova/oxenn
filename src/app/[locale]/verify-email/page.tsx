@@ -24,6 +24,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const legacyToken = searchParams?.get("token") ?? "";
   const requestedReturnTo = searchParams?.get("returnTo") ?? "";
   const postVerificationDestination = getSafeLocaleReturnTo(requestedReturnTo, locale) ?? `/${locale}/dashboard/profile`;
+  const loginHref = `/${locale}/login?returnTo=${encodeURIComponent(postVerificationDestination)}`;
   const deliveryFailed = searchParams?.get("delivery") === "failed";
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
@@ -173,7 +174,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
               <div className="space-y-4 text-center">
                 <CheckCircle2 className="mx-auto text-emerald-500" size={42}/>
                 {sessionError && <p role="alert" className="text-sm text-amber-600">{t.sessionFailed}</p>}
-                <Link href={sessionError ? `/${locale}/login` : postVerificationDestination} className="block rounded-xl bg-[var(--sky-blue-500)] px-4 py-3 text-sm font-bold text-white">{sessionError ? t.login : (isFa ? "رفتن به حساب کاربری" : "Go to my account")}</Link>
+                <Link href={sessionError ? loginHref : postVerificationDestination} className="block rounded-xl bg-[var(--sky-blue-500)] px-4 py-3 text-sm font-bold text-white">{sessionError ? t.login : (isFa ? "رفتن به حساب کاربری" : "Go to my account")}</Link>
               </div>
             ) : isLegacyVerifying ? (
               <p role="status" className="py-6 text-center text-sm text-[var(--text-muted)]">{t.legacyPending}</p>
@@ -210,7 +211,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
         </Card>
         <div className="flex flex-col items-center gap-3 text-center">
           <Link href={`/${locale}`} className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]">{isFa ? <ArrowRight size={14}/> : <ArrowLeft size={14}/>}<span>{t.home}</span></Link>
-          <Link href={`/${locale}/login`} className="text-xs text-[var(--sky-blue-500)] hover:underline">{t.login}</Link>
+          <Link href={loginHref} className="text-xs text-[var(--sky-blue-500)] hover:underline">{t.login}</Link>
         </div>
       </div>
     </div>
