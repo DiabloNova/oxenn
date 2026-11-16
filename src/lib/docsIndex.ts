@@ -311,7 +311,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Canonical Table Ownership Registry",
     category: "database",
     categoryFa: "Database",
-    snippet: ` Canonical Table Ownership Registry  **Status:** SCR-001 Stage 2   **Workspace source:** database/schema/index.ts and its canonical modular schema sources, including database/schema/users.ts, database/schema/organization-table.ts, database/schema/api-keys.ts, and database/schema/user-profile.ts. The canonical barrel re-exports every table; Drizzle configuration consumes the barrel only.   **Platform Admin source:** database/platform-admin/schema/index.ts  ## Purpose and authority  scripts/database/table-ownership-registry.ts`
+    snippet: `# Canonical Table Ownership Registry  **Status:** SCR-001 Stage 2   **Workspace source:** database/schema/index.ts and its canonical modular schema sources, including database/schema/users.ts, database/schema/organization-table.ts, database/schema/api-keys.ts, and database/schema/user-profile.ts. The canonical barrel re-exports every table; Drizzle configuration consumes the barrel only.   **Platform Admin source:** database/platform-admin/schema/index.ts  ## Purpose and authority  scripts/database/table-ownership-registry.ts`
   },
   {
     slug: "OXENN_MVP_PRODUCT_SPECIFICATION",
@@ -431,7 +431,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Registration Migration 0016: Snapshot and Ownership Integrity",
     category: "tasks_reports",
     categoryFa: "tasks_reports",
-    snippet: ` Registration Migration 0016: Snapshot and Ownership Integrity  ## Scope  Audited only the Workspace migration journal, Drizzle snapshot lineage, migration 0016, the user_profiles and users schema declarations, the canonical schema barrel, and the table-ownership registry on the registration-verification branch.  ## Findings  - The current database/drizzle/meta/_journal.json parses as valid JSON. Its 17 entries have sequential indexes 0 through 16, and every journal tag has a corresponding SQL `
+    snippet: `# Registration Migration 0016: Snapshot and Ownership Integrity  ## Scope  Audited only the Workspace migration journal, Drizzle snapshot lineage, migration 0016, the user_profiles and users schema declarations, the canonical schema barrel, and the table-ownership registry on the registration-verification branch.  ## Findings  - The current database/drizzle/meta/_journal.json parses as valid JSON. Its 17 entries have sequential indexes 0 through 16, and every journal tag has a corresponding SQL `
   },
   {
     slug: "phase-2-code-security",
