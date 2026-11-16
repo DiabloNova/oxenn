@@ -144,10 +144,14 @@ export function validateEnv(modeArg?: string) {
 
   for (const rule of activeRules) {
     const rawValue = process.env[rule.name] ?? "";
-    // SESSION_SECRET is normalized by the application too. Other values must
-    // keep their runtime representation: stripping quotes here could make a
-    // malformed DATABASE_URL or provider setting look valid to this check.
-    const val = rule.name === "SESSION_SECRET" ? normalizeEnvValue(rawValue) : rawValue;
+    // SESSION_SECRET uses the same normalization as authentication. db:push
+    // target inputs are trimmed by the runtime guard; all other settings retain
+    // their actual runtime representation so quotes cannot hide bad values.
+    const val = rule.name === "SESSION_SECRET"
+      ? normalizeEnvValue(rawValue)
+      : rule.name === "DB_PUSH_TARGET_ID" || rule.name === "DB_PUSH_DATABASE_URL"
+        ? rawValue.trim()
+        : rawValue;
 
     if (!val.trim()) {
       if (rule.required) {
