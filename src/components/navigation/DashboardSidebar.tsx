@@ -354,7 +354,7 @@ export default function DashboardSidebar({
         {/* Collapse Button floating indicator on desktop */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className={`absolute bottom-20 ${isRtl ? "-left-3" : "-right-3"} w-6 h-6 rounded-full bg-[var(--background)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center justify-center shadow-md cursor-pointer transition-transform duration-200 z-50`}
+          className={`absolute bottom-20 -left-3 w-6 h-6 rounded-full bg-[var(--background)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center justify-center shadow-md cursor-pointer transition-transform duration-200 z-50`}
           aria-label={isRtl ? "تغییر عرض سایدبار" : "Toggle Sidebar Collapse"}
         >
           {collapsed ? (

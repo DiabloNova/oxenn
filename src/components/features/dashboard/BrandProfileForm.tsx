@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
 type Field = { id: string; labelFa: string; labelEn: string; kind?: "text" | "textarea" | "select"; required?: boolean; options?: Array<{ value: string; labelFa: string; labelEn: string }> };
@@ -58,7 +58,7 @@ export function BrandProfileForm() {
   const [message, setMessage] = useState("");
   const [messageKind, setMessageKind] = useState<"success" | "error">("success");
   const [uploadedNames, setUploadedNames] = useState<string[]>([]);
-  const labels = useMemo(() => Object.fromEntries(groups.flatMap((group) => group.fields.map((field) => [field.id, isFa ? field.labelFa : field.labelEn])), [isFa]);
+  const labels: Record<string, string> = Object.fromEntries(groups.flatMap((group) => group.fields.map((field) => [field.id, isFa ? field.labelFa : field.labelEn])));
 
   const ingestText = async (text: string, metadata: Record<string, unknown>) => {
     if (!text.trim()) throw new Error(isFa ? "محتوای متنی برای ثبت وجود ندارد." : "There is no text content to ingest.");

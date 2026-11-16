@@ -30,7 +30,10 @@ export function LandingHeader() {
   useEffect(() => {
     if (!mobileOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeMenu();
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        toggleRef.current?.focus();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
