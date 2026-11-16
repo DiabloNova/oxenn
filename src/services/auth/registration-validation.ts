@@ -1,5 +1,11 @@
 export type RegistrationLocale = "fa" | "en";
 
+export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MAX_LENGTH = 255;
+export const PERSON_NAME_MAX_LENGTH = 100;
+export const USERNAME_MIN_LENGTH = 3;
+export const USERNAME_MAX_LENGTH = 32;
+
 export type EmailValidationError = "EMAIL_REQUIRED" | "EMAIL_ENGLISH_ONLY" | "EMAIL_DOMAIN_UPPERCASE" | "EMAIL_HYPHEN_NOT_ALLOWED" | "EMAIL_INVALID_FORMAT";
 
 /**
@@ -48,19 +54,20 @@ export type PasswordValidationError = "PASSWORD_REQUIRED" | "PASSWORD_TOO_SHORT"
 
 export function getPasswordValidationError(password: string): PasswordValidationError | null {
   if (!password) return "PASSWORD_REQUIRED";
-  if (password.length < 10) return "PASSWORD_TOO_SHORT";
-  if (password.length > 255) return "PASSWORD_TOO_LONG";
-  if (!/^[\x20-\x7E]+$/.test(password)) return "PASSWORD_ENGLISH_ONLY";
+  if (password.length < PASSWORD_MIN_LENGTH) return "PASSWORD_TOO_SHORT";
+  if (password.length > PASSWORD_MAX_LENGTH) return "PASSWORD_TOO_LONG";
+  if (!/^[\x21-\x7E]+$/.test(password)) return "PASSWORD_ENGLISH_ONLY";
   if (!/[A-Z]/.test(password)) return "PASSWORD_UPPERCASE_REQUIRED";
   if (!/[0-9]/.test(password)) return "PASSWORD_NUMBER_REQUIRED";
   if ((password.match(/[^A-Za-z0-9\s]/g) ?? []).length < 2) return "PASSWORD_TWO_SPECIAL_REQUIRED";
   return null;
 }
 
-export type NameValidationError = "NAME_REQUIRED" | "NAME_LOCALE_MISMATCH";
+export type NameValidationError = "NAME_REQUIRED" | "NAME_TOO_LONG" | "NAME_LOCALE_MISMATCH";
 export function getPersonNameValidationError(name: string, locale: RegistrationLocale): NameValidationError | null {
   const value = name.trim();
   if (!value) return "NAME_REQUIRED";
+  if ([...value].length > PERSON_NAME_MAX_LENGTH) return "NAME_TOO_LONG";
   if (locale === "fa") {
     return /^[\u0621-\u063A\u0641-\u064A\u067E\u0686\u0698\u06A9\u06AF\u06BE\u06CC\u06C0\u06C1]+(?:[ \u200c][\u0621-\u063A\u0641-\u064A\u067E\u0686\u0698\u06A9\u06AF\u06BE\u06CC\u06C0\u06C1]+)*$/u.test(value) ? null : "NAME_LOCALE_MISMATCH";
   }
@@ -70,6 +77,7 @@ export function getPersonNameValidationError(name: string, locale: RegistrationL
 export function getUsernameValidationError(username: string): "USERNAME_REQUIRED" | "USERNAME_INVALID" | null {
   const value = username.trim();
   if (!value) return "USERNAME_REQUIRED";
-  if (value.length < 3 || value.length > 32 || !/^[\p{L}\p{N}._-]+$/u.test(value)) return "USERNAME_INVALID";
+  const characterCount = [...value].length;
+  if (characterCount < USERNAME_MIN_LENGTH || characterCount > USERNAME_MAX_LENGTH || !/^[\p{L}\p{N}._-]+$/u.test(value)) return "USERNAME_INVALID";
   return null;
 }
