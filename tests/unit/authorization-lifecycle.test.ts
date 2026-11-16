@@ -87,6 +87,7 @@ describe("Auth Lifecycle Tests", () => {
         }
         if (sql.includes("UPDATE email_verification_tokens")) {
           if (params.length > 1) {
+            lifecycleSession.queryTrace.push({ sql: `DEBUG ${JSON.stringify({ createdUserId, createdEmail, verificationTokenUserId, verificationTokenHash, suppliedEmail: params[0], suppliedHash: params[1] })}`, params });
             if (String(params[0] ?? "").trim().toLowerCase() === createdEmail.trim().toLowerCase() && String(params[1]) === verificationTokenHash) {
               return { rows: [{ user_id: createdUserId }], rowCount: 1 };
             }
