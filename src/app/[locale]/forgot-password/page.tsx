@@ -88,7 +88,7 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
     if (errorCode) {
       const messages: Record<string, string> = isFa ? {
         EMAIL_REQUIRED: "وارد کردن ایمیل الزامی است.",
-        EMAIL_INVALID_FORMAT: "قالب ایمیل باید مانند x@x.x باشد.",
+        EMAIL_INVALID_FORMAT: "لطفاً یک آدرس ایمیل معتبر وارد کنید.",
       } : {
         EMAIL_REQUIRED: "Email is required.",
         EMAIL_INVALID_FORMAT: "Enter a valid email address.",
