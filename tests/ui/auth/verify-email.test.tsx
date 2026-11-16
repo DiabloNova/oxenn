@@ -68,7 +68,7 @@ describe("VerifyEmailPage localized code input", () => {
   });
 
   it("converts Persian digits typed into the actual code field to ASCII", async () => {
-    render(<VerifyEmailPage params={Promise.resolve({ locale: "fa" })} />);
+    render(<React.Suspense fallback={<p>Loading verification form</p>}><VerifyEmailPage params={Promise.resolve({ locale: "fa" })} /></React.Suspense>);
     const codeInput = await screen.findByLabelText("کد تأیید ۸ رقمی");
     fireEvent.change(codeInput, { target: { value: "۱۲۳۴۵۶۷۸" } });
     expect(codeInput).toHaveValue("12345678");
