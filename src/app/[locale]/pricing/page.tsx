@@ -27,6 +27,8 @@ export default function PricingPage() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   const handlePlanSelection = React.useCallback((planName: string) => {
+    // Do not make an auth/workspace decision until the session has resolved.
+    if (session.status === "loading") return;
     setSelectedPlan(planName);
 
     if (session.status !== "authenticated") {
@@ -169,6 +171,7 @@ export default function PricingPage() {
               <Button
                 variant="outline"
                 onClick={() => handlePlanSelection("Free")}
+                disabled={session.status === "loading"}
                 className="w-full mt-6 py-3 rounded-xl text-xs font-black gap-2 flex items-center justify-center cursor-pointer hover:bg-white/5"
               >
                 <span>{strings.ctaFree}</span>
@@ -203,6 +206,7 @@ export default function PricingPage() {
                 <Button
                   variant="primary"
                   onClick={() => handlePlanSelection("Professional")}
+                  disabled={session.status === "loading"}
                   className="w-full mt-6 py-3.5 rounded-xl text-xs font-black gap-2 flex items-center justify-center cursor-pointer bg-gradient-to-r from-[var(--sky-blue-500)] to-[var(--orange-500)] border-none text-white shadow-lg"
                 >
                   <Sparkles size={14} className="animate-pulse" />
@@ -233,6 +237,7 @@ export default function PricingPage() {
               <Button
                 variant="outline"
                 onClick={() => handlePlanSelection("Enterprise")}
+                disabled={session.status === "loading"}
                 className="w-full mt-6 py-3 rounded-xl text-xs font-black gap-2 flex items-center justify-center cursor-pointer hover:bg-white/5"
               >
                 <span>{strings.ctaEnt}</span>
@@ -249,8 +254,8 @@ export default function PricingPage() {
         <div className="space-y-4">
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
             {isRtl
-              ? "برای ادامه، ثبت‌نام را در فرم رسمی انجام دهید. پس از تأیید ایمیل، به صفحه حساب کاربری منتقل می‌شوید."
-              : "Complete registration on the secure registration page. After email verification, you will be taken to your account page."}
+              ? "برای ادامه، ثبت‌نام را در فرم رسمی انجام دهید. پس از تأیید ایمیل، به همین صفحه و پلن انتخاب‌شده بازمی‌گردید تا ادامه دهید."
+              : "Complete registration on the secure registration page. After email verification, you will return here with your selected plan so you can continue."}
           </p>
           <div className="flex items-center justify-end gap-3 border-t border-[var(--border)] pt-4">
             <Button variant="outline" type="button" onClick={() => setIsAuthOpen(false)}>
