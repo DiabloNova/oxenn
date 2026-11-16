@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
@@ -56,6 +56,10 @@ export default function DashboardSidebar({
   // Accordion state manually toggled by user (key is item id, value is boolean)
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const closeMobileDrawer = useCallback(() => {
+    setAccountMenuOpen(false);
+    setMobileOpen(false);
+  }, [setMobileOpen]);
 
   // Trap focus for mobile drawer
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -66,12 +70,12 @@ export default function DashboardSidebar({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && mobileOpen && !accountMenuOpen) {
-        setMobileOpen(false);
+        closeMobileDrawer();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [mobileOpen, accountMenuOpen, setMobileOpen]);
+  }, [mobileOpen, accountMenuOpen, closeMobileDrawer]);
 
   // Dismiss the account menu when pointer or keyboard focus moves outside it.
   useEffect(() => {
@@ -101,9 +105,6 @@ export default function DashboardSidebar({
     };
   }, [accountMenuOpen]);
 
-  useEffect(() => {
-    if (!mobileOpen) setAccountMenuOpen(false);
-  }, [mobileOpen]);
 
   // Trap focus implementation for mobile drawer
   useEffect(() => {
@@ -157,8 +158,7 @@ export default function DashboardSidebar({
     const destination = getLocalizedHref(href);
     notifyNavigationStart(destination);
     router.push(destination);
-    setMobileOpen(false);
-    setAccountMenuOpen(false);
+    closeMobileDrawer();
   };
 
   const isParentActive = (item: NavigationItem) => {
@@ -172,12 +172,13 @@ export default function DashboardSidebar({
   const handleItemClick = (item: NavigationItem) => {
     if (item.href) {
       if (item.href === "#help") {
+        closeMobileDrawer();
         if (onHelpClick) onHelpClick();
       } else {
         const destination = getLocalizedHref(item.href);
         notifyNavigationStart(destination);
         router.push(destination);
-        setMobileOpen(false);
+        closeMobileDrawer();
       }
     } else {
       toggleExpand(item.id);
@@ -188,7 +189,7 @@ export default function DashboardSidebar({
     const destination = getLocalizedHref(child.href);
     notifyNavigationStart(destination);
     router.push(destination);
-    setMobileOpen(false);
+    closeMobileDrawer();
   };
 
   const renderNavItems = (items: NavigationItem[], isMobileState: boolean) => {
@@ -342,11 +343,11 @@ export default function DashboardSidebar({
               <button type="button" role="menuitem" onClick={() => navigateTo("/dashboard/billing")} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
                 <Receipt size={15} aria-hidden="true" />{isRtl ? "اشتراک و صورت‌حساب" : "Billing and subscription"}
               </button>
-              <button type="button" role="menuitem" onClick={() => { setAccountMenuOpen(false); setMobileOpen(false); onHelpClick?.(); }} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
+              <button type="button" role="menuitem" onClick={() => { closeMobileDrawer(); onHelpClick?.(); }} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
                 <HelpCircle size={15} aria-hidden="true" />{isRtl ? "راهنما و پشتیبانی" : "Help and support"}
               </button>
               <div className="my-1 border-t border-[var(--border)]" />
-              <button type="button" role="menuitem" onClick={async () => { setAccountMenuOpen(false); setMobileOpen(false); await logout(); }} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-rose-400 hover:bg-rose-500/10">
+              <button type="button" role="menuitem" onClick={async () => { closeMobileDrawer(); await logout(); }} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-rose-400 hover:bg-rose-500/10">
                 <LogOut size={15} aria-hidden="true" />{isRtl ? "خروج از حساب" : "Sign out"}
               </button>
             </div>
@@ -407,7 +408,7 @@ export default function DashboardSidebar({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setMobileOpen(false)}
+              onClick={closeMobileDrawer}
             />
 
             {/* Sliding Drawer Panel */}
@@ -420,7 +421,7 @@ export default function DashboardSidebar({
             >
               {/* Close Button floating top inner */}
               <button
-                onClick={() => setMobileOpen(false)}
+                onClick={closeMobileDrawer}
                 className={`absolute top-4 ${isRtl ? "left-4" : "right-4"} p-1.5 rounded-full hover:bg-[var(--muted-surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer outline-none focus:ring-1 focus:ring-[var(--sky-blue-500)]`}
                 aria-label={isRtl ? "بستن منو" : "Close menu"}
               >

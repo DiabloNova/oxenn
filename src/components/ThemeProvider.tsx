@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useLayoutEffect, useCallback } from "react";
+import React, { createContext, useContext, useCallback, useLayoutEffect, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { notifyNavigationStart } from "@/lib/navigation-transition";
 
@@ -17,6 +17,92 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const THEME_CHANGE_EVENT = "oxenn:theme-change";
+const LANGUAGE_CHANGE_EVENT = "oxenn:language-change";
+
+let inMemoryTheme: Theme | null = null;
+let inMemoryLanguage: Language | null = null;
+let pendingLanguage: { value: Language; originPath: string | null } | null = null;
+
+function readStoredPreference(key: string): string | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredPreference(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // The in-memory snapshot remains authoritative for this tab when storage is unavailable.
+  }
+}
+
+function getThemeSnapshot(): Theme {
+  if (inMemoryTheme) return inMemoryTheme;
+  const storedTheme = readStoredPreference("theme");
+  if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function getServerThemeSnapshot(): Theme {
+  return "light";
+}
+
+function subscribeTheme(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => undefined;
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === "theme") {
+      inMemoryTheme = null;
+      onStoreChange();
+    }
+  };
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(THEME_CHANGE_EVENT, onStoreChange);
+  const media = typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-color-scheme: dark)")
+    : null;
+  media?.addEventListener?.("change", onStoreChange);
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(THEME_CHANGE_EVENT, onStoreChange);
+    media?.removeEventListener?.("change", onStoreChange);
+  };
+}
+
+function getLanguageSnapshot(
+  fallback: Language,
+  routeLanguage: Language | null,
+  pathname: string | null,
+): Language {
+  if (pendingLanguage && pendingLanguage.originPath === pathname) return pendingLanguage.value;
+  if (routeLanguage) return routeLanguage;
+  if (inMemoryLanguage) return inMemoryLanguage;
+  const storedLanguage = readStoredPreference("language");
+  return storedLanguage === "fa" || storedLanguage === "en" ? storedLanguage : fallback;
+}
+
+function subscribeLanguage(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => undefined;
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === "language") {
+      inMemoryLanguage = null;
+      pendingLanguage = null;
+      onStoreChange();
+    }
+  };
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(LANGUAGE_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(LANGUAGE_CHANGE_EVENT, onStoreChange);
+  };
+}
 
 export function ThemeProvider({
   children,
@@ -27,27 +113,35 @@ export function ThemeProvider({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [theme, setThemeState] = useState<Theme>("light");
-  const [language, setLanguageState] = useState<Language>(initialLanguage);
-  const [direction, setDirection] = useState<Direction>(initialLanguage === "fa" ? "rtl" : "ltr");
+  const routeLanguage = pathname?.match(/^\/(fa|en)(?=\/|$)/)?.[1] as Language | undefined;
+  const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot);
+  const getLanguage = useCallback(
+    () => getLanguageSnapshot(initialLanguage, routeLanguage ?? null, pathname),
+    [initialLanguage, routeLanguage, pathname],
+  );
+  const getServerLanguage = useCallback(() => initialLanguage, [initialLanguage]);
+  const language = useSyncExternalStore(subscribeLanguage, getLanguage, getServerLanguage);
+  const direction: Direction = language === "fa" ? "rtl" : "ltr";
 
   const setTheme = useCallback((newTheme: Theme) => {
+    inMemoryTheme = newTheme;
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(newTheme);
-    localStorage.setItem("theme", newTheme);
-    setThemeState(newTheme);
+    writeStoredPreference("theme", newTheme);
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   }, []);
 
   const setLanguage = useCallback(
     (newLang: Language) => {
+      pendingLanguage = { value: newLang, originPath: pathname };
+      inMemoryLanguage = newLang;
       const root = window.document.documentElement;
       const dir: Direction = newLang === "fa" ? "rtl" : "ltr";
       root.setAttribute("lang", newLang);
       root.setAttribute("dir", dir);
-      localStorage.setItem("language", newLang);
-      setLanguageState(newLang);
-      setDirection(dir);
+      writeStoredPreference("language", newLang);
+      window.dispatchEvent(new Event(LANGUAGE_CHANGE_EVENT));
 
       if (pathname) {
         const localePrefix = /^\/(?:fa|en)(?=\/|$)/;
@@ -65,35 +159,24 @@ export function ThemeProvider({
         }
       }
     },
-    [pathname, router]
+    [pathname, router],
   );
 
   useLayoutEffect(() => {
-    const storedTheme = localStorage.getItem("theme") as Theme | null;
-    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const initialTheme = storedTheme || systemTheme;
-
     const root = window.document.documentElement;
+    const currentTheme = getThemeSnapshot();
     root.classList.remove("light", "dark");
-    root.classList.add(initialTheme);
+    root.classList.add(currentTheme);
 
-    const routeLanguage = pathname?.match(/^\/(fa|en)(?=\/|$)/)?.[1];
-    const storedLanguage = localStorage.getItem("language");
-    let currentLang: Language = initialLanguage;
-    if (routeLanguage === "fa" || routeLanguage === "en") {
-      currentLang = routeLanguage;
-      localStorage.setItem("language", currentLang);
-    } else if (storedLanguage === "fa" || storedLanguage === "en") {
-      currentLang = storedLanguage;
+    if (pendingLanguage && pendingLanguage.originPath !== pathname) pendingLanguage = null;
+    const currentLanguage = routeLanguage ?? getLanguageSnapshot(initialLanguage, null, pathname);
+    if (routeLanguage) {
+      inMemoryLanguage = routeLanguage;
+      writeStoredPreference("language", routeLanguage);
     }
-
-    const currentDir: Direction = currentLang === "fa" ? "rtl" : "ltr";
-    root.setAttribute("lang", currentLang);
-    root.setAttribute("dir", currentDir);
-    setThemeState(initialTheme);
-    setLanguageState(currentLang);
-    setDirection(currentDir);
-  }, [initialLanguage, pathname]);
+    root.setAttribute("lang", currentLanguage);
+    root.setAttribute("dir", currentLanguage === "fa" ? "rtl" : "ltr");
+  }, [initialLanguage, routeLanguage, pathname]);
 
   return <ThemeContext.Provider value={{ theme, setTheme, direction, language, setLanguage }}>{children}</ThemeContext.Provider>;
 }
