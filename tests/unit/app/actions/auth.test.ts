@@ -78,9 +78,9 @@ describe("Authentication Actions", () => {
       mocks.query
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration IP limit
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration account/IP limit
-        .mockResolvedValueOnce({ rows: [{ id: "usr-existing", username: null }] });
+        .mockResolvedValueOnce({ rows: [{ id: "usr-existing" }] }) // email lookup\n        .mockResolvedValueOnce({ rows: [] }); // username lookup
       await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
-        .resolves.toEqual({ errorCode: "USER_EXISTS" });
+        .resolves.toEqual({ errorCode: "REGISTRATION_UNAVAILABLE" });
     });
 
     it("keeps the account unverified and exposes delivery failure when the provider rejects the message", async () => {
