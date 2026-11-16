@@ -85,18 +85,19 @@ export class ProductionEmailSender implements EmailSender {
 
     let response: Response;
     if (this.provider === "maileroo") {
-      // Maileroo's documented REST API accepts multipart form data at /send
-      // and authenticates with X-API-Key (not Bearer authorization).
-      const body = new FormData();
-      body.set("from", `${this.fromName} <${this.fromAddress}>`);
-      body.set("to", to);
-      body.set("subject", subject);
-      body.set("plain", plain);
-      body.set("html", html);
-      response = await fetch("https://smtp.maileroo.com/send", {
+      // Use Maileroo's current versioned Email API. Sending keys authenticate
+      // with X-Api-Key and the endpoint expects JSON EmailObject recipients.
+      const payload = {
+        from: { address: this.fromAddress, display_name: this.fromName },
+        to: [{ address: to }],
+        subject,
+        plain,
+        html,
+      };
+      response = await fetch("https://smtp.maileroo.com/api/v2/emails", {
         method: "POST",
-        headers: { "X-API-Key": this.apiKey },
-        body,
+        headers: { "X-Api-Key": this.apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
         signal: AbortSignal.timeout(10_000),
       });
     } else {
