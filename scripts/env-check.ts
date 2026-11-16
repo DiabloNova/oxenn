@@ -127,6 +127,21 @@ export function validateEnv(modeArg?: string) {
     }
   }
 
+  if (mode === "build" && process.env.NODE_ENV === "production") {
+    const provider = (normalizeEnvValue(process.env.EMAIL_PROVIDER) || "maileroo").toLowerCase();
+    if (provider !== "maileroo" && provider !== "resend") {
+      invalid.push({ name: "EMAIL_PROVIDER", reason: "must be maileroo or resend" });
+    } else {
+      const keyName = provider === "maileroo" ? "MAILEROO_API_KEY" : "RESEND_API_KEY";
+      if (!normalizeEnvValue(process.env[keyName])) missing.push(keyName);
+    }
+
+    const fromAddress = normalizeEnvValue(process.env.EMAIL_FROM_ADDRESS);
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(fromAddress)) {
+      invalid.push({ name: "EMAIL_FROM_ADDRESS", reason: "must be a valid address on the verified sending domain" });
+    }
+  }
+
   if (mode === "dev" || mode === "test") {
     if (process.env.ALLOW_DB_PUSH === "true") {
       if (!process.env.DB_PUSH_TARGET_ID?.trim()) {
