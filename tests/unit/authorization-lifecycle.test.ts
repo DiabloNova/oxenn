@@ -135,6 +135,7 @@ describe("Auth Lifecycle Tests", () => {
     const loggedInUser = loginResult.user;
     expect(loggedInUser.email).toBe("probe@example.com");
     expect(loggedInUser.id).toBe(lifecycleSession.registeredUserId);
+    expect(loggedInUser.id).toMatch(/^usr-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     expect(loggedInUser.id).toBe(lifecycleSession.user?.id);
     expect(loggedInUser.workspaceId).toBe(lifecycleSession.user?.workspaceId);
 
