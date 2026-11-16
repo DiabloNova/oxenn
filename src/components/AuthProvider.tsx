@@ -6,7 +6,7 @@ import { loginAction, logoutAction, getServerSessionAction, registerAction } fro
 
 interface AuthContextType {
   session: Session;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ errorCode?: "EMAIL_NOT_VERIFIED" }>;
   register: (firstName: string, lastName: string, email: string, password: string, username: string, locale: "fa" | "en") => Promise<{ verificationEmailSent: boolean }>;
   refreshSession: () => Promise<Session>;
   logout: () => Promise<void>;
@@ -64,9 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setSession((previous) => ({ ...previous, status: "loading" }));
     try {
-      const user = await loginAction(email, password);
-      localStorage.setItem("auth_session_user", JSON.stringify(user));
-      setSession({ user, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), status: "authenticated" });
+      const result = await loginAction(email, password);
+      if (!result.success) {
+        localStorage.removeItem("auth_session_user");
+        setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+        return { errorCode: result.errorCode };
+      }
+      localStorage.setItem("auth_session_user", JSON.stringify(result.user));
+      setSession({ user: result.user, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), status: "authenticated" });
+      return {};
     } catch (error) {
       localStorage.removeItem("auth_session_user");
       setSession({ user: null, expiresAt: null, status: "unauthenticated" });
