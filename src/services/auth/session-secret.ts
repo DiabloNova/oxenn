@@ -31,7 +31,7 @@ export function normalizeEnvValue(value: string | undefined): string {
     return trimmed;
   }
 
-  return trimmed.replace(/\\s+#.*$/, "").trim();
+  return trimmed.replace(/\s+#.*$/, "").trim();
 }
 
 /** Runtime process.env values have already been parsed by the host/dotenv loader. */
