@@ -62,6 +62,9 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/oxenn_ci
+          SESSION_SECRET: ci-only-session-secret-not-used-for-deployment-000000000000
 
       - name: Build Reference Matrix
         run: pnpm run docs:matrix
