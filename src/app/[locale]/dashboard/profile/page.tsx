@@ -9,11 +9,14 @@ export default async function DashboardProfilePage({ params }: { params: Promise
   const session = await getSession();
   if (!session?.user) redirect(`/${locale}/login`);
   const user = session.user;
+  const roleLabel = isFa
+    ? ({ workspace_admin: "مدیر فضای کاری", super_admin: "مدیر ارشد سامانه", viewer: "مشاهده‌گر" } as const)[user.role] ?? "نامشخص"
+    : ({ workspace_admin: "Workspace administrator", super_admin: "System administrator", viewer: "Viewer" } as const)[user.role] ?? "Unknown";
   const rows = [
     [isFa ? "نام و نام خانوادگی" : "Full name", user.name],
     [isFa ? "نام کاربری" : "Username", user.username || (isFa ? "ثبت نشده" : "Not set")],
     [isFa ? "ایمیل" : "Email address", user.email],
-    [isFa ? "نقش حساب" : "Account role", user.role],
+    [isFa ? "نقش حساب" : "Account role", roleLabel],
     [isFa ? "شناسه فضای کاری" : "Workspace ID", user.workspaceId],
   ];
   return (
