@@ -216,11 +216,11 @@ function main() {
   assert.equal(userTables.length, 1, "Expected one users table in its schema module");
 
   const schemaIndex = readFile("database/schema/index.ts");
-  assert.match(schemaIndex, /import\\s*\\{\\s*organizations\\s*\\}\\s*from\\s*["']\\.\\/organization-table["']/);
-  assert.match(schemaIndex, /import\\s*\\{\\s*users\\s*\\}\\s*from\\s*["']\\.\\/users["']/);
-  assert.match(schemaIndex, /export\\s*\\{[^}]*organizations[^}]*users[^}]*\\}/);
-  assert.match(schemaIndex, /export\\s*\\*\\s*from\\s*["']\\.\\/api-keys["']/);
-  assert.match(schemaIndex, /export\\s*\\*\\s*from\\s*["']\\.\\/user-profile["']/);
+  assert.match(schemaIndex, /import\s*\{\s*organizations\s*\}\s*from\s*["']\.\/organization-table["']/);
+  assert.match(schemaIndex, /import\s*\{\s*users\s*\}\s*from\s*["']\.\/users["']/);
+  assert.match(schemaIndex, /export\s*\{[^}]*organizations[^}]*users[^}]*\}/);
+  assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/api-keys["']/);
+  assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/user-profile["']/);
 
   for (const configPath of ["drizzle.config.ts", "drizzle.push.config.ts"]) {
     assert.ok(
