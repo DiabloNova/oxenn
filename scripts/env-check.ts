@@ -137,7 +137,7 @@ export function validateEnv(modeArg?: string) {
     }
 
     const fromAddress = normalizeEnvValue(process.env.EMAIL_FROM_ADDRESS);
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(fromAddress)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)) {
       invalid.push({ name: "EMAIL_FROM_ADDRESS", reason: "must be a valid address on the verified sending domain" });
     }
   }
