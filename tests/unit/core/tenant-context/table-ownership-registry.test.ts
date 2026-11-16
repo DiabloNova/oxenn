@@ -51,40 +51,49 @@ describe("Canonical table ownership registry", () => {
       expect(fs.existsSync(path.join(migrationDirectory, entry.tag + ".sql"))).toBe(true);
     }
 
-    const latestSnapshotEntry = [...journal.entries]
-      .reverse()
-      .find((entry) => fs.existsSync(snapshotPathFor(entry.idx)));
-    if (!latestSnapshotEntry) {
-      throw new Error("Workspace migration journal has no matching Drizzle snapshot.");
-    }
-
-    const snapshot = JSON.parse(
-      fs.readFileSync(snapshotPathFor(latestSnapshotEntry.idx), "utf8"),
-    ) as {
+    // Validate the entire generated-snapshot chain, not just its terminal link.
+    // SQL-only journal entries (for example 0005_force_rls) have no snapshot;
+    // the next generated snapshot must point to the nearest preceding snapshot.
+    let previousGeneratedSnapshotId = "00000000-0000-0000-0000-000000000000";
+    let latestSnapshotEntry: (typeof journal.entries)[number] | undefined;
+    let latestSnapshot: {
       id: string;
       prevId: string;
       version: string;
       dialect: string;
       tables: Record<string, { name: string }>;
-    };
+    } | undefined;
 
-    const previousSnapshotEntry = journal.entries
-      .filter((entry) => entry.idx < latestSnapshotEntry.idx)
-      .reverse()
-      .find((entry) => fs.existsSync(snapshotPathFor(entry.idx)));
-    if (!previousSnapshotEntry) {
-      throw new Error("Latest Workspace snapshot has no preceding generated snapshot.");
+    for (const entry of journal.entries) {
+      const snapshotPath = snapshotPathFor(entry.idx);
+      if (!fs.existsSync(snapshotPath)) continue;
+
+      const generatedSnapshot = JSON.parse(
+        fs.readFileSync(snapshotPath, "utf8"),
+      ) as {
+        id: string;
+        prevId: string;
+        version: string;
+        dialect: string;
+        tables: Record<string, { name: string }>;
+      };
+
+      expect(generatedSnapshot.version).toBe(journal.version);
+      expect(generatedSnapshot.dialect).toBe(journal.dialect);
+      expect(generatedSnapshot.prevId).toBe(previousGeneratedSnapshotId);
+
+      previousGeneratedSnapshotId = generatedSnapshot.id;
+      latestSnapshotEntry = entry;
+      latestSnapshot = generatedSnapshot;
     }
-    const previousSnapshot = JSON.parse(
-      fs.readFileSync(snapshotPathFor(previousSnapshotEntry.idx), "utf8"),
-    ) as { id: string };
 
-    const snapshotNames = Object.values(snapshot.tables).map((table) => table.name);
+    if (!latestSnapshotEntry || !latestSnapshot) {
+      throw new Error("Workspace migration journal has no matching Drizzle snapshot.");
+    }
+
+    const snapshotNames = Object.values(latestSnapshot.tables).map((table) => table.name);
     const userProfilesOwnership = getTableOwnershipEntry("workspace", "user_profiles");
 
-    expect(snapshot.version).toBe(journal.version);
-    expect(snapshot.dialect).toBe(journal.dialect);
-    expect(snapshot.prevId).toBe(previousSnapshot.id);
     expect(new Set(schemaNames).size).toBe(schemaNames.length);
     expect([...schemaNames].sort()).toEqual([...snapshotNames].sort());
     expect(snapshotNames).toContain("user_profiles");
