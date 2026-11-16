@@ -92,6 +92,7 @@ describe("EmailSender factory and transactional email adapters", () => {
     const payload = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(payload.from).toEqual({ address: "accounts@example.com", display_name: "Oxenn" });
     expect(payload.to).toEqual([{ address: "user@example.com" }]);
+    expect(payload.subject).toBe("Your Oxenn email verification code");
     expect(payload.plain).toContain("12345678");
     expect(payload.html).toContain("12345678");
   });
