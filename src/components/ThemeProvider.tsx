@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useLayoutEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { notifyNavigationStart } from "@/lib/navigation-transition";
 
@@ -68,7 +68,7 @@ export function ThemeProvider({
     [pathname, router]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const storedTheme = localStorage.getItem("theme") as Theme | null;
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     const initialTheme = storedTheme || systemTheme;
@@ -90,12 +90,9 @@ export function ThemeProvider({
     const currentDir: Direction = currentLang === "fa" ? "rtl" : "ltr";
     root.setAttribute("lang", currentLang);
     root.setAttribute("dir", currentDir);
-    const timer = setTimeout(() => {
-      setThemeState(initialTheme);
-      setLanguageState(currentLang);
-      setDirection(currentDir);
-    }, 0);
-    return () => clearTimeout(timer);
+    setThemeState(initialTheme);
+    setLanguageState(currentLang);
+    setDirection(currentDir);
   }, [initialLanguage, pathname]);
 
   return <ThemeContext.Provider value={{ theme, setTheme, direction, language, setLanguage }}>{children}</ThemeContext.Provider>;

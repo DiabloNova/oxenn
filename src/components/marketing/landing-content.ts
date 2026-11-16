@@ -1,6 +1,6 @@
 export const landingContent = {
   fa: {
-    nav: { tracks: "مسیرهای ارزیابی", method: "روش کار", offers: "محصول و مشتریان", evidence: "شواهد و اعتماد", login: "ورود", signup: "ساخت حساب", openMenu: "باز کردن منو", closeMenu: "بستن منو", themeLight: "تغییر به حالت روشن", themeDark: "تغییر به حالت تیره", switchLanguage: "Switch to English" },
+    nav: { tracks: "مسیرهای ارزیابی", method: "روش کار", offers: "محصول و مشتریان", evidence: "شواهد و اعتماد", login: "ورود", signup: "ساخت حساب", openMenu: "باز کردن منو", closeMenu: "بستن منو", themeLight: "تغییر به حالت روشن", themeDark: "تغییر به حالت تیره", switchLanguage: "Switch to English", skipToContent: "Skip to main content", mainNavigationLabel: "Main navigation", mobileNavigationLabel: "Mobile navigation" },
     hero: {
       eyebrow: "هوشمندی محصول و بازار",
       title: "محصولتان را بهتر بشناسید؛",
@@ -36,7 +36,7 @@ export const landingContent = {
     },
     method: {
       eyebrow: "روش کار", title: "اطلاعات را به فهم و برنامه تبدیل کنید",
-      body: "فرایند به‌صورت مرحله‌ای پیش می‌رود تا منشأ اطلاعات، تصمیم‌ها و موارد نیازمند بررسی روشن بماند.",
+      body: "فرایند به‌صورت مرحله‌ای پیش می‌رود تا منشأ اطلاعات، تصمیم‌ها و موارد نیازمند بررسی روشن بماند.",\n      baseline: "خروجی هر مرحله باید با دامنه، منبع و محدودیت‌های اطلاعات موجود خوانده شود.",
       steps: [
         { number: "01", title: "شناخت Offer", description: "محصول یا خدمت موجود، مشتریان، کاربردها و زمینه تجاری آن را مشخص کنید." },
         { number: "02", title: "ساخت پروفایل هوشمندی محصول", description: "اطلاعات Offer و زمینه آن در یک PIP نسخه‌دار و قابل بازبینی سازمان‌دهی می‌شود." },
@@ -91,7 +91,7 @@ export const landingContent = {
     },
   },
   en: {
-    nav: { tracks: "Assessment tracks", method: "How it works", offers: "Products & customers", evidence: "Evidence & trust", login: "Log in", signup: "Create account", openMenu: "Open menu", closeMenu: "Close menu", themeLight: "Switch to light theme", themeDark: "Switch to dark theme", switchLanguage: "تغییر زبان به فارسی" },
+    nav: { tracks: "Assessment tracks", method: "How it works", offers: "Products & customers", evidence: "Evidence & trust", login: "Log in", signup: "Create account", openMenu: "Open menu", closeMenu: "Close menu", themeLight: "Switch to light theme", themeDark: "Switch to dark theme", switchLanguage: "تغییر زبان به فارسی", skipToContent: "رفتن به محتوای اصلی", mainNavigationLabel: "ناوبری اصلی", mobileNavigationLabel: "ناوبری موبایل" },
     hero: {
       eyebrow: "PRODUCT & MARKET INTELLIGENCE",
       title: "Understand what you offer.",
@@ -127,7 +127,7 @@ export const landingContent = {
     },
     method: {
       eyebrow: "HOW IT WORKS", title: "Turn information into understanding and a plan",
-      body: "The process is staged so that the origin of information, decisions, and items needing further review remain visible.",
+      body: "The process is staged so that the origin of information, decisions, and items needing further review remain visible.",\n      baseline: "Each stage should be read together with the scope, sources, and limitations of the available information.",
       steps: [
         { number: "01", title: "Understand the Offer", description: "Describe the existing product or service, its customers, use cases, and commercial context." },
         { number: "02", title: "Build the Product Intelligence Profile", description: "Organize the Offer and its context in a versioned, reviewable Product Intelligence Profile (PIP)." },

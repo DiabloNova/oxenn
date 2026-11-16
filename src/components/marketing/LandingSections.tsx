@@ -147,7 +147,7 @@ export function LandingSections({ locale }: LandingSectionsProps) {
               </li>
             ))}
           </ol>
-          <div className="atlas-method-baseline"><span className="atlas-baseline-symbol" aria-hidden="true">↗</span><p>{isFa ? "خروجی هر مرحله باید با دامنه، منبع و محدودیت‌های اطلاعات موجود خوانده شود." : "Each stage should be read together with the scope, sources, and limitations of the available information."}</p></div>
+          <div className="atlas-method-baseline"><span className="atlas-baseline-symbol" aria-hidden="true">↗</span><p>{t.method.baseline}</p></div>
         </div>
       </section>
 

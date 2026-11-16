@@ -43,17 +43,14 @@ export function AuthProvider({
       .then((serverSession) => {
         if (!active) return;
         if (serverSession.status === "authenticated" && serverSession.user) {
-          localStorage.setItem("auth_session_user", JSON.stringify(serverSession.user));
           setSession(serverSession);
         } else {
-          localStorage.removeItem("auth_session_user");
           setSession(PUBLIC_UNAUTHENTICATED_SESSION);
         }
       })
       .catch((err) => {
         if (!active) return;
         console.error("Failed to fetch authoritative server session:", err);
-        localStorage.removeItem("auth_session_user");
         setSession(PUBLIC_UNAUTHENTICATED_SESSION);
       });
 
@@ -67,7 +64,6 @@ export function AuthProvider({
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
       const user = await loginAction(email, password);
-      localStorage.setItem("auth_session_user", JSON.stringify(user));
       setSession({
         user,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
@@ -97,7 +93,6 @@ export function AuthProvider({
   const logout = async () => {
     setSession((prev) => ({ ...prev, status: "loading" }));
     await new Promise((resolve) => setTimeout(resolve, 400));
-    localStorage.removeItem("auth_session_user");
     await logoutAction();
     setSession(PUBLIC_UNAUTHENTICATED_SESSION);
   };

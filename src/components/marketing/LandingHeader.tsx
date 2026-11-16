@@ -41,12 +41,12 @@ export function LandingHeader() {
 
   return (
     <header className="atlas-header">
-      <a className="atlas-skip-link" href="#page-content">{language === "fa" ? "رفتن به محتوای اصلی" : "Skip to main content"}</a>
+      <a className="atlas-skip-link" href="#page-content">{t.nav.skipToContent}</a>
       <div className="atlas-header-inner">
         <Link className="atlas-brand" href={`/${language}`} aria-label="OXENN">
           <Image src="/icon.svg" alt="" width={38} height={38} priority /><span>OXENN</span>
         </Link>
-        <nav className="atlas-desktop-nav" aria-label={language === "fa" ? "ناوبری اصلی" : "Main navigation"}>
+        <nav className="atlas-desktop-nav" aria-label={t.nav.mainNavigationLabel}>
           {navItems.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
         </nav>
         <div className="atlas-header-actions">
@@ -64,7 +64,7 @@ export function LandingHeader() {
         </div>
       </div>
       {mobileOpen && (
-        <nav id="atlas-mobile-navigation" className="atlas-mobile-nav" aria-label={language === "fa" ? "ناوبری موبایل" : "Mobile navigation"}>
+        <nav id="atlas-mobile-navigation" className="atlas-mobile-nav" aria-label={t.nav.mobileNavigationLabel}>
           {navItems.map((item) => <Link key={item.href} href={item.href} onClick={closeMenu}>{item.label}</Link>)}
           <Link href={`/${language}/login`} onClick={closeMenu}>{t.nav.login}</Link>
           <Link className="atlas-mobile-signup" href={`/${language}/register`} onClick={closeMenu}>{t.nav.signup}</Link>
