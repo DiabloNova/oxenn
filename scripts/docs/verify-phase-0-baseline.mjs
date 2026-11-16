@@ -224,7 +224,7 @@ function main() {
 
   for (const configPath of ["drizzle.config.ts", "drizzle.push.config.ts"]) {
     assert.ok(
-      readFile(configPath).includes('schema: "./database/schema/index.ts"'),
+      (readFile(configPath).match(/^\s*schema:\s*"\.\/database\/schema\/index\.ts",?\s*$/gm) ?? []).length === 1,
       configPath + " must use the canonical schema barrel exactly once",
     );
   }
