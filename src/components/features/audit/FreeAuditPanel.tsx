@@ -213,7 +213,11 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
       if (!authEmail.trim() || !authPassword) {
         throw new Error(isRtl ? "لطفاً ایمیل و رمز عبور را وارد کنید." : "Enter your email and password.");
       }
-      await login(authEmail, authPassword);
+      const result = await login(authEmail, authPassword);
+      if (result.errorCode === "EMAIL_NOT_VERIFIED") {
+        router.push(`/${language}/verify-email?email=${encodeURIComponent(authEmail.trim())}`);
+        return;
+      }
       // Successful login triggers the existing effect to resume the pending audit.
     } catch (err: unknown) {
       setAuthError(err instanceof Error ? err.message : String(err));
