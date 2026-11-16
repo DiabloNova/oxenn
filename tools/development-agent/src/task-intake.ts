@@ -1,8 +1,9 @@
 import { constants } from "node:fs";
-import { lstat,open } from "node:fs/promises";
+import { lstat,open,realpath } from "node:fs/promises";
 import path from "node:path";
 import type { TaskClass,TaskEnvelope } from "./types";
-import { normalizeRepoPath } from "./path-safety";
+import { isPathInside,normalizeRepoPath } from "./path-safety";
+import { isValidGitBranchName } from "./git-ref";
 
 const TASK_KEYS = ["schemaVersion","taskId","title","taskClass","objective","authorizedBy","targetBranch","baseSha","allowedPaths","prohibitedPaths","authoritativeDocs","successCriteria","stopConditions","providerPolicy","permittedCommands"] as const;
 function asRecord(value: unknown,label: string): Record<string,unknown> {
@@ -24,10 +25,9 @@ function textArray(value: unknown,label: string,maxItems: number,allowEmpty = fa
   return result;
 }
 function safeBranchName(value: unknown): string {
+  if (typeof value !== "string" || value !== value.trim()) throw new Error("targetBranch must be a literal Git branch name.");
   const branch = requiredText(value,"targetBranch",200);
-  if (!/^[A-Za-z0-9._/-]+$/.test(branch) || branch.startsWith("-") || branch.includes("..") || branch.includes("//") || branch.endsWith("/") || branch.includes("@{")) {
-    throw new Error("targetBranch is not a valid literal branch name.");
-  }
+  if (!isValidGitBranchName(branch)) throw new Error("targetBranch is not a valid literal Git branch name.");
   return branch;
 }
 function repoPaths(value: unknown,label: string,allowEmpty: boolean): string[] {
@@ -40,7 +40,7 @@ export function parseTaskEnvelope(value: unknown): TaskEnvelope {
   const taskClass = record.taskClass;
   if (!["tooling","mvp-stage","remediation","maintenance"].includes(String(taskClass))) throw new Error("taskClass is not supported.");
   const baseSha = requiredText(record.baseSha,"baseSha",64).toLowerCase();
-  if (!/^[a-f0-9]{40}$/.test(baseSha)) throw new Error("baseSha must be a full 40-character Git SHA.");
+  if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(baseSha)) throw new Error("baseSha must be a full 40-character SHA-1 or 64-character SHA-256 Git object ID.");
   const policy = asRecord(record.providerPolicy,"providerPolicy");
   exactKeys(policy,["mode","maxTokens","maxCostUsd"],"providerPolicy");
   if (policy.mode !== "disabled" || policy.maxTokens !== 0 || policy.maxCostUsd !== 0) throw new Error("Version 1 requires all model providers and model budgets to be disabled.");
@@ -49,7 +49,7 @@ export function parseTaskEnvelope(value: unknown): TaskEnvelope {
   if (!/^[A-Z0-9][A-Z0-9._-]{1,63}$/.test(taskId)) throw new Error("taskId contains unsupported characters.");
   const allowedPaths = repoPaths(record.allowedPaths,"allowedPaths",false);
   const prohibitedPaths = repoPaths(record.prohibitedPaths,"prohibitedPaths",true);
-  if (allowedPaths.some((item) => prohibitedPaths.includes(item))) throw new Error("A path cannot be both allowed and prohibited.");
+  if (allowedPaths.some((allowed) => prohibitedPaths.some((prohibited) => allowed === prohibited || allowed.startsWith(prohibited + "/")))) throw new Error("An allowed path cannot be equal to or nested inside a prohibited path.");
   return {
     schemaVersion:1,taskId,title:requiredText(record.title,"title",200),taskClass:taskClass as TaskClass,
     objective:requiredText(record.objective,"objective",1000),authorizedBy:requiredText(record.authorizedBy,"authorizedBy",300),
@@ -60,19 +60,40 @@ export function parseTaskEnvelope(value: unknown): TaskEnvelope {
     providerPolicy:{mode:"disabled",maxTokens:0,maxCostUsd:0},permittedCommands:[]
   };
 }
-export async function readTaskEnvelopeFile(taskFile: string): Promise<TaskEnvelope> {
+async function readBoundedTaskFile(handle: Awaited<ReturnType<typeof open>>): Promise<string> {
+  const maximumBytes = 32 * 1024;
+  const buffer = Buffer.alloc(maximumBytes + 1);
+  let offset = 0;
+  while (offset < buffer.length) {
+    const {bytesRead} = await handle.read(buffer,offset,buffer.length - offset,offset);
+    if (bytesRead === 0) break;
+    offset += bytesRead;
+  }
+  if (offset > maximumBytes) throw new Error("Task input exceeds the 32 KiB size limit.");
+  return buffer.subarray(0,offset).toString("utf8");
+}
+export async function readTaskEnvelopeFile(taskFile: string,repositoryRoot: string): Promise<TaskEnvelope> {
   const absolutePath = path.resolve(taskFile);
-  // lstat is a fast fail for symlinks; O_NOFOLLOW closes the common lstat/open race on supported platforms.
-  const linkInfo = await lstat(absolutePath);
+  const root = await realpath(repositoryRoot);
+  const linkInfo = await lstat(absolutePath,{bigint:true});
   if (linkInfo.isSymbolicLink()) throw new Error("Task input must not be a symlink.");
+  const resolvedPath = await realpath(absolutePath);
+  if (isPathInside(root,resolvedPath)) throw new Error("Task input must be stored outside the selected repository.");
   const noFollow = constants.O_NOFOLLOW ?? 0;
-  const handle = await open(absolutePath,constants.O_RDONLY | noFollow);
+  const handle = await open(resolvedPath,constants.O_RDONLY | noFollow);
   let content: string;
   try {
-    const fileInfo = await handle.stat();
+    const fileInfo = await handle.stat({bigint:true});
     if (!fileInfo.isFile()) throw new Error("Task input must be a regular file.");
-    if (fileInfo.size > 32 * 1024) throw new Error("Task input exceeds the 32 KiB size limit.");
-    content = await handle.readFile({encoding:"utf8"});
+    if (fileInfo.nlink !== 1n) throw new Error("Task input must not be a hard-linked file.");
+    if (fileInfo.size > 32n * 1024n) throw new Error("Task input exceeds the 32 KiB size limit.");
+    const pathInfo = await lstat(resolvedPath,{bigint:true});
+    if (pathInfo.isSymbolicLink() || pathInfo.dev !== fileInfo.dev || pathInfo.ino !== fileInfo.ino) throw new Error("Task input changed during safe open.");
+    const confirmedPath = await realpath(resolvedPath);
+    if (isPathInside(root,confirmedPath)) throw new Error("Task input changed to a path inside the selected repository.");
+    content = await readBoundedTaskFile(handle);
+    const after = await handle.stat({bigint:true});
+    if (fileInfo.size !== after.size || fileInfo.mtimeNs !== after.mtimeNs || fileInfo.ctimeNs !== after.ctimeNs) throw new Error("Task input changed while it was being read.");
   } finally {
     await handle.close();
   }

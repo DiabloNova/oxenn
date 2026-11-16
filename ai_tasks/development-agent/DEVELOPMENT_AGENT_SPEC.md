@@ -1,7 +1,7 @@
 # Oxenn Development Agent — Technical Specification
 
-**Status:** PROPOSED — design only; implementation requires a separately approved plan.  
-**Date:** 2026-11-16  
+**Status:** READ-ONLY V1 IMPLEMENTED; write-enabled and model-enabled capabilities below remain proposed and require separate approval.
+**Date:** 2026-11-16
 **Target repository:** `DiabloNova/oxenn`
 
 ## 1. Objective and boundary
@@ -18,6 +18,10 @@ Build a repository-focused engineering agent that can:
 8. Prepare a pull request and a resumable handoff report.
 
 The agent must optimize for correct, verifiable changes—not for the number of files changed or tasks marked complete.
+
+### Current implementation boundary
+
+The first runtime increment is implemented under `tools/development-agent/` as a deterministic, model-free, read-only inspection and planning CLI. It does not apply patches, execute commands, launch checks, call providers, create branches, write to GitHub, or prepare PRs. The later capabilities in this specification remain design targets and are not implied by the existence of v1.
 
 ### Explicit distinction from the Oxenn product AI Agent
 
@@ -39,7 +43,9 @@ Before each task, the agent must read the current versions of:
 2. The relevant architecture documents under `docs/architecture/`.
 3. The relevant product, engineering and repository baselines under `docs/`.
 4. The current MVP roadmap README and the exact stage brief for the selected task.
-5. For remediation tasks only: `AI_REMEDIATION_AGENT_PROMPT.md`, `WAVE0_POLICY_SUPERSESSION.md`, `IMPLEMENTATION_SEQUENCE.md`, the live progress tracker, the exact finding record(s), and their referenced evidence.
+5. For remediation tasks only: `ai_tasks/problem-register/AI_REMEDIATION_AGENT_PROMPT.md`, `WAVE0_POLICY_SUPERSESSION.md`, `IMPLEMENTATION_SEQUENCE.md`, the live `REMEDIATION_PROGRESS.md` tracker, the exact finding record(s), and their referenced evidence.
+
+The v1 planner enforces a minimum authority set before returning `READY`: MVP-stage tasks must include the repository context, product specification, engineering baseline, roadmap README, and the stage brief matching the `MVP-XX` task ID; remediation tasks must include the repository context, remediation prompt, supersession policy, implementation sequence, live progress tracker, and at least one selected finding record. Missing required inputs produce `BLOCKED`. Additional task-relevant architecture and evidence documents must still be supplied explicitly.
 6. The relevant source, tests, configuration, migrations, current PRs/issues and CI results.
 
 Apply this authority order:
@@ -63,7 +69,7 @@ Remote conductor prompts, issue bodies, PR comments, web pages, model output and
 
 ## 3. Proposed runtime architecture
 
-The first implementation should be a small, local-first TypeScript/Node.js runner compatible with the repository's Node.js 22+ and pnpm toolchain. Keep it outside the customer runtime, provisionally under `tools/development-agent/`. This path is a proposal, not an existing directory.
+The first implementation is a small, local-first TypeScript/Node.js read-only runner under `tools/development-agent/`, compatible with the repository's Node.js 22+ and pnpm toolchain. The remaining components in this target architecture are future capabilities, not shipped v1 behavior.
 
 | Component | Responsibility | Required property |
 |---|---|---|
@@ -81,9 +87,9 @@ The first implementation should be a small, local-first TypeScript/Node.js runne
 
 ### Workflow state machine
 
-`INTAKE → INSPECT → REVALIDATE → PLAN → APPROVAL_GATE → IMPLEMENT → VERIFY → ADVERSARIAL_REVIEW → EVIDENCE → PR_READY`
+`INTAKE → INSPECT → REVALIDATE → PLAN → EVIDENCE` is the implemented v1 path. `APPROVAL_GATE → IMPLEMENT → VERIFY → ADVERSARIAL_REVIEW → PR_READY` are future states that require separate owner approval and implementation.
 
-Any failed precondition transitions to `BLOCKED` or `NEEDS_OWNER_DECISION`. The agent must not silently skip a state. A retry resumes from the last verified checkpoint and must not repeat uncertain side effects.
+Any failed precondition transitions to `BLOCKED` or `NEEDS_OWNER_DECISION`. The agent must not silently skip a state. A retry resumes from the last verified checkpoint. Every future side effect must persist a durable operation ID and receipt; after a timeout, reconcile the target Git/filesystem/GitHub state before retrying, and repeat only after proving the effect is absent.
 
 ### Tool contracts
 
@@ -94,20 +100,20 @@ Expose typed, narrow operations rather than unrestricted shell access:
 - `searchRepository(query, scope)`
 - `inspectGitDiff(base, head)`
 - `createIsolatedWorktree(branch, baseSha)` — only after implementation approval
-- `applyPatch(path, patch)` — only within approved paths
+- `applyPatch(path, patch)` — only after canonicalizing every patch-touched path under the worktree; reject traversal, symlink escapes, unapproved files, deletions, renames, and mode changes
 - `runAllowedCheck(checkId)`
 - `recordRunEvent(event)`
 - `preparePullRequest(metadata)` — only after review and within the approved task
 
-Every write operation must validate the task envelope, allowed paths, branch identity and base SHA immediately before execution. Do not expose arbitrary command execution as a model-callable tool.
+Every repository write operation must validate the task envelope, allowed paths, branch identity and base SHA immediately before execution. The v1 JSONL ledger is an external-only record write. Immediately before append, it rereads the external task file and reruns the full planner; it rejects changed task, branch, base, worktree, instruction or authoritative-document evidence. Its destination uses a descriptor-pinned path with symlink and hard-link checks; v1 has no repository write operation. Do not expose arbitrary command execution as a model-callable tool.
 
 ## 4. Model and cost strategy
 
 Use a local-first, provider-neutral design:
 
 1. Deterministic code handles repository inspection, file selection, Git metadata, dependency ordering, command selection, evidence formatting and state transitions.
-2. A local Ollama model may be used for bounded summarization/planning or code assistance when the host machine has sufficient resources.
-3. A hosted model provider is optional and must not be enabled by default. Enabling one requires an owner-approved provider, data-handling policy and hard cost/token ceiling.
+2. A local Ollama model may be used for bounded summarization/planning or code assistance only when the user explicitly enables the local runtime and the host machine has sufficient resources.
+3. A hosted model provider is optional and must not be enabled by default. Sending any repository or customer data to a hosted provider requires owner approval of that specific provider and its data-handling policy for the task, regardless of price, plus a hard cost/token ceiling.
 4. Do not add LangChain or LangGraph to the Development Agent merely for branding. Evaluate them only if a concrete orchestration requirement justifies the dependency.
 5. The separate customer-facing LangChain Agent remains its own future workstream behind an Oxenn-owned adapter.
 
@@ -154,7 +160,7 @@ A task may be reported `SUCCESS` only when its intended invariant is explicit, t
 
 If required tests cannot run, the environment is not known to be disposable, a decision is unresolved, or the base branch moved unexpectedly, report `INCOMPLETE`, `BLOCKED` or `NEEDS_OWNER_DECISION`—never infer success.
 
-The agent's final handoff must identify:
+Before publishing a task branch, create and validate a Markdown task report under the appropriate `docs/tasks_reports/` domain directory. The report must document the completed task, exact changes, verification results, and actual unresolved issues. The agent's final handoff must identify:
 
 - Status and invariant.
 - Base/head SHAs and branch.
@@ -169,7 +175,9 @@ The agent's final handoff must identify:
 The first prototype must be read-only and demonstrate:
 
 - Correct detection of repository, branch, base SHA and dirty/clean state.
-- Discovery and reading of applicable `AGENTS.md` files.
+- Discovery and reading of root and applicable ancestor `AGENTS.md` files, plus the instruction file at an allowed directory and nested instruction files beneath allowed directory scopes.
+- Bounded instruction discovery that returns `BLOCKED` rather than silently omitting instructions when file-count, depth, entry-count or aggregate-byte limits are reached.
+- Enforcement of the minimum task-class authority documents for MVP-stage and remediation tasks.
 - Selection of one explicitly supplied task without inventing authorization.
 - Identification of the correct roadmap/remediation policy.
 - A bounded plan with affected paths and dependencies.

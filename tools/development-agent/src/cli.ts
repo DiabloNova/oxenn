@@ -26,7 +26,7 @@ function parseArguments(args: string[]): CliOptions {
 }
 async function main(args: string[]): Promise<void> {
   const options = parseArguments(args);
-  const task = await readTaskEnvelopeFile(options.taskFile);
+  const task = await readTaskEnvelopeFile(options.taskFile,options.repositoryPath);
   const plan = await buildPlan({repositoryPath:options.repositoryPath,task});
   const record: RunLedgerRecord = {
     schemaVersion:1,event:"plan",runId:plan.runId,createdAt:plan.createdAt,taskId:task.taskId,
@@ -35,7 +35,7 @@ async function main(args: string[]): Promise<void> {
     instructionPaths:plan.applicableInstructions.map((file) => file.path),
     documentPaths:plan.authoritativeDocuments.map((file) => file.path)
   };
-  await appendRunLedger(record,plan.repository.repositoryRoot,options.ledgerPath);
+  await appendRunLedger(record,plan.repository.repositoryRoot,{taskFilePath:options.taskFile,task,plan},options.ledgerPath);
   process.stdout.write(JSON.stringify(plan,null,2) + "\n");
   if (plan.status === "BLOCKED") process.exitCode = 2;
 }

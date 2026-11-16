@@ -1,7 +1,7 @@
 # Oxenn Development Agent
 
-**Status:** DESIGN / PREPARATION — no runtime implementation is authorized by this document.  
-**Prepared:** 2026-11-16  
+**Status:** READ-ONLY V1 RUNTIME IMPLEMENTED; this document governs preparation and future capability gates.
+**Prepared:** 2026-11-16
 **Repository:** `DiabloNova/oxenn`
 
 ## Purpose
@@ -36,4 +36,4 @@ The copied documents are historical records and remain unchanged. Their branch m
 
 ## Next implementation gate
 
-Before runtime code is added, the owner must approve a separate implementation plan that identifies the runner location, model/provider choice, tool permissions, cost ceiling, and first bounded task. The first implementation should be a read-only repository-inspection prototype, then a gated plan-generation prototype; write access and code execution should be enabled only after those pass their safety checks.
+The read-only repository-inspection and plan-generation prototype is implemented in `tools/development-agent/`. Before adding repository write access, command execution, local/hosted model use, GitHub writes or PR preparation, the owner must approve a separate implementation plan identifying the exact capability, permissions, data-handling policy, tool allowlist, cost ceiling and acceptance checks. Those later capabilities remain disabled in v1.

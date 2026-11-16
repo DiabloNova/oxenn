@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DevelopmentPlan,TaskEnvelope,FileEvidence } from "./types";
 import { inspectGitRepository } from "./git-inspector";
 import { loadApplicableInstructions,loadAuthoritativeDocuments } from "./instruction-loader";
+import { missingRequiredAuthorityDocs } from "./authority-requirements";
 
 export interface BuildPlanOptions { repositoryPath: string; task: TaskEnvelope; }
 export async function buildPlan(options: BuildPlanOptions): Promise<DevelopmentPlan> {
@@ -10,15 +11,20 @@ export async function buildPlan(options: BuildPlanOptions): Promise<DevelopmentP
   const repository = await inspectGitRepository(options.repositoryPath);
   const task = options.task;
   const reasonCodes: string[] = [];
-  if (!repository.isClean) reasonCodes.push("DIRTY_WORKTREE");
+  if (!repository.executionBoundaryKnown) reasonCodes.push("GIT_EXECUTION_BOUNDARY_UNVERIFIED");
+  if (!repository.statusKnown) reasonCodes.push("WORKTREE_STATUS_UNAVAILABLE");
+  else if (!repository.isClean) reasonCodes.push("DIRTY_WORKTREE");
   if (repository.branch === "(detached)") reasonCodes.push("DETACHED_HEAD");
   if (repository.branch !== task.targetBranch) reasonCodes.push("TARGET_BRANCH_MISMATCH");
   if (repository.headSha.toLowerCase() !== task.baseSha) reasonCodes.push("BASE_SHA_MISMATCH");
   let instructionFiles: FileEvidence[] = [];
   let referenceFiles: FileEvidence[] = [];
+  const missingAuthorityDocs = missingRequiredAuthorityDocs(task);
+  if (missingAuthorityDocs.length) reasonCodes.push("TASK_AUTHORITY_INPUTS_MISSING");
   try {
     const instructions = await loadApplicableInstructions(repository.repositoryRoot,[...task.allowedPaths,...task.authoritativeDocs]);
     instructionFiles = instructions.files;
+    if (instructions.discoveryLimitExceeded) reasonCodes.push("INSTRUCTION_DISCOVERY_LIMIT");
     if (!instructions.rootInstructionFound) reasonCodes.push("ROOT_INSTRUCTIONS_MISSING");
     const documents = await loadAuthoritativeDocuments(repository.repositoryRoot,task.authoritativeDocs);
     referenceFiles = documents.files;
@@ -33,7 +39,7 @@ export async function buildPlan(options: BuildPlanOptions): Promise<DevelopmentP
       taskId:task.taskId,title:task.title,taskClass:task.taskClass,objective:task.objective,
       successCriteria:task.successCriteria,stopConditions:task.stopConditions
     },
-    repository,applicableInstructions:instructionFiles,authoritativeDocuments:referenceFiles,
+    repository,applicableInstructions:instructionFiles,authoritativeDocuments:referenceFiles,missingAuthorityDocs,
     allowedPaths:task.allowedPaths,prohibitedPaths:task.prohibitedPaths,
     steps:[
       "Confirm the inspected branch, HEAD SHA, and clean working tree.",

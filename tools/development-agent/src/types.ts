@@ -9,7 +9,7 @@ export interface TaskEnvelope {
 }
 export interface GitSnapshot {
   repositoryRoot: string; branch: string; headSha: string; mainSha?: string;
-  isClean: boolean; statusEntryCount: number;
+  isClean: boolean; executionBoundaryKnown: boolean; statusKnown: boolean; statusEntryCount: number;
 }
 export interface FileEvidence { path: string; sha256: string; }
 export interface DevelopmentPlan {
@@ -20,7 +20,7 @@ export interface DevelopmentPlan {
     successCriteria: string[]; stopConditions: string[];
   };
   repository: GitSnapshot; applicableInstructions: FileEvidence[];
-  authoritativeDocuments: FileEvidence[]; allowedPaths: string[];
+  authoritativeDocuments: FileEvidence[]; missingAuthorityDocs: string[]; allowedPaths: string[];
   prohibitedPaths: string[]; steps: string[]; forbiddenActions: string[];
 }
 export interface RunLedgerRecord {

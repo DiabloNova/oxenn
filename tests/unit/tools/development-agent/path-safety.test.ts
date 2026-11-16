@@ -28,4 +28,15 @@ describe("repository path safety",() => {
     await symlink(outside,path.join(root,"linked"),"dir");
     await expect(readRepoFile(root,"linked/secret.txt")).rejects.toThrow(PathSafetyError);
   });
+  it("reads a contained regular file through a bounded descriptor",async () => {
+    const root = await tempRoot();
+    await writeFile(path.join(root,"scope.txt"),"bounded content");
+    await expect(readRepoFile(root,"scope.txt",32)).resolves.toBe("bounded content");
+  });
+  it("rejects repository files that exceed the descriptor read limit",async () => {
+    const root = await tempRoot();
+    await writeFile(path.join(root,"large.txt"),"x".repeat(17));
+    await expect(readRepoFile(root,"large.txt",16)).rejects.toThrow(PathSafetyError);
+  });
+
 });

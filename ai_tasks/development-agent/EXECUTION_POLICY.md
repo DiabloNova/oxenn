@@ -1,6 +1,6 @@
 # Oxenn Development Agent — Execution and Safety Policy
 
-**Status:** PROPOSED — applies to the future Development Agent after implementation and owner approval.  
+**Status:** Guardrails for the implemented read-only v1 and future capabilities; write-enabled/model-enabled phases still require separate owner approval.
 **Date:** 2026-11-16
 
 ## 1. Default mode
@@ -73,7 +73,9 @@ Potential checks, subject to task relevance and environment verification:
 - `pnpm test:unit`
 - `pnpm test:ui`
 - `pnpm build`
-- `pnpm test:isolation` only after positively verifying a disposable PostgreSQL target.
+
+
+Do not run `pnpm test:isolation` as a generic check: its current implementation connects with PostgreSQL administrator credentials and force-drops/recreates the hard-coded `isolation_test_db`, without accepting or attesting the caller's target. It remains forbidden until it is replaced by a target-aware guarded command and the exact disposable database identity is independently attested and explicitly approved for the task.
 
 Do not automatically run `pnpm db:migrate`, `pnpm db:push`, Platform Admin migrations/bootstrap, provider integration tests with real credentials, or any command that writes to a non-disposable database.
 
@@ -85,6 +87,7 @@ A command is not a pass merely because it was queued. Record the actual exit cod
 - Use a unique task branch and isolated worktree.
 - Never push directly to `main` or `MVP_00`.
 - A PR must state the task scope, base SHA, evidence, checks, risks and owner decisions.
+- Every side effect must have a durable operation ID and receipt. After a timeout, reconcile the actual target state before retrying; do not repeat an uncertain write.
 - Do not mark a PR ready while required checks are missing, skipped or failing.
 - Never merge the PR; the repository owner retains merge authority.
 - If the base moves or the branch diverges unexpectedly, stop and reconcile rather than force-pushing or rewriting history.
@@ -95,6 +98,8 @@ A command is not a pass merely because it was queued. Record the actual exit cod
 - Read only relevant files and ranges. Do not repeatedly ingest large historical documents or the entire repository.
 - No automatic model-provider fallback.
 - Respect the per-run budget in the task envelope. Stop when the budget is reached or cannot be measured.
+- Do not send repository or customer data to any hosted model/provider unless the owner has approved that specific provider and its data-handling policy for this task, regardless of price.
+- Any approved hosted provider must also have a hard token/cost ceiling; no free-tier assumption substitutes for data-handling approval.
 - Do not use paid Super Chrome execution, paid model endpoints or other metered services unless the owner explicitly approves the specific service and cost.
 - Prefer local models only when the local host has adequate resources and the user has explicitly enabled that runtime.
 - Record unknown usage as unknown; never invent a free quota or claim zero cost without evidence.

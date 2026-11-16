@@ -31,7 +31,21 @@ describe("task intake",() => {
     expect(() => parseTaskEnvelope({...validTask,permittedCommands:["pnpm test"]})).toThrow(/does not permit command/);
   });
   it("rejects an invalid base SHA and path traversal",() => {
-    expect(() => parseTaskEnvelope({...validTask,baseSha:"main"})).toThrow(/40-character/);
+    expect(() => parseTaskEnvelope({...validTask,baseSha:"main"})).toThrow(/40-character SHA-1 or 64-character/);
     expect(() => parseTaskEnvelope({...validTask,allowedPaths:["../secrets.env"]})).toThrow(/unsafe segment/);
   });
+  it("accepts valid Git branch punctuation and full SHA-256 object IDs",() => {
+    expect(parseTaskEnvelope({...validTask,targetBranch:"feat/a+b"}).targetBranch).toBe("feat/a+b");
+    expect(parseTaskEnvelope({...validTask,targetBranch:"fix#12",baseSha:"a".repeat(64)}).baseSha).toBe("a".repeat(64));
+  });
+  it("rejects invalid Git ref syntax without rejecting valid punctuation",() => {
+    for (const targetBranch of ["bad..name","bad//name","bad name","-option","feature/.hidden","feature/branch.lock","trailing."]) {
+      expect(() => parseTaskEnvelope({...validTask,targetBranch})).toThrow(/valid literal Git branch/);
+    }
+  });
+  it("rejects allowed paths nested in prohibited scopes but permits narrower exclusions",() => {
+    expect(() => parseTaskEnvelope({...validTask,allowedPaths:["database/schema/index.ts"],prohibitedPaths:["database"]})).toThrow(/nested inside a prohibited path/);
+    expect(parseTaskEnvelope({...validTask,allowedPaths:["database"],prohibitedPaths:["database/schema"]}).allowedPaths).toEqual(["database"]);
+  });
+
 });
