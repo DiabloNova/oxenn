@@ -31,6 +31,7 @@ import { Button } from "@/components/Button";
 interface DashboardTopbarProps {
   onMenuTrigger: () => void;
   onHelpTrigger?: () => void;
+  showAccountMenu?: boolean;
 }
 
 interface Workspace {
@@ -41,7 +42,8 @@ interface Workspace {
 
 export default function DashboardTopbar({
   onMenuTrigger,
-  onHelpTrigger
+  onHelpTrigger,
+  showAccountMenu = true,
 }: DashboardTopbarProps) {
   const router = useRouter();
   const { theme, setTheme, direction, language, setLanguage } = useTheme();
@@ -390,8 +392,8 @@ export default function DashboardTopbar({
             </AnimatePresence>
           </div>
 
-          {/* User Account Menu */}
-          <Dropdown
+          {/* Account menu is pinned to the bottom of the shared sidebar. */}
+          {showAccountMenu && <Dropdown
             align="right"
             trigger={
               <button
@@ -409,7 +411,7 @@ export default function DashboardTopbar({
               </button>
             }
             items={userDropdownItems}
-          />
+          />}
         </div>
       </header>
 

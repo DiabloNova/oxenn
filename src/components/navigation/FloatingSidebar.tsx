@@ -314,6 +314,7 @@ export default function FloatingSidebar() {
   const isWorkspace = /^\/(?:fa|en)\/(?:dashboard|settings|profile)(?:\/|$)/.test(
     pathname ?? ""
   );
+  const isDashboardRoute = pathname?.includes("/dashboard") ?? false;
   const isNavigationPending = navigationFromPath !== null;
 
   const handleLogout = async () => {
@@ -335,7 +336,7 @@ export default function FloatingSidebar() {
     }
   };
 
-  if (!isWorkspace || isNavigationPending) return null;
+  if (!isWorkspace || isDashboardRoute || isNavigationPending) return null;
 
   return (
     <>

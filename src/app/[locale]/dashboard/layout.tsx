@@ -54,6 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <DashboardTopbar
             onMenuTrigger={() => setMobileOpen(true)}
             onHelpTrigger={() => setHelpOpen(true)}
+            showAccountMenu={false}
           />
 
           {/* Page Content viewport container */}
@@ -64,12 +65,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Footer status row */}
           <footer className="h-11 border-t border-[var(--border)] bg-[rgba(15,23,42,0.15)] backdrop-blur-md flex items-center justify-between px-6 text-[10px] text-[var(--text-muted)] font-semibold select-none shrink-0">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--color-success)]" />
-              <span>{isRtl ? "کلیه سامانه‌ها عملیاتی هستند" : "All services operational"}</span>
+              <span className="w-2 h-2 rounded-full bg-[var(--text-muted)]" />
+              <span>OXENN</span>
             </div>
             <div className="hidden sm:flex items-center gap-5">
-              <span>{isRtl ? "بروزرسانی شده: همین الان" : "Last synced: Just now"}</span>
-              <span className="px-2 py-0.5 rounded bg-[var(--border)] text-[9px]">v3.0.0 (Shell)</span>
+              <span>{isRtl ? "فضای کاری" : "Workspace"}</span>
             </div>
           </footer>
         </div>
