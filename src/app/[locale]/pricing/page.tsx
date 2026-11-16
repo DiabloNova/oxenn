@@ -29,7 +29,7 @@ export default function PricingPage() {
   const handlePlanSelection = React.useCallback((planName: string) => {
     setSelectedPlan(planName);
 
-    if (session.status === "unauthenticated") {
+    if (session.status !== "authenticated") {
       // User must register first
       setIsAuthOpen(true);
     } else {
@@ -41,12 +41,12 @@ export default function PricingPage() {
   // Check if there was a pre-selected plan in the query params (e.g. from landing page)
   useEffect(() => {
     const planParam = searchParams?.get("plan");
-    if (planParam) {
+    if (planParam && session.status !== "loading") {
       queueMicrotask(() => {
         handlePlanSelection(planParam);
       });
     }
-  }, [searchParams, handlePlanSelection]);
+  }, [searchParams, handlePlanSelection, session.status]);
 
   const handleWorkspaceCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,7 +261,8 @@ export default function PricingPage() {
               type="button"
               onClick={() => {
                 setIsAuthOpen(false);
-                router.push("/" + language + "/register");
+                const returnTo = `/${language}/pricing?plan=${encodeURIComponent(selectedPlan ?? "Free")}`;
+                router.push(`/${language}/register?returnTo=${encodeURIComponent(returnTo)}`);
               }}
             >
               {strings.registerBtn}
