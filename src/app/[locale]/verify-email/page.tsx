@@ -34,7 +34,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   const [isResending, setIsResending] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [sessionError, setSessionError] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(recoveryRequested ? 0 : 60);
+  const [resendCooldown, setResendCooldown] = useState(recoveryRequested || deliveryFailed ? 0 : 60);
   const [resendMessage, setResendMessage] = useState("");
 
   useEffect(() => {
@@ -193,7 +193,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
                     }}
                     inputMode="numeric"
                     autoComplete="one-time-code"
-                    maxLength={8}
+                    maxLength={16}
                     disabled={isVerifying}
                     required
                     className="text-center text-lg tracking-[0.35em]"
