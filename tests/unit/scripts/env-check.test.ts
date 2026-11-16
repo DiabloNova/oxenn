@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveMode, validateEnv } from "../../../scripts/env-check";
+import { parseDotenvValue, resolveMode, validateEnv } from "../../../scripts/env-check";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -84,6 +84,27 @@ describe("production build email configuration", () => {
     expect(validateEnv("build").invalid).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "EMAIL_PROVIDER" }),
     ]));
+  });
+});
+
+describe("dotenv value parsing", () => {
+  it("strips unquoted inline comments while preserving the value", () => {
+    expect(parseDotenvValue("change-this-to-a-secure-32-character-secret-in-production # local note"))
+      .toBe("change-this-to-a-secure-32-character-secret-in-production");
+  });
+
+  it("preserves hashes inside matching quoted values and strips trailing comments", () => {
+    expect(parseDotenvValue("\"secret # retained\" # local note")).toBe("secret # retained");
+    expect(parseDotenvValue("\x27secret # retained\x27 # local note")).toBe("secret # retained");
+  });
+
+  it("treats an empty assignment followed by an inline comment as empty", () => {
+    expect(parseDotenvValue(" # Required in production")).toBe("");
+  });
+
+  it("keeps malformed quoted values intact so validation rejects them", () => {
+    expect(parseDotenvValue("\"unterminated")).toBe("\"unterminated");
+    expect(parseDotenvValue("\"quoted\" trailing")).toBe("\"quoted\" trailing");
   });
 });
 
