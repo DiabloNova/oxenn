@@ -41,14 +41,16 @@ describe("registration validation", () => {
     expect(getPasswordValidationError("aa123456!!")).toBe("PASSWORD_UPPERCASE_REQUIRED");
     expect(getPasswordValidationError("Aaabcdef!!")).toBe("PASSWORD_NUMBER_REQUIRED");
     expect(getPasswordValidationError("Aa1234567!")).toBe("PASSWORD_TWO_SPECIAL_REQUIRED");
-    expect(getPasswordValidationError("Aa12345 !!")).toBeNull();
+    expect(getPasswordValidationError("Aa12345 !!")).toBe("PASSWORD_ENGLISH_ONLY");
     expect(getPasswordValidationError("Aa123456!پ")).toBe("PASSWORD_ENGLISH_ONLY");
     expect(getPasswordValidationError("Aa123!")).toBe("PASSWORD_TOO_SHORT");
+    expect(getPasswordValidationError("Aa123456!!".padEnd(256, "a"))).toBe("PASSWORD_TOO_LONG");
     expect(passwordHasUppercase("Aa123456!!")).toBe(true);
   });
 
   it("enforces locale-specific first and last names", () => {
     expect(getPersonNameValidationError("علی", "fa")).toBeNull();
+    expect(getPersonNameValidationError("ع".repeat(101), "fa")).toBe("NAME_TOO_LONG");
     expect(getPersonNameValidationError("رضا احمدی", "fa")).toBeNull();
     expect(getPersonNameValidationError("John", "fa")).toBe("NAME_LOCALE_MISMATCH");
     expect(getPersonNameValidationError("John Doe", "en")).toBeNull();
@@ -59,5 +61,7 @@ describe("registration validation", () => {
     expect(getUsernameValidationError("my.user_1")).toBeNull();
     expect(getUsernameValidationError("ab")).toBe("USERNAME_INVALID");
     expect(getUsernameValidationError("user name")).toBe("USERNAME_INVALID");
+    expect(getUsernameValidationError("😀".repeat(16))).toBe("USERNAME_INVALID");
+    expect(getUsernameValidationError("界".repeat(32))).toBeNull();
   });
 });
