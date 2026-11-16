@@ -209,9 +209,11 @@ function main() {
   const organizationTables = pgTables("database/schema/organization-table.ts");
   const apiKeyTables = pgTables("database/schema/api-keys.ts");
   const userProfileTables = pgTables("database/schema/user-profile.ts");
+  const userTables = pgTables("database/schema/users.ts");
   assert.equal(organizationTables.length, 1, "Expected one organizations table in its schema module");
   assert.equal(apiKeyTables.length, 1, "Expected one api_keys table in its schema module");
   assert.equal(userProfileTables.length, 1, "Expected one user_profiles table in its schema module");
+  assert.equal(userTables.length, 1, "Expected one users table in its schema module");
 
   const schemaIndex = readFile("database/schema/index.ts");
   assert.match(schemaIndex, /import\s*\{\s*organizations\s*\}\s*from\s*["']\.\/organization-table["']/);
@@ -229,7 +231,7 @@ function main() {
   const snapshot = JSON.parse(readFile(snapshotPath));
   assert.ok(snapshot.tables && typeof snapshot.tables === "object", "Latest Drizzle snapshot has no table map");
 
-  const schemaTables = [...schemaIndexTables, ...organizationTables, ...apiKeyTables, ...userProfileTables];
+  const schemaTables = [...schemaIndexTables, ...organizationTables, ...apiKeyTables, ...userProfileTables, ...userTables];
   assert.equal(unique(schemaTables).length, schemaTables.length, "Duplicate canonical schema table declaration");
   const snapshotTables = Object.values(snapshot.tables).map((table) => table.name);
   assert.equal(unique(snapshotTables).length, snapshotTables.length, "Duplicate table name in latest snapshot");
@@ -269,7 +271,7 @@ function main() {
   const localCount = schemaIndexTables.length;
   const migrationCount = journal.entries.length;
   const migrationTableCount = unique(migrationTables).length;
-  const modularCount = organizationTables.length + apiKeyTables.length + userProfileTables.length;
+  const modularCount = organizationTables.length + apiKeyTables.length + userProfileTables.length + userTables.length;
 
   assert.match(baseline, /^# OXENN.*MVP Engineering Baseline/m, "Current MVP engineering baseline heading is missing");
   assert.match(baseline, /Repository snapshot|Repository implementation snapshot/i, "Engineering baseline must identify its repository snapshot");
