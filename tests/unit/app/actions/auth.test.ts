@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import crypto from "node:crypto";
 import {
   confirmPasswordReset,
   loginAction,
@@ -11,12 +12,15 @@ import {
 
 const mocks = vi.hoisted(() => ({
   query: vi.fn(),
+  after: vi.fn(),
   createSession: vi.fn(),
   revokeAllForUser: vi.fn(),
   sendEmail: vi.fn(),
   hashPassword: vi.fn(),
   verifyPassword: vi.fn(),
 }));
+
+vi.mock("next/server", () => ({ after: mocks.after }));
 
 vi.mock("@/services/email/adapters", () => ({
   getEmailSender: () => ({ send: mocks.sendEmail }),
@@ -48,6 +52,7 @@ vi.mock("@/services/auth/passwords", async (importOriginal) => {
 describe("Authentication Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.after.mockReset();
     mocks.query.mockReset();
     mocks.query.mockResolvedValue({ rows: [] });
     mocks.createSession.mockReset();
@@ -60,7 +65,7 @@ describe("Authentication Actions", () => {
       algorithm: "scrypt",
       params: { n: 32768, r: 8, p: 1, keyLength: 64 },
     });
-    mocks.verifyPassword.mockResolvedValue(true);
+    mocks.verifyPassword.mockResolvedValue(false);
   });
 
   describe("registerAction", () => {
@@ -156,19 +161,37 @@ describe("Authentication Actions", () => {
         .mockResolvedValueOnce({ rows: [{ user_id: "usr-1", password_hash: "hash", params: {} }] })
         .mockResolvedValueOnce({ rows: [] }) // reset failed attempts
         .mockResolvedValueOnce({ rows: [] }); // clear successful login bucket
+      mocks.verifyPassword.mockResolvedValueOnce(true);
       await expect(loginAction("unverified@doe.com", "Password123!!"))
-        .rejects.toThrow("EMAIL_NOT_VERIFIED");
+        .resolves.toEqual({ success: false, errorCode: "EMAIL_NOT_VERIFIED" });
+      expect(mocks.verifyPassword).toHaveBeenCalledWith("Password123!!", "hash", {});
     });
   });
 
   describe("requestVerification", () => {
-    it("returns an enumeration-safe response for an unknown address", async () => {
+    it("returns the same immediate response before account lookup or provider delivery", async () => {
+      await expect(requestVerification("missing@doe.com", "en")).resolves.toEqual({ success: true });
+      expect(mocks.after).toHaveBeenCalledTimes(1);
+      expect(mocks.query).not.toHaveBeenCalled();
+
       mocks.query
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // IP limit
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // minute limit
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // hourly limit
-        .mockResolvedValueOnce({ rows: [] });
-      await expect(requestVerification("missing@doe.com", "en")).resolves.toEqual({ success: true });
+        .mockResolvedValueOnce({ rows: [] }); // unknown address
+      const callback = mocks.after.mock.calls[0][0] as () => Promise<void>;
+      await callback();
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it("keeps the same public result when resend quotas are exhausted", async () => {
+      await expect(requestVerification("member@doe.com", "en")).resolves.toEqual({ success: true });
+      const callback = mocks.after.mock.calls[0][0] as () => Promise<void>;
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 2 }] }); // minute limit exhausted
+      await callback();
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
     });
   });
 
@@ -182,6 +205,15 @@ describe("Authentication Actions", () => {
         .mockResolvedValueOnce({ rows: [{ workspaceId: "org-1", role: "workspace_admin", username: "johndoe" }] });
       await expect(verifyEmailAction("john@doe.com", "12345678"))
         .resolves.toEqual({ success: true, sessionCreated: true });
+      const expectedDigest = crypto
+        .createHmac("sha256", process.env.SESSION_SECRET || "oxenn-test-only-verification-secret-32-chars")
+        .update("john@doe.com:12345678")
+        .digest("hex");
+      expect(mocks.query).toHaveBeenNthCalledWith(
+        3,
+        expect.stringContaining("lower(email) = $1 AND deleted_at IS NULL"),
+        ["john@doe.com", expectedDigest],
+      );
       expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), expect.any(Array));
       expect(mocks.createSession).toHaveBeenCalledWith(expect.objectContaining({
         id: "usr-1", username: "johndoe", workspaceId: "org-1",
