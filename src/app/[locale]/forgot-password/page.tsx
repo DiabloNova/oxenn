@@ -195,6 +195,7 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
 
                 {/* Input Fields */}
                 {isConfirmMode ? (
+                  <>
                   <Input
                     type="password"
                     label={strings.passwordLabel}
@@ -209,6 +210,7 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
                     spellCheck={false}
                   />
                   <p className="text-xs leading-relaxed text-[var(--text-muted)]">{strings.passwordHint}</p>
+                  </>
                 ) : (
                   <Input
                     type="email"
