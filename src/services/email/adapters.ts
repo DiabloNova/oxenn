@@ -79,8 +79,8 @@ export class ProductionEmailSender implements EmailSender {
       const action = templateId === "password_reset"
         ? (locale === "fa" ? "بازیابی رمز عبور" : "Reset password")
         : (locale === "fa" ? "پذیرفتن دعوت‌نامه" : "Accept invitation");
-      const workspaceName = params.workspaceName?.replace(/\\s+/g, " ").trim() || (locale === "fa" ? "فضای کاری شما" : "your workspace");
-      const inviterName = params.inviterName?.replace(/\\s+/g, " ").trim() || (locale === "fa" ? "یکی از مدیران فضای کاری" : "a workspace administrator");
+      const workspaceName = params.workspaceName?.replace(/\s+/g, " ").trim() || (locale === "fa" ? "فضای کاری شما" : "your workspace");
+      const inviterName = params.inviterName?.replace(/\s+/g, " ").trim() || (locale === "fa" ? "یکی از مدیران فضای کاری" : "a workspace administrator");
       const isInvitation = templateId === "workspace_invitation";
       const context = isInvitation
         ? (locale === "fa" ? "فضای کاری: " + workspaceName + String.fromCharCode(10) + "دعوت‌کننده: " + inviterName : "Workspace: " + workspaceName + String.fromCharCode(10) + "Invited by: " + inviterName)
