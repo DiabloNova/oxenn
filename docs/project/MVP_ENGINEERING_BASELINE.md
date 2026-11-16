@@ -56,12 +56,12 @@ Use these terms consistently:
 
 ### 2.3 Machine-checked repository database inventory
 
-The following static inventory is tied to repository snapshot commit `e6646b3969e1f33023db8875745eb811e499f2f1` (the PR #147 head at the time this inventory was recalculated). The document's product/code observations above retain their separately stated preparation and inspection baselines. These values describe checked-in schema, snapshot, migration and RLS declarations only; they do not establish that migrations were applied to, or that RLS is effective in, any live database. CI recomputes each value from the repository and fails if this table becomes stale.
+The following static inventory is tied to repository snapshot commit `81546254e8ef2ca1aa863495f7950339765ec1ef` (the PR #147 head at the time this inventory was recalculated). The document's product/code observations above retain their separately stated preparation and inspection baselines. These values describe checked-in schema, snapshot, migration and RLS declarations only; they do not establish that migrations were applied to, or that RLS is effective in, any live database. CI recomputes each value from the repository and fails if this table becomes stale.
 
 | Inventory metric | Recorded value |
 |---|---:|
-| Schema index pgTable declarations | 68 |
-| Additional modular schema declarations | 3 |
+| Schema index pgTable declarations | 67 |
+| Additional modular schema declarations | 4 |
 | Effective schema table declarations | 71 |
 | Latest Drizzle snapshot tables | 71 |
 | Ordered migration journal entries | 17 |
