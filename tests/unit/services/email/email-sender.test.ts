@@ -107,4 +107,50 @@ describe("EmailSender factory and transactional email adapters", () => {
       .rejects.toThrow("Maileroo did not accept the email for delivery.");
   });
 
+  it("quotes a Resend display name containing commas and quotes", async () => {
+    process.env.EMAIL_PROVIDER = "resend";
+    process.env.RESEND_API_KEY = "test-api-key";
+    process.env.EMAIL_FROM_ADDRESS = "accounts@example.com";
+    process.env.EMAIL_FROM_NAME = 'Oxenn, "Security" Team';
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sender = new ProductionEmailSender();
+    await sender.send({
+      to: "user@example.com",
+      templateId: "verification",
+      params: { code: "12345678", locale: "en" },
+    });
+
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const slash = String.fromCharCode(92);
+    expect(payload.from).toBe('"Oxenn, ' + slash + '"Security' + slash + '" Team" <accounts@example.com>');
+  });
+
+  it("includes workspace and inviter context in invitation email text and escaped HTML", async () => {
+    process.env.EMAIL_PROVIDER = "resend";
+    process.env.RESEND_API_KEY = "test-api-key";
+    process.env.EMAIL_FROM_ADDRESS = "accounts@example.com";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sender = new ProductionEmailSender();
+    await sender.send({
+      to: "invitee@example.com",
+      templateId: "workspace_invitation",
+      params: {
+        locale: "en",
+        workspaceName: "Research & Development",
+        inviterName: "Owner <Admin>",
+        url: "https://oxenn.example/en/accept-invite?token=secret",
+      },
+    });
+
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(payload.text).toContain("Workspace: Research & Development");
+    expect(payload.text).toContain("Invited by: Owner <Admin>");
+    expect(payload.html).toContain("Research &amp; Development");
+    expect(payload.html).toContain("Owner &lt;Admin&gt;");
+  });
+
 });
