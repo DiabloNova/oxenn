@@ -44,6 +44,49 @@ describe("resolveMode", () => {
 });
 
 
+
+describe("production build email configuration", () => {
+  function stubProductionBase() {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DATABASE_URL", "postgresql://app:secret@127.0.0.1:5432/oxenn");
+    vi.stubEnv("SESSION_SECRET", "valid-session-secret-with-more-than-32-chars");
+    vi.stubEnv("EMAIL_PROVIDER", "maileroo");
+    vi.stubEnv("MAILEROO_API_KEY", "maileroo-test-key");
+    vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");
+  }
+
+  it("requires the selected provider key and a valid sender address", () => {
+    stubProductionBase();
+    vi.stubEnv("MAILEROO_API_KEY", "");
+    vi.stubEnv("EMAIL_FROM_ADDRESS", "not-an-email");
+    const result = validateEnv("build");
+    expect(result.missing).toContain("MAILEROO_API_KEY");
+    expect(result.invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "EMAIL_FROM_ADDRESS" }),
+    ]));
+  });
+
+  it("accepts a fully configured Maileroo sender", () => {
+    stubProductionBase();
+    expect(validateEnv("build")).toMatchObject({ missing: [], invalid: [], valid: true });
+  });
+
+  it("requires the selected Resend key when Resend is explicitly selected", () => {
+    stubProductionBase();
+    vi.stubEnv("EMAIL_PROVIDER", "resend");
+    vi.stubEnv("RESEND_API_KEY", "");
+    expect(validateEnv("build").missing).toContain("RESEND_API_KEY");
+  });
+
+  it("rejects unsupported production email providers", () => {
+    stubProductionBase();
+    vi.stubEnv("EMAIL_PROVIDER", "unknown");
+    expect(validateEnv("build").invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "EMAIL_PROVIDER" }),
+    ]));
+  });
+});
+
 describe("validateEnv db:push settings", () => {
   function stubBaseEnvironment(mode: "dev" | "test") {
     vi.stubEnv("DATABASE_URL", "postgresql://app:secret@127.0.0.1:5432/oxenn");
@@ -64,6 +107,23 @@ describe("validateEnv db:push settings", () => {
     vi.stubEnv("SESSION_SECRET", "change-this-to-a-secure-32-character-secret-in-production");
     const result = validateEnv("dev");
     expect(result.invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "SESSION_SECRET" }),
+    ]));
+  });
+
+
+  it("normalizes quoted environment secrets before validating their length", () => {
+    stubBaseEnvironment("dev");
+    vi.stubEnv("SESSION_SECRET", '"too-short-secret"');
+    expect(validateEnv("dev").invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "SESSION_SECRET" }),
+    ]));
+  });
+
+  it("rejects the placeholder even when it is quoted", () => {
+    stubBaseEnvironment("dev");
+    vi.stubEnv("SESSION_SECRET", '"change-this-to-a-secure-32-character-secret-in-production"');
+    expect(validateEnv("dev").invalid).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "SESSION_SECRET" }),
     ]));
   });
