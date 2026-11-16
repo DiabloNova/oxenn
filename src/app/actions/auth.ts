@@ -67,7 +67,7 @@ async function trustedClientIp(): Promise<string> {
     const requestHeaders = await headers();
     // Vercel overwrites x-vercel-forwarded-for at its trusted edge. Do not use
     // the left-most arbitrary x-forwarded-for value supplied by a client.
-    const candidates = [requestHeaders.get("x-vercel-forwarded-for"), requestHeaders.get("x-real-ip")];
+    const candidates = [requestHeaders.get("x-vercel-forwarded-for")];
     for (const candidate of candidates) {
       const address = candidate?.split(",")[0]?.trim();
       if (address && isIP(address)) return address;
@@ -243,7 +243,7 @@ export async function loginAction(email: string, password: string): Promise<Logi
 
 export type RegisterActionResult =
   | { success: true; verificationEmailSent: boolean }
-  | { errorCode: "USER_EXISTS" | "USERNAME_EXISTS" | "TooManyRequests" | "INVALID_REGISTRATION" };
+  | { errorCode: "REGISTRATION_UNAVAILABLE" | "USERNAME_EXISTS" | "TooManyRequests" | "INVALID_REGISTRATION" };
 
 export async function registerAction(
   firstName: string,
@@ -294,7 +294,7 @@ export async function registerAction(
   });
   if (rateLimitResult === "TooManyRequests") return { errorCode: "TooManyRequests" };
 
-  let createdUser: User | { errorCode: "USER_EXISTS" | "USERNAME_EXISTS" };
+  let createdUser: User | { errorCode: "REGISTRATION_UNAVAILABLE" | "USERNAME_EXISTS" };
   try {
     createdUser = await TenantContextManager.runWithSystemContext(null, "sys-register", async () => {
       const client = TenantContextManager.getDbClient();
@@ -304,12 +304,13 @@ export async function registerAction(
         "SELECT id FROM users WHERE lower(email) = $1 LIMIT 1",
         [normalizedEmail],
       );
-      if (existingEmail.length > 0) return { errorCode: "USER_EXISTS" as const };
-
       const { rows: existingUsername } = await client.query(
         "SELECT user_id FROM user_profiles WHERE lower(username) = lower($1) LIMIT 1",
         [normalizedUsername],
       );
+
+      // Do not make account existence discoverable through the public register action.
+      if (existingEmail.length > 0) return { errorCode: "REGISTRATION_UNAVAILABLE" as const };
       if (existingUsername.length > 0) return { errorCode: "USERNAME_EXISTS" as const };
 
       const userId = generateUserId();
@@ -337,7 +338,7 @@ export async function registerAction(
     const databaseError = error as { code?: string; constraint?: string };
     if (databaseError?.code === "23505") {
       if (databaseError.constraint?.toLowerCase().includes("username")) return { errorCode: "USERNAME_EXISTS" };
-      if (databaseError.constraint?.toLowerCase().includes("email")) return { errorCode: "USER_EXISTS" };
+      if (databaseError.constraint?.toLowerCase().includes("email")) return { errorCode: "REGISTRATION_UNAVAILABLE" };
     }
     throw error;
   }
@@ -592,6 +593,30 @@ export async function verifyLegacyEmailAction(token: string): Promise<{ success:
   }
 }
 
+function getApplicationOrigin(): string {
+  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const vercelHost = process.env.VERCEL_ENV === "preview"
+    ? process.env.VERCEL_URL
+    : process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  const fallbackOrigin = process.env.NODE_ENV !== "production" ? "http://localhost:3000" : "";
+  const candidate = configuredOrigin || (vercelHost ? `https://${vercelHost}` : fallbackOrigin);
+
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    throw new Error("A valid HTTPS application URL must be configured before sending account email.");
+  }
+  if (
+    (process.env.NODE_ENV === "production" && parsed.protocol !== "https:") ||
+    (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") ||
+    parsed.username || parsed.password
+  ) {
+    throw new Error("The account email application URL must use HTTPS and contain no credentials.");
+  }
+  return parsed.origin;
+}
+
 export async function requestPasswordReset(email: string): Promise<{ success: boolean, error?: string }> {
   if (typeof email !== "string" || getAccountEmailValidationError(email)) return { success: false, error: "INVALID_EMAIL" };
   const normalizedEmail = email.trim().toLowerCase();
@@ -643,28 +668,31 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
   });
 
   if (result && result.rawToken) {
-    try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000");
-      const parsedAppUrl = new URL(appUrl);
-      if (process.env.NODE_ENV === "production" && parsedAppUrl.protocol !== "https:") throw new Error("NEXT_PUBLIC_APP_URL must use HTTPS in production.");
-      const sender = getEmailSender();
-      await sender.send({
-        to: result.email,
-        templateId: "password_reset",
-        params: { url: `${parsedAppUrl.origin}/en/forgot-password?token=${result.rawToken}`, locale: "en" },
-      });
-    } catch (error) {
-      console.error("Password-reset email delivery failed.", error instanceof Error ? error.message : "Unknown email error");
+    const applicationOrigin = getApplicationOrigin();
+    after(async () => {
       try {
-        await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
-          const client = TenantContextManager.getDbClient();
-          if (!client) throw new Error("Failed to get DB client in system context");
-          await client.query("UPDATE password_reset_tokens SET consumed_at = NOW() WHERE token_hash = $1 AND consumed_at IS NULL", [crypto.createHash("sha256").update(result.rawToken).digest("hex")]);
+        const sender = getEmailSender();
+        await sender.send({
+          to: result.email,
+          templateId: "password_reset",
+          params: { url: `${applicationOrigin}/en/forgot-password?token=${result.rawToken}`, locale: "en" },
         });
-      } catch (cleanupError) {
-        console.error("Failed to invalidate an undelivered password-reset token.", cleanupError instanceof Error ? cleanupError.message : "Unknown cleanup error");
+      } catch (error) {
+        console.error("Password-reset email delivery failed.", error instanceof Error ? error.message : "Unknown email error");
+        try {
+          await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
+            const client = TenantContextManager.getDbClient();
+            if (!client) throw new Error("Failed to get DB client in system context");
+            await client.query(
+              "UPDATE password_reset_tokens SET consumed_at = NOW() WHERE token_hash = $1 AND consumed_at IS NULL",
+              [crypto.createHash("sha256").update(result.rawToken).digest("hex")],
+            );
+          });
+        } catch (cleanupError) {
+          console.error("Failed to invalidate an undelivered password-reset token.", cleanupError instanceof Error ? cleanupError.message : "Unknown cleanup error");
+        }
       }
-    }
+    });
   }
 
   // Unknown account, rate limit and provider failure all have the same public result.
