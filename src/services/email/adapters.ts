@@ -79,8 +79,16 @@ export class ProductionEmailSender implements EmailSender {
       const action = templateId === "password_reset"
         ? (locale === "fa" ? "بازیابی رمز عبور" : "Reset password")
         : (locale === "fa" ? "پذیرفتن دعوت‌نامه" : "Accept invitation");
-      plain = `${action}: ${actionUrl.toString()}`;
-      html = `<div style="font-family:Arial,sans-serif;line-height:1.8"><h2>${escapeHtml(subject)}</h2><p><a href="${escapeHtml(actionUrl.toString())}">${escapeHtml(action)}</a></p></div>`;
+      const workspaceName = params.workspaceName?.trim() || (locale === "fa" ? "فضای کاری شما" : "your workspace");
+      const inviterName = params.inviterName?.trim() || (locale === "fa" ? "یکی از مدیران فضای کاری" : "a workspace administrator");
+      const isInvitation = templateId === "workspace_invitation";
+      const context = isInvitation
+        ? (locale === "fa" ? "فضای کاری: " + workspaceName + String.fromCharCode(10) + "دعوت‌کننده: " + inviterName : "Workspace: " + workspaceName + String.fromCharCode(10) + "Invited by: " + inviterName)
+        : "";
+      plain = [action, context, actionUrl.toString()].filter(Boolean).join(String.fromCharCode(10));
+      html = "<div style=\"font-family:Arial,sans-serif;line-height:1.8\"><h2>" + escapeHtml(subject) + "</h2>" +
+        (isInvitation ? "<p>" + (locale === "fa" ? "فضای کاری:" : "Workspace:") + " <strong>" + escapeHtml(workspaceName) + "</strong></p><p>" + (locale === "fa" ? "دعوت‌کننده:" : "Invited by:") + " " + escapeHtml(inviterName) + "</p>" : "") +
+        "<p><a href=\"" + escapeHtml(actionUrl.toString()) + "\">" + escapeHtml(action) + "</a></p></div>";
     }
 
     let response: Response;
@@ -101,10 +109,13 @@ export class ProductionEmailSender implements EmailSender {
         signal: AbortSignal.timeout(10_000),
       });
     } else {
+      const slash = String.fromCharCode(92);
+      const quote = String.fromCharCode(34);
+      const quotedFromName = this.fromName.split(slash).join(slash + slash).split(quote).join(slash + quote);
       response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: `${this.fromName} <${this.fromAddress}>`, to: [to], subject, html, text: plain }),
+        body: JSON.stringify({ from: quote + quotedFromName + quote + " <" + this.fromAddress + ">", to: [to], subject, html, text: plain }),
         signal: AbortSignal.timeout(10_000),
       });
     }
