@@ -426,6 +426,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Remove Redundant API-Key Prefix Index  ## Finding  The api_keys prefix column already has a uniqueness constraint, which PostgreSQL backs with a unique index. A separate non-unique index on the same prefix column duplicates that index for the same leading-column lookup pattern. This change removes only the redundant non-unique index and preserves the uniqueness guarantee.  ## Implementation  - Removed the standalone prefix index declaration from the current Drizzle schema. - Added migration 0013`
   },
   {
+    slug: "pr-148-remediation-20261117",
+    titleEn: "PR #148 — Development Agent v1 remediation report",
+    titleFa: "PR #148 — Development Agent v1 remediation report",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# PR #148 — Development Agent v1 remediation report  **Date:** 2026-11-17 **PR:** https://github.com/DiabloNova/oxenn/pull/148 **Working branch:** \`agents/oxenn-dev-agent-foundation-20261116\` **Initial PR head:** \`4a1dc82144706e438bf292eb9c4244b6fc1a513c\` **Branch handling:** Updated the existing PR branch; no new branch was created.  ## Scope  Remediate the confirmed Gitar, HeyDeer and Cubic findings affecting the current read-only Development Agent v1 runtime, its security boundaries, task aut`
+  },
+  {
     slug: "phase-2-code-security",
     titleEn: "Phase 2 — Code Security (H1, M8)",
     titleFa: "Phase 2 — Code Security (H1, M8)",
