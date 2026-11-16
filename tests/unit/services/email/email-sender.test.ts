@@ -84,16 +84,16 @@ describe("EmailSender factory and transactional email adapters", () => {
     const sender = new ProductionEmailSender();
     await sender.send({ to: "user@example.com", templateId: "verification", params: { code: "12345678", locale: "en" } });
 
-    expect(fetchMock).toHaveBeenCalledWith("https://smtp.maileroo.com/send", expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith("https://smtp.maileroo.com/api/v2/emails", expect.objectContaining({
       method: "POST",
-      headers: { "X-API-Key": "test-maileroo-key" },
-      body: expect.any(FormData),
+      headers: { "X-Api-Key": "test-maileroo-key", "Content-Type": "application/json" },
+      body: expect.any(String),
     }));
-    const form = fetchMock.mock.calls[0][1].body as FormData;
-    expect(form.get("from")).toBe("Oxenn <accounts@example.com>");
-    expect(form.get("to")).toBe("user@example.com");
-    expect(form.get("plain")).toContain("12345678");
-    expect(form.get("html")).toContain("12345678");
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(payload.from).toEqual({ address: "accounts@example.com", display_name: "Oxenn" });
+    expect(payload.to).toEqual([{ address: "user@example.com" }]);
+    expect(payload.plain).toContain("12345678");
+    expect(payload.html).toContain("12345678");
   });
 
   it("rejects a Maileroo API response that does not confirm acceptance", async () => {
