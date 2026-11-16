@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { isValidSessionSecret, normalizeEnvValue } from "../src/services/auth/session-secret";
 
 type Mode = "dev" | "build" | "migrate" | "test";
 
@@ -9,6 +10,7 @@ interface VarRule {
   required: boolean;
   format?: RegExp;
   formatDescription?: string;
+  validate?: (value: string) => boolean;
 }
 
 const RULES: VarRule[] = [
@@ -30,7 +32,7 @@ const RULES: VarRule[] = [
     name: "SESSION_SECRET",
     modes: ["dev", "build"],
     required: true,
-    format: /^(?!change-this-to-a-secure-32-character-secret-in-production$).{32,}$/,
+    validate: isValidSessionSecret,
     formatDescription: "must be a unique non-placeholder secret of at least 32 characters",
   },
   {
@@ -79,7 +81,7 @@ function loadEnvFile(filePath: string) {
     const eqIdx = trimmed.indexOf("=");
     if (eqIdx === -1) continue;
     const key = trimmed.slice(0, eqIdx).trim();
-    const val = trimmed.slice(eqIdx + 1).trim();
+    const val = normalizeEnvValue(trimmed.slice(eqIdx + 1));
     if (key && process.env[key] === undefined) {
       process.env[key] = val;
     }
@@ -108,16 +110,16 @@ export function validateEnv(modeArg?: string) {
   const activeRules = RULES.filter((r) => r.modes.includes(mode));
 
   for (const rule of activeRules) {
-    const val = process.env[rule.name];
+    const val = normalizeEnvValue(process.env[rule.name]);
 
-    if (!val?.trim()) {
+    if (!val) {
       if (rule.required) {
         missing.push(rule.name);
       }
       continue;
     }
 
-    if (rule.format && !rule.format.test(val)) {
+    if ((rule.validate && !rule.validate(val)) || (rule.format && !rule.format.test(val))) {
       invalid.push({
         name: rule.name,
         reason: rule.formatDescription || "invalid format",
