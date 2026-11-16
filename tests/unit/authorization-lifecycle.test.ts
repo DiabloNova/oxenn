@@ -2,6 +2,7 @@ vi.mock("pg");
 const lifecycleSession = vi.hoisted(() => ({
   user: null as null | { id: string; name: string; email: string; role: "workspace_admin"; workspaceId: string },
   registeredUserId: "",
+  queryTrace: [] as Array<{ sql: string; params: unknown[] }>,
 }));
 vi.mock("../../src/services/auth/session", async (importOriginal) => {
     const mod = await importOriginal<typeof import("../../src/services/auth/session")>();
@@ -41,6 +42,7 @@ describe("Auth Lifecycle Tests", () => {
     process.env.SESSION_SECRET = "lifecycle-test-session-secret-with-32-chars";
     lifecycleSession.user = null;
     lifecycleSession.registeredUserId = "";
+    lifecycleSession.queryTrace = [];
     CaptureEmailSender.clear();
     PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
@@ -57,6 +59,7 @@ describe("Auth Lifecycle Tests", () => {
     const mockClient = {
       query: vi.fn().mockImplementation(async (sqlOrObj: unknown, params: unknown[] = []) => {
         const sql = typeof sqlOrObj === "string" ? sqlOrObj : (sqlOrObj as { text?: string }).text || String(sqlOrObj);
+        if (sql.includes("email_verification_tokens") || sql.includes("email_verified_at")) lifecycleSession.queryTrace.push({ sql, params });
         if (sql.includes("INSERT INTO auth_rate_limits")) return { rows: [{ attempts: 1 }], rowCount: 1 };
         if (sql.includes("SELECT id FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 };
         if (sql.includes("SELECT user_id FROM user_profiles")) return { rows: [], rowCount: 0 };
@@ -127,6 +130,7 @@ describe("Auth Lifecycle Tests", () => {
     expect(verificationEmail?.params.code).toMatch(/^\d{8}$/);
     expect(verificationEmail?.to).toBe("probe@example.com");
     const verificationResult = await verifyEmailAction("probe@example.com", verificationEmail!.params.code!);
+    if (!verificationResult.success) throw new Error(`Email verification mock trace: ${JSON.stringify(lifecycleSession.queryTrace)}`);
     expect(verificationResult).toEqual({ success: true, sessionCreated: true });
 
     const loginResult = await loginAction("probe@example.com", "Password123!!");
