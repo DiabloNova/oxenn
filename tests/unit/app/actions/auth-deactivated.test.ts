@@ -32,7 +32,7 @@ describe('Auth handling for deactivated users', () => {
     await expect(loginAction('deleted@example.com', 'password123')).rejects.toThrow('Invalid credentials or user not found');
   });
 
-  it('rejects registration for deleted user (handled by unique constraint logic/existing query)', async () => {
+  it('returns generic registration success for a soft-deleted email', async () => {
     const PostgresClientModule = await import("../../../../src/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 

@@ -86,6 +86,23 @@ describe("Authentication Actions", () => {
       expect(mocks.sendEmail).not.toHaveBeenCalled();
     });
 
+    it("returns generic success when the email unique constraint wins a concurrent registration race", async () => {
+      const duplicateEmailError = Object.assign(new Error("duplicate email"), {
+        code: "23505",
+        constraint: "users_email_unique",
+      });
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration account/IP limit
+        .mockResolvedValueOnce({ rows: [] }) // email lookup
+        .mockResolvedValueOnce({ rows: [] }) // username lookup
+        .mockRejectedValueOnce(duplicateEmailError); // concurrent email insert
+      await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
+        .resolves.toEqual({ success: true, verificationEmailSent: true });
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      expect(mocks.createSession).not.toHaveBeenCalled();
+    });
+
     it("still reports a username conflict when the email is not registered", async () => {
       mocks.query
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // registration IP limit
