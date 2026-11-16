@@ -24,6 +24,7 @@ describe("Canonical table ownership registry", () => {
   it("accounts for every canonical Workspace Drizzle table and the latest snapshot", () => {
     const workspaceSources = [
       "database/schema/index.ts",
+      "database/schema/users.ts",
       "database/schema/organization-table.ts",
       "database/schema/api-keys.ts",
       "database/schema/user-profile.ts",
