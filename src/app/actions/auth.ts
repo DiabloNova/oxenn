@@ -464,7 +464,7 @@ export async function verifyEmailAction(email: string, code: string): Promise<{ 
 
     const userId = consumedTokens[0].user_id as string;
     const { rows: userRows } = await client.query(
-      "UPDATE users SET email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW() WHERE id = $1 RETURNING id, name, email",
+      "UPDATE users SET email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id, name, email",
       [userId],
     );
     const user = userRows[0];
@@ -521,7 +521,14 @@ export async function verifyLegacyEmailAction(token: string): Promise<{ success:
     const { rows: consumedTokens } = await client.query(`
       UPDATE email_verification_tokens
       SET consumed_at = NOW()
-      WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > NOW()
+      WHERE token_hash = $1
+        AND consumed_at IS NULL
+        AND expires_at > NOW()
+        AND EXISTS (
+          SELECT 1 FROM users
+          WHERE users.id = email_verification_tokens.user_id
+            AND users.deleted_at IS NULL
+        )
       RETURNING user_id
     `, [tokenHash]);
     if (consumedTokens.length === 0) return null;
