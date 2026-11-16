@@ -62,12 +62,9 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
   useEffect(() => {
     if (!legacyToken || legacyVerificationStarted.current) return;
     legacyVerificationStarted.current = true;
-    let active = true;
-
     const verifyLegacyLink = async () => {
       try {
         const result = await verifyLegacyEmailAction(legacyToken);
-        if (!active) return;
         if (!result.success) {
           setError(isFa ? "لینک تأیید نامعتبر یا منقضی شده است." : "This verification link is invalid or has expired.");
           return;
@@ -89,14 +86,13 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ locale: 
           setSessionError(true);
         }
       } catch {
-        if (active) setError(isFa ? "تأیید لینک انجام نشد. ایمیل خود را وارد کنید و کد تازه بگیرید." : "The link could not be verified. Enter your email to request a new code.");
+        setError(isFa ? "تأیید لینک انجام نشد. ایمیل خود را وارد کنید و کد تازه بگیرید." : "The link could not be verified. Enter your email to request a new code.");
       } finally {
-        if (active) setIsLegacyVerifying(false);
+        setIsLegacyVerifying(false);
       }
     };
 
     void verifyLegacyLink();
-    return () => { active = false; };
   }, [legacyToken, isFa, locale, refreshSession, router]);
 
   const handleVerify = async (event: React.FormEvent) => {
