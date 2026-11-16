@@ -271,6 +271,45 @@ describe("Authentication Actions", () => {
       await expect(requestPasswordReset("missing@doe.com")).resolves.toEqual({ success: true });
     });
 
+    it("schedules reset-email delivery after returning a generic result", async () => {
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // account/IP limit
+        .mockResolvedValueOnce({ rows: [{ id: "usr-1" }] }) // existing user
+        .mockResolvedValueOnce({ rows: [] }) // invalidate old reset tokens
+        .mockResolvedValueOnce({ rows: [] }); // insert reset token
+
+      await expect(requestPasswordReset("member@doe.com")).resolves.toEqual({ success: true });
+      expect(mocks.after).toHaveBeenCalledTimes(1);
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+
+      const callback = mocks.after.mock.calls[0][0] as () => Promise<void>;
+      await callback();
+      expect(mocks.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+        to: "member@doe.com",
+        templateId: "password_reset",
+        params: expect.objectContaining({ url: expect.stringMatching(/^http:\/\/localhost:3000\/en\/forgot-password\?token=/) }),
+      }));
+    });
+
+    it("invalidates a reset token when deferred email delivery fails", async () => {
+      mocks.sendEmail.mockRejectedValueOnce(new Error("provider unavailable"));
+      mocks.query
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // account/IP limit
+        .mockResolvedValueOnce({ rows: [{ id: "usr-1" }] }) // existing user
+        .mockResolvedValueOnce({ rows: [] }) // invalidate old reset tokens
+        .mockResolvedValueOnce({ rows: [] }); // insert reset token
+
+      await expect(requestPasswordReset("member@doe.com")).resolves.toEqual({ success: true });
+      const callback = mocks.after.mock.calls[0][0] as () => Promise<void>;
+      await callback();
+      expect(mocks.query).toHaveBeenLastCalledWith(
+        expect.stringContaining("UPDATE password_reset_tokens"),
+        expect.any(Array),
+      );
+    });
+
     it("updates credentials and revokes old sessions after a valid reset token", async () => {
       mocks.query.mockResolvedValueOnce({ rows: [{ user_id: "usr-1" }] }).mockResolvedValueOnce({ rows: [] });
       await expect(confirmPasswordReset("a".repeat(64), "NewPassword123!!")).resolves.toEqual({ success: true });
