@@ -34,7 +34,6 @@ if (!process.env.DATABASE_URL) {
 describe("Auth Lifecycle Tests", () => {
   let PostgresClientModule: typeof import("../../src/features/admin/infrastructure/persistence/postgres");
 
-  let PostgresClientModule: typeof import("../../src/features/admin/infrastructure/persistence/postgres");
 
   beforeEach(async () => {
     process.env.SESSION_SECRET = "lifecycle-test-session-secret-with-32-chars";
