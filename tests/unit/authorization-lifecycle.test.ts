@@ -119,7 +119,7 @@ describe("Auth Lifecycle Tests", () => {
     expect(registeredUser).toMatchObject({ success: true, verificationEmailSent: true });
 
     const verificationEmail = CaptureEmailSender.capturedEmails.find((message) => message.to === "probe@example.com");
-    expect(verificationEmail?.params.code).toMatch(/^\\d{8}$/);
+    expect(verificationEmail?.params.code).toMatch(/^\d{8}$/);
     expect(verificationEmail?.to).toBe("probe@example.com");
     const verificationResult = await verifyEmailAction("probe@example.com", verificationEmail!.params.code!);
     expect(verificationResult).toEqual({ success: true, sessionCreated: true });
