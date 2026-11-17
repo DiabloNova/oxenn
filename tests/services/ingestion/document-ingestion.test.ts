@@ -11,19 +11,51 @@ import { PostgresClient } from "../../../src/features/admin/infrastructure/persi
 const mockEmbeddingsStore: any[] = [];
 const mockEntitiesStore: any[] = [];
 const mockRelationshipsStore: any[] = [];
+let transactionSnapshot: { embeddings: any[]; entities: any[]; relationships: any[] } | null = null;
 
 // Clean database mocks
 function resetMocks() {
   mockEmbeddingsStore.length = 0;
   mockEntitiesStore.length = 0;
   mockRelationshipsStore.length = 0;
+  transactionSnapshot = null;
 }
 
 const originalQuery = Pool.prototype.query;
+const originalConnect = Pool.prototype.connect;
+(Pool.prototype as any).connect = async function (this: Pool) {
+  return {
+    query: (sql: string, params: unknown[] = []) => (Pool.prototype as any).query.call(this, sql, params),
+    release: () => undefined,
+  };
+};
 
 // Query mock to intercept database writes and queries for Document Ingestion integration tests
 (Pool.prototype as any).query = async function (sql: string, params: unknown[] = []) {
   const normalizedSql = sql.toLowerCase();
+
+  if (normalizedSql.includes("pg_advisory_xact_lock")) return { rowCount: 1, rows: [] };
+  if (normalizedSql.trim() === "begin") {
+    transactionSnapshot = {
+      embeddings: structuredClone(mockEmbeddingsStore),
+      entities: structuredClone(mockEntitiesStore),
+      relationships: structuredClone(mockRelationshipsStore),
+    };
+    return { rowCount: 1, rows: [] };
+  }
+  if (normalizedSql.trim() === "rollback") {
+    if (transactionSnapshot) {
+      mockEmbeddingsStore.splice(0, mockEmbeddingsStore.length, ...transactionSnapshot.embeddings);
+      mockEntitiesStore.splice(0, mockEntitiesStore.length, ...transactionSnapshot.entities);
+      mockRelationshipsStore.splice(0, mockRelationshipsStore.length, ...transactionSnapshot.relationships);
+    }
+    transactionSnapshot = null;
+    return { rowCount: 1, rows: [] };
+  }
+  if (normalizedSql.trim() === "commit") {
+    transactionSnapshot = null;
+    return { rowCount: 1, rows: [] };
+  }
 
   // 1. document_embeddings INSERT
   if (normalizedSql.includes("insert into document_embeddings")) {
@@ -148,7 +180,7 @@ const originalQuery = Pool.prototype.query;
   }
 
   // 7. Transaction control SQLs safely resolved for offline simulation
-  if (normalizedSql.includes("begin") || normalizedSql.includes("commit") || normalizedSql.includes("rollback") || normalizedSql.includes("set local")) {
+  if (normalizedSql.includes("begin") || normalizedSql.includes("commit") || normalizedSql.includes("rollback") || normalizedSql.includes("set local") || normalizedSql.includes("set_config")) {
     return { rowCount: 1, rows: [], command: "SELECT", oid: 0, fields: [] };
   }
 
@@ -166,9 +198,7 @@ export async function testDocumentIngestionPipeline() {
   const docText = "Optimus AI solves brand intelligence problems by using Gemini models beautifully.";
 
   console.log("  * Executing Document Ingestion Process...");
-  const ingestionResult = await TenantContextManager.runWithTenantContext(tenantId, "user-01", "req-01", async () => {
-    return await ingestionService.ingestDocument(docText, { source: "test-suite" });
-  });
+  const ingestionResult = await ingestionService.ingestDocument(docText, { source: "test-suite" }, undefined, { tenantId, userId: "user-01", requestId: "req-01" });
 
   if (ingestionResult.totalChunks !== 1) {
     throw new Error(`Ingestion Integration Error: Expected 1 chunk, got ${ingestionResult.totalChunks}`);
@@ -191,8 +221,8 @@ export async function testDocumentIngestionPipeline() {
   }
 
   const rel = mockRelationshipsStore[0];
-  if (!rel.properties || !rel.properties.source_chunk_id) {
-    throw new Error("Traceability Error: Expected source_chunk_id in relationship properties");
+  if (!rel.properties || !Array.isArray(rel.properties.source_chunk_ids) || rel.properties.source_chunk_ids.length !== 1) {
+    throw new Error("Traceability Error: Expected source_chunk_ids in relationship properties");
   }
 
   console.log("  * Testing sub-graph 1-hop Query logic...");
@@ -228,6 +258,7 @@ export async function testDocumentIngestionPipeline() {
 
 export function restoreOriginalPool() {
   Pool.prototype.query = originalQuery;
+  Pool.prototype.connect = originalConnect;
 }
 
 // ✅ FIXED: Properly closed the catch block for the first test suite
@@ -243,8 +274,7 @@ if (require.main === module) {
 
 /**
  * Programmatic Enterprise Test Suite for Document Ingestion Pipeline
- * Verifies document chunking, embedding, sentiment processing, database storage, partial success error recovery,
- * and zero-trust multi-tenant isolation boundaries.
+ * Verifies provider preparation, atomic database persistence/rollback, and zero-trust multi-tenant isolation.
  */
 
 import { VectorStoreService } from "../../../src/services/knowledge-graph/vector-store";
@@ -288,9 +318,7 @@ export async function testDocumentIngestion() {
   const ingestionService = new DocumentIngestionService();
   const rawText = "موتور بهینه‌سازی جی ای او. اپتیموس بهترین راهکار گراف دانش است؛ حتماً استفاده کنید!";
 
-  const result = await TenantContextManager.runWithTenantContext(tenantAId, "user-01", "req-ingest-01", async () => {
-    return await ingestionService.ingestDocument(rawText, { docType: "article" }, { maxChunkSize: 50, overlap: 5 });
-  });
+  const result = await ingestionService.ingestDocument(rawText, { docType: "article" }, { maxChunkSize: 50, overlap: 5 }, { tenantId: tenantAId, userId: "user-01", requestId: "req-ingest-01" });
 
   if (!result.success) {
     throw new Error(`Ingestion Test Failure: Expected success, got result: ${JSON.stringify(result)}`);
@@ -306,28 +334,31 @@ export async function testDocumentIngestion() {
   const failingIngestionService = new DocumentIngestionService(failingVectorStore);
   const partialRawText = "بخش اول متن بسیار خوب است. بخش دوم فیلتر_خطا حاوی ارور شبیه‌سازی شده است. بخش سوم هم بدون مشکل است.";
 
-  const partialResult = await TenantContextManager.runWithTenantContext(tenantAId, "user-01", "req-ingest-02", async () => {
-    return await failingIngestionService.ingestDocument(partialRawText, { docType: "partial" }, { maxChunkSize: 30, overlap: 0 });
-  });
-
-  if (!partialResult.success) {
-    throw new Error("Ingestion Test Failure: Ingestion should have partial success status.");
+  const beforeFailedWrite = {
+    embeddings: mockEmbeddingsStore.length,
+    entities: mockEntitiesStore.length,
+    relationships: mockRelationshipsStore.length,
+  };
+  let databaseFailureWasPropagated = false;
+  try {
+    await failingIngestionService.ingestDocument(partialRawText, { docType: "partial" }, { maxChunkSize: 30, overlap: 0 }, { tenantId: tenantAId, userId: "user-01", requestId: "req-ingest-02" });
+  } catch (error) {
+    databaseFailureWasPropagated = error instanceof Error
+      && error.message === "Simulated database insertion failure for this chunk";
   }
-  if (partialResult.failedChunks !== 1 || partialResult.errors.length !== 1) {
-    throw new Error(`Ingestion Test Failure: Expected exactly 1 failed chunk, got: ${JSON.stringify(partialResult)}`);
+  if (!databaseFailureWasPropagated) {
+    throw new Error("Ingestion Test Failure: Database write errors must abort the atomic write transaction.");
   }
-  if (partialResult.processedChunks !== partialResult.totalChunks - 1) {
-    throw new Error(`Ingestion Test Failure: Unsuccessful chunks recovery mismatch: ${JSON.stringify(partialResult)}`);
+  if (mockEmbeddingsStore.length !== beforeFailedWrite.embeddings || mockEntitiesStore.length !== beforeFailedWrite.entities || mockRelationshipsStore.length !== beforeFailedWrite.relationships) {
+    throw new Error("Ingestion Test Failure: Database transaction rollback did not restore the pre-write state.");
   }
-  console.log("    ✅ Successfully verified partial success and graceful error recovery.");
+  console.log("    ✅ Database write failure rolled back all partial database changes.");
 
   // 4. Test Multi-Tenant Isolation
   console.log("  * Testing end-to-end multi-tenant isolation...");
   const isolationText = "اطلاعات محرمانه سازمانی آلفا برای امنیت پیشرفته.";
 
-  await TenantContextManager.runWithTenantContext(tenantAId, "user-01", "req-ingest-03", async () => {
-    await ingestionService.ingestDocument(isolationText, { source: "internal-alpha" });
-  });
+  await ingestionService.ingestDocument(isolationText, { source: "internal-alpha" }, undefined, { tenantId: tenantAId, userId: "user-01", requestId: "req-ingest-03" });
 
   await TenantContextManager.runWithTenantContext(tenantAId, "user-01", "req-ingest-04", async () => {
     const vectorStore = new VectorStoreService();

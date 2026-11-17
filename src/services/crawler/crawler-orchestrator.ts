@@ -4,7 +4,6 @@ import { fetchPublicUrl } from "./safe-http-fetch";
 import { FREE_CRAWLER_MAX_REDIRECTS, MAX_REDIRECT_CHAIN_DURATION_MS, type CrawlerRedirectPolicy } from "./redirect-policy";
 import { extractSeedLinks } from "./link-discovery";
 import { DocumentIngestionService } from "../ingestion/document-ingestion";
-import { TenantContextManager } from "../../core/database/tenant-context";
 
 export interface CrawlerResult {
   totalUrlsFound: number;
@@ -96,20 +95,11 @@ export class CrawlerOrchestrator {
         totalTextsExtracted++;
 
         // 3. Ingest Document under secure Tenant Context
-        const ingestionResult = await TenantContextManager.runWithTenantContext(
-          organizationId,
-          userId,
-          requestId,
-          async () => {
-            return await this.ingestionService.ingestDocument(
-              cleanText,
-              {
-                source: "web-crawler",
-                url: targetUrl,
-                extractedAt: new Date().toISOString()
-              }
-            );
-          }
+        const ingestionResult = await this.ingestionService.ingestDocument(
+          cleanText,
+          { source: "web-crawler", url: targetUrl, extractedAt: new Date().toISOString() },
+          undefined,
+          { tenantId: organizationId, userId, requestId },
         );
 
         if (ingestionResult.success) {

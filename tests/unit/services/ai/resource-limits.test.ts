@@ -52,6 +52,14 @@ describe("shared AI request resource limits", () => {
     expect(ingestionRequestSchema.safeParse({ text: "document", metadata: tooManyBytes }).success).toBe(false);
   });
 
+  it("reserves capacity for the longest server-generated supporting-file ID", () => {
+    const nearLimit = ingestionRequestSchema.safeParse({
+      text: "document",
+      metadata: { payload: "x".repeat(11_000) },
+    });
+    expect(nearLimit.success).toBe(true);
+  });
+
   it("uses UTF-8 bytes rather than JavaScript character count for text caps", () => {
     const result = sentimentRequestSchema.safeParse({ text: "😀".repeat(8_193) });
     expect(result.success).toBe(false);

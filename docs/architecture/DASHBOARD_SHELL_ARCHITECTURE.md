@@ -1,5 +1,7 @@
 # Seorchable — Dashboard Shell Architecture & Specification
 
+> **Status — partially superseded (2026-11-16):** The navigation taxonomy, menu hierarchy, account-menu placement, and other owner-controlled dashboard information-architecture decisions in this document are historical. They must not override [the current owner-approved frontend requirements](./FRONTEND_OWNER_REQUIREMENTS_2026-11-16.md). The remaining technical guidance is retained only where it does not conflict with that owner decision record.
+
 This document details the production-grade architectural design of the unified authenticated Dashboard Shell implemented in **Task 3.0**. The shell serves as the layout foundation for all authenticated sub-modules, establishing strict client-server component boundaries, unified configuration-driven navigation, multi-tenant workspace context integration, and comprehensive LTR/RTL bidirectional layout controls.
 
 ---

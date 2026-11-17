@@ -1,37 +1,40 @@
 import React from "react";
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
-import { AuthProvider } from "@/components/AuthProvider";
+import { RouteAwareAuthProvider } from "@/components/auth/RouteAwareAuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { persianPrimary, persianDisplay } from "@/config/fonts";
+import { persianPrimary } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { isSupportedLocale } from "@/config/i18n";
 import FloatingSidebar from "@/components/navigation/FloatingSidebar";
 import GlobalNavigationControls from "@/components/navigation/GlobalNavigationControls";
 import "../globals.css";
 
-export const metadata: Metadata = {
-  title: {
-    default: `${siteConfig.name} — هوشمندی و دیده‌شدن برند سئورچبل`,
-    template: `%s | ${siteConfig.name}`,
-  },
-  description:
-    "سنجش، محافظت و بهینه‌سازی نحوه‌ی ارجاع به برند شما در ChatGPT، Gemini، Claude و Perplexity. پلتفرم نسل‌بعدی AEO و GEO با سئورچبل seorchable.ir.",
-  keywords: ["AEO", "GEO", "Brand Intelligence", "AI visibility", "سئورچبل", "seorchable.ir", "دیده‌شدن برند"],
-  metadataBase: new URL(siteConfig.url),
-  openGraph: {
-    title: siteConfig.name,
-    description: siteConfig.description,
-    url: siteConfig.url,
-    siteName: siteConfig.name,
-    type: "website",
-  },
-};
+export async function generateMetadata({ params }: LayoutProps): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isSupportedLocale(locale)) return {};
+
+  const isFa = locale === "fa";
+  const title = isFa
+    ? "هوشمندی ارزیابی و بهبود محصول و بازار"
+    : "Product & Market Improvement Intelligence";
+  const description = isFa
+    ? "محصول یا خدمت موجود خود را در زمینه بازار، حضور دیجیتال و رقابت ارزیابی کنید و فرصت‌های بهبود را به برنامه‌ای قابل بررسی تبدیل کنید."
+    : "Assess existing products and services across digital presence and competitive context, distinguish evidence from hypotheses, and shape reviewable improvement plans.";
+
+  return {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL?.trim() || siteConfig.url),
+    title: { default: title, template: "%s | OXENN" },
+    description,
+    applicationName: "OXENN",
+    openGraph: { title, description, siteName: "OXENN", type: "website" },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+    { media: "(prefers-color-scheme: dark)", color: "#102024" },
   ],
   colorScheme: "light dark",
 };
@@ -41,36 +44,22 @@ interface LayoutProps {
   params: Promise<{ locale: string }>;
 }
 
-/**
- * Configures the localized application layout and provider hierarchy.
- *
- * @param params - Resolves to the current route locale.
- * @returns The document layout containing the localized direction, theme provider, authentication provider, and page content.
- */
 export default async function RootLayout({ children, params }: LayoutProps) {
   const { locale } = await params;
-
-  if (!isSupportedLocale(locale)) {
-    notFound();
-  }
-
-  // Apply the Persian body and display font variables to the document.
-  const fontClasses = `${persianPrimary.variable} ${persianDisplay.variable}`;
+  if (!isSupportedLocale(locale)) notFound();
+  const fontClasses = persianPrimary.variable;
 
   return (
-    <html
-      lang={locale}
-      dir={locale === "fa" ? "rtl" : "ltr"}
-      className={fontClasses}
-      style={{ backgroundColor: "var(--background)" }}
-    >
+    <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"} className={fontClasses} style={{ backgroundColor: "var(--background)" }}>
       <body>
         <ThemeProvider initialLanguage={locale}>
-          <AuthProvider>
-            {children}
+          <RouteAwareAuthProvider>
+            <div id="page-content" tabIndex={-1}>
+              {children}
+            </div>
             <FloatingSidebar />
             <GlobalNavigationControls />
-          </AuthProvider>
+          </RouteAwareAuthProvider>
         </ThemeProvider>
       </body>
     </html>

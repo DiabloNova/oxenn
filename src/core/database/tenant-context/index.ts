@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AsyncLocalStorage } from "node:async_hooks";
+import { TenantTransactionOutcomeError } from "./transaction-outcome-error";
+export { TenantTransactionOutcomeError, type TenantTransactionOutcome, type TenantTransactionPhase } from "./transaction-outcome-error";
 
 export interface TenantContext {
   readonly tenantId: string | null;
@@ -257,7 +259,7 @@ export class TenantContextManager {
     userId: string | null,
     requestId: string | null,
     work: () => Promise<T>,
-    options?: { requireNewSavepoint?: boolean }
+    options?: { requireNewSavepoint?: boolean; reportTransactionOutcome?: boolean }
   ): Promise<T> {
     if (!tenantId) {
       throw new TenantContextViolationException(
@@ -266,6 +268,14 @@ export class TenantContextManager {
     }
 
     const parentCtx = this.getContext();
+
+    // An outcome-aware caller must own the outer transaction; a nested caller
+    // cannot know whether the parent will later commit or roll back.
+    if (options?.reportTransactionOutcome && parentCtx?.dbClient && parentCtx.tenantId === tenantId) {
+      throw new TenantContextViolationException(
+        "Transaction outcome reporting requires ownership of the outer tenant transaction."
+      );
+    }
 
     // Check if there is already an active transaction in the current async scope
     if (parentCtx && parentCtx.dbClient && parentCtx.tenantId === tenantId) {
@@ -297,15 +307,24 @@ export class TenantContextManager {
     }
 
     let leasedClient: any = null;
+    let releaseError: Error | undefined;
+    let phase: "setup" | "work" | "commit" = "setup";
 
-    // Dynamically import PostgresClient to avoid circular dependencies
-    const { PostgresClient } = await import("../../../features/admin/infrastructure/persistence/postgres");
-    const pgClient = PostgresClient.getInstance();
+    // Dynamically import PostgresClient to avoid circular dependencies. A failure
+    // here or while leasing the client occurs before the work callback can mutate data.
+    try {
+      const { PostgresClient } = await import("../../../features/admin/infrastructure/persistence/postgres");
+      const pgClient = PostgresClient.getInstance();
+      leasedClient = await pgClient.connectClient();
+    } catch (err) {
+      if (options?.reportTransactionOutcome) {
+        throw new TenantTransactionOutcomeError({ outcome: "not_started", phase: "setup", cause: err });
+      }
+      throw err;
+    }
 
-    // We do not catch the connectClient error here; it should propagate up as DatabaseUnavailableError.
-    leasedClient = await pgClient.connectClient();
-
-    // Execute the transaction lifecycle
+    // Execute the transaction lifecycle. The phase is tracked separately from the
+    // thrown error because a COMMIT transport failure cannot prove the final state.
     try {
       await leasedClient.query("BEGIN");
       await leasedClient.query(
@@ -322,22 +341,51 @@ export class TenantContextManager {
         transactionDepth: 1
       });
 
+      phase = "work";
       const result = await this.storage.run(transactedCtx, work);
 
+      phase = "commit";
       await leasedClient.query("COMMIT");
       return result;
     } catch (err) {
-      if (leasedClient) {
-        try {
-          await leasedClient.query("ROLLBACK");
-        } catch (rollbackErr) {
-          console.error("[TenantContextManager] ROLLBACK error:", rollbackErr);
-        }
+      let rollbackError: unknown;
+      let rollbackFailed = false;
+      try {
+        await leasedClient.query("ROLLBACK");
+      } catch (cleanupError) {
+        rollbackFailed = true;
+        rollbackError = cleanupError;
+        console.error("[TenantContextManager] ROLLBACK error:", cleanupError);
       }
+
+      const asReleaseError = (value: unknown, message: string): Error =>
+        value instanceof Error ? value : new Error(message, { cause: value });
+
+      if (phase === "commit") {
+        // Even a successful best-effort ROLLBACK cannot prove that COMMIT was not
+        // already applied. Discard this connection and report an uncertain outcome.
+        releaseError = asReleaseError(err, "Commit outcome could not be confirmed.");
+      } else if (rollbackFailed) {
+        // A client with an unconfirmed transaction state must not return to the pool.
+        releaseError = asReleaseError(rollbackError, "Transaction rollback could not be confirmed.");
+      }
+
+      if (options?.reportTransactionOutcome) {
+        const outcome = phase === "commit"
+          ? "commit_uncertain"
+          : phase === "setup"
+            ? "not_started"
+            : rollbackFailed
+              ? "rollback_failed"
+              : "rolled_back";
+        throw new TenantTransactionOutcomeError({ outcome, phase, cause: err, rollbackError });
+      }
+
+      // Preserve the legacy exception contract for every existing transaction caller.
       throw err;
     } finally {
       if (leasedClient && typeof leasedClient.release === "function") {
-        leasedClient.release();
+        leasedClient.release(releaseError);
       }
     }
   }

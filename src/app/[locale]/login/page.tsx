@@ -4,6 +4,7 @@ import React, { useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { getSafeLocalizedReturnTo } from "@/lib/auth/route-policy";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
@@ -83,8 +84,10 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     setIsLoading(true);
     try {
       await login(email, password);
-      // Success redirect
-      router.push(`/${locale}/dashboard`);
+      // Preserve only a validated same-origin destination in the active locale.
+      const requestedReturnTo = new URLSearchParams(window.location.search).get("returnTo");
+      const returnTo = getSafeLocalizedReturnTo(requestedReturnTo, locale, window.location.origin);
+      router.push(returnTo ?? `/${locale}/dashboard`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
