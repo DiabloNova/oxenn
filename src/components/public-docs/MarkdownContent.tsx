@@ -11,19 +11,22 @@ interface ListItem {
   text: string;
 }
 
-function resolveLink(href: string, locale: Locale): { href: string; external: boolean } | null {
+function resolveLink(href: string): { href: string; external: boolean } | null {
   const normalizedHref = href.trim();
 
   if (normalizedHref.startsWith("#")) {
     return { href: normalizedHref, external: false };
   }
-  if (normalizedHref.startsWith("https://") || normalizedHref.startsWith("http://")) {
+  if (/^https?:\/\//i.test(normalizedHref)) {
     return { href: normalizedHref, external: true };
   }
-  if (normalizedHref.startsWith("../") || normalizedHref.startsWith("./") || normalizedHref.startsWith("/")) {
-    const localeSegment = normalizedHref.split("/").find((segment) => segment === "en" || segment === "fa");
-    const targetLocale = (localeSegment as Locale | undefined) ?? (locale === "fa" ? "en" : "fa");
-    return { href: "/" + targetLocale + "/public-docs", external: false };
+  const relativeReadme = normalizedHref.match(/^(?:(?:\.\.\/)+|\.\/)*(?:docs\/public\/)?(en|fa)\/README\.md(?:#(.+))?$/);
+  const rootReadme = normalizedHref.match(/^\/(?:docs\/public\/)?(en|fa)\/README\.md(?:#(.+))?$/);
+  const languageReadme = relativeReadme ?? rootReadme;
+  if (languageReadme) {
+    const targetLocale = languageReadme[1] as Locale;
+    const fragment = languageReadme[2] ? "#" + languageReadme[2] : "";
+    return { href: "/" + targetLocale + "/public-docs" + fragment, external: false };
   }
   return null;
 }
@@ -52,11 +55,13 @@ function renderInline(source: string, locale: Locale, keyPrefix: string): ReactN
     const key = keyPrefix + "-" + tokenIndex++;
 
     if (source.startsWith("[", cursor)) {
-      const labelEnd = source.indexOf("](", cursor + 1);
-      const urlEnd = labelEnd >= 0 ? findLinkClosingParen(source, labelEnd + 2) : -1;
-      if (labelEnd >= 0 && urlEnd > labelEnd + 2) {
+      const labelEnd = source.indexOf("]", cursor + 1);
+      const validLabel = labelEnd > cursor + 1 && !source.slice(cursor + 1, labelEnd).includes("[");
+      const urlStart = validLabel && source[labelEnd + 1] === "(" ? labelEnd + 2 : -1;
+      const urlEnd = urlStart >= 0 ? findLinkClosingParen(source, urlStart) : -1;
+      if (urlStart >= 0 && urlEnd > urlStart) {
         const label = source.slice(cursor + 1, labelEnd);
-        const link = resolveLink(source.slice(labelEnd + 2, urlEnd), locale);
+        const link = resolveLink(source.slice(urlStart, urlEnd));
         if (!link) {
           node = label;
         } else if (link.external) {
@@ -120,6 +125,17 @@ function headingLevel(line: string): number {
   return count >= 1 && count <= 3 && line[count] === " " ? count : 0;
 }
 
+function createHeadingSlug(value: string): string {
+  const slug = value
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+  return slug || "section";
+}
+
 function isHorizontalRule(line: string): boolean {
   const value = line.trim();
   return value.length >= 3 && (Array.from(value).every((character) => character === "-") ||
@@ -133,6 +149,7 @@ function isBlockStart(line: string): boolean {
 export default function MarkdownContent({ markdown, locale }: MarkdownContentProps) {
   const lines = markdown.replaceAll(String.fromCharCode(13), "").split(String.fromCharCode(10));
   const blocks: ReactNode[] = [];
+  const headingIdCounts = new Map<string, number>();
   let index = 0;
 
   while (index < lines.length) {
@@ -146,13 +163,17 @@ export default function MarkdownContent({ markdown, locale }: MarkdownContentPro
     if (level > 0) {
       const HeadingTag: "h1" | "h2" | "h3" = level === 1 ? "h1" : level === 2 ? "h2" : "h3";
       const title = line.slice(level + 1);
+      const baseHeadingId = createHeadingSlug(title);
+      const headingOccurrence = headingIdCounts.get(baseHeadingId) ?? 0;
+      headingIdCounts.set(baseHeadingId, headingOccurrence + 1);
+      const headingId = headingOccurrence === 0 ? baseHeadingId : baseHeadingId + "-" + headingOccurrence;
       const headingClass = level === 1
         ? "mb-6 mt-8 text-3xl font-black tracking-tight sm:text-4xl"
         : level === 2
           ? "mb-4 mt-10 border-b border-[var(--glass-border)] pb-2 text-2xl font-bold"
           : "mb-3 mt-7 text-xl font-bold";
       blocks.push(
-        <HeadingTag key={"heading-" + index} className={headingClass}>
+        <HeadingTag key={"heading-" + index} id={headingId} className={headingClass}>
           {renderInline(title, locale, "heading-" + index)}
         </HeadingTag>,
       );

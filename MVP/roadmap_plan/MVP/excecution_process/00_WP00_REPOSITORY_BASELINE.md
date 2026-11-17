@@ -65,7 +65,7 @@ The following counts were computed from the checked-out branch tree. They are na
 | Platform Admin migration journal entries | 1 |
 | Workspace snapshot tables with policy declarations | 56 |
 | Policy declarations in the latest Workspace snapshot | 224 |
-| Test files matching test/spec TypeScript patterns | 134 |
+| Test files matching test/spec TypeScript patterns | 136 |
 | Files under scripts/ | 29 |
 | Markdown files under docs/ | 86 |
 
@@ -180,7 +180,7 @@ The checked-in .github/workflows/ci.yml contains three jobs:
 2. **Unit Tests:** pnpm test:unit and pnpm test:ui.
 3. **Isolation Suite:** PostgreSQL/pgvector 16 service and pnpm test:isolation against a temporary CI database.
 
-package.json also defines pnpm test:db, but the reviewed CI workflow does not invoke it. The Vitest db project has passWithNoTests: true with a temporary comment; no tests/db/ directory was present in the inspected tree. The test-file inventory contains 134 matching test files: 90 under tests/unit, 4 under tests/ui, and 40 across tests/services, tests/features, and tests/actions. The configured Vitest project globs cover the unit and UI roots; a complete runner-to-file mapping for the other 40 files was not established in WP-00. Do not claim all 134 files are run by the two Vitest CI jobs.
+package.json also defines pnpm test:db, but the reviewed CI workflow does not invoke it. The Vitest db project has passWithNoTests: true with a temporary comment; no tests/db/ directory was present in the inspected tree. The test-file inventory contains 136 matching test files: 91 under tests/unit, 5 under tests/ui, and 40 across tests/services, tests/features, and tests/actions. The configured Vitest project globs cover the unit and UI roots; a complete runner-to-file mapping for the other 40 files was not established in WP-00. Do not claim all 136 files are run by the two Vitest CI jobs.
 
 ### Exact GitHub evidence
 
@@ -194,7 +194,7 @@ package.json also defines pnpm test:db, but the reviewed CI workflow does not in
 | Command / check | Result | Evidence / limitation |
 |---|---|---|
 | node --test scripts/audit-gate.test.mjs | **PASS** | 14 tests passed, 0 failed |
-| git diff --check | **PASS** | No whitespace errors in the initial documentation snapshot; rerun after final report commit |
+| git diff --check | **WARNINGS** | Reports trailing whitespace on intentional Markdown hard-break lines in the initial documentation snapshot; this is not a whitespace-free PASS. Rerun after the final report commit |
 | node scripts/docs/verify-phase-0-baseline.mjs | **NOT RUN locally** | Could not start because package typescript was unavailable in the constrained audit shell |
 | pnpm install --frozen-lockfile | **BLOCKED locally** | The package installation process was killed by the temporary execution environment before dependencies/binaries were ready |
 | pnpm typecheck, pnpm lint, pnpm build, pnpm test:unit, pnpm test:ui, pnpm test:db, pnpm test:isolation | **NOT RUN locally** | Required project dependencies were not installed in the audit shell |

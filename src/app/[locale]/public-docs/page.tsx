@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MarkdownContent from "@/components/public-docs/MarkdownContent";
+import { siteConfig } from "@/config/site";
 import { isSupportedLocale, SUPPORTED_LOCALES, type Locale } from "@/config/i18n";
 
 export const dynamic = "force-static";
@@ -45,6 +46,7 @@ export async function generateMetadata({ params }: PublicDocsPageProps): Promise
     openGraph: {
       title,
       description,
+      siteName: siteConfig.name,
       locale: isPersian ? "fa_IR" : "en_US",
       type: "article",
     },

@@ -67,7 +67,7 @@ All documents below were retrieved from `main` at the source snapshot above. The
 | [Project Map](../../../architecture_map/project_map.md) | Complete portfolio hierarchy and product-line boundaries |
 | [MVP-01 through MVP-14 briefs](../roadmap/README.md) | Downstream stage contracts, sequencing, and acceptance expectations |
 
-The roadmap directory contains a README and fourteen numbered stage briefs (MVP-00 through MVP-14). All fourteen briefs and the parent MVP baseline were retrieved and reviewed. The five canonical references linked by MVP-00 were also retrieved and reviewed.
+The roadmap directory contains a README and fifteen numbered stage briefs: the separate MVP-00 stage contract plus fourteen downstream briefs (MVP-01 through MVP-14). All fifteen numbered briefs and the parent MVP baseline were retrieved and reviewed. The five canonical references linked by MVP-00 were also retrieved and reviewed.
 
 ### 2.3 Source authority and conflict handling
 
@@ -267,7 +267,7 @@ Map every FR-01–FR-11 to an accountable stage, owner, implementation area, tes
 
 ## 6. Decision register — initial open items
 
-This table is a tracking register, not an approval record. Every row starts as `OPEN` until owner approval and supporting evidence are recorded.
+This table is a tracking register, not an approval record. Every row starts as `OPEN` until its specific choice and supporting evidence are recorded. The owner approved WP-01 recommendation directions on 2026-11-14, but did not close the unresolved values or specialist-approval gates; see the [WP-01 Owner Decision Register, Section 8](./00_WP01_OWNER_DECISION_REGISTER.md#8-owner-disposition-2026-11-14). The `OPEN` statuses below remain current for those outstanding choices.
 
 | ID | Decision required | Minimum resolution needed | Blocking impact | Status |
 |---|---|---|---|---|
@@ -471,7 +471,12 @@ Do not rewrite or reorder prior entries. Append a new entry for every material a
 - Confirmed the single shared Workspace/dashboard model and independent SEO/AEO/GEO entitlements as already approved constraints. Role details, usage attribution, commercial terms, metric ownership, source permissions, pilot choices and other listed decisions remain open where the evidence does not show owner approval.
 - WP-01 remains **PARTIAL** pending explicit owner decisions. No product feature, code, schema, migration, provider/payment integration, external account connection, deployment, PR, merge, main-branch or production change was authorized or performed.
 
+### 2026-11-14 — Owner approval of WP-01 recommendation directions
 
+- The owner explicitly approved the expert recommendations already documented in D-001–D-017 as default planning/design directions. This approval is limited to the recommendations; it does not silently choose unresolved values or grant legal, privacy, provider or third-party permissions.
+- Recorded the per-decision disposition and remaining open choices in [00_WP01_OWNER_DECISION_REGISTER.md](./00_WP01_OWNER_DECISION_REGISTER.md). Adopted directions include staged pilot; Iran retained only as the leading candidate pending feasibility; hybrid, service-owned metrics; staged permission-aware sources; deferred ungrounded prices/quotas; no early bundle before standalone coherence; phased optional PAI; hybrid evidence confidence; minimum safe Workspace roles; evidence-backed service gates; baseline-first KPI thresholds; manual auditable workflows; dimension-level scoring; manual-first integrations; separate safety ceilings and commercial quotas; data-class-specific privacy controls; and service-by-service readiness.
+- Explicitly retained unresolved owner choices for pilot segment, operating locale, metric definitions, source allowlist/legal basis, commercial terms, PAI Offer coverage, role capabilities, launch surfaces, KPIs, numeric limits, retention periods and legal review.
+- WP-01 remains **PARTIAL**. No WP-02 work, code, schema, migration, provider/payment connection, deployment, PR, merge, or main-branch change is authorized by this approval.
 
 ## 16. Source references
 
@@ -488,9 +493,3 @@ Do not rewrite or reorder prior entries. Append a new entry for every material a
 - [Authenticated service access — Stele KNOW-64](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/KNOW-64)
 
 
-### 2026-11-14 — Owner approval of WP-01 recommendation directions
-
-- The owner explicitly approved the expert recommendations already documented in D-001–D-017 as default planning/design directions. This approval is limited to the recommendations; it does not silently choose unresolved values or grant legal, privacy, provider or third-party permissions.
-- Recorded the per-decision disposition and remaining open choices in [00_WP01_OWNER_DECISION_REGISTER.md](./00_WP01_OWNER_DECISION_REGISTER.md). Adopted directions include staged pilot; Iran retained only as the leading candidate pending feasibility; hybrid, service-owned metrics; staged permission-aware sources; deferred ungrounded prices/quotas; no early bundle before standalone coherence; phased optional PAI; hybrid evidence confidence; minimum safe Workspace roles; evidence-backed service gates; baseline-first KPI thresholds; manual auditable workflows; dimension-level scoring; manual-first integrations; separate safety ceilings and commercial quotas; data-class-specific privacy controls; and service-by-service readiness.
-- Explicitly retained unresolved owner choices for pilot segment, operating locale, metric definitions, source allowlist/legal basis, commercial terms, PAI Offer coverage, role capabilities, launch surfaces, KPIs, numeric limits, retention periods and legal review.
-- WP-01 remains **PARTIAL**. No WP-02 work, code, schema, migration, provider/payment connection, deployment, PR, merge, or main-branch change is authorized by this approval.

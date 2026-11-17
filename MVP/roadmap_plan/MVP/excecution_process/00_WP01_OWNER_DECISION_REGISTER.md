@@ -272,7 +272,7 @@ WP-01 cannot be marked complete until each decision blocking the next authorized
 
 **WP-01 disposition:** `PARTIAL — evidence inventory and decision recommendations prepared; owner approvals pending`. No implementation authorization is created by this document.
 
-## 9. Owner disposition — 2026-11-14
+## 8. Owner disposition — 2026-11-14
 
 **Approver:** Product owner (explicit approval in the project conversation on 2026-11-14).
 **Approval scope:** The owner approves the expert recommendations already written in this register as the default planning and design directions for downstream work. This approval does not invent missing numeric values, grant third-party permissions, constitute legal/privacy review, activate providers, or authorize implementation. The recommendations below are adopted as direction; the remaining specific choices listed under each item stay OPEN until explicitly decided or independently approved by the proper authority.
@@ -307,7 +307,7 @@ WP-01 cannot be marked complete until each decision blocking the next authorized
 - Exact prices, numeric quotas/budgets, sample sizes, confidence thresholds and outcome targets remain evidence-gated. No payment/provider account, schema, migration or implementation is authorized by this disposition.
 - **WP-01 remains PARTIAL.** Do not begin WP-02 implementation or mark MVP-00 complete until the blocking owner choices and evidence/policy approvals are explicitly resolved and the owner separately authorizes the handoff.
 
-## 10. Source links
+## 9. Source links
 
 - [MVP-00 governance contract](../roadmap/00-product-decisions-and-delivery-governance.md)
 - [Owner-approved MVP Product Specification](../../../../docs/product/OXENN_MVP_PRODUCT_SPECIFICATION.md)
