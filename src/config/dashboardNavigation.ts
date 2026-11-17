@@ -49,7 +49,11 @@ export function matchesDashboardNavigationSearch(
 ): boolean {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return true;
-  return item.labelEn.toLowerCase().includes(normalizedQuery) || item.labelFa.includes(query.trim());
+  const normalizeFa = (value: string) => value.normalize("NFC")
+    .replace(/\u064A/g, "\u06CC")
+    .replace(/\u0643/g, "\u06A9")
+    .replace(/[\u200C\s]+/g, "");
+  return item.labelEn.toLowerCase().includes(normalizedQuery) || normalizeFa(item.labelFa).includes(normalizeFa(query));
 }
 
 export const dashboardNavigation: NavigationSection[] = [
@@ -87,7 +91,7 @@ export const dashboardNavigation: NavigationSection[] = [
       { id: "search-ranking", labelEn: "Improve search rankings", labelFa: "بهبود رتبه در موتورهای جستجو", href: "/dashboard/seo/technical", icon: TrendingUp },
       { id: "site-health", labelEn: "Site health", labelFa: "سلامت سایت", href: "/dashboard/audit/premium", icon: HeartPulse },
       { id: "technical-issues", labelEn: "Technical issues", labelFa: "مشکلات فنی", href: "/dashboard/technical-issues", icon: Wrench },
-      { id: "product-review", labelEn: "Product review", labelFa: "بررسی محصول", href: "/dashboard/audits", icon: ClipboardCheck },
+      { id: "product-review", labelEn: "Product review", labelFa: "بررسی محصول", href: "/dashboard/product-review", icon: ClipboardCheck },
     ],
   },
 ];

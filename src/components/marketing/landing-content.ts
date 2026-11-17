@@ -1,6 +1,6 @@
 export const landingContent = {
   fa: {
-    nav: { tracks: "مسیرهای ارزیابی", method: "روش کار", offers: "محصول و مشتریان", evidence: "شواهد و اعتماد", login: "ورود", signup: "ساخت حساب", openMenu: "باز کردن منو", closeMenu: "بستن منو", themeLight: "تغییر به حالت روشن", themeDark: "تغییر به حالت تیره", switchLanguage: "Switch to English", skipToContent: "رفتن به محتوای اصلی", mainNavigationLabel: "ناوبری اصلی", mobileNavigationLabel: "ناوبری موبایل" },
+    nav: { tracks: "مسیرهای ارزیابی", method: "روش کار", offers: "محصول و مشتریان", evidence: "شواهد و اعتماد", login: "ورود", signup: "ساخت حساب", openMenu: "باز کردن منو", closeMenu: "بستن منو", themeLight: "تغییر به حالت روشن", themeDark: "تغییر به حالت تیره", switchLanguage: "تغییر زبان به انگلیسی", skipToContent: "رفتن به محتوای اصلی", mainNavigationLabel: "ناوبری اصلی", mobileNavigationLabel: "ناوبری موبایل" },
     hero: {
       eyebrow: "هوشمندی محصول و بازار",
       title: "محصولتان را بهتر بشناسید؛",

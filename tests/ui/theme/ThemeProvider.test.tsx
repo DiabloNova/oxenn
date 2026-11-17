@@ -48,7 +48,7 @@ describe("ThemeProvider external preferences", () => {
     expect(window.localStorage.getItem("language")).toBe("fa");
   });
 
-  it("updates theme state and the document class without effect-driven state updates", () => {
+  it("updates theme state and the document class when setTheme is called", () => {
     render(<ThemeProvider initialLanguage="fa"><ThemeProbe /></ThemeProvider>);
     fireEvent.click(screen.getByRole("button", { name: "Set dark theme" }));
 
@@ -57,14 +57,28 @@ describe("ThemeProvider external preferences", () => {
     expect(window.localStorage.getItem("theme")).toBe("dark");
   });
 
-  it("updates the language immediately and navigates while preserving the current URL state", () => {
-    window.history.replaceState({}, "", "/fa/dashboard?tab=seo#overview");
+  it("applies external theme preference changes to the document class", () => {
     render(<ThemeProvider initialLanguage="fa"><ThemeProbe /></ThemeProvider>);
+    window.localStorage.setItem("theme", "dark");
+    window.dispatchEvent(new StorageEvent("storage", { key: "theme" }));
+    expect(screen.getByTestId("theme-state")).toHaveTextContent("dark|fa|rtl");
+    expect(document.documentElement).toHaveClass("dark");
+  });
+
+  it("keeps the current locale authoritative until navigation commits", () => {
+    window.history.replaceState({}, "", "/fa/dashboard?tab=seo#overview");
+    const { rerender } = render(<ThemeProvider initialLanguage="fa"><ThemeProbe /></ThemeProvider>);
     fireEvent.click(screen.getByRole("button", { name: "Switch to English" }));
 
-    expect(screen.getByTestId("theme-state")).toHaveTextContent("light|en|ltr");
-    expect(document.documentElement).toHaveAttribute("lang", "en");
-    expect(document.documentElement).toHaveAttribute("dir", "ltr");
+    expect(screen.getByTestId("theme-state")).toHaveTextContent("light|fa|rtl");
+    expect(document.documentElement).toHaveAttribute("lang", "fa");
+    expect(document.documentElement).toHaveAttribute("dir", "rtl");
+    expect(window.localStorage.getItem("language")).toBe("fa");
     expect(mocks.replace).toHaveBeenCalledWith("/en/dashboard?tab=seo#overview");
+    mocks.pathname = "/en/dashboard";
+    window.history.replaceState({}, "", "/en/dashboard?tab=seo#overview");
+    rerender(<ThemeProvider initialLanguage="fa"><ThemeProbe /></ThemeProvider>);
+    expect(screen.getByTestId("theme-state")).toHaveTextContent("light|en|ltr");
+    expect(window.localStorage.getItem("language")).toBe("en");
   });
 });

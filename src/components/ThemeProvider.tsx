@@ -22,7 +22,6 @@ const LANGUAGE_CHANGE_EVENT = "oxenn:language-change";
 
 let inMemoryTheme: Theme | null = null;
 let inMemoryLanguage: Language | null = null;
-let pendingLanguage: { value: Language; originPath: string | null } | null = null;
 
 function readStoredPreference(key: string): string | null {
   try {
@@ -78,9 +77,7 @@ function subscribeTheme(onStoreChange: () => void): () => void {
 function getLanguageSnapshot(
   fallback: Language,
   routeLanguage: Language | null,
-  pathname: string | null,
 ): Language {
-  if (pendingLanguage && pendingLanguage.originPath === pathname) return pendingLanguage.value;
   if (routeLanguage) return routeLanguage;
   if (inMemoryLanguage) return inMemoryLanguage;
   const storedLanguage = readStoredPreference("language");
@@ -92,7 +89,6 @@ function subscribeLanguage(onStoreChange: () => void): () => void {
   const handleStorage = (event: StorageEvent) => {
     if (event.key === null || event.key === "language") {
       inMemoryLanguage = null;
-      pendingLanguage = null;
       onStoreChange();
     }
   };
@@ -116,8 +112,8 @@ export function ThemeProvider({
   const routeLanguage = pathname?.match(/^\/(fa|en)(?=\/|$)/)?.[1] as Language | undefined;
   const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot);
   const getLanguage = useCallback(
-    () => getLanguageSnapshot(initialLanguage, routeLanguage ?? null, pathname),
-    [initialLanguage, routeLanguage, pathname],
+    () => getLanguageSnapshot(initialLanguage, routeLanguage ?? null),
+    [initialLanguage, routeLanguage],
   );
   const getServerLanguage = useCallback(() => initialLanguage, [initialLanguage]);
   const language = useSyncExternalStore(subscribeLanguage, getLanguage, getServerLanguage);
@@ -134,15 +130,6 @@ export function ThemeProvider({
 
   const setLanguage = useCallback(
     (newLang: Language) => {
-      pendingLanguage = { value: newLang, originPath: pathname };
-      inMemoryLanguage = newLang;
-      const root = window.document.documentElement;
-      const dir: Direction = newLang === "fa" ? "rtl" : "ltr";
-      root.setAttribute("lang", newLang);
-      root.setAttribute("dir", dir);
-      writeStoredPreference("language", newLang);
-      window.dispatchEvent(new Event(LANGUAGE_CHANGE_EVENT));
-
       if (pathname) {
         const localePrefix = /^\/(?:fa|en)(?=\/|$)/;
         let localizedPath = pathname;
@@ -154,22 +141,30 @@ export function ThemeProvider({
           localizedPath = "/" + newLang + (pathname.startsWith("/") ? pathname : "/" + pathname);
         }
         if (localizedPath !== pathname) {
+          // The route locale remains authoritative until navigation commits.
+          // A cancelled transition therefore cannot leak an optimistic preference.
           notifyNavigationStart(localizedPath);
           router.replace(localizedPath + window.location.search + window.location.hash);
+          return;
         }
       }
+
+      inMemoryLanguage = newLang;
+      writeStoredPreference("language", newLang);
+      window.dispatchEvent(new Event(LANGUAGE_CHANGE_EVENT));
     },
     [pathname, router],
   );
 
   useLayoutEffect(() => {
     const root = window.document.documentElement;
-    const currentTheme = getThemeSnapshot();
     root.classList.remove("light", "dark");
-    root.classList.add(currentTheme);
+    root.classList.add(theme);
+  }, [theme]);
 
-    if (pendingLanguage && pendingLanguage.originPath !== pathname) pendingLanguage = null;
-    const currentLanguage = routeLanguage ?? getLanguageSnapshot(initialLanguage, null, pathname);
+  useLayoutEffect(() => {
+    const root = window.document.documentElement;
+    const currentLanguage = routeLanguage ?? getLanguageSnapshot(initialLanguage, null);
     if (routeLanguage) {
       inMemoryLanguage = routeLanguage;
       writeStoredPreference("language", routeLanguage);

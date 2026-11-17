@@ -74,6 +74,6 @@ describe("OwnerDefinedPage accessibility", () => {
 
     expect(screen.getByRole("list")).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
-    expect(screen.queryByRole("listitem", { name: /priority|step/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/priority|step/i)).not.toBeInTheDocument();
   });
 });

@@ -139,6 +139,7 @@ const chunkingOptionsSchema = z
 const ingestionMetadataSchema = metadataSchema.refine(
   (metadata) => isBoundedJsonMetadata({
     ...metadata,
+    documentId: `brand-supporting-document:${"f".repeat(64)}`,
     chunkIndex: MAX_CHUNK_COUNT - 1,
     sentiment: {
       score: -1.7976931348623157e308,
@@ -146,7 +147,7 @@ const ingestionMetadataSchema = metadataSchema.refine(
       confidence: 1.7976931348623157e308,
     },
   }),
-  { message: "Metadata must leave room for the chunk index and sentiment fields added during ingestion." },
+  { message: "Metadata must leave room for the server-generated document ID, chunk index, and sentiment fields added during ingestion." },
 );
 
 const boundedText = (maxBytes: number, label: string) =>

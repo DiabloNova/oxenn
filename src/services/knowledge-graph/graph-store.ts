@@ -136,21 +136,28 @@ export class GraphStoreService {
       }
 
       const relType = rel.relationshipType || 'associated_with';
-      const properties = rel.properties || {};
+      const incomingProperties: Record<string, unknown> = { ...(rel.properties || {}) };
+      // Provenance and migration markers are server-owned; ignore any such values
+      // supplied by extraction output.
+      delete incomingProperties.source_chunk_id;
+      delete incomingProperties.source_chunk_ids;
+      delete incomingProperties.source_provenance_incomplete;
 
-      // Embed traceability source_chunk_id in relationship properties
-      const enrichedProperties = {
-        ...properties,
-        source_chunk_id: sourceChunkId,
-      };
+      // Serialize upserts for the same tenant-scoped edge so concurrent ingestions
+      // cannot create duplicate edges or lose source provenance.
+      await this.pg.query(
+        "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+        [tenantId, `${sourceId}:${targetId}:${relType.toLowerCase()}`],
+      );
 
-      // Check if relationship already exists
+      // Check if relationship already exists within this tenant.
       const selectRelSql = `
         SELECT id, properties FROM kg_relationships
-        WHERE source_entity_id = $1 AND target_entity_id = $2 AND LOWER(relationship_type) = LOWER($3)
+        WHERE tenant_id = $4 AND source_entity_id = $1 AND target_entity_id = $2
+          AND LOWER(relationship_type) = LOWER($3)
         LIMIT 1;
       `;
-      const resRel = await this.pg.query(selectRelSql, [sourceId, targetId, relType]);
+      const resRel = await this.pg.query(selectRelSql, [sourceId, targetId, relType, tenantId]);
 
       let relationshipId: string;
 
@@ -163,18 +170,40 @@ export class GraphStoreService {
           ? JSON.parse(row.properties)
           : (row.properties || {});
 
-        const mergedProperties = {
-          ...existingProperties,
-          ...enrichedProperties,
-        };
+        const mergedProperties = { ...existingProperties, ...incomingProperties };
+        // Let PostgreSQL append provenance from the row's current value under its
+        // row lock; an application-side read/merge/write could lose concurrent sources.
+        delete mergedProperties.source_chunk_id;
+        delete mergedProperties.source_chunk_ids;
 
         const updateRelSql = `
-          UPDATE kg_relationships
-          SET properties = $1, updated_at = NOW()
-          WHERE id = $2
+          UPDATE kg_relationships AS relationship
+          SET properties = (
+            (relationship.properties - 'source_chunk_id' - 'source_chunk_ids')
+            || $1::jsonb
+            || jsonb_build_object(
+              'source_chunk_ids',
+              COALESCE((
+                SELECT jsonb_agg(DISTINCT known_source.source_id)
+                FROM jsonb_array_elements_text(
+                  (CASE WHEN jsonb_typeof(relationship.properties -> 'source_chunk_ids') = 'array'
+                    THEN relationship.properties -> 'source_chunk_ids' ELSE '[]'::jsonb END)
+                  || (CASE WHEN jsonb_typeof(relationship.properties -> 'source_chunk_id') = 'string'
+                    THEN jsonb_build_array(relationship.properties ->> 'source_chunk_id') ELSE '[]'::jsonb END)
+                  || jsonb_build_array($2::text)
+                ) AS known_source(source_id)
+                WHERE known_source.source_id IS NOT NULL
+              ), '[]'::jsonb)
+            )
+            || CASE WHEN jsonb_typeof(relationship.properties -> 'source_chunk_id') = 'string'
+                THEN jsonb_build_object('source_provenance_incomplete', TRUE)
+                ELSE '{}'::jsonb END
+          ),
+          updated_at = NOW()
+          WHERE id = $3 AND tenant_id = $4
           RETURNING id;
         `;
-        await this.pg.query(updateRelSql, [JSON.stringify(mergedProperties), relationshipId]);
+        await this.pg.query(updateRelSql, [JSON.stringify(mergedProperties), sourceChunkId, relationshipId, tenantId]);
       } else {
         // Relationship does not exist: Create new UUID and insert
         relationshipId = crypto.randomUUID();
@@ -190,7 +219,7 @@ export class GraphStoreService {
           sourceId,
           targetId,
           relType,
-          JSON.stringify(enrichedProperties),
+          JSON.stringify({ ...incomingProperties, source_chunk_ids: [sourceChunkId] }),
         ];
         await this.pg.query(insertRelSql, params);
       }

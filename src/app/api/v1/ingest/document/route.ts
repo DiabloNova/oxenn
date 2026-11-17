@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DocumentIngestionService } from "@/services/ingestion/document-ingestion";
-import { TenantContextManager } from "@/core/database/tenant-context";
 import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 import {
   ingestionRequestSchema,
@@ -30,12 +29,7 @@ export async function POST(req: NextRequest) {
     const ingestionService = new DocumentIngestionService();
     const requestId = req.headers.get("x-request-id") || `req-ingest-${Date.now()}`;
 
-    const result = await TenantContextManager.runWithTenantContext(
-      tenantId,
-      userId,
-      requestId,
-      async () => ingestionService.ingestDocument(text, metadata, chunkingOptions)
-    );
+    const result = await ingestionService.ingestDocument(text, metadata, chunkingOptions, { tenantId, userId, requestId });
 
     if (result.rolledBack) {
       return NextResponse.json(result, { status: 422 });

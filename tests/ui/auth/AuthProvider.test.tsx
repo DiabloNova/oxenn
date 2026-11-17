@@ -64,6 +64,7 @@ describe("AuthProvider public homepage isolation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     await waitFor(() => {
       expect(window.localStorage.getItem("auth_session_user")).toBeNull();
+      expect(actions.logoutAction).toHaveBeenCalledTimes(1);
     });
   });
 

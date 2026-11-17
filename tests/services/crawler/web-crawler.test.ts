@@ -32,8 +32,13 @@ function calculateCosineDistance(a: number[], b: number[]): number {
 
 // Set up global pg.Pool query mock for offline test run
 const originalPoolQuery = (Pool.prototype as any).query;
+const originalPoolConnect = (Pool.prototype as any).connect;
 
 function setupPoolMock() {
+  (Pool.prototype as any).connect = async function () {
+    const pool = this;
+    return { query: (sql: string, params: unknown[] = []) => (Pool.prototype as any).query.call(pool, sql, params), release: () => undefined };
+  };
   (Pool.prototype as any).query = async function(sql: string, params: unknown[] = []) {
     const normalizedSql = sql.toLowerCase();
 
@@ -88,12 +93,16 @@ function setupPoolMock() {
       };
     }
 
+    if (normalizedSql.includes("begin") || normalizedSql.includes("commit") || normalizedSql.includes("rollback") || normalizedSql.includes("set_config")) {
+      return { rowCount: 1, rows: [] };
+    }
     return { rowCount: 0, rows: [] };
   };
 }
 
 function restorePoolMock() {
   (Pool.prototype as any).query = originalPoolQuery;
+  (Pool.prototype as any).connect = originalPoolConnect;
 }
 
 // Mock HTML pages database for HTTP fetch interception

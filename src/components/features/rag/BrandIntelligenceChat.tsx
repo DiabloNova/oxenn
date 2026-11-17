@@ -30,6 +30,8 @@ interface Message {
  */
 export const BrandIntelligenceChat: React.FC = () => {
   const { language } = useTheme();
+  const formatTimestamp = (timestamp: string) =>
+    new Date(timestamp).toLocaleTimeString(language === "fa" ? "fa-IR" : "en-US", { hour: "2-digit", minute: "2-digit" });
 
   // Lazy initializer to set up initial greeting message
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -38,7 +40,7 @@ export const BrandIntelligenceChat: React.FC = () => {
         id: "msg-greet",
         role: "assistant",
         content: "", // Content will be dynamically rendered based on the active UI language to avoid setState-in-effect
-        timestamp: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" })
+        timestamp: new Date().toISOString()
       }
     ];
   });
@@ -63,7 +65,7 @@ export const BrandIntelligenceChat: React.FC = () => {
       id: `msg-user-${Date.now()}`,
       role: "user",
       content: input,
-      timestamp: new Date().toLocaleTimeString(language === "fa" ? "fa-IR" : "en-US", { hour: "2-digit", minute: "2-digit" })
+      timestamp: new Date().toISOString()
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -93,7 +95,7 @@ export const BrandIntelligenceChat: React.FC = () => {
         content: data.answer,
         sources: data.sources,
         confidence: data.confidence,
-        timestamp: new Date().toLocaleTimeString(language === "fa" ? "fa-IR" : "en-US", { hour: "2-digit", minute: "2-digit" })
+        timestamp: new Date().toISOString()
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -162,7 +164,7 @@ export const BrandIntelligenceChat: React.FC = () => {
 
               {/* Time / Metadata badge */}
               <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[var(--text-muted)] px-1">
-                <span>{msg.timestamp}</span>
+                <span>{formatTimestamp(msg.timestamp)}</span>
                 {msg.confidence !== undefined && (
                   <>
                     <span>•</span>

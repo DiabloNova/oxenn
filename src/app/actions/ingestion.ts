@@ -1,7 +1,6 @@
 "use server";
 
 import { DocumentIngestionService } from "@/services/ingestion/document-ingestion";
-import { TenantContextManager } from "@/core/database/tenant-context";
 import { requireSession } from "@/services/auth/session";
 import { requireWorkspaceMembership } from "@/services/auth/authorization";
 import { ingestionRequestSchema } from "@/services/ai/resource-limits";
@@ -37,15 +36,8 @@ export async function ingestDocumentAction(data: {
     const ingestionService = new DocumentIngestionService();
     const requestId = `req-act-ingest-${Date.now()}`;
 
-    const result = await TenantContextManager.runWithTenantContext(
-      tenantId,
-      userId,
-      requestId,
-      async () => ingestionService.ingestDocument(
-        parsed.data.text,
-        parsed.data.metadata,
-        parsed.data.chunkingOptions
-      )
+    const result = await ingestionService.ingestDocument(
+      parsed.data.text, parsed.data.metadata, parsed.data.chunkingOptions, { tenantId, userId, requestId },
     );
 
     return { success: true, result };

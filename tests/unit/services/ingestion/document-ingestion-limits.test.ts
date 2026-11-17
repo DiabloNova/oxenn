@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { VectorStoreService } from "@/services/knowledge-graph/vector-store";
 import type { GraphStoreService } from "@/services/knowledge-graph/graph-store";
 
 const mocks = vi.hoisted(() => ({
   getTenantId: vi.fn(() => "tenant-test"),
-  getTenantContext: vi.fn(() => ({ tenantId: "tenant-test", userId: "user-test", requestId: "request-test", dbClient: {} })),
+  getTenantContext: vi.fn(() => null),
   runWithTenantContext: vi.fn(async (...args: unknown[]) => {
     const callback = args[3] as () => Promise<unknown>;
     return callback();
@@ -26,6 +26,7 @@ vi.mock("@/core/database/tenant-context", () => ({
     getContext: mocks.getTenantContext,
     runWithTenantContext: mocks.runWithTenantContext,
   },
+  TenantContextViolationException: class TenantContextViolationException extends Error {},
 }));
 vi.mock("@/services/ai/text-chunker", () => ({ chunkText: mocks.chunkText }));
 vi.mock("@/services/ai/embed-client", () => ({ generateEmbedding: mocks.generateEmbedding }));
@@ -34,13 +35,27 @@ vi.mock("@/services/ai/graph-extraction", () => ({ extractGraphEntities: mocks.e
 
 import { DocumentIngestionService } from "@/services/ingestion/document-ingestion";
 
+const tenantContext = { tenantId: "tenant-test", userId: "user-test", requestId: "request-test" };
+
+beforeEach(() => {
+  mocks.getTenantContext.mockReset().mockReturnValue(null);
+  mocks.runWithTenantContext.mockReset().mockImplementation(async (...args: unknown[]) => {
+    const callback = args[3] as () => Promise<unknown>;
+    return callback();
+  });
+  mocks.chunkText.mockReset().mockReturnValue(["chunk"]);
+  mocks.generateEmbedding.mockReset().mockResolvedValue([0.1, 0.2]);
+  mocks.analyzeSentiment.mockReset().mockResolvedValue({ score: 0, label: "neutral", confidence: 0.5 });
+  mocks.extractGraphEntities.mockReset().mockResolvedValue({ entities: [], relationships: [] });
+});
+
 describe("DocumentIngestionService resource boundary", () => {
   it("rejects oversized text before chunking or any provider/database operation", async () => {
     const vectorStore = { insertEmbedding: vi.fn() } as unknown as VectorStoreService;
     const graphStore = { upsertEntitiesAndRelationships: vi.fn() } as unknown as GraphStoreService;
     const service = new DocumentIngestionService(vectorStore, graphStore);
 
-    await expect(service.ingestDocument("x".repeat(3 * 1024 * 1024 + 1))).rejects.toThrow(RangeError);
+    await expect(service.ingestDocument("x".repeat(3 * 1024 * 1024 + 1), {}, undefined, tenantContext)).rejects.toThrow(RangeError);
 
     expect(mocks.chunkText).not.toHaveBeenCalled();
     expect(mocks.generateEmbedding).not.toHaveBeenCalled();
@@ -55,20 +70,21 @@ describe("DocumentIngestionService resource boundary", () => {
     const service = new DocumentIngestionService(vectorStore, graphStore);
 
     await expect(
-      service.ingestDocument("valid text", { payload: "x".repeat(13 * 1024) })
+      service.ingestDocument("valid text", { payload: "x".repeat(13 * 1024) }, undefined, tenantContext)
     ).rejects.toThrow(RangeError);
 
     expect(mocks.chunkText).not.toHaveBeenCalled();
     expect(mocks.generateEmbedding).not.toHaveBeenCalled();
   });
 
-  it("rolls back a profile replacement when any chunk fails", async () => {
+  it("preserves the existing profile when required provider preparation fails", async () => {
     mocks.chunkText.mockReturnValue(["first chunk", "second chunk"]);
+    mocks.generateEmbedding.mockReset()
+      .mockResolvedValueOnce([0.1, 0.2])
+      .mockRejectedValueOnce(new Error("embedding provider unavailable"));
     const vectorStore = {
       replaceDocument: vi.fn(async () => undefined),
-      insertEmbedding: vi.fn()
-        .mockResolvedValueOnce({ id: "new-chunk-1" })
-        .mockRejectedValueOnce(new Error("embedding provider unavailable")),
+      insertEmbedding: vi.fn(async () => ({ id: "new-chunk-1" })),
     } as unknown as VectorStoreService;
     const graphStore = { upsertEntitiesAndRelationships: vi.fn(async () => ({ entityIds: {}, relationshipIds: [] })) } as unknown as GraphStoreService;
     const service = new DocumentIngestionService(vectorStore, graphStore);
@@ -76,12 +92,11 @@ describe("DocumentIngestionService resource boundary", () => {
     const result = await service.ingestDocument("brand profile content", {
       source: "brand-profile",
       documentType: "brand-context",
-    });
+    }, undefined, tenantContext);
 
-    expect(vectorStore.replaceDocument).toHaveBeenCalledWith("tenant-test", "brand-profile");
-    expect(mocks.runWithTenantContext).toHaveBeenCalledWith(
-      "tenant-test", "user-test", "request-test", expect.any(Function), { requireNewSavepoint: true }
-    );
+    expect(vectorStore.replaceDocument).not.toHaveBeenCalled();
+    expect(vectorStore.insertEmbedding).not.toHaveBeenCalled();
+    expect(mocks.runWithTenantContext).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       success: false,
       rolledBack: true,
@@ -93,6 +108,7 @@ describe("DocumentIngestionService resource boundary", () => {
   });
 
   it("commits a profile replacement only when every chunk succeeds", async () => {
+    mocks.generateEmbedding.mockReset().mockResolvedValue([0.1, 0.2]);
     mocks.chunkText.mockReturnValue(["first chunk", "second chunk"]);
     const vectorStore = {
       replaceDocument: vi.fn(async () => undefined),
@@ -106,7 +122,7 @@ describe("DocumentIngestionService resource boundary", () => {
     const result = await service.ingestDocument("brand profile content", {
       source: "brand-profile",
       documentType: "brand-context",
-    });
+    }, undefined, tenantContext);
 
     expect(result).toMatchObject({ success: true, totalChunks: 2, processedChunks: 2, failedChunks: 0 });
     expect(result.rolledBack).toBeUndefined();
@@ -120,6 +136,7 @@ describe("DocumentIngestionService resource boundary", () => {
 
 
   it("derives a stable server-side identity for each supporting file", async () => {
+    mocks.generateEmbedding.mockReset().mockResolvedValue([0.1, 0.2]);
     mocks.chunkText.mockReturnValue(["supporting file chunk"]);
     const vectorStore = {
       replaceDocument: vi.fn(async () => undefined),
@@ -132,7 +149,7 @@ describe("DocumentIngestionService resource boundary", () => {
       source: "brand-profile-file",
       documentType: "brand-supporting-document",
       originalFilename: "Market Notes.md",
-    });
+    }, undefined, tenantContext);
 
     expect(result.success).toBe(true);
     expect(vectorStore.replaceDocument).toHaveBeenCalledWith(
@@ -146,6 +163,31 @@ describe("DocumentIngestionService resource boundary", () => {
       expect.any(Array),
       expect.objectContaining({ documentId: expect.stringMatching(/^brand-supporting-document:[a-f0-9]{64}$/) }),
     );
+  });
+
+  it("keeps case-distinct supporting filenames distinct and ignores client document IDs", async () => {
+    mocks.generateEmbedding.mockReset().mockResolvedValue([0.1, 0.2]);
+    mocks.chunkText.mockReturnValue(["supporting file chunk"]);
+    const vectorStore = {
+      replaceDocument: vi.fn(async () => undefined),
+      insertEmbedding: vi.fn(async () => ({ id: "supporting-chunk" })),
+    } as unknown as VectorStoreService;
+    const service = new DocumentIngestionService(vectorStore, { upsertEntitiesAndRelationships: vi.fn() } as unknown as GraphStoreService);
+
+    await service.ingestDocument("file", { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: "Notes.md", documentId: "forged" }, undefined, tenantContext);
+    await service.ingestDocument("file", { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: "notes.md", documentId: "forged" }, undefined, tenantContext);
+    await service.ingestDocument("file", { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: "Cafe\u0301.md" }, undefined, tenantContext);
+    await service.ingestDocument("file", { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: "Café.md" }, undefined, tenantContext);
+
+    const firstId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    const secondId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[1][1];
+    const thirdId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[2][1];
+    const fourthId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[3][1];
+    expect(firstId).not.toBe(secondId);
+    expect(thirdId).toBe(fourthId);
+    const metadata = (vectorStore.insertEmbedding as ReturnType<typeof vi.fn>).mock.calls[0][3];
+    expect(metadata.documentId).toMatch(/^brand-supporting-document:[a-f0-9]{64}$/);
+    expect(metadata.documentId).not.toBe("forged");
   });
 
 });

@@ -56,11 +56,16 @@ describe("VectorStoreService resource boundary", () => {
       expect.stringContaining("metadata ->> 'source' = 'brand-profile-form'"),
       ["tenant-a", "brand-profile", null],
     );
+    expect(query.mock.calls[1][0]).toContain("metadata ->> 'documentType' = 'brand-context'");
     expect(query).toHaveBeenNthCalledWith(
       3,
-      expect.stringContaining("properties ->> 'source_chunk_id' = ANY($2::text[])"),
+      expect.stringContaining("source_chunk_ids"),
       ["tenant-a", ["chunk-a", "chunk-b"]],
     );
+    expect(query.mock.calls[2][0]).toContain("jsonb_array_elements_text");
+    expect(query.mock.calls[2][0]).toContain("DELETE FROM kg_relationships");
+    expect(query.mock.calls[2][0]).toContain("source_provenance_incomplete");
+    expect(query.mock.calls[2][0]).toContain("FOR UPDATE");
     expect(query).toHaveBeenNthCalledWith(
       4,
       expect.stringContaining("DELETE FROM document_embeddings"),

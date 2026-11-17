@@ -3,10 +3,6 @@ import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
   authorize: vi.fn(async () => ({ tenantId: "tenant-test", userId: "user-test" })),
-  runWithTenant: vi.fn(async (...args: unknown[]) => {
-    const callback = args[3] as () => Promise<unknown>;
-    return callback();
-  }),
   ingest: vi.fn(async () => ({
     success: true,
     tenantId: "tenant-test",
@@ -22,10 +18,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/services/auth/authorization", () => ({
   authorizeApiRequest: mocks.authorize,
   authorizationErrorResponse: vi.fn(() => null),
-}));
-
-vi.mock("@/core/database/tenant-context", () => ({
-  TenantContextManager: { runWithTenantContext: mocks.runWithTenant },
 }));
 
 vi.mock("@/services/ingestion/document-ingestion", () => ({
@@ -80,10 +72,16 @@ describe("POST /api/v1/ingest/document resource limits", () => {
 
     expect(response.status).toBe(422);
     expect(body).toMatchObject({ success: false, rolledBack: true, processedChunks: 0, failedChunks: 1 });
+    expect(mocks.ingest).toHaveBeenCalledWith(
+      "valid brand profile text",
+      { source: "brand-profile", documentId: "brand-profile" },
+      undefined,
+      { tenantId: "tenant-test", userId: "user-test", requestId: expect.stringMatching(/^req-ingest-/) },
+    );
   });
 
 
-  it("returns multi-status when a non-atomic ingestion has failed chunks", async () => {
+  it("returns multi-status when provider preparation fails for some chunks", async () => {
     mocks.ingest.mockResolvedValueOnce({
       success: false,
       tenantId: "tenant-test",
