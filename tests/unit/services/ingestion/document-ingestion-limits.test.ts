@@ -79,7 +79,7 @@ describe("DocumentIngestionService resource boundary", () => {
 
   it("preserves the existing profile when required provider preparation fails", async () => {
     mocks.chunkText.mockReturnValue(["first chunk", "second chunk"]);
-    mocks.generateEmbedding.mockReset()
+    mocks.generateEmbedding
       .mockResolvedValueOnce([0.1, 0.2])
       .mockRejectedValueOnce(new Error("embedding provider unavailable"));
     const vectorStore = {
@@ -111,7 +111,7 @@ describe("DocumentIngestionService resource boundary", () => {
   });
 
   it("commits a profile replacement only when every chunk succeeds", async () => {
-    mocks.generateEmbedding.mockReset().mockResolvedValue([0.1, 0.2]);
+
     mocks.chunkText.mockReturnValue(["first chunk", "second chunk"]);
     const vectorStore = {
       replaceDocument: vi.fn(async () => undefined),
@@ -129,6 +129,7 @@ describe("DocumentIngestionService resource boundary", () => {
 
     expect(result).toMatchObject({ success: true, totalChunks: 2, processedChunks: 2, failedChunks: 0 });
     expect(result.rolledBack).toBeUndefined();
+    expect(vectorStore.replaceDocument).toHaveBeenCalledWith("tenant-test", "brand-profile");
     expect(vectorStore.insertEmbedding).toHaveBeenCalledWith(
       "tenant-test",
       "first chunk",
@@ -139,7 +140,7 @@ describe("DocumentIngestionService resource boundary", () => {
 
 
   it("derives a stable server-side identity for each supporting file", async () => {
-    mocks.generateEmbedding.mockReset().mockResolvedValue([0.1, 0.2]);
+
     mocks.chunkText.mockReturnValue(["supporting file chunk"]);
     const vectorStore = {
       replaceDocument: vi.fn(async () => undefined),
@@ -177,7 +178,7 @@ describe("DocumentIngestionService resource boundary", () => {
   });
 
   it("keeps case-distinct supporting filenames distinct and ignores client document IDs", async () => {
-    mocks.generateEmbedding.mockReset().mockResolvedValue([0.1, 0.2]);
+
     mocks.chunkText.mockReturnValue(["supporting file chunk"]);
     const vectorStore = {
       replaceDocument: vi.fn(async () => undefined),
