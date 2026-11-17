@@ -45,29 +45,34 @@ describe("VectorStoreService resource boundary", () => {
 
     await store.replaceDocument("tenant-a", "brand-profile");
 
-    expect(query).toHaveBeenCalledTimes(4);
+    expect(query).toHaveBeenCalledTimes(5);
     expect(query).toHaveBeenNthCalledWith(
       1,
+      expect.stringContaining("pg_advisory_xact_lock"),
+      ["tenant-a", "oxenn:tenant-graph-write"],
+    );
+    expect(query).toHaveBeenNthCalledWith(
+      2,
       expect.stringContaining("pg_advisory_xact_lock"),
       ["tenant-a", "brand-profile"],
     );
     expect(query).toHaveBeenNthCalledWith(
-      2,
+      3,
       expect.stringContaining("metadata ->> 'source' = 'brand-profile-form'"),
       ["tenant-a", "brand-profile", null],
     );
-    expect(query.mock.calls[1][0]).toContain("metadata ->> 'documentType' = 'brand-context'");
-    expect(query).toHaveBeenNthCalledWith(
-      3,
-      expect.stringContaining("source_chunk_ids"),
-      ["tenant-a", ["chunk-a", "chunk-b"]],
-    );
-    expect(query.mock.calls[2][0]).toContain("jsonb_array_elements_text");
-    expect(query.mock.calls[2][0]).toContain("DELETE FROM kg_relationships");
-    expect(query.mock.calls[2][0]).toContain("source_provenance_incomplete");
-    expect(query.mock.calls[2][0]).toContain("FOR UPDATE");
+    expect(query.mock.calls[2][0]).toContain("metadata ->> 'documentType' = 'brand-context'");
     expect(query).toHaveBeenNthCalledWith(
       4,
+      expect.stringContaining("properties -> 'source_chunk_ids' ?| $2::text[]"),
+      ["tenant-a", ["chunk-a", "chunk-b"]],
+    );
+    expect(query.mock.calls[3][0]).toContain("jsonb_array_elements_text");
+    expect(query.mock.calls[3][0]).toContain("DELETE FROM kg_relationships");
+    expect(query.mock.calls[3][0]).toContain("source_provenance_incomplete");
+    expect(query.mock.calls[3][0]).toContain("FOR UPDATE");
+    expect(query).toHaveBeenNthCalledWith(
+      5,
       expect.stringContaining("DELETE FROM document_embeddings"),
       ["tenant-a", "brand-profile", null],
     );
@@ -86,12 +91,12 @@ describe("VectorStoreService resource boundary", () => {
     await store.replaceDocument("tenant-a", "brand-supporting-document:abc123", "Market Notes.md");
 
     expect(query).toHaveBeenNthCalledWith(
-      2,
+      3,
       expect.stringContaining("metadata ->> 'originalFilename' = $3"),
       ["tenant-a", "brand-supporting-document:abc123", "Market Notes.md"],
     );
     expect(query).toHaveBeenNthCalledWith(
-      4,
+      5,
       expect.stringContaining("DELETE FROM document_embeddings"),
       ["tenant-a", "brand-supporting-document:abc123", "Market Notes.md"],
     );

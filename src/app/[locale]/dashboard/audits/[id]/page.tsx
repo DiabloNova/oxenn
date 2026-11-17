@@ -33,7 +33,7 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
     const returnTo = `/${locale}/dashboard/audits/${id}`;
     redirect(`/${locale}/login?returnTo=${encodeURIComponent(returnTo)}`);
   }
-  const audit = await getPremiumAuditById(id);
+  const audit = await getPremiumAuditById(id, session);
   if (!audit) notFound();
   const metrics = Object.entries(audit.metrics).filter(([, value]) => typeof value === "number" || typeof value === "string");
   const date = new Date(audit.createdAt).toLocaleString(isFa ? "fa-IR" : "en-US", { dateStyle: "full", timeStyle: "short" });

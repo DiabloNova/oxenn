@@ -342,8 +342,9 @@ export async function testDocumentIngestion() {
   let databaseFailureWasPropagated = false;
   try {
     await failingIngestionService.ingestDocument(partialRawText, { docType: "partial" }, { maxChunkSize: 30, overlap: 0 }, { tenantId: tenantAId, userId: "user-01", requestId: "req-ingest-02" });
-  } catch {
-    databaseFailureWasPropagated = true;
+  } catch (error) {
+    databaseFailureWasPropagated = error instanceof Error
+      && error.message === "Simulated database insertion failure for this chunk";
   }
   if (!databaseFailureWasPropagated) {
     throw new Error("Ingestion Test Failure: Database write errors must abort the atomic write transaction.");

@@ -44,10 +44,12 @@ vi.mock("@/services/ingestion/document-ingestion", () => ({
 import { TenantTransactionOutcomeError } from "@/core/database/tenant-context";
 import { POST } from "@/app/api/v1/ingest/document/route";
 
-function makeRequest(payload: unknown): NextRequest {
+function makeRequest(payload: unknown, requestId?: string): NextRequest {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (requestId) headers["x-request-id"] = requestId;
   return new NextRequest("http://localhost/api/v1/ingest/document", {
     method: "POST",
-    headers: { "content-type": "application/json", "x-request-id": "request-test" },
+    headers,
     body: JSON.stringify(payload),
   });
 }
@@ -187,7 +189,7 @@ describe("POST /api/v1/ingest/document", () => {
 
   it("preserves the successful response and forwards authorized tenant context", async () => {
     const metadata = { source: "route-test" };
-    const response = await POST(makeRequest({ text: "valid document text", metadata }));
+    const response = await POST(makeRequest({ text: "valid document text", metadata }, "request-test"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -197,6 +199,23 @@ describe("POST /api/v1/ingest/document", () => {
       metadata,
       undefined,
       { tenantId: "tenant-test", userId: "user-test", requestId: "request-test" },
+    );
+  });
+
+  it("generates a request ID when the caller does not provide one", async () => {
+    const metadata = { source: "route-test" };
+    const response = await POST(makeRequest({ text: "valid document text", metadata }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.ingest).toHaveBeenCalledWith(
+      "valid document text",
+      metadata,
+      undefined,
+      expect.objectContaining({
+        tenantId: "tenant-test",
+        userId: "user-test",
+        requestId: expect.stringMatching(/^req-ingest-\d+$/),
+      }),
     );
   });
 

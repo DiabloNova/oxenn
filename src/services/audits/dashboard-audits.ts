@@ -27,8 +27,13 @@ function mapAudit(row: PremiumAuditRow): PremiumAuditRecord {
     metrics: parseObject(row.metrics), issues: parseArray(row.issues), recommendations: parseArray(row.recommendations),
   };
 }
-async function withTenant<T>(work: (tenantId: string, pg: PostgresClient) => Promise<T>): Promise<T> {
-  const session = await requireSession();
+type AuthenticatedSession = Awaited<ReturnType<typeof requireSession>>;
+
+async function withTenant<T>(
+  work: (tenantId: string, pg: PostgresClient) => Promise<T>,
+  existingSession?: AuthenticatedSession,
+): Promise<T> {
+  const session = existingSession ?? await requireSession();
   if (!session.user?.workspaceId) throw new Error("Unauthorized: An active workspace is required to view audit reports.");
   const tenantId = session.user.workspaceId;
   const pg = PostgresClient.getInstance();
@@ -67,7 +72,10 @@ export async function listPremiumAudits(options: { page?: number; query?: string
     };
   });
 }
-export async function getPremiumAuditById(id: string): Promise<PremiumAuditRecord | null> {
+export async function getPremiumAuditById(
+  id: string,
+  session?: AuthenticatedSession,
+): Promise<PremiumAuditRecord | null> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return null;
   return withTenant(async (tenantId, pg) => {
     const result = await pg.query<PremiumAuditRow>(
@@ -76,5 +84,5 @@ export async function getPremiumAuditById(id: string): Promise<PremiumAuditRecor
       [tenantId, id],
     );
     return result.rows[0] ? mapAudit(result.rows[0]) : null;
-  });
+  }, session);
 }

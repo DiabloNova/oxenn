@@ -6,6 +6,7 @@
 import { PostgresClient } from "../../features/admin/infrastructure/persistence/postgres";
 import { DocumentEmbedding } from "../../features/ai-intelligence/domain/types";
 import { MAX_CHUNK_SIZE, validateMetadata, validateRagResultLimit } from "../ai/resource-limits";
+import { acquireTenantGraphWriteLock } from "./graph-write-lock";
 
 export class VectorStoreService {
   private pg: PostgresClient;
@@ -82,7 +83,11 @@ export class VectorStoreService {
       throw new RangeError("A tenant and stable document ID are required for replacement.");
     }
 
-    // Serialize concurrent updates to the same document without blocking other documents.
+    // Acquire the shared graph lock before any document or relationship row locks.
+    // Graph upserts take this same transaction-scoped lock first.
+    await acquireTenantGraphWriteLock(this.pg, tenantId);
+
+    // Serialize concurrent updates to this specific document.
     await this.pg.query(
       "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
       [tenantId, documentId],

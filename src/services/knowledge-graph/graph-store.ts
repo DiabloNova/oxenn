@@ -6,6 +6,7 @@
 import { PostgresClient } from "../../features/admin/infrastructure/persistence/postgres";
 import { TenantContextManager } from "../../core/database/tenant-context";
 import { ExtractedGraph, ExtractedEntity } from "../ai/graph-extraction";
+import { acquireTenantGraphWriteLock } from "./graph-write-lock";
 
 export class GraphStoreService {
   private pg: PostgresClient;
@@ -24,6 +25,12 @@ export class GraphStoreService {
   ): Promise<{ entityIds: Record<string, string>; relationshipIds: string[] }> {
     // 1. Resolve active tenant isolation boundary
     const tenantId = TenantContextManager.getRequiredTenantId();
+
+    // Hold one tenant-scoped transaction lock across every graph mutation.
+    // Ingestion may call this service repeatedly for different chunks within
+    // the same transaction, so per-call edge sorting alone cannot guarantee a
+    // transaction-wide lock order. Document replacement takes this same lock.
+    await acquireTenantGraphWriteLock(this.pg, tenantId);
 
     const entityIds: Record<string, string> = {};
     const relationshipIds: string[] = [];
@@ -142,13 +149,6 @@ export class GraphStoreService {
       delete incomingProperties.source_chunk_id;
       delete incomingProperties.source_chunk_ids;
       delete incomingProperties.source_provenance_incomplete;
-
-      // Serialize upserts for the same tenant and resolved entity-ID pair. This
-      // protects edge-level provenance; entity creation by normalized name is separate.
-      await this.pg.query(
-        "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
-        [tenantId, `${sourceId}:${targetId}:${relType.toLowerCase()}`],
-      );
 
       // Check if relationship already exists within this tenant.
       const selectRelSql = `
