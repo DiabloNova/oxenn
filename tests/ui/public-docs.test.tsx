@@ -36,12 +36,11 @@ describe("public documentation Markdown renderer", () => {
   });
 
   it("maps only language README links and preserves their fragments", () => {
-    render(<MarkdownContent locale="fa" markdown="[English overview](../en/README.md#overview) [pricing](/pricing) [next](./getting-started.md)" />);
+    const { container } = render(<MarkdownContent locale="fa" markdown="[English overview](../en/README.md#overview) [pricing](/pricing) [next](./getting-started.md)" />);
     expect(screen.getByRole("link", { name: "English overview" })).toHaveAttribute("href", "/en/public-docs#overview");
     expect(screen.queryByRole("link", { name: "pricing" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "next" })).not.toBeInTheDocument();
-    expect(screen.getByText("pricing")).toBeInTheDocument();
-    expect(screen.getByText("next")).toBeInTheDocument();
+    expect(container.querySelector("p")).toHaveTextContent("English overview pricing next");
   });
 
   it("supports case-insensitive HTTP(S) schemes", () => {
