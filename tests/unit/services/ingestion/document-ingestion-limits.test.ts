@@ -45,7 +45,7 @@ beforeEach(() => {
   });
   mocks.chunkText.mockReset().mockReturnValue(["chunk"]);
   mocks.generateEmbedding.mockReset().mockResolvedValue([0.1, 0.2]);
-  mocks.analyzeSentiment.mockReset().mockResolvedValue({ score: 0, label: "neutral", confidence: 0.5 });
+  mocks.analyzeSentiment.mockReset().mockResolvedValue({ score: 0, label: "neutral", confidence: 0.5, emotions: [] });
   mocks.extractGraphEntities.mockReset().mockResolvedValue({ entities: [], relationships: [] });
 });
 

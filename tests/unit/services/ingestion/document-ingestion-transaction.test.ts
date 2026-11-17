@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
-  const client = { query: vi.fn(async () => ({ rowCount: 1, rows: [] })), release: vi.fn() };
+  const client = { query: vi.fn(async (_sql: string, _params?: unknown[]) => ({ rowCount: 1, rows: [] })), release: vi.fn() };
   return {
     client,
     connectClient: vi.fn(async () => client),
     chunkText: vi.fn(() => ["prepared chunk"]),
     generateEmbedding: vi.fn(async () => [0.1, 0.2]),
-    analyzeSentiment: vi.fn(async () => ({ score: 0, label: "neutral", confidence: 0.5 })),
+    analyzeSentiment: vi.fn(async () => ({ score: 0, label: "neutral", confidence: 0.5, emotions: [] })),
     extractGraphEntities: vi.fn(async () => ({ entities: [], relationships: [] })),
   };
 });
