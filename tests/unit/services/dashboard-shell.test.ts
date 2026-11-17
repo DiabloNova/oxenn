@@ -20,7 +20,13 @@ describe("Dashboard Shell Architecture", () => {
       const section = dashboardNavigation.find((entry) => entry.id === sectionId);
       expect(section).toBeDefined();
       expect(section?.items.map((item) => item.id)).toEqual(itemIds);
-      expect(section?.items.every((item) => Boolean(item.href) || Boolean(item.children?.length && item.children.every((child) => Boolean(child.href)))).toBe(true);
+      expect(
+        section?.items.every(
+          (item) =>
+            Boolean(item.href) ||
+            Boolean(item.children?.length && item.children.every((child) => Boolean(child.href))),
+        ),
+      ).toBe(true);
     }
   });
 
