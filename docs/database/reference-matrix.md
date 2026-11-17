@@ -2128,7 +2128,7 @@
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
-- **Consumers:** `src/app/api/v1/audit/engine/route.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/services/dashboard-home/index.ts`
+- **Consumers:** `src/app/api/v1/audit/engine/route.ts`, `src/app/api/v1/audit/premium/route.ts`, `src/services/audits/dashboard-audits.ts`, `src/services/dashboard-home/index.ts`
 
 ### Columns
 

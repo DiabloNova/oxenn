@@ -150,7 +150,15 @@ describe("DocumentIngestionService resource boundary", () => {
       documentType: "brand-supporting-document",
       originalFilename: "Market Notes.md",
     }, undefined, tenantContext);
+    await service.ingestDocument("supporting file content", {
+      source: "brand-profile-file",
+      documentType: "brand-supporting-document",
+      originalFilename: "Market Notes.md",
+    }, undefined, tenantContext);
 
+    const firstDocumentId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    const secondDocumentId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[1][1];
+    expect(secondDocumentId).toBe(firstDocumentId);
     expect(result.success).toBe(true);
     expect(vectorStore.replaceDocument).toHaveBeenCalledWith(
       "tenant-test",
@@ -178,12 +186,15 @@ describe("DocumentIngestionService resource boundary", () => {
     await service.ingestDocument("file", { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: "notes.md", documentId: "forged" }, undefined, tenantContext);
     await service.ingestDocument("file", { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: "Cafe\u0301.md" }, undefined, tenantContext);
     await service.ingestDocument("file", { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: "Café.md" }, undefined, tenantContext);
+    await service.ingestDocument("file", { source: "brand-profile-file", documentType: "brand-supporting-document", originalFilename: "Notes.md " }, undefined, tenantContext);
 
     const firstId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[0][1];
     const secondId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[1][1];
     const thirdId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[2][1];
     const fourthId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[3][1];
+    const paddedId = (vectorStore.replaceDocument as ReturnType<typeof vi.fn>).mock.calls[4][1];
     expect(firstId).not.toBe(secondId);
+    expect(firstId).not.toBe(paddedId);
     expect(thirdId).toBe(fourthId);
     const metadata = (vectorStore.insertEmbedding as ReturnType<typeof vi.fn>).mock.calls[0][3];
     expect(metadata.documentId).toMatch(/^brand-supporting-document:[a-f0-9]{64}$/);
