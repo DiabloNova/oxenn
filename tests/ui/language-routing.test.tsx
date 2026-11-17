@@ -172,6 +172,9 @@ describe("localized language routing contract", () => {
   });
 
   afterEach(() => {
+    // Notify the external preference stores before unmounting their subscribers.
+    // This resets module-level in-memory fallbacks between isolated test cases.
+    window.dispatchEvent(new StorageEvent("storage", { key: null }));
     cleanup();
     vi.useRealTimers();
   });
