@@ -70,6 +70,16 @@ export function BrandProfileForm() {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok || body.success !== true || Number(body.failedChunks ?? 0) > 0) {
+      if (body.code === "DOCUMENT_REPLACEMENT_FAILED") {
+        const preserved = body.preservationStatus === "preserved";
+        throw new Error(preserved
+          ? (isFa
+            ? "جایگزینی سند انجام نشد، اما نسخه قبلی حفظ شده است. محتوا را بررسی کنید و دوباره تلاش کنید."
+            : "The replacement failed, but the previous document is preserved. Review the content and retry.")
+          : (isFa
+            ? "وضعیت نهایی جایگزینی سند تأیید نشد. پیش از تلاش مجدد، صفحه را تازه‌سازی کنید و وضعیت فعلی سند را بررسی کنید."
+            : "The replacement outcome could not be confirmed. Reload this page and verify the current document before retrying."));
+      }
       if (body.rolledBack) {
         throw new Error(isFa
           ? `ثبت کامل انجام نشد؛ نسخه قبلی حفظ شد. ${body.failedChunks ?? 0} قطعه ناموفق بود. پس از بررسی محتوا دوباره تلاش کنید.`
@@ -168,7 +178,7 @@ export function BrandProfileForm() {
           {uploadedNames.length > 0 && <ul className="list-disc ps-5 text-xs text-[var(--text-muted)]">{uploadedNames.map((name, index) => <li key={name + "-" + index}>{name}</li>)}</ul>}
         </section>
 
-        {message && <p role="status" aria-live="polite" className={"rounded-xl border p-4 text-sm leading-6 " + (messageKind === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-rose-500/30 bg-rose-500/10 text-rose-400")}>{message}</p>}
+        {message && <p role={messageKind === "error" ? "alert" : "status"} aria-live="polite" className={"rounded-xl border p-4 text-sm leading-6 " + (messageKind === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-rose-500/30 bg-rose-500/10 text-rose-400")}>{message}</p>}
         <div className="space-y-3">
           <button type="submit" disabled={busy} className="w-full md:w-auto rounded-xl bg-[var(--sky-blue-500)] px-5 py-3 text-sm font-extrabold text-white disabled:opacity-50">{busy ? (isFa ? "در حال پردازش..." : "Processing...") : (isFa ? "ثبت اطلاعات در مخزن دانش" : "Add information to knowledge store")}</button>
           <p className="text-[11px] leading-6 text-[var(--text-muted)]">{isFa ? "ثبت اطلاعات در مخزن دانش به‌معنای ایجاد نسخه رسمی و نسخه‌دار Product Intelligence Profile نیست؛ اتصال گردش‌کار نسخه‌سازی PIP در این بخش هنوز ارائه نشده است." : "Adding information to the knowledge store does not create an official versioned Product Intelligence Profile; versioned PIP workflow is not yet available in this section."}</p>

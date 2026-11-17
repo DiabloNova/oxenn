@@ -13,7 +13,12 @@ export interface ChunkError { chunkIndex: number; error: string }
 export interface IngestionTenantContext { tenantId: string; userId: string | null; requestId: string | null }
 export interface IngestionResult {
   success: boolean; tenantId: string; totalChunks: number; processedChunks: number; failedChunks: number;
-  errors: ChunkError[]; rolledBack?: boolean; attemptedProcessedChunks?: number;
+  errors: ChunkError[];
+  rolledBack?: boolean;
+  preservationStatus?: "preserved" | "unknown";
+  failureCode?: "DOCUMENT_REPLACEMENT_FAILED";
+  failureStage?: "preparation";
+  attemptedProcessedChunks?: number;
 }
 interface PreparedChunk {
   index: number; content: string; embedding: number[];
@@ -99,15 +104,25 @@ export class DocumentIngestionService {
 
     const failedChunks = errors.length;
     if (documentId && failedChunks > 0) {
-      return { success: false, tenantId, totalChunks, processedChunks: 0, failedChunks, errors,
-        rolledBack: true, attemptedProcessedChunks: prepared.length };
+      return {
+        success: false,
+        tenantId,
+        totalChunks,
+        processedChunks: 0,
+        failedChunks,
+        errors,
+        rolledBack: false,
+        preservationStatus: "preserved",
+        failureCode: "DOCUMENT_REPLACEMENT_FAILED",
+        failureStage: "preparation",
+        attemptedProcessedChunks: prepared.length,
+      };
     }
     if (prepared.length === 0) return { success: false, tenantId, totalChunks, processedChunks: 0, failedChunks, errors };
 
     // Phase 2: all database writes, including replacement and provenance updates,
     // share one short transaction. Database errors cannot be swallowed as provider errors.
-    try {
-      await TenantContextManager.runWithTenantContext(tenantId, userId, requestId, async () => {
+    await TenantContextManager.runWithTenantContext(tenantId, userId, requestId, async () => {
         if (documentId) {
           const legacyFilename = source === "brand-profile-file" && typeof safeMetadata.originalFilename === "string"
             ? safeMetadata.originalFilename : undefined;
@@ -125,13 +140,7 @@ export class DocumentIngestionService {
           const chunkId = (inserted as { id?: string })?.id;
           if (chunk.graph && chunkId) await this.graphStore.upsertEntitiesAndRelationships(chunk.graph, chunkId);
         }
-      });
-    } catch (error) {
-      // The transaction manager has already rolled back. Preserve the previous
-      // document, but propagate persistence failures so callers return a 5xx.
-      console.error("[DocumentIngestionService] Replacement transaction rolled back:", error instanceof Error ? error.message : String(error));
-      throw error;
-    }
+    }, documentId ? { reportTransactionOutcome: true } : undefined);
 
     return { success: failedChunks === 0 && prepared.length === totalChunks, tenantId, totalChunks,
       processedChunks: prepared.length, failedChunks, errors };

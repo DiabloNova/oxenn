@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DocumentIngestionService } from "@/services/ingestion/document-ingestion";
+import { TenantTransactionOutcomeError } from "@/core/database/tenant-context";
 import { authorizationErrorResponse, authorizeApiRequest } from "@/services/auth/authorization";
 import {
   ingestionRequestSchema,
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const result = await ingestionService.ingestDocument(text, metadata, chunkingOptions, { tenantId, userId, requestId });
 
-    if (result.rolledBack) {
+    if (result.failureCode === "DOCUMENT_REPLACEMENT_FAILED") {
       return NextResponse.json(result, { status: 422 });
     }
 
@@ -54,6 +55,25 @@ export async function POST(req: NextRequest) {
     if (authResponse) return authResponse;
     if (error instanceof RangeError) {
       return NextResponse.json({ error: "Invalid ingestion input." }, { status: 400 });
+    }
+    if (error instanceof TenantTransactionOutcomeError) {
+      const preservationStatus = error.outcome === "not_started" || error.outcome === "rolled_back"
+        ? "preserved"
+        : "unknown";
+      console.error("[API Document Ingestion Replacement Failure]:", {
+        outcome: error.outcome,
+        phase: error.phase,
+        cause: error.cause,
+        rollbackError: error.rollbackError,
+      });
+      return NextResponse.json({
+        success: false,
+        error: "Document replacement failed.",
+        code: "DOCUMENT_REPLACEMENT_FAILED",
+        preservationStatus,
+        rolledBack: error.outcome === "rolled_back",
+        ...(preservationStatus === "unknown" ? { recoveryAction: "reload_and_verify" } : {}),
+      }, { status: 500 });
     }
     console.error("[API Document Ingestion Route Error]:", error);
     return NextResponse.json(
