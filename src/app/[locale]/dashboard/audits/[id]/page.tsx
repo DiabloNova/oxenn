@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getSession } from "@/services/auth/session";
 import { getPremiumAuditById } from "@/services/audits/dashboard-audits";
 interface AuditDetailPageProps { params: Promise<{ locale: string; id: string }> }
 const METRIC_LABELS: Record<string, { en: string; fa: string }> = {
@@ -27,6 +28,11 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
   const { locale: requestedLocale, id } = await params;
   const locale = requestedLocale === "fa" ? "fa" : "en";
   const isFa = locale === "fa";
+  const session = await getSession();
+  if (!session?.user?.workspaceId) {
+    const returnTo = `/${locale}/dashboard/audits/${id}`;
+    redirect(`/${locale}/login?returnTo=${encodeURIComponent(returnTo)}`);
+  }
   const audit = await getPremiumAuditById(id);
   if (!audit) notFound();
   const metrics = Object.entries(audit.metrics).filter(([, value]) => typeof value === "number" || typeof value === "string");
