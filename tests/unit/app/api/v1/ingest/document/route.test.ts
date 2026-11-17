@@ -47,7 +47,7 @@ import { POST } from "@/app/api/v1/ingest/document/route";
 function makeRequest(payload: unknown): NextRequest {
   return new NextRequest("http://localhost/api/v1/ingest/document", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-request-id": "request-test" },
     body: JSON.stringify(payload),
   });
 }
@@ -185,12 +185,19 @@ describe("POST /api/v1/ingest/document", () => {
     expect(mocks.ingest).not.toHaveBeenCalled();
   });
 
-  it("preserves the existing successful response behavior", async () => {
-    const response = await POST(makeRequest({ text: "valid document text" }));
+  it("preserves the successful response and forwards authorized tenant context", async () => {
+    const metadata = { source: "route-test" };
+    const response = await POST(makeRequest({ text: "valid document text", metadata }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ success: true, processedChunks: 1, failedChunks: 0 });
+    expect(mocks.ingest).toHaveBeenCalledWith(
+      "valid document text",
+      metadata,
+      undefined,
+      { tenantId: "tenant-test", userId: "user-test", requestId: "request-test" },
+    );
   });
 
   it("returns multi-status when provider preparation partially fails for a non-replacement document", async () => {

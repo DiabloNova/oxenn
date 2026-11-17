@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => {
     setupError: undefined as Error | undefined,
     commitAppliedBeforeError: false,
     transactionOpen: false,
+    rollbackGate: undefined as Promise<void> | undefined,
+    rollbackStarted: undefined as (() => void) | undefined,
   };
 
   const query = vi.fn(async (sql: string) => {
@@ -29,6 +31,8 @@ const mocks = vi.hoisted(() => {
     }
     if (statement === "ROLLBACK") {
       if (state.rollbackError) throw state.rollbackError;
+      state.rollbackStarted?.();
+      if (state.rollbackGate) await state.rollbackGate;
       // A ROLLBACK response is an acknowledgement, even when the server reports
       // there was no active transaction (the COMMIT-uncertainty case).
       state.transactionOpen = false;
@@ -55,6 +59,8 @@ describe("TenantContextManager transaction outcome reporting", () => {
     mocks.state.setupError = undefined;
     mocks.state.commitAppliedBeforeError = false;
     mocks.state.transactionOpen = false;
+    mocks.state.rollbackGate = undefined;
+    mocks.state.rollbackStarted = undefined;
     mocks.query.mockClear();
     mocks.release.mockClear();
     mocks.connectClient.mockClear();
@@ -78,9 +84,24 @@ describe("TenantContextManager transaction outcome reporting", () => {
 
   it("reports confirmed rollback only after the ROLLBACK query resolves", async () => {
     const operationError = new Error("write failed");
-    const error = await TenantContextManager.runWithTenantContext(
+    let resolveRollback!: () => void;
+    let notifyRollbackStarted!: () => void;
+    const rollbackStarted = new Promise<void>((resolve) => { notifyRollbackStarted = resolve; });
+    mocks.state.rollbackGate = new Promise<void>((resolve) => { resolveRollback = resolve; });
+    mocks.state.rollbackStarted = notifyRollbackStarted;
+
+    let outcomeSettled = false;
+    const outcomePromise = TenantContextManager.runWithTenantContext(
       "tenant-a", "user-a", "request-a", async () => { throw operationError; }, { reportTransactionOutcome: true },
-    ).catch((caught: unknown) => caught);
+    ).catch((caught: unknown) => caught).then((error) => {
+      outcomeSettled = true;
+      return error;
+    });
+
+    await rollbackStarted;
+    expect(outcomeSettled).toBe(false);
+    resolveRollback();
+    const error = await outcomePromise;
 
     expect(error).toBeInstanceOf(TenantTransactionOutcomeError);
     expect(error).toMatchObject({ outcome: "rolled_back", phase: "work", cause: operationError });

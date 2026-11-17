@@ -48,6 +48,7 @@ describe("BrandProfileForm replacement failure messaging", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The replacement failed, but the previous document is preserved.",
     );
+    expect(screen.getByRole("alert")).toHaveAttribute("aria-live", "assertive");
     expect(screen.queryByText(/brand profile was updated/i)).not.toBeInTheDocument();
   });
 
@@ -122,6 +123,7 @@ describe("BrandProfileForm replacement failure messaging", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "The brand profile was updated in the workspace knowledge store.",
     );
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
