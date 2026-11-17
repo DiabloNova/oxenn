@@ -1,7 +1,7 @@
 // Application metadata configuration
 export const siteConfig = {
-  name: "seorchable.ir",
-  description: "Next-generation software for measuring, tracking, and optimizing brand visibility across generative search engines, answer engines, and LLMs.",
+  name: "Oxenn",
+  description: "Product and market intelligence for clearer decisions. Connect product context, digital presence, and market evidence in one view.",
   url: "https://seorchable.ir",
   ogImage: "https://seorchable.ir/og.png",
   links: {

@@ -2,10 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Moon, Sun, Languages, Receipt, ChevronDown, Sparkles, LogIn, Menu } from "lucide-react";
+import { Moon, Sun, Languages, ChevronDown, Sparkles, LogIn, Menu } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
-import { marketingContent as C } from "./content";
-import { SeorchableLogo } from "./SeorchableLogo";
 import { Dropdown } from "@/components/Dropdown";
 import AppSidebar from "@/components/navigation/AppSidebar";
 
@@ -37,9 +35,9 @@ export function LandingHeader() {
   const platformItems = [
     { label: isFa ? "قابلیت‌های پلتفرم" : "Features", value: "features", href: `/${language}/features` },
     { label: isFa ? "صنایع هدف" : "Industries", value: "industries", href: `/${language}/industries` },
-    { label: isFa ? "معماری اکوسیستم" : "Ecosystem Architecture", value: "ecosystem", href: `/${language}/#ecosystem` },
-    { label: isFa ? "بررسی کلان پلتفرم" : "Platform Overview", value: "overview", href: `/${language}/#overview` },
-    { label: isFa ? "داستان چرخه محصول" : "Product Lifecycle Story", value: "story", href: `/${language}/#story` },
+{ label: isFa ? "معماری اکوسیستم" : "Ecosystem Architecture", value: "ecosystem", href: `/${language}/#capabilities` },
+  { label: isFa ? "بررسی کلان پلتفرم" : "Platform Overview", value: "overview", href: `/${language}/#platform` },
+  { label: isFa ? "داستان چرخه محصول" : "Product Lifecycle Story", value: "story", href: `/${language}/#workflow` },
   ];
 
   return (
@@ -71,10 +69,11 @@ export function LandingHeader() {
           {/* Brand & Logo */}
           <Link
             href={`/${language}`}
-            aria-label={isFa ? "صفحه نخست سئورچبل" : "Seorchable Homepage"}
-            className="flex items-center justify-center shrink-0 rounded-[var(--radius-md)] focus-visible:ring-2 focus-visible:ring-[var(--sky-blue-500)]/40 focus-visible:outline-none outline-none"
+            aria-label={isFa ? "صفحه نخست اوکسن" : "Oxenn homepage"}
+            className="flex items-center gap-2 shrink-0 rounded-[var(--radius-md)] focus-visible:ring-2 focus-visible:ring-[var(--sky-blue-500)]/40 focus-visible:outline-none outline-none"
           >
-            <SeorchableLogo className="w-10 h-10 transition-transform duration-300 hover:scale-[1.05]" />
+            <span className="ox-brand-mark" aria-hidden="true">O</span>
+            <span className="font-display text-sm font-bold tracking-wide text-[var(--text-primary)]">OXENN</span>
           </Link>
 
           {/* Enterprise-grade Nav Menu */}
@@ -111,18 +110,18 @@ export function LandingHeader() {
 
             {/* Comparison table link */}
             <a
-              href={`/${language}/#why-different`}
+              href={`/${language}/#approach`}
               className="px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)] transition-colors"
             >
-              {isFa ? "تمایز ما" : "Why Us"}
+              {isFa ? "رویکرد ما" : "Our approach"}
             </a>
 
-            {/* Pricing Link */}
+            {/* Audit entry point */}
             <a
-              href={`/${language}/#pricing`}
+              href={`/${language}/#audit`}
               className="px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)] transition-colors"
             >
-              {isFa ? "تعرفه‌ها" : "Pricing"}
+              {isFa ? "ممیزی رایگان" : "Free audit"}
             </a>
 
             {/* Documentation Section (Opens in new browser tab) */}
@@ -184,15 +183,6 @@ export function LandingHeader() {
               {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
-            {/* Invoice Icon placed right next to Language and Theme Toggles */}
-            <Link
-              href={`/${language}/invoice`}
-              aria-label={isFa ? "پرداخت صورتحساب" : "Invoice Payment"}
-              className="grid place-items-center w-9 h-9 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--muted-surface)] border border-[var(--glass-border)] transition-colors"
-            >
-              <Receipt size={15} />
-            </Link>
-
             {/* Separator */}
             <span className="hidden sm:inline h-6 w-px bg-[var(--glass-border)]" />
 
@@ -205,7 +195,7 @@ export function LandingHeader() {
                 </button>
               </Link>
 
-              <Link href={`/${language}/#free-audit`} className="hidden sm:inline-block">
+              <Link href={`/${language}/#audit`} className="hidden sm:inline-block">
                 <button className="relative overflow-hidden group px-4 h-9 text-xs font-bold rounded-[var(--radius-md)] text-white bg-gradient-to-r from-[#38bdf8] to-[#f97316] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5">
                   <Sparkles size={13} className="animate-pulse" />
                   <span>{isFa ? "آنالیز رایگان" : "Free Audit"}</span>

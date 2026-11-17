@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ShieldCheck, Globe, AtSign, Send, Mail, MapPin, ArrowUpRight } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { marketingContent as C } from "./content";
-import { SeorchableLogo } from "./SeorchableLogo";
 
 /**
  * Enterprise Sitemap Footer for seorchable.ir.
@@ -52,7 +51,7 @@ export function LandingFooter() {
       heading: isFa ? "منابع" : "Resources",
       links: [
         { label: isFa ? "مرکز منابع" : "All Resources", href: `/${language}/resources` },
-        { label: isFa ? "ابزارهای رایگان سنجش" : "Free Tools", href: `/${language}/#free-audit` },
+        { label: isFa ? "ابزارهای رایگان سنجش" : "Free Tools", href: `/${language}/#audit` },
         { label: isFa ? "وبلاگ مهندسی" : "Corporate Blog", href: `/${language}/blog` },
         { label: isFa ? "مطالعات موردی موفقیت" : "Case Studies", href: `/${language}/blog` },
         { label: isFa ? "بنچ‌مارک‌های صنعت" : "Industry Benchmarks", href: `/${language}/blog` },
@@ -94,11 +93,9 @@ export function LandingFooter() {
         <div className="grid gap-12 xl:grid-cols-[1fr_3.5fr] pb-12 border-b border-[var(--border)]">
           {/* Brand & Mission block */}
           <div className="space-y-6 max-w-sm">
-            <Link href={`/${language}`} className="flex items-center gap-2.5 shrink-0">
-              <SeorchableLogo className="w-10 h-10" />
-              <span className="font-display font-black text-xl tracking-tight text-[var(--text-primary)]">
-                {C.brand[language]}
-              </span>
+            <Link href={`/${language}`} aria-label={isFa ? "صفحه نخست اوکسن" : "Oxenn homepage"} className="flex items-center gap-2.5 shrink-0">
+              <span className="ox-brand-mark" aria-hidden="true">O</span>
+              <span className="font-display font-black text-xl tracking-tight text-[var(--text-primary)]">OXENN</span>
             </Link>
 
             <p className="text-sm text-[var(--text-secondary)] leading-relaxed text-balance">

@@ -12,12 +12,12 @@ import "../globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: `${siteConfig.name} — هوشمندی و دیده‌شدن برند سئورچبل`,
+    default: "Oxenn — Product Intelligence",
     template: `%s | ${siteConfig.name}`,
   },
   description:
-    "سنجش، محافظت و بهینه‌سازی نحوه‌ی ارجاع به برند شما در ChatGPT، Gemini، Claude و Perplexity. پلتفرم نسل‌بعدی AEO و GEO با سئورچبل seorchable.ir.",
-  keywords: ["AEO", "GEO", "Brand Intelligence", "AI visibility", "سئورچبل", "seorchable.ir", "دیده‌شدن برند"],
+    "Product and market intelligence for clearer decisions. Connect product context, digital presence, and market evidence in one view.",
+  keywords: ["Oxenn", "Product Intelligence", "Market Intelligence", "Digital Discovery", "Product Strategy"],
   metadataBase: new URL(siteConfig.url),
   openGraph: {
     title: siteConfig.name,
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f6f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#101514" },
   ],
   colorScheme: "light dark",
 };
