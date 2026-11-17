@@ -33,7 +33,12 @@ export async function POST(req: NextRequest) {
     const result = await ingestionService.ingestDocument(text, metadata, chunkingOptions, { tenantId, userId, requestId });
 
     if (result.failureCode === "DOCUMENT_REPLACEMENT_FAILED") {
-      return NextResponse.json(result, { status: 422 });
+      const { failureCode, ...replacementFailure } = result;
+      return NextResponse.json({
+        ...replacementFailure,
+        error: "Document replacement failed.",
+        code: failureCode,
+      }, { status: 422 });
     }
 
     if (result.totalChunks > 0 && result.processedChunks === 0) {

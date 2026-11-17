@@ -99,7 +99,10 @@ describe("DocumentIngestionService resource boundary", () => {
     expect(mocks.runWithTenantContext).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       success: false,
-      rolledBack: true,
+      rolledBack: false,
+      preservationStatus: "preserved",
+      failureCode: "DOCUMENT_REPLACEMENT_FAILED",
+      failureStage: "preparation",
       totalChunks: 2,
       processedChunks: 0,
       attemptedProcessedChunks: 1,
