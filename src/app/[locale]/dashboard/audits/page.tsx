@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSession } from "@/services/auth/session";
 import { listPremiumAudits } from "@/services/audits/dashboard-audits";
 interface AuditsPageProps {
   params: Promise<{ locale: string }>;
@@ -8,6 +10,10 @@ export default async function AuditsPage({ params, searchParams }: AuditsPagePro
   const [{ locale: requestedLocale }, search] = await Promise.all([params, searchParams]);
   const locale = requestedLocale === "fa" ? "fa" : "en";
   const isFa = locale === "fa";
+  const session = await getSession();
+  if (!session?.user?.workspaceId) {
+    redirect(`/${locale}/login?returnTo=${encodeURIComponent(`/${locale}/dashboard/audits`)}`);
+  }
   const rawPage = Array.isArray(search.page) ? search.page[0] : search.page;
   const rawQuery = Array.isArray(search.q) ? search.q[0] : search.q;
   const result = await listPremiumAudits({ page: Number.parseInt(rawPage ?? "1", 10), query: rawQuery });
@@ -15,7 +21,7 @@ export default async function AuditsPage({ params, searchParams }: AuditsPagePro
   const querySuffix = result.query ? `&q=${encodeURIComponent(result.query)}` : "";
   const formatDate = (value: string) => new Date(value).toLocaleString(isFa ? "fa-IR" : "en-US", { dateStyle: "medium", timeStyle: "short" });
   return (
-    <main className="space-y-6" dir={isFa ? "rtl" : "ltr"}>
+    <div className="space-y-6" dir={isFa ? "rtl" : "ltr"}>
       <header className="flex flex-wrap items-end justify-between gap-4"><div>
         <h1 className="text-2xl font-black text-[var(--text-primary)]">{isFa ? "گزارش‌های ممیزی" : "Audit reports"}</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">{isFa ? "گزارش‌های ثبت‌شده در فضای کاری شما" : "Saved audit reports for your workspace"}</p>
@@ -38,6 +44,6 @@ export default async function AuditsPage({ params, searchParams }: AuditsPagePro
         <span className="text-xs text-[var(--text-secondary)]">{isFa ? `صفحه ${result.page} از ${result.pageCount}` : `Page ${result.page} of ${result.pageCount}`}</span>
         {result.page < result.pageCount ? <Link className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm" href={`${basePath}?page=${result.page + 1}${querySuffix}`}>{isFa ? "صفحهٔ بعد" : "Next"}</Link> : <span />}
       </nav>}
-    </main>
+    </div>
   );
 }

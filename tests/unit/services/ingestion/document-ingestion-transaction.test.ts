@@ -38,12 +38,12 @@ describe("document replacement transaction boundary", () => {
     const graphStore = { upsertEntitiesAndRelationships: vi.fn() };
     const service = new DocumentIngestionService(vectorStore as never, graphStore as never);
 
-    const result = await service.ingestDocument(
+    await expect(service.ingestDocument(
       "profile text",
       { source: "brand-profile", documentType: "brand-context" },
       undefined,
       { tenantId: "tenant-a", userId: "user-a", requestId: "request-a" },
-    );
+    )).rejects.toThrow("simulated database write failure");
 
     const statements = mocks.client.query.mock.calls.map(([sql]) => String(sql));
     expect(statements).toContain("BEGIN");
@@ -51,7 +51,6 @@ describe("document replacement transaction boundary", () => {
     expect(statements).toContain("ROLLBACK");
     expect(statements).not.toContain("COMMIT");
     expect(vectorStore.replaceDocument).toHaveBeenCalledWith("tenant-a", "brand-profile");
-    expect(result).toMatchObject({ success: false, rolledBack: true, processedChunks: 0, failedChunks: 1 });
     expect(mocks.client.release).toHaveBeenCalledTimes(1);
   });
 });

@@ -127,13 +127,10 @@ export class DocumentIngestionService {
         }
       });
     } catch (error) {
-      if (!documentId) throw error;
+      // The transaction manager has already rolled back. Preserve the previous
+      // document, but propagate persistence failures so callers return a 5xx.
       console.error("[DocumentIngestionService] Replacement transaction rolled back:", error instanceof Error ? error.message : String(error));
-      return {
-        success: false, tenantId, totalChunks, processedChunks: 0, failedChunks: totalChunks,
-        errors: [{ chunkIndex: -1, error: "Document replacement failed during database persistence; the previous document was preserved." }],
-        rolledBack: true, attemptedProcessedChunks: prepared.length,
-      };
+      throw error;
     }
 
     return { success: failedChunks === 0 && prepared.length === totalChunks, tenantId, totalChunks,

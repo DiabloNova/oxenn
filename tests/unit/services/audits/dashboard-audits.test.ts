@@ -24,6 +24,14 @@ describe("tenant-scoped premium audit history", () => {
     expect(result).toMatchObject({ page: 2, pageCount: 2, total: 21, query: "example.com" });
     expect(result.audits[0]).toMatchObject({ url: "https://example.com", score: 82, pagesAnalyzed: 4 });
   });
+  it("escapes LIKE metacharacters in user search text", async () => {
+    mocks.query.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    const result = await listPremiumAudits({ query: "100%_\\path" });
+    expect(result.query).toBe("100%_\\path");
+    expect(mocks.query.mock.calls[0][0]).toContain("ILIKE $2 ESCAPE chr(92)");
+    expect(mocks.query.mock.calls[0][1]).toEqual(["tenant-1", "%100\\%\\_\\\\path%"]);
+    expect(mocks.query.mock.calls[1][1]).toEqual(["tenant-1", "%100\\%\\_\\\\path%", 20, 0]);
+  });
   it("fetches detail by both workspace and UUID", async () => {
     const id = "2f1d4b67-62f5-4b4d-9b18-4b0b3e7e4c7a";
     mocks.query.mockResolvedValueOnce({ rows: [{ id, url: "https://example.com", score: 82, grade: "B", pages_analyzed: 4,

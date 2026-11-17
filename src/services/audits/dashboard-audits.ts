@@ -39,9 +39,10 @@ async function withTenant<T>(work: (tenantId: string, pg: PostgresClient) => Pro
 export async function listPremiumAudits(options: { page?: number; query?: string } = {}) {
   const requestedPage = Number.isSafeInteger(options.page) && Number(options.page) > 0 ? Math.min(Number(options.page), 1_000_000) : 1;
   const query = (options.query ?? "").trim().slice(0, 200);
+  const escapedQuery = query.replace(/[\\%_]/g, "\\$&");
   return withTenant(async (tenantId, pg) => {
-    const searchClause = query ? "AND url ILIKE $2" : "";
-    const searchParams = query ? [tenantId, `%${query}%`] : [tenantId];
+    const searchClause = query ? "AND url ILIKE $2 ESCAPE chr(92)" : "";
+    const searchParams = query ? [tenantId, `%${escapedQuery}%`] : [tenantId];
     const count = await pg.query<{ [column: string]: unknown; total: string }>(
       `SELECT COUNT(*)::text AS total FROM premium_audits WHERE organization_id = $1 ${searchClause}`,
       searchParams,
@@ -50,7 +51,7 @@ export async function listPremiumAudits(options: { page?: number; query?: string
     const pageCount = Math.max(1, Math.ceil(total / AUDIT_PAGE_SIZE));
     const page = Math.min(requestedPage, pageCount);
     const offset = (page - 1) * AUDIT_PAGE_SIZE;
-    const params = query ? [tenantId, `%${query}%`, AUDIT_PAGE_SIZE, offset] : [tenantId, AUDIT_PAGE_SIZE, offset];
+    const params = query ? [tenantId, `%${escapedQuery}%`, AUDIT_PAGE_SIZE, offset] : [tenantId, AUDIT_PAGE_SIZE, offset];
     const result = await pg.query<PremiumAuditRow>(
       `SELECT id, url, score, grade, pages_analyzed, created_at FROM premium_audits
        WHERE organization_id = $1 ${searchClause} ORDER BY created_at DESC, id DESC

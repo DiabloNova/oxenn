@@ -40,7 +40,7 @@ export async function ingestDocumentAction(data: {
       parsed.data.text, parsed.data.metadata, parsed.data.chunkingOptions, { tenantId, userId, requestId },
     );
 
-    return { success: true, result };
+    return { success: result.success, result };
   } catch (err: unknown) {
     console.error("[ingestDocumentAction Error]:", err);
     return { success: false, error: err instanceof Error ? err.message : "Internal Server Error" };

@@ -143,8 +143,8 @@ export class GraphStoreService {
       delete incomingProperties.source_chunk_ids;
       delete incomingProperties.source_provenance_incomplete;
 
-      // Serialize upserts for the same tenant-scoped edge so concurrent ingestions
-      // cannot create duplicate edges or lose source provenance.
+      // Serialize upserts for the same tenant and resolved entity-ID pair. This
+      // protects edge-level provenance; entity creation by normalized name is separate.
       await this.pg.query(
         "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
         [tenantId, `${sourceId}:${targetId}:${relType.toLowerCase()}`],
