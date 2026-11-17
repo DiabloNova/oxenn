@@ -22,6 +22,10 @@ vi.mock("@/services/audits/dashboard-audits", () => ({
 
 import AuditDetailPage from "@/app/[locale]/dashboard/audits/[id]/page";
 
+const authenticatedSession = {
+  user: { id: "user-1", workspaceId: "workspace-1" },
+};
+
 const audit = {
   id: "audit-123",
   url: "https://example.com",
@@ -43,9 +47,7 @@ function renderPage(locale = "en", id = audit.id) {
 describe("premium audit detail page authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getSession.mockResolvedValue({
-      user: { id: "user-1", workspaceId: "workspace-1" },
-    });
+    mocks.getSession.mockResolvedValue(authenticatedSession);
     mocks.getPremiumAuditById.mockResolvedValue(audit);
     mocks.redirect.mockImplementation((destination: string) => {
       throw new Error(`REDIRECT:${destination}`);
@@ -89,7 +91,7 @@ describe("premium audit detail page authentication", () => {
     const result = await renderPage("en");
 
     expect(mocks.getSession).toHaveBeenCalledOnce();
-    expect(mocks.getPremiumAuditById).toHaveBeenCalledWith(audit.id);
+    expect(mocks.getPremiumAuditById).toHaveBeenCalledWith(audit.id, authenticatedSession);
     expect(mocks.getSession.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.getPremiumAuditById.mock.invocationCallOrder[0],
     );
@@ -100,7 +102,7 @@ describe("premium audit detail page authentication", () => {
     mocks.getPremiumAuditById.mockResolvedValue(null);
 
     await expect(renderPage()).rejects.toThrow("NOT_FOUND");
-    expect(mocks.getPremiumAuditById).toHaveBeenCalledWith(audit.id);
+    expect(mocks.getPremiumAuditById).toHaveBeenCalledWith(audit.id, authenticatedSession);
   });
 
   it("propagates unexpected session infrastructure errors instead of redirecting", async () => {

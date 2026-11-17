@@ -12,7 +12,7 @@ vi.mock("@/core/database/tenant-context", () => ({
 
 describe("GraphStoreService transaction locking", () => {
   it("acquires the shared tenant graph lock before reading or writing graph rows", async () => {
-    const query = vi.fn(async () => ({ rowCount: 0, rows: [] }));
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) => ({ rowCount: 0, rows: [] }));
     const store = new GraphStoreService({ query } as unknown as PostgresClient);
 
     await store.upsertEntitiesAndRelationships({
