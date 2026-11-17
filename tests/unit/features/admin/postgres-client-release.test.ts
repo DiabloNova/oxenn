@@ -10,6 +10,7 @@ vi.mock("pg", () => ({
   Pool: class {
     connect = mocks.connect;
     query = vi.fn();
+    on = vi.fn();
     end = vi.fn(async () => undefined);
   },
 }));

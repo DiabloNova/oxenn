@@ -15,7 +15,7 @@ function response(body: unknown, status = 500): Response {
 }
 
 function submitBrandProfile() {
-  fireEvent.change(screen.getByLabelText("Brand name"), { target: { value: "Oxenn" } });
+  fireEvent.change(screen.getByLabelText(/Brand name/), { target: { value: "Oxenn" } });
   fireEvent.click(screen.getByRole("button", { name: "Add information to knowledge store" }));
 }
 
@@ -62,7 +62,7 @@ describe("BrandProfileForm replacement failure messaging", () => {
     }));
     render(<BrandProfileForm />);
 
-    fireEvent.change(screen.getByLabelText("نام برند"), { target: { value: "اکسن" } });
+    fireEvent.change(screen.getByLabelText(/نام برند/), { target: { value: "اکسن" } });
     fireEvent.click(screen.getByRole("button", { name: "ثبت اطلاعات در مخزن دانش" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -99,7 +99,7 @@ describe("BrandProfileForm replacement failure messaging", () => {
     }));
     render(<BrandProfileForm />);
 
-    fireEvent.change(screen.getByLabelText("نام برند"), { target: { value: "اکسن" } });
+    fireEvent.change(screen.getByLabelText(/نام برند/), { target: { value: "اکسن" } });
     fireEvent.click(screen.getByRole("button", { name: "ثبت اطلاعات در مخزن دانش" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(

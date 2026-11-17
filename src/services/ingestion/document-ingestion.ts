@@ -123,24 +123,24 @@ export class DocumentIngestionService {
     // Phase 2: all database writes, including replacement and provenance updates,
     // share one short transaction. Database errors cannot be swallowed as provider errors.
     await TenantContextManager.runWithTenantContext(tenantId, userId, requestId, async () => {
-        if (documentId) {
-          const legacyFilename = source === "brand-profile-file" && typeof safeMetadata.originalFilename === "string"
-            ? safeMetadata.originalFilename : undefined;
-          if (legacyFilename) await this.vectorStore.replaceDocument(tenantId, documentId, legacyFilename);
-          else await this.vectorStore.replaceDocument(tenantId, documentId);
-        }
-        for (const chunk of prepared) {
-          const chunkMetadata = {
-            ...safeMetadata,
-            ...(documentId ? { documentId } : {}),
-            chunkIndex: chunk.index,
-            sentiment: { score: chunk.sentiment.score, label: chunk.sentiment.label, confidence: chunk.sentiment.confidence },
-          };
-          const inserted = await this.vectorStore.insertEmbedding(tenantId, chunk.content, chunk.embedding, chunkMetadata);
-          const chunkId = (inserted as { id?: string })?.id;
-          if (chunk.graph && chunkId) await this.graphStore.upsertEntitiesAndRelationships(chunk.graph, chunkId);
-        }
-    }, documentId ? { reportTransactionOutcome: true } : undefined);
+      if (documentId) {
+        const legacyFilename = source === "brand-profile-file" && typeof safeMetadata.originalFilename === "string"
+          ? safeMetadata.originalFilename : undefined;
+        if (legacyFilename) await this.vectorStore.replaceDocument(tenantId, documentId, legacyFilename);
+        else await this.vectorStore.replaceDocument(tenantId, documentId);
+      }
+      for (const chunk of prepared) {
+        const chunkMetadata = {
+          ...safeMetadata,
+          ...(documentId ? { documentId } : {}),
+          chunkIndex: chunk.index,
+          sentiment: { score: chunk.sentiment.score, label: chunk.sentiment.label, confidence: chunk.sentiment.confidence },
+        };
+        const inserted = await this.vectorStore.insertEmbedding(tenantId, chunk.content, chunk.embedding, chunkMetadata);
+        const chunkId = (inserted as { id?: string })?.id;
+        if (chunk.graph && chunkId) await this.graphStore.upsertEntitiesAndRelationships(chunk.graph, chunkId);
+      }
+  }, documentId ? { reportTransactionOutcome: true } : undefined);
 
     return { success: failedChunks === 0 && prepared.length === totalChunks, tenantId, totalChunks,
       processedChunks: prepared.length, failedChunks, errors };
