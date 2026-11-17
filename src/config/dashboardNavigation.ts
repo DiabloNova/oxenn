@@ -4,7 +4,7 @@ import {
   FileText, CalendarClock, MessageSquareText, FileBarChart,
   PenTool, FlaskConical, ListChecks, Megaphone,
   TrendingUp, HeartPulse, Wrench, ClipboardCheck,
-  Settings, BookOpen, BarChart3, Award, Network, LineChart, HelpCircle,
+  Settings, BookOpen, BarChart3, Award, Network, LineChart, HelpCircle, UserRound, Receipt,
 } from "lucide-react";
 
 export interface NavigationSubItem {
@@ -92,17 +92,9 @@ export const dashboardNavigation: NavigationSection[] = [
       { id: "execution-plan", labelEn: "Execution plan", labelFa: "برنامه اجرایی", href: "/dashboard/planning", icon: ListChecks },
       { id: "marketing", labelEn: "Marketing & Service Marketplace", labelFa: "بازاریابی و بازارچه خدمات", href: "/dashboard/services", icon: Megaphone },
       { id: "content-ingestion", labelEn: "Content ingestion", labelFa: "بارگذاری محتوا و مستندات", href: "/dashboard/content/ingestion", icon: BookOpen },
-      {
-        id: "workspace-account",
-        labelEn: "Workspace & account",
-        labelFa: "فضای کاری و حساب کاربری",
-        icon: Settings,
-        children: [
-          { id: "profile", labelEn: "My Account", labelFa: "حساب کاربری", href: "/dashboard/profile" },
-          { id: "settings", labelEn: "Workspace Settings", labelFa: "تنظیمات فضای کاری", href: "/dashboard/settings" },
-          { id: "billing", labelEn: "Billing & Subscriptions", labelFa: "اشتراک و صورت‌حساب", href: "/dashboard/billing" },
-        ],
-      },
+      { id: "profile", labelEn: "My Account", labelFa: "حساب کاربری", href: "/dashboard/profile", icon: UserRound },
+      { id: "settings", labelEn: "Workspace Settings", labelFa: "تنظیمات فضای کاری", href: "/dashboard/settings", icon: Settings },
+      { id: "billing", labelEn: "Billing & Subscriptions", labelFa: "اشتراک و صورت‌حساب", href: "/dashboard/billing", icon: Receipt },
       { id: "help", labelEn: "Help & Guide", labelFa: "راهنما و پشتیبانی", href: "#help", icon: HelpCircle },
     ],
   },
