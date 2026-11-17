@@ -23,10 +23,9 @@ function resetMocks() {
 
 const originalQuery = Pool.prototype.query;
 const originalConnect = Pool.prototype.connect;
-(Pool.prototype as any).connect = async function () {
-  const pool = this;
+(Pool.prototype as any).connect = async function (this: Pool) {
   return {
-    query: (sql: string, params: unknown[] = []) => (Pool.prototype as any).query.call(pool, sql, params),
+    query: (sql: string, params: unknown[] = []) => (Pool.prototype as any).query.call(this, sql, params),
     release: () => undefined,
   };
 };

@@ -35,9 +35,8 @@ const originalPoolQuery = (Pool.prototype as any).query;
 const originalPoolConnect = (Pool.prototype as any).connect;
 
 function setupPoolMock() {
-  (Pool.prototype as any).connect = async function () {
-    const pool = this;
-    return { query: (sql: string, params: unknown[] = []) => (Pool.prototype as any).query.call(pool, sql, params), release: () => undefined };
+  (Pool.prototype as any).connect = async function (this: Pool) {
+    return { query: (sql: string, params: unknown[] = []) => (Pool.prototype as any).query.call(this, sql, params), release: () => undefined };
   };
   (Pool.prototype as any).query = async function(sql: string, params: unknown[] = []) {
     const normalizedSql = sql.toLowerCase();

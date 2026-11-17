@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   pathname: "/fa/dashboard",
@@ -59,8 +59,10 @@ describe("ThemeProvider external preferences", () => {
 
   it("applies external theme preference changes to the document class", () => {
     render(<ThemeProvider initialLanguage="fa"><ThemeProbe /></ThemeProvider>);
-    window.localStorage.setItem("theme", "dark");
-    window.dispatchEvent(new StorageEvent("storage", { key: "theme" }));
+    act(() => {
+      window.localStorage.setItem("theme", "dark");
+      window.dispatchEvent(new StorageEvent("storage", { key: "theme" }));
+    });
     expect(screen.getByTestId("theme-state")).toHaveTextContent("dark|fa|rtl");
     expect(document.documentElement).toHaveClass("dark");
   });

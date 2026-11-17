@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
-  const client = { query: vi.fn(async (_sql: string, _params?: unknown[]) => ({ rowCount: 1, rows: [] })), release: vi.fn() };
+  const client = { query: vi.fn(async (sql: string, params?: unknown[]) => {
+    void sql;
+    void params;
+    return { rowCount: 1, rows: [] };
+  }), release: vi.fn() };
   return {
     client,
     connectClient: vi.fn(async () => client),

@@ -180,7 +180,7 @@ describe("localized language routing contract", () => {
   });
 
   it("changes fa to en with one route replacement while preserving the page, query, and hash", async () => {
-    renderLanguageProbe("fa", "en");
+    const view = renderLanguageProbe("fa", "en");
 
     await waitFor(() => {
       expect(screen.getByTestId("language")).toHaveTextContent("fa");
@@ -194,17 +194,27 @@ describe("localized language routing contract", () => {
       "/en/dashboard/seo/technical?tab=links#findings"
     );
     expect(navigation.router.push).not.toHaveBeenCalled();
+    expect(screen.getByTestId("language")).toHaveTextContent("fa");
+    expect(screen.getByTestId("direction")).toHaveTextContent("rtl");
+    expect(document.documentElement).toHaveAttribute("lang", "fa");
+    expect(document.documentElement).toHaveAttribute("dir", "rtl");
+    expect(localStorage.getItem("language")).toBe("fa");
+
+    navigation.pathname = "/en/dashboard/seo/technical";
+    setBrowserUrl("/en/dashboard/seo/technical?tab=links#findings");
+    view.rerender(<ThemeProvider initialLanguage="fa"><LanguageProbe targetLanguage="en" /></ThemeProvider>);
     expect(screen.getByTestId("language")).toHaveTextContent("en");
     expect(screen.getByTestId("direction")).toHaveTextContent("ltr");
     expect(document.documentElement).toHaveAttribute("lang", "en");
     expect(document.documentElement).toHaveAttribute("dir", "ltr");
+    expect(localStorage.getItem("language")).toBe("en");
   });
 
   it("changes en to fa with one route replacement while preserving the page, query, and hash", async () => {
     navigation.pathname = "/en/dashboard/seo/technical";
     setBrowserUrl("/en/dashboard/seo/technical?tab=links#findings");
 
-    renderLanguageProbe("en", "fa");
+    const view = renderLanguageProbe("en", "fa");
 
     await waitFor(() => {
       expect(screen.getByTestId("language")).toHaveTextContent("en");
@@ -218,10 +228,20 @@ describe("localized language routing contract", () => {
       "/fa/dashboard/seo/technical?tab=links#findings"
     );
     expect(navigation.router.push).not.toHaveBeenCalled();
+    expect(screen.getByTestId("language")).toHaveTextContent("en");
+    expect(screen.getByTestId("direction")).toHaveTextContent("ltr");
+    expect(document.documentElement).toHaveAttribute("lang", "en");
+    expect(document.documentElement).toHaveAttribute("dir", "ltr");
+    expect(localStorage.getItem("language")).toBe("en");
+
+    navigation.pathname = "/fa/dashboard/seo/technical";
+    setBrowserUrl("/fa/dashboard/seo/technical?tab=links#findings");
+    view.rerender(<ThemeProvider initialLanguage="en"><LanguageProbe targetLanguage="fa" /></ThemeProvider>);
     expect(screen.getByTestId("language")).toHaveTextContent("fa");
     expect(screen.getByTestId("direction")).toHaveTextContent("rtl");
     expect(document.documentElement).toHaveAttribute("lang", "fa");
     expect(document.documentElement).toHaveAttribute("dir", "rtl");
+    expect(localStorage.getItem("language")).toBe("fa");
   });
 
   it("treats the locale in /en/pricing as authoritative over stale Persian localStorage", async () => {
