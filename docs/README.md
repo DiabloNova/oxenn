@@ -23,6 +23,7 @@ The Product Specification is the authority for what OXENN is expected to deliver
 
 1. [Product](./product/README.md) — product definition, MVP scope, target users, and capabilities.
 2. [Architecture](./architecture/README.md) — system boundaries, domain architecture, database and service design.
+   - [Frontend owner requirements](./architecture/FRONTEND_OWNER_REQUIREMENTS_2026-11-16.md): current owner-approved dashboard and Agent interface decisions; unspecified placement and behavior remain pending.
 3. [API](./api/README.md) — API entry points, contracts, authentication, and rate limits where implemented.
 4. [Security](./security/README.md) — authentication, authorization, tenant isolation, data access, and API security.
 5. [User guides](./user-guides/README.md) and [Service documentation](./services/README.md) — user workflows, internal service boundaries, integrations, and operational behavior.

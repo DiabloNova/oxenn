@@ -14,6 +14,11 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const PUBLIC_UNAUTHENTICATED_SESSION: Session = {
+  user: null,
+  expiresAt: null,
+  status: "unauthenticated",
+};
 
 async function synchronizeServerSession(): Promise<Session> {
   try {
@@ -30,7 +35,13 @@ async function synchronizeServerSession(): Promise<Session> {
   }
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({
+  children,
+  skipSessionCheck = false,
+}: {
+  children: React.ReactNode;
+  skipSessionCheck?: boolean;
+}) {
   const [session, setSession] = useState<Session>({ user: null, expiresAt: null, status: "loading" });
 
   const refreshSession = useCallback(async (): Promise<Session> => {
@@ -46,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (skipSessionCheck) {
+      // Public marketing pages do not need Workspace-backed identity or browser storage.
+      return;
+    }
+
     let active = true;
 
     synchronizeServerSession()
@@ -63,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [skipSessionCheck]);
 
   const login = async (email: string, password: string) => {
     setSession((previous) => ({ ...previous, status: "loading" }));
@@ -108,13 +124,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession({ user: null, expiresAt: null, status: "unauthenticated" });
   };
 
+  const effectiveSession = skipSessionCheck ? PUBLIC_UNAUTHENTICATED_SESSION : session;
+
   const hasPermission = (requiredRole: UserRole): boolean => {
-    if (!session.user) return false;
-    const hierarchy: Record<UserRole, number> = { super_admin: 3, workspace_admin: 2, viewer: 1 };
-    return hierarchy[session.user.role] >= hierarchy[requiredRole];
+    if (!effectiveSession.user) return false;
+    const roleHierarchy: Record<UserRole, number> = {
+      super_admin: 3,
+      workspace_admin: 2,
+      viewer: 1,
+    };
+    return roleHierarchy[effectiveSession.user.role] >= roleHierarchy[requiredRole];
   };
 
-  return <AuthContext.Provider value={{ session, login, register, refreshSession, logout, hasPermission }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ session: effectiveSession, login, register, refreshSession, logout, hasPermission }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

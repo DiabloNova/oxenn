@@ -177,9 +177,10 @@ describe("Authentication Actions", () => {
   describe("loginAction", () => {
     it("uses a dummy hash for an unknown account", async () => {
       mocks.query
-        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
-        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // independent email limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // account/IP limit
+        .mockResolvedValueOnce({ rows: [] }); // unknown account
       await expect(loginAction("missing@doe.com", "Password123!!"))
         .rejects.toThrow("Invalid credentials or user not found.");
       expect(mocks.hashPassword).toHaveBeenCalled();
@@ -188,15 +189,22 @@ describe("Authentication Actions", () => {
     it("blocks login until email verification has been completed", async () => {
       mocks.query
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // IP limit
+        .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // independent email limit
         .mockResolvedValueOnce({ rows: [{ attempts: 1 }] }) // account/IP limit
         .mockResolvedValueOnce({ rows: [{ id: "usr-1", email_verified_at: null }] })
         .mockResolvedValueOnce({ rows: [{ user_id: "usr-1", password_hash: "hash", params: {} }] })
         .mockResolvedValueOnce({ rows: [] }) // reset failed attempts
-        .mockResolvedValueOnce({ rows: [] }); // clear successful login bucket
+        .mockResolvedValueOnce({ rows: [] }) // clear successful account/IP bucket
+        .mockResolvedValueOnce({ rows: [] }); // clear successful email bucket
       mocks.verifyPassword.mockResolvedValueOnce(true);
       await expect(loginAction("unverified@doe.com", "Password123!!"))
         .resolves.toEqual({ success: false, errorCode: "EMAIL_NOT_VERIFIED" });
       expect(mocks.verifyPassword).toHaveBeenCalledWith("Password123!!", "hash", {});
+      expect(mocks.query.mock.calls[1][1][0]).toBe("login-email");
+      expect(mocks.query.mock.calls[1][1][1]).toMatch(/^email:[a-f0-9]{64}$/);
+      expect(mocks.query.mock.calls[2][1][0]).toBe("login");
+      expect(mocks.query.mock.calls[2][1][1]).toMatch(/^account-ip:/);
+      expect(mocks.query.mock.calls[7][0]).toContain("login-email");
     });
   });
 

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { emailLocalPartHasUppercase, getAccountEmailValidationError } from "@/services/auth/registration-validation";
 import { getSafeLocaleReturnTo } from "@/services/auth/return-to";
+import { getSafeLocalizedReturnTo } from "@/lib/auth/route-policy";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
@@ -18,7 +19,9 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const isFa = locale === "fa";
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = getSafeLocaleReturnTo(searchParams.get("returnTo"), locale);
+  const requestedReturnTo = searchParams.get("returnTo");
+  const localeSafeReturnTo = getSafeLocaleReturnTo(requestedReturnTo, locale);
+  const returnTo = getSafeLocalizedReturnTo(localeSafeReturnTo, locale, "https://oxenn.invalid");
   const registerHref = returnTo ? `/${locale}/register?returnTo=${encodeURIComponent(returnTo)}` : `/${locale}/register`;
   const { login, session } = useAuth();
 
@@ -59,12 +62,13 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
       isValid = false;
     } else {
       const errorCode = getAccountEmailValidationError(email);
+      const hasBasicEmailShape = /\S+@\S+\.\S+/.test(email);
       const messages: Record<string, string> = {
         EMAIL_REQUIRED: isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.",
         EMAIL_INVALID_FORMAT: strings.validationEmailInvalid,
       };
-      if (errorCode) {
-        setEmailError(messages[errorCode] || strings.validationEmailInvalid);
+      if (errorCode || !hasBasicEmailShape) {
+        setEmailError((errorCode && messages[errorCode]) || strings.validationEmailInvalid);
         isValid = false;
       } else {
         setEmailError("");
@@ -96,7 +100,12 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
         router.push(`/${locale}/verify-email?${verificationParams.toString()}`);
         return;
       }
-      router.push(returnTo ?? `/${locale}/dashboard`);
+      const safeLocalizedReturnTo = getSafeLocalizedReturnTo(
+        returnTo,
+        locale,
+        window.location.origin,
+      );
+      router.push(safeLocalizedReturnTo ?? `/${locale}/dashboard`);
     } catch {
       setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
     } finally {

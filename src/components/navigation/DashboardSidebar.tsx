@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
@@ -8,6 +8,7 @@ import { notifyNavigationStart } from "@/lib/navigation-transition";
 import { useAuth } from "@/components/AuthProvider";
 import {
   dashboardNavigation,
+  isDashboardRouteActive,
   NavigationItem,
   NavigationSubItem
 } from "@/config/dashboardNavigation";
@@ -16,8 +17,18 @@ import {
   X,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  ChevronUp,
   LogOut,
-  ChevronLeft
+  Bot,
+  LayoutDashboard,
+  Plus,
+  BookOpen,
+  MessageSquareText,
+  UserCircle,
+  Settings,
+  Receipt,
+  HelpCircle
 } from "lucide-react";
 
 interface DashboardSidebarProps {
@@ -40,23 +51,60 @@ export default function DashboardSidebar({
   const { language, direction } = useTheme();
   const { session, logout } = useAuth();
   const isRtl = language === "fa";
+  const isAgentMode = pathname?.includes("/dashboard/agent") ?? false;
 
   // Accordion state manually toggled by user (key is item id, value is boolean)
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const closeMobileDrawer = useCallback(() => {
+    setAccountMenuOpen(false);
+    setMobileOpen(false);
+  }, [setMobileOpen]);
 
   // Trap focus for mobile drawer
   const drawerRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const accountTriggerRef = useRef<HTMLButtonElement>(null);
 
   // Support Escape key to close mobile menu
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && mobileOpen) {
-        setMobileOpen(false);
+      if (e.key === "Escape" && mobileOpen && !accountMenuOpen) {
+        closeMobileDrawer();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [mobileOpen, setMobileOpen]);
+  }, [mobileOpen, accountMenuOpen, closeMobileDrawer]);
+
+  // Dismiss the account menu when pointer or keyboard focus moves outside it.
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const handleOutsidePointer = (event: PointerEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const handleOutsideFocus = (event: FocusEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const handleAccountEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setAccountMenuOpen(false);
+      accountTriggerRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", handleOutsidePointer);
+    document.addEventListener("focusin", handleOutsideFocus);
+    window.addEventListener("keydown", handleAccountEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsidePointer);
+      document.removeEventListener("focusin", handleOutsideFocus);
+      window.removeEventListener("keydown", handleAccountEscape);
+    };
+  }, [accountMenuOpen]);
+
 
   // Trap focus implementation for mobile drawer
   useEffect(() => {
@@ -103,17 +151,18 @@ export default function DashboardSidebar({
     return `/${language}${href === "/" ? "" : href}`;
   };
 
-  const isRouteActive = (href?: string) => {
-    if (!href) return false;
-    const localizedHref = getLocalizedHref(href);
-    if (href === "/dashboard") {
-      return pathname === localizedHref;
-    }
-    return pathname === localizedHref || pathname?.startsWith(localizedHref + "/");
+  const isRouteActive = (href?: string, exact = false) =>
+    isDashboardRouteActive(pathname, href, language, exact);
+
+  const navigateTo = (href: string) => {
+    const destination = getLocalizedHref(href);
+    notifyNavigationStart(destination);
+    router.push(destination);
+    closeMobileDrawer();
   };
 
   const isParentActive = (item: NavigationItem) => {
-    if (item.href) return isRouteActive(item.href);
+    if (item.href) return isRouteActive(item.href, item.exact);
     if (item.children) {
       return item.children.some((child) => isRouteActive(child.href));
     }
@@ -123,12 +172,13 @@ export default function DashboardSidebar({
   const handleItemClick = (item: NavigationItem) => {
     if (item.href) {
       if (item.href === "#help") {
+        closeMobileDrawer();
         if (onHelpClick) onHelpClick();
       } else {
         const destination = getLocalizedHref(item.href);
         notifyNavigationStart(destination);
         router.push(destination);
-        setMobileOpen(false);
+        closeMobileDrawer();
       }
     } else {
       toggleExpand(item.id);
@@ -139,7 +189,7 @@ export default function DashboardSidebar({
     const destination = getLocalizedHref(child.href);
     notifyNavigationStart(destination);
     router.push(destination);
-    setMobileOpen(false);
+    closeMobileDrawer();
   };
 
   const renderNavItems = (items: NavigationItem[], isMobileState: boolean) => {
@@ -216,71 +266,108 @@ export default function DashboardSidebar({
   };
 
   const renderSidebarContents = (isMobileState: boolean) => {
+    const showLabels = !collapsed || isMobileState;
+    const accountName = session.user?.name || (isRtl ? "حساب کاربری" : "Account");
+    const accountEmail = session.user?.email || (isRtl ? "اطلاعات حساب در دسترس نیست" : "Account details unavailable");
+
     return (
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* LOGO & BRAND HEADER */}
-        <div className="h-16 flex items-center gap-2.5 px-6 border-b border-[var(--border)] shrink-0 bg-[rgba(15,23,42,0.15)]">
+        <div className="h-16 flex items-center gap-2.5 px-5 border-b border-[var(--border)] shrink-0 bg-[rgba(15,23,42,0.15)]">
           <SeorchableLogo className="w-7 h-7" glow={false} />
-          {(!collapsed || isMobileState) && (
-            <span className="font-black text-[var(--text-primary)] text-sm tracking-tight font-display">
-              {isRtl ? "پنل هوشمند سئورچبل" : "seorchable Intelligence"}
-            </span>
-          )}
+          {showLabels && <span className="font-black text-[var(--text-primary)] text-sm tracking-tight font-display">OXENN</span>}
         </div>
 
-        {/* NAVIGATION SECTIONS */}
-        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-6 scrollbar-none">
-          {dashboardNavigation.map((sec) => {
-            const hasVisibleItems = sec.items.length > 0;
-            if (!hasVisibleItems) return null;
+        <div className="grid grid-cols-2 gap-1 p-2 border-b border-[var(--border)] shrink-0">
+          <button type="button" onClick={() => navigateTo("/dashboard/agent")}
+            className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
+            aria-current={isAgentMode ? "page" : undefined}
+            title={showLabels ? undefined : (isRtl ? "عامل" : "Agent")}>
+            <Bot size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "عامل" : "Agent"}</span>}
+          </button>
+          <button type="button" onClick={() => navigateTo("/dashboard")}
+            className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (!isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
+            aria-current={!isAgentMode ? "page" : undefined}
+            title={showLabels ? undefined : (isRtl ? "داشبورد" : "Dashboard")}>
+            <LayoutDashboard size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "داشبورد" : "Dashboard"}</span>}
+          </button>
+        </div>
 
-            return (
-              <div key={sec.id} className="space-y-2">
-                {(!collapsed || isMobileState) ? (
-                  <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
-                    {isRtl ? sec.titleFa : sec.titleEn}
-                  </h3>
-                ) : (
-                  <div className="h-px bg-[var(--border)] mx-2 my-4" />
-                )}
-                <div className="space-y-1">
-                  {renderNavItems(sec.items, isMobileState)}
-                </div>
+        <nav className="flex-1 overflow-y-auto px-4 py-5 space-y-6 scrollbar-none" aria-label={isRtl ? "منوی فضای کاری" : "Workspace navigation"}>
+          {isAgentMode ? (
+            <div className="space-y-5">
+              <div className="space-y-1">
+                <button type="button" onClick={() => navigateTo("/dashboard/agent?new=" + Date.now())}
+                  className={"w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)] " + (collapsed && !isMobileState ? "justify-center" : "")}
+                  title={showLabels ? undefined : (isRtl ? "گفتگوی جدید" : "New conversation")}>
+                  <Plus size={16} className="shrink-0" aria-hidden="true" />{showLabels && <span>{isRtl ? "گفتگوی جدید" : "New conversation"}</span>}
+                </button>
+                <button type="button" onClick={() => navigateTo("/dashboard/agent/skills")}
+                  className={"w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)] " + (collapsed && !isMobileState ? "justify-center" : "")}
+                  title={showLabels ? undefined : (isRtl ? "مهارت‌ها" : "Skills")}>
+                  <BookOpen size={16} className="shrink-0" aria-hidden="true" />{showLabels && <span>{isRtl ? "مهارت‌ها" : "Skills"}</span>}
+                </button>
               </div>
-            );
-          })}
-        </nav>
-
-        {/* FOOTER PINNED SECTION */}
-        {(!collapsed || isMobileState) && (
-          <div className="p-4 border-t border-[var(--border)] bg-[rgba(15,23,42,0.15)] shrink-0 space-y-3">
-            <div className="flex items-center gap-2 px-2 py-1 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-              <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--sky-blue-500)] to-[var(--orange-500)] text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
-                {session.user?.name?.slice(0, 1) || "U"}
-              </span>
-              <div className="min-w-0 flex-1 text-start">
-                <p className="text-xs font-black text-[var(--text-primary)] truncate">
-                  {session.user?.name || (isRtl ? "کاربر سیستم" : "User System")}
-                </p>
-                <p className="text-[10px] text-[var(--text-muted)] truncate">
-                  {session.user?.email || "user@seorchable.ir"}
-                </p>
+              <div className="border-t border-[var(--border)] pt-4 space-y-2">
+                <div className={"flex items-center gap-2 px-3 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] " + (collapsed && !isMobileState ? "justify-center" : "")}>
+                  <MessageSquareText size={14} aria-hidden="true" />{showLabels && <span>{isRtl ? "تاریخچه گفتگوها" : "Conversation history"}</span>}
+                </div>
+                {showLabels && <p className="px-3 py-2 text-[11px] leading-6 text-[var(--text-muted)]">{isRtl ? "گفتگوی ذخیره‌شده‌ای برای نمایش در تاریخچه وجود ندارد." : "There are no saved conversations to display yet."}</p>}
               </div>
             </div>
+          ) : (
+            dashboardNavigation.map((sec) => {
+              if (sec.items.length === 0) return null;
+              return (
+                <div key={sec.id} className="space-y-2">
+                  {showLabels ? (
+                    <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{isRtl ? sec.titleFa : sec.titleEn}</h3>
+                  ) : (
+                    <div className="h-px bg-[var(--border)] mx-2 my-4" />
+                  )}
+                  <div className="space-y-1">{renderNavItems(sec.items, isMobileState)}</div>
+                </div>
+              );
+            })
+          )}
+        </nav>
 
-            <button
-              onClick={async () => {
-                setMobileOpen(false);
-                await logout();
-              }}
-              className="w-full py-2 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer outline-none focus:ring-1 focus:ring-rose-500"
-              aria-label={isRtl ? "خروج" : "Sign Out"}
+        <div ref={accountMenuRef} className="relative p-3 border-t border-[var(--border)] bg-[rgba(15,23,42,0.15)] shrink-0">
+          {accountMenuOpen && (
+            <div className="absolute bottom-full left-2 right-2 mb-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-2xl z-[120]" role="menu">
+              <button type="button" role="menuitem" onClick={() => navigateTo("/profile")} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
+                <UserCircle size={15} aria-hidden="true" />{isRtl ? "پروفایل کاربری" : "Account profile"}
+              </button>
+              <button type="button" role="menuitem" onClick={() => navigateTo("/dashboard/settings")} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
+                <Settings size={15} aria-hidden="true" />{isRtl ? "تنظیمات فضای کاری" : "Workspace settings"}
+              </button>
+              <button type="button" role="menuitem" onClick={() => navigateTo("/dashboard/billing")} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
+                <Receipt size={15} aria-hidden="true" />{isRtl ? "اشتراک و صورت‌حساب" : "Billing and subscription"}
+              </button>
+              <button type="button" role="menuitem" onClick={() => { closeMobileDrawer(); onHelpClick?.(); }} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
+                <HelpCircle size={15} aria-hidden="true" />{isRtl ? "راهنما و پشتیبانی" : "Help and support"}
+              </button>
+              <div className="my-1 border-t border-[var(--border)]" />
+              <button type="button" role="menuitem" onClick={async () => { closeMobileDrawer(); await logout(); }} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-rose-400 hover:bg-rose-500/10">
+                <LogOut size={15} aria-hidden="true" />{isRtl ? "خروج از حساب" : "Sign out"}
+              </button>
+            </div>
+          )}
+          <button ref={accountTriggerRef} type="button"
+            onClick={() => { if (collapsed && !isMobileState) setCollapsed(false); setAccountMenuOpen((open) => !open); }}
+            className={"w-full flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white/[0.02] px-2.5 py-2 text-start hover:bg-[var(--muted-surface)] " + (showLabels ? "" : "justify-center")}
+            aria-expanded={accountMenuOpen} aria-haspopup="menu"
             >
-              <LogOut size={14} />
-              <span>{isRtl ? "خروج از حساب" : "Sign Out"}</span>
-            </button>
-          </div>
-        )}
+            <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--sky-blue-500)] to-[var(--orange-500)] text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
+              {session.user?.name?.slice(0, 1) || (isRtl ? "ک" : "U")}
+            </span>
+            {!showLabels && <span className="sr-only">{accountName}, {accountEmail}</span>}
+            {showLabels && <span className="min-w-0 flex-1">
+              <span className="block text-xs font-black text-[var(--text-primary)] truncate">{accountName}</span>
+              <span className="block text-[10px] text-[var(--text-muted)] truncate">{accountEmail}</span>
+            </span>}
+            {showLabels && <ChevronUp size={14} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />}
+          </button>
+        </div>
       </div>
     );
   };
@@ -292,13 +379,14 @@ export default function DashboardSidebar({
         className={`hidden md:flex flex-col h-screen sticky top-0 bg-[var(--card)] border-r border-l border-[var(--border)] transition-all duration-300 shrink-0 z-30 select-none overflow-hidden
           ${collapsed ? "w-20" : "w-64 lg:w-72"}`}
         dir={direction}
+        style={{ order: isRtl ? 0 : 1 }}
       >
         {renderSidebarContents(false)}
 
         {/* Collapse Button floating indicator on desktop */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className={`absolute bottom-20 ${isRtl ? "-left-3" : "-right-3"} w-6 h-6 rounded-full bg-[var(--background)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center justify-center shadow-md cursor-pointer transition-transform duration-200 z-50`}
+          className={`absolute bottom-20 -left-3 w-6 h-6 rounded-full bg-[var(--background)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center justify-center shadow-md cursor-pointer transition-transform duration-200 z-50`}
           aria-label={isRtl ? "تغییر عرض سایدبار" : "Toggle Sidebar Collapse"}
         >
           {collapsed ? (
@@ -320,7 +408,7 @@ export default function DashboardSidebar({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setMobileOpen(false)}
+              onClick={closeMobileDrawer}
             />
 
             {/* Sliding Drawer Panel */}
@@ -333,7 +421,7 @@ export default function DashboardSidebar({
             >
               {/* Close Button floating top inner */}
               <button
-                onClick={() => setMobileOpen(false)}
+                onClick={closeMobileDrawer}
                 className={`absolute top-4 ${isRtl ? "left-4" : "right-4"} p-1.5 rounded-full hover:bg-[var(--muted-surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer outline-none focus:ring-1 focus:ring-[var(--sky-blue-500)]`}
                 aria-label={isRtl ? "بستن منو" : "Close menu"}
               >

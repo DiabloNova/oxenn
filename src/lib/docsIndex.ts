@@ -426,6 +426,24 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Remove Redundant API-Key Prefix Index  ## Finding  The api_keys prefix column already has a uniqueness constraint, which PostgreSQL backs with a unique index. A separate non-unique index on the same prefix column duplicates that index for the same leading-column lookup pattern. This change removes only the redundant non-unique index and preserves the uniqueness guarantee.  ## Implementation  - Removed the standalone prefix index declaration from the current Drizzle schema. - Added migration 0013`
   },
   {
+    slug: "pr-146-graph-ingestion-remediation-2026-11-17",
+    titleEn: "PR #146 — Graph provenance and ingestion remediation",
+    titleFa: "PR #146 — Graph provenance and ingestion remediation",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# PR #146 — Graph provenance and ingestion remediation  ## Scope  This report records the database/ingestion work performed after refreshing PR #146 from \`main\` at commit \`46d0e80d34fb432457e9d89781acd88d9ad96ac3\`.  ## Changes  - Relationship provenance is now represented as the server-managed JSONB array \`source_chunk_ids\`. New graph upserts append the current source atomically in PostgreSQL, and an edge-scoped transaction advisory lock serializes concurrent upserts. Extraction output cannot su`
+  },
+  },
+  {
+    slug: "pr-146-dashboard-audit-remediation-2026-11-17",
+    titleEn: "PR #146 — Dashboard and UI remediation",
+    titleFa: "PR #146 — Dashboard and UI remediation",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# PR #146 — Dashboard and UI remediation  ## Scope  This report records the frontend and dashboard work performed after refreshing PR #146 from \`main\` at commit \`46d0e80d34fb432457e9d89781acd88d9ad96ac3\`.  ## Changes  - Removed optimistic global language state during route changes. The route locale remains authoritative until Next.js commits the destination; a cancelled navigation no longer leaves a stale language preference. - Kept document theme classes synchronized with the active theme throu`
+  },
+  },
+  {
     slug: "registration-migration-0016-snapshot-ownership-integrity",
     titleEn: "Registration Migration 0016: Snapshot and Ownership Integrity",
     titleFa: "Registration Migration 0016: Snapshot and Ownership Integrity",

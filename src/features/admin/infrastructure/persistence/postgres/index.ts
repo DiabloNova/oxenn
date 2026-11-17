@@ -142,9 +142,9 @@ export class PostgresClient {
       }
       return client.query(sql, params);
     };
-    wrappedClient.release = () => {
+    wrappedClient.release = (err?: Error | boolean) => {
       if (typeof client.release === "function") {
-        client.release();
+        client.release(err);
       }
     };
 

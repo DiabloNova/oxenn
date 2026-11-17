@@ -108,6 +108,7 @@ export async function loginAction(email: string, password: string): Promise<Logi
 
   const normalizedEmail = email.trim().toLowerCase();
   const ipKey = privateRateLimitKey("ip", await trustedClientIp());
+  const emailKey = privateRateLimitKey("login-email", normalizedEmail);
   const accountIpKey = privateRateLimitKey("login-account-ip", `${normalizedEmail}\0${ipKey}`);
 
   const rlError = await TenantContextManager.runWithSystemContext(null, "sys-login", async () => {
@@ -115,6 +116,7 @@ export async function loginAction(email: string, password: string): Promise<Logi
     if (!client) throw new Error("Failed to get DB client in system context");
     try {
       await enforceRateLimit(client, "login-ip", `ip:${ipKey}`, 100, 15 * 60 * 1000);
+      await enforceRateLimit(client, "login-email", `email:${emailKey}`, 10, 15 * 60 * 1000);
       await enforceRateLimit(client, "login", `account-ip:${accountIpKey}`, 10, 15 * 60 * 1000);
       return null;
     } catch (error: unknown) {
@@ -194,6 +196,10 @@ export async function loginAction(email: string, password: string): Promise<Logi
     await client.query(
       "DELETE FROM auth_rate_limits WHERE endpoint = 'login' AND bucket_key = $1",
       [`account-ip:${accountIpKey}`],
+    );
+    await client.query(
+      "DELETE FROM auth_rate_limits WHERE endpoint = 'login-email' AND bucket_key = $1",
+      [`email:${emailKey}`],
     );
 
     // Require verification only after password proof. Existing accounts can

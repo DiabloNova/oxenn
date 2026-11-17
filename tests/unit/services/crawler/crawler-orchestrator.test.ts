@@ -3,11 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   extractSeedLinksMock,
   fetchAndExtractTextMock,
-  runWithTenantContextMock
 } = vi.hoisted(() => ({
   extractSeedLinksMock: vi.fn(),
   fetchAndExtractTextMock: vi.fn(),
-  runWithTenantContextMock: vi.fn()
 }));
 
 vi.mock("@/services/crawler/link-discovery", () => ({
@@ -16,18 +14,11 @@ vi.mock("@/services/crawler/link-discovery", () => ({
 vi.mock("@/services/crawler/web-crawler", () => ({
   fetchAndExtractText: fetchAndExtractTextMock
 }));
-vi.mock("@/core/database/tenant-context", () => ({
-  TenantContextManager: { runWithTenantContext: runWithTenantContextMock }
-}));
-
 import { CrawlerOrchestrator } from "@/services/crawler/crawler-orchestrator";
 
 describe("CrawlerOrchestrator redirect policy propagation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    runWithTenantContextMock.mockImplementation(
-      (_tenantId, _userId, _requestId, callback) => callback()
-    );
     extractSeedLinksMock.mockResolvedValue(["https://page.example/article"]);
     fetchAndExtractTextMock.mockResolvedValue("x".repeat(120));
   });
@@ -64,6 +55,12 @@ describe("CrawlerOrchestrator redirect policy propagation", () => {
       "https://page.example/article",
       paidPolicy,
       fetcher
+    );
+    expect(ingestion.ingestDocument).toHaveBeenCalledWith(
+      "x".repeat(120),
+      expect.objectContaining({ source: "web-crawler", url: "https://page.example/article" }),
+      undefined,
+      { tenantId: "tenant-test", userId: "user-test", requestId: "request-test" },
     );
   });
 });

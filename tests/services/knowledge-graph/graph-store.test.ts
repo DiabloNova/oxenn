@@ -20,9 +20,18 @@ function resetStores() {
 
 // Global SQL query interception mock for Graph Store tests
 const originalQuery = Pool.prototype.query;
+const originalConnect = Pool.prototype.connect;
+(Pool.prototype as any).connect = async function (this: Pool) {
+  return {
+    query: (sql: string, params: unknown[] = []) => (Pool.prototype as any).query.call(this, sql, params),
+    release: () => undefined,
+  };
+};
 
 (Pool.prototype as any).query = async function (sql: string, params: unknown[] = []) {
   const normalizedSql = sql.toLowerCase();
+
+  if (normalizedSql.includes("pg_advisory_xact_lock")) return { rowCount: 1, rows: [] };
 
   // 1. Intercept SELECT from kg_entities
   if (normalizedSql.includes("select") && normalizedSql.includes("kg_entities") && normalizedSql.includes("lower(name) = lower")) {
@@ -132,14 +141,18 @@ const originalQuery = Pool.prototype.query;
   // 6. Intercept UPDATE kg_relationships
   if (normalizedSql.includes("update") && normalizedSql.includes("kg_relationships")) {
     const activeTenantId = TenantContextManager.getRequiredTenantId();
-    const [propertiesJson, id] = params as any[];
+    const [propertiesJson, sourceChunkId, id] = params as any[];
     const rel = mockRelationshipsStore.find(r => r.id === id && r.tenant_id === activeTenantId);
 
     if (!rel) {
       throw new Error(`Relationship not found or tenant context violation for ID ${id}`);
     }
 
-    rel.properties = typeof propertiesJson === "string" ? JSON.parse(propertiesJson) : propertiesJson;
+    const incoming = typeof propertiesJson === "string" ? JSON.parse(propertiesJson) : propertiesJson;
+    const existingSources = Array.isArray(rel.properties.source_chunk_ids) ? rel.properties.source_chunk_ids : [];
+    const legacySources = typeof rel.properties.source_chunk_id === "string" ? [rel.properties.source_chunk_id] : [];
+    rel.properties = { ...rel.properties, ...incoming, source_chunk_ids: [...new Set([...existingSources, ...legacySources, sourceChunkId])], ...(legacySources.length ? { source_provenance_incomplete: true } : {}) };
+    delete rel.properties.source_chunk_id;
     rel.updated_at = new Date().toISOString();
 
     return {
@@ -149,7 +162,7 @@ const originalQuery = Pool.prototype.query;
   }
 
   // Handle BEGIN/COMMIT/ROLLBACK safely for offline simulation
-  if (normalizedSql.includes("begin") || normalizedSql.includes("commit") || normalizedSql.includes("rollback") || normalizedSql.includes("set local")) {
+  if (normalizedSql.includes("begin") || normalizedSql.includes("commit") || normalizedSql.includes("rollback") || normalizedSql.includes("set local") || normalizedSql.includes("set_config")) {
     return {
       rowCount: 1,
       rows: [],
@@ -192,7 +205,7 @@ export async function testGraphStore() {
       { name: "Gemini", type: "product" as const, properties: { creator: "Google" } }
     ],
     relationships: [
-      { sourceEntityName: "Optimus AI", targetEntityName: "Gemini", relationshipType: "utilizes", properties: { confidence: 0.95 } }
+      { sourceEntityName: "Optimus AI", targetEntityName: "Gemini", relationshipType: "utilizes", properties: { confidence: 0.95, source_chunk_id: "forged-source", source_chunk_ids: ["forged-array-source"], source_provenance_incomplete: true } }
     ]
   };
 
@@ -217,8 +230,22 @@ export async function testGraphStore() {
     }
 
     const relationship = mockRelationshipsStore.find(r => r.tenant_id === tenantA);
-    if (!relationship || relationship.properties.source_chunk_id !== chunkId) {
+    if (!relationship || !Array.isArray(relationship.properties.source_chunk_ids) || !relationship.properties.source_chunk_ids.includes(chunkId) || relationship.properties.source_chunk_ids.includes("forged-source") || relationship.properties.source_chunk_ids.includes("forged-array-source") || relationship.properties.source_provenance_incomplete === true) {
       throw new Error("Graph Store Test Failed: Traceability source chunk ID was not registered properly.");
+    }
+
+    // A second document supporting the same edge must append provenance, not overwrite it.
+    await storeService.upsertEntitiesAndRelationships(initialGraph, "chunk-second-document");
+    if (!relationship.properties.source_chunk_ids.includes(chunkId) || !relationship.properties.source_chunk_ids.includes("chunk-second-document")) {
+      throw new Error("Graph Store Test Failed: Shared relationship provenance was overwritten.");
+    }
+
+    // Legacy single-source rows are migrated forward on the next upsert.
+    delete relationship.properties.source_chunk_ids;
+    relationship.properties.source_chunk_id = "legacy-source-chunk";
+    await storeService.upsertEntitiesAndRelationships(initialGraph, "chunk-third-document");
+    if (!relationship.properties.source_chunk_ids.includes("legacy-source-chunk") || !relationship.properties.source_chunk_ids.includes("chunk-third-document") || "source_chunk_id" in relationship.properties || relationship.properties.source_provenance_incomplete !== true) {
+      throw new Error("Graph Store Test Failed: Legacy relationship provenance was not preserved.");
     }
   });
 
@@ -287,6 +314,7 @@ export async function testGraphStore() {
 // Restore original Pool query on test suite end to not leak to other tests
 export function restoreOriginalPool() {
   Pool.prototype.query = originalQuery;
+  Pool.prototype.connect = originalConnect;
 }
 
 // If run directly
