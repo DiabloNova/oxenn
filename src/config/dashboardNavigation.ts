@@ -4,6 +4,7 @@ import {
   FileText, CalendarClock, MessageSquareText, FileBarChart,
   PenTool, FlaskConical, ListChecks, Megaphone,
   TrendingUp, HeartPulse, Wrench, ClipboardCheck,
+  Settings, BookOpen, BarChart3, Award, Network, LineChart, HelpCircle, UserRound, Receipt,
 } from "lucide-react";
 
 export interface NavigationSubItem {
@@ -65,6 +66,13 @@ export const dashboardNavigation: NavigationSection[] = [
       { id: "seo", labelEn: "SEO", labelFa: "سئو (SEO)", href: "/dashboard/seo", icon: Search, exact: true },
       { id: "geo", labelEn: "Language Model Analytics (GEO)", labelFa: "تجزیه و تحلیل ماشین‌های زبانی (GEO)", href: "/dashboard/geo", icon: BrainCircuit },
       { id: "quick-analysis", labelEn: "Quick analysis", labelFa: "تحلیل سریع", href: "/dashboard/audit/free", icon: Zap },
+      { id: "aeo-audits", labelEn: "AI Visibility Audits", labelFa: "سنجش رویت‌پذیری هوش مصنوعی", href: "/dashboard/aeo/audits", icon: Sparkles },
+      { id: "aeo-playground", labelEn: "AI Playground", labelFa: "محیط اجرای هوش مصنوعی", href: "/dashboard/aeo/playground", icon: BrainCircuit },
+      { id: "aeo-content", labelEn: "AEO Content Intelligence", labelFa: "هوشمندی محتوای AEO", href: "/dashboard/aeo/content", icon: BookOpen },
+      { id: "competitors-radar", labelEn: "Competitor Radar", labelFa: "رادار رقیبان", href: "/dashboard/competitors/radar", icon: BarChart3 },
+      { id: "brand-citations", labelEn: "Citation Explorer", labelFa: "کاوشگر استنادها", href: "/dashboard/brand/citations", icon: Award },
+      { id: "entities-graph", labelEn: "Live Knowledge Graph", labelFa: "نمودار زنده دانش", href: "/dashboard/entities/graph", icon: Network },
+      { id: "analytics-llm-bias", labelEn: "LLM Response Share & Bias", labelFa: "سهم پاسخ و انحراف مدل‌ها", href: "/dashboard/analytics/llm-bias", icon: LineChart },
     ],
   },
   {
@@ -82,7 +90,12 @@ export const dashboardNavigation: NavigationSection[] = [
       { id: "content-studio", labelEn: "Content studio", labelFa: "استودیو محتوا", href: "/dashboard/content/studio", icon: PenTool },
       { id: "prompt-research", labelEn: "Prompt research", labelFa: "تحقیقات پرامپت", href: "/dashboard/query", icon: FlaskConical },
       { id: "execution-plan", labelEn: "Execution plan", labelFa: "برنامه اجرایی", href: "/dashboard/planning", icon: ListChecks },
-      { id: "marketing", labelEn: "Marketing", labelFa: "بازاریابی", href: "/dashboard/services", icon: Megaphone },
+      { id: "marketing", labelEn: "Marketing & Service Marketplace", labelFa: "بازاریابی و بازارچه خدمات", href: "/dashboard/services", icon: Megaphone },
+      { id: "content-ingestion", labelEn: "Content ingestion", labelFa: "بارگذاری محتوا و مستندات", href: "/dashboard/content/ingestion", icon: BookOpen },
+      { id: "profile", labelEn: "My Account", labelFa: "حساب کاربری", href: "/dashboard/profile", icon: UserRound },
+      { id: "settings", labelEn: "Workspace Settings", labelFa: "تنظیمات فضای کاری", href: "/dashboard/settings", icon: Settings },
+      { id: "billing", labelEn: "Billing & Subscriptions", labelFa: "اشتراک و صورت‌حساب", href: "/dashboard/billing", icon: Receipt },
+      { id: "help", labelEn: "Help & Guide", labelFa: "راهنما و پشتیبانی", href: "#help", icon: HelpCircle },
     ],
   },
   {
@@ -92,6 +105,7 @@ export const dashboardNavigation: NavigationSection[] = [
       { id: "site-health", labelEn: "Site health", labelFa: "سلامت سایت", href: "/dashboard/audit/premium", icon: HeartPulse },
       { id: "technical-issues", labelEn: "Technical issues", labelFa: "مشکلات فنی", href: "/dashboard/technical-issues", icon: Wrench },
       { id: "product-review", labelEn: "Product review", labelFa: "بررسی محصول", href: "/dashboard/product-review", icon: ClipboardCheck },
+      { id: "seo-schema", labelEn: "Schema & Metadata", labelFa: "طرح‌واره و فراداده", href: "/dashboard/seo/schema", icon: ClipboardCheck },
     ],
   },
 ];

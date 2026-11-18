@@ -2,8 +2,10 @@
 
 import React, { useState, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { emailLocalPartHasUppercase, getAccountEmailValidationError } from "@/services/auth/registration-validation";
+import { getSafeLocaleReturnTo } from "@/services/auth/return-to";
 import { getSafeLocalizedReturnTo } from "@/lib/auth/route-policy";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
@@ -16,6 +18,11 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const locale = resolvedParams.locale;
   const isFa = locale === "fa";
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedReturnTo = searchParams.get("returnTo");
+  const localeSafeReturnTo = getSafeLocaleReturnTo(requestedReturnTo, locale);
+  const returnTo = getSafeLocalizedReturnTo(localeSafeReturnTo, locale, "https://oxenn.invalid");
+  const registerHref = returnTo ? `/${locale}/register?returnTo=${encodeURIComponent(returnTo)}` : `/${locale}/register`;
   const { login, session } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -41,37 +48,40 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     orOAuth: isFa ? "یا استفاده از ورود یکپارچه (OAuth)" : "Or connect via Single Sign-On",
     oauthGoogle: isFa ? "ورود یکپارچه با گوگل (Google)" : "Continue with Google Workspace",
     oauthMicrosoft: isFa ? "ورود یکپارچه با مایکروسافت" : "Continue with Microsoft Entra",
-    validationEmailInvalid: isFa ? "لطفاً یک ایمیل معتبر وارد کنید." : "Please enter a valid email address.",
+    validationEmailInvalid: isFa ? "قالب ایمیل معتبر نیست." : "Enter a valid email address.",
+    localPartCaseWarning: isFa ? "حروف بزرگ در بخش قبل از @ مجاز است؛ ایمیل هنگام ورود یکسان‌سازی می‌شود." : "Uppercase letters before @ are allowed; the address is normalized when you sign in.",
     validationPasswordRequired: isFa ? "وارد کردن رمز عبور الزامی است." : "Password is required.",
-    validationPasswordLength: isFa ? "رمز عبور باید حداقل ۶ کاراکتر باشد." : "Password must be at least 6 characters.",
+    validationPasswordLength: isFa ? "رمز عبور را وارد کنید." : "Enter your password.",
     backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
   };
 
   const validateForm = () => {
     let isValid = true;
-
-    // Email validation
     if (!email) {
       setEmailError(isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.");
       isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setEmailError(strings.validationEmailInvalid);
-      isValid = false;
     } else {
-      setEmailError("");
+      const errorCode = getAccountEmailValidationError(email);
+      const hasBasicEmailShape = /\S+@\S+\.\S+/.test(email);
+      const messages: Record<string, string> = {
+        EMAIL_REQUIRED: isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.",
+        EMAIL_INVALID_FORMAT: strings.validationEmailInvalid,
+      };
+      if (errorCode || !hasBasicEmailShape) {
+        setEmailError((errorCode && messages[errorCode]) || strings.validationEmailInvalid);
+        isValid = false;
+      } else {
+        setEmailError("");
+      }
     }
 
-    // Password validation
     if (!password) {
       setPasswordError(strings.validationPasswordRequired);
       isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError(strings.validationPasswordLength);
-      isValid = false;
     } else {
+      // Existing accounts retain their original password policy at sign-in.
       setPasswordError("");
     }
-
     return isValid;
   };
 
@@ -83,13 +93,20 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
 
     setIsLoading(true);
     try {
-      await login(email, password);
-      // Preserve only a validated same-origin destination in the active locale.
-      const requestedReturnTo = new URLSearchParams(window.location.search).get("returnTo");
-      const returnTo = getSafeLocalizedReturnTo(requestedReturnTo, locale, window.location.origin);
-      router.push(returnTo ?? `/${locale}/dashboard`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const result = await login(email, password);
+      if (result.errorCode === "EMAIL_NOT_VERIFIED") {
+        const verificationParams = new URLSearchParams({ email: email.trim(), recovery: "1" });
+        if (returnTo) verificationParams.set("returnTo", returnTo);
+        router.push(`/${locale}/verify-email?${verificationParams.toString()}`);
+        return;
+      }
+      const safeLocalizedReturnTo = getSafeLocalizedReturnTo(
+        returnTo,
+        locale,
+        window.location.origin,
+      );
+      router.push(safeLocalizedReturnTo ?? `/${locale}/dashboard`);
+    } catch {
       setSubmitError(isFa ? "آدرس ایمیل یا رمز عبور نامعتبر است." : "Invalid credentials. Please try again.");
     } finally {
       setIsLoading(false);
@@ -151,7 +168,14 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
                 error={emailError}
                 disabled={isLoading}
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="email"
               />
+              {!emailError && emailLocalPartHasUppercase(email) && (
+                <p className="text-xs text-amber-600">{strings.localPartCaseWarning}</p>
+              )}
 
               {/* Password Input */}
               <div className="space-y-1">
@@ -164,6 +188,9 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
                   error={passwordError}
                   disabled={isLoading}
                   required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
                 <div className="flex justify-end pt-1">
                   <Link
@@ -245,7 +272,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
             <div className="mt-6 pt-4 border-t border-[var(--border)] text-center text-xs font-bold">
               <span className="text-[var(--text-muted)] mr-1">{strings.noAccount}</span>
               <Link
-                href={`/${locale}/register`}
+                href={registerHref}
                 className="text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] hover:underline transition-colors"
               >
                 {strings.registerLink}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
@@ -41,7 +42,8 @@ interface AuditState {
 
 export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: _onUpgradeClick }) => {
   const { language, direction } = useTheme();
-  const { session, login, register } = useAuth();
+  const router = useRouter();
+  const { session, login } = useAuth();
   const isRtl = language === "fa";
 
   const [url, setUrl] = useState("");
@@ -57,7 +59,6 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
 
   // Auth tabs inside the inline auth gate
   const [authTab, setAuthTab] = useState<"login" | "register">("register");
-  const [authName, setAuthName] = useState("");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
@@ -103,6 +104,41 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
     }
   }, [url]);
 
+  // Restore an audit that was interrupted by registration/email verification.
+  useEffect(() => {
+    const storageKey = "oxenn.pending-free-audit";
+    const pending = window.sessionStorage.getItem(storageKey);
+    if (!pending) return;
+
+    let restoredUrl: string;
+    try {
+      const restored = JSON.parse(pending) as { url?: unknown };
+      if (typeof restored.url !== "string" || !auditService.validateUrl(restored.url)) {
+        window.sessionStorage.removeItem(storageKey);
+        return;
+      }
+      restoredUrl = restored.url;
+    } catch {
+      // Discard malformed, stale session-storage state.
+      window.sessionStorage.removeItem(storageKey);
+      return;
+    }
+
+    // Defer state updates to avoid a synchronous cascading render from the effect.
+    // Keep the pending value until the mounted panel has restored it.
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      window.sessionStorage.removeItem(storageKey);
+      setUrl(restoredUrl);
+      setAuditState({ status: "auth-required", job: null, error: null, logs: [] });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Auto-scroll the terminal logs
   useEffect(() => {
     if (consoleEndRef.current) {
@@ -135,7 +171,10 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
       : "Sign in or register to use this demo. All displayed crawl and AI data is synthetic.",
     loginTab: isRtl ? "ورود کاربران" : "Sign In",
     registerTab: isRtl ? "ایجاد حساب کاربری جدید" : "Register Workspace",
-    authNameLabel: isRtl ? "نام و نام خانوادگی" : "Full Name",
+    registerRedirectDesc: isRtl
+      ? "برای ایجاد حساب، به فرم رسمی ثبت‌نام بروید. پس از تأیید ایمیل، به صفحه حساب کاربری منتقل می‌شوید."
+      : "Create your account on the secure registration page. After email verification, you will be taken to your account page.",
+    registerRedirectButton: isRtl ? "رفتن به صفحه ثبت‌نام" : "Go to registration",
     authEmailLabel: isRtl ? "ایمیل سازمانی" : "Enterprise Email Address",
     authPasswordLabel: isRtl ? "رمز عبور" : "Password",
     authBtnLogin: isRtl ? "ورود و اجرای دمو" : "Sign In & Run Demo",
@@ -205,23 +244,20 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
     e.preventDefault();
     setAuthError(null);
     setIsAuthLoading(true);
-
     try {
-      if (authTab === "login") {
-        if (!authEmail.trim() || !authPassword.trim()) {
-          throw new Error(isRtl ? "لطفاً تمام فیلدها را پر کنید." : "Please fill in all credentials.");
-        }
-        await login(authEmail, authPassword);
-      } else {
-        if (!authName.trim() || !authEmail.trim() || !authPassword.trim()) {
-          throw new Error(isRtl ? "لطفاً تمام فیلدها را پر کنید." : "Please fill in all registration fields.");
-        }
-        await register(authName, authEmail, authPassword);
+      if (!authEmail.trim() || !authPassword.trim()) {
+        throw new Error(isRtl ? "لطفاً ایمیل و رمز عبور را وارد کنید." : "Enter your email and password.");
       }
-      // Success will trigger the useEffect, resuming the audit!
+      const result = await login(authEmail, authPassword);
+      if (result.errorCode === "EMAIL_NOT_VERIFIED") {
+        window.sessionStorage.setItem("oxenn.pending-free-audit", JSON.stringify({ url }));
+        const returnTo = window.location.pathname;
+        router.push(`/${language}/verify-email?email=${encodeURIComponent(authEmail.trim())}&returnTo=${encodeURIComponent(returnTo)}`);
+        return;
+      }
+      // Successful login triggers the existing effect to resume the pending audit.
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      setAuthError(errMsg);
+      setAuthError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsAuthLoading(false);
     }
@@ -338,65 +374,71 @@ export const FreeAuditPanel: React.FC<FreeAuditPanelProps> = ({ onUpgradeClick: 
               </button>
             </div>
 
-            <form onSubmit={handleInlineAuth} className="space-y-4">
-              {authError && (
-                <div className="p-3.5 rounded-xl border border-[var(--color-error)]/20 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs flex items-center gap-2">
-                  <AlertCircle size={14} className="shrink-0" />
-                  <p className="font-bold">{authError}</p>
-                </div>
-              )}
-
-              {authTab === "register" && (
+            {authTab === "register" ? (
+              <div className="space-y-4">
+                <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{strings.registerRedirectDesc}</p>
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="w-full py-3 text-xs font-black"
+                  onClick={() => {
+                    window.sessionStorage.setItem("oxenn.pending-free-audit", JSON.stringify({ url }));
+                    const returnTo = window.location.pathname;
+                    router.push(`/${language}/register?returnTo=${encodeURIComponent(returnTo)}`);
+                  }}
+                >
+                  <UserPlus size={14} />
+                  <span>{strings.registerRedirectButton}</span>
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleInlineAuth} className="space-y-4">
+                {authError && (
+                  <div className="flex items-center gap-2 rounded-xl border border-[var(--color-error)]/20 bg-[var(--color-error)]/10 p-3.5 text-xs text-[var(--color-error)]">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <p className="font-bold">{authError}</p>
+                  </div>
+                )}
                 <Input
-                  type="text"
-                  label={strings.authNameLabel}
-                  placeholder="e.g. Seyed"
-                  value={authName}
-                  onChange={(e) => setAuthName(e.target.value)}
+                  type="email"
+                  label={strings.authEmailLabel}
+                  placeholder="name@company.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
                   disabled={isAuthLoading}
                   required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="email"
                 />
-              )}
-
-              <Input
-                type="email"
-                label={strings.authEmailLabel}
-                placeholder="name@company.com"
-                value={authEmail}
-                onChange={(e) => setAuthEmail(e.target.value)}
-                disabled={isAuthLoading}
-                required
-              />
-
-              <Input
-                type="password"
-                label={strings.authPasswordLabel}
-                placeholder="••••••••"
-                value={authPassword}
-                onChange={(e) => setAuthPassword(e.target.value)}
-                disabled={isAuthLoading}
-                required
-              />
-
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={isAuthLoading}
-                className="w-full py-3 mt-4 rounded-xl text-xs font-black shadow-lg"
-              >
-                {isAuthLoading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-1.5" />
-                    <span>{isRtl ? "در حال تایید هویت..." : "Authenticating..."}</span>
-                  </>
-                ) : (
-                  <>
-                    {authTab === "login" ? <LogIn size={14} /> : <UserPlus size={14} />}
-                    <span>{authTab === "login" ? strings.authBtnLogin : strings.authBtnRegister}</span>
-                  </>
-                )}
-              </Button>
-            </form>
+                <Input
+                  type="password"
+                  label={strings.authPasswordLabel}
+                  placeholder="••••••••"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  disabled={isAuthLoading}
+                  required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <Button type="submit" variant="primary" disabled={isAuthLoading} className="mt-4 w-full rounded-xl py-3 text-xs font-black shadow-lg">
+                  {isAuthLoading ? (
+                    <>
+                      <span className="mr-1.5 h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                      <span>{isRtl ? "در حال ورود..." : "Signing in..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogIn size={14} />
+                      <span>{strings.authBtnLogin}</span>
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       )}

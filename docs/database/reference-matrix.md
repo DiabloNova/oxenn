@@ -2795,6 +2795,39 @@
 
 ---
 
+## Table: `user_profiles`
+
+- **Ownership Scope:** USER_OWNED
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (USER_OWNED)
+- **Migration Coverage:** Not applicable (USER_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
+- **Status:** `WIRED`
+- **Consumers:** `src/app/actions/auth.ts`, `src/services/auth/session.ts`
+
+### Columns
+
+| Name | Type | Not Null | Primary Key | Default |
+|---|---|---|---|---|
+| `created_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
+| `updated_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
+| `user_id` | `text` | ✅ | ✅ | NULL |
+| `username` | `text` | ✅ | ❌ | NULL |
+
+### Indexes
+
+| Name | Columns | Method | Unique | Predicate |
+|---|---|---|---|---|
+| `idx_user_profiles_lower_username` | `lower("username")` | `btree` | ✅ | — |
+
+### Foreign Keys
+
+| Name | Columns | Foreign Table | Foreign Columns | On Delete |
+|---|---|---|---|---|
+| `user_profiles_user_id_users_id_fk` | `user_id` | `users` | `id` | cascade |
+
+---
+
 ## Table: `users`
 
 - **Ownership Scope:** USER_OWNED
@@ -2924,6 +2957,6 @@
 
 
 ## Summary
-- Total Tables: 70
-- WIRED Tables: 59
+- Total Tables: 71
+- WIRED Tables: 60
 - ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 11

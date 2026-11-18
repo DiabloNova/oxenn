@@ -60,8 +60,10 @@ jobs:
       - name: Verify Drizzle migration chain
         run: pnpm exec drizzle-kit check --config=drizzle.config.ts
 
-      - name: Build
+      - name: Build (Vercel Preview environment; database and session secret intentionally absent)
         run: pnpm build
+        env:
+          VERCEL_ENV: preview
 
       - name: Build Reference Matrix
         run: pnpm run docs:matrix

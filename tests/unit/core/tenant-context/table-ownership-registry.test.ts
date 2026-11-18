@@ -24,34 +24,95 @@ describe("Canonical table ownership registry", () => {
   it("accounts for every canonical Workspace Drizzle table and the latest snapshot", () => {
     const workspaceSources = [
       "database/schema/index.ts",
+      "database/schema/users.ts",
       "database/schema/organization-table.ts",
       "database/schema/api-keys.ts",
+      "database/schema/user-profile.ts",
     ];
     const schemaNames = readTableNames(workspaceSources);
+    const migrationDirectory = path.join(repositoryRoot, "database/drizzle");
+    const metadataDirectory = path.join(migrationDirectory, "meta");
     const journal = JSON.parse(
-      fs.readFileSync(
-        path.join(repositoryRoot, "database/drizzle/meta/_journal.json"),
-        "utf8",
-      ),
-    ) as { entries: Array<{ idx: number }> };
-    const latestEntry = journal.entries[journal.entries.length - 1];
-    const snapshotPath = path.join(
-      repositoryRoot,
-      "database/drizzle/meta",
-      String(latestEntry.idx).padStart(4, "0") + "_snapshot.json",
-    );
-    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8")) as {
-      tables: Record<string, { name: string }>;
+      fs.readFileSync(path.join(metadataDirectory, "_journal.json"), "utf8"),
+    ) as {
+      version: string;
+      dialect: string;
+      entries: Array<{ idx: number; tag: string }>;
     };
-    const snapshotNames = Object.values(snapshot.tables).map((table) => table.name);
+    const snapshotPathFor = (index: number) =>
+      path.join(metadataDirectory, String(index).padStart(4, "0") + "_snapshot.json");
+
+    // The journal is authoritative for SQL execution order. SQL-only entries may
+    // legitimately have no Drizzle snapshot, so snapshot lineage follows the
+    // nearest preceding generated snapshot rather than assuming idx - 1.
+    expect(journal.entries.map((entry) => entry.idx)).toEqual(
+      journal.entries.map((_, index) => index),
+    );
+    for (const entry of journal.entries) {
+      expect(fs.existsSync(path.join(migrationDirectory, entry.tag + ".sql"))).toBe(true);
+    }
+
+    // Validate the entire generated-snapshot chain, not just its terminal link.
+    // SQL-only journal entries (for example 0005_force_rls) have no snapshot;
+    // the next generated snapshot must point to the nearest preceding snapshot.
+    let previousGeneratedSnapshotId = "00000000-0000-0000-0000-000000000000";
+    let latestSnapshotEntry: (typeof journal.entries)[number] | undefined;
+    let latestSnapshot: {
+      id: string;
+      prevId: string;
+      version: string;
+      dialect: string;
+      tables: Record<string, { name: string }>;
+    } | undefined;
+
+    for (const entry of journal.entries) {
+      const snapshotPath = snapshotPathFor(entry.idx);
+      if (!fs.existsSync(snapshotPath)) continue;
+
+      const generatedSnapshot = JSON.parse(
+        fs.readFileSync(snapshotPath, "utf8"),
+      ) as {
+        id: string;
+        prevId: string;
+        version: string;
+        dialect: string;
+        tables: Record<string, { name: string }>;
+      };
+
+      expect(generatedSnapshot.version).toBe(journal.version);
+      expect(generatedSnapshot.dialect).toBe(journal.dialect);
+      expect(generatedSnapshot.prevId).toBe(previousGeneratedSnapshotId);
+
+      previousGeneratedSnapshotId = generatedSnapshot.id;
+      latestSnapshotEntry = entry;
+      latestSnapshot = generatedSnapshot;
+    }
+
+    if (!latestSnapshotEntry || !latestSnapshot) {
+      throw new Error("Workspace migration journal has no matching Drizzle snapshot.");
+    }
+
+    const snapshotNames = Object.values(latestSnapshot.tables).map((table) => table.name);
+    const userProfilesOwnership = getTableOwnershipEntry("workspace", "user_profiles");
 
     expect(new Set(schemaNames).size).toBe(schemaNames.length);
     expect([...schemaNames].sort()).toEqual([...snapshotNames].sort());
+    expect(snapshotNames).toContain("user_profiles");
+    expect(userProfilesOwnership).toMatchObject({
+      scope: "USER_OWNED",
+      status: "current",
+    });
+    expect(userProfilesOwnership.evidence).toEqual(
+      expect.arrayContaining([
+        "database/schema/user-profile.ts: userProfiles.userId references users.id; lower(username) has a unique index",
+        "database/drizzle/meta/0016_snapshot.json: canonical Workspace snapshot",
+      ]),
+    );
     expect(getOwnershipRegistryDrift("workspace", schemaNames)).toEqual({
       missingRegistryEntries: [],
       staleRegistryEntries: [],
     });
-    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(70);
+    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(71);
   });
 
   it("accounts for every table in the separate Platform Admin Drizzle schema", () => {

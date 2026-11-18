@@ -208,13 +208,27 @@ function main() {
   const schemaIndexTables = pgTables("database/schema/index.ts");
   const organizationTables = pgTables("database/schema/organization-table.ts");
   const apiKeyTables = pgTables("database/schema/api-keys.ts");
+  const userProfileTables = pgTables("database/schema/user-profile.ts");
+  const userTables = pgTables("database/schema/users.ts");
   assert.equal(organizationTables.length, 1, "Expected one organizations table in its schema module");
   assert.equal(apiKeyTables.length, 1, "Expected one api_keys table in its schema module");
+  assert.equal(userProfileTables.length, 1, "Expected one user_profiles table in its schema module");
+  assert.equal(userTables.length, 1, "Expected one users table in its schema module");
 
   const schemaIndex = readFile("database/schema/index.ts");
   assert.match(schemaIndex, /import\s*\{\s*organizations\s*\}\s*from\s*["']\.\/organization-table["']/);
-  assert.match(schemaIndex, /export\s*\{\s*organizations\s*\}/);
+  assert.match(schemaIndex, /import\s*\{\s*users\s*\}\s*from\s*["']\.\/users["']/);
+  assert.match(schemaIndex, /export\s*\{[^}]*\borganizations\b[^}]*\}/);
+  assert.match(schemaIndex, /export\s*\{[^}]*\busers\b[^}]*\}/);
   assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/api-keys["']/);
+  assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/user-profile["']/);
+
+  for (const configPath of ["drizzle.config.ts", "drizzle.push.config.ts"]) {
+    assert.ok(
+      (readFile(configPath).match(/^\s*schema:\s*"\.\/database\/schema\/index\.ts",?\s*$/gm) ?? []).length === 1,
+      configPath + " must use the canonical schema barrel exactly once",
+    );
+  }
 
   const journal = JSON.parse(readFile("database/drizzle/meta/_journal.json"));
   assert.ok(Array.isArray(journal.entries) && journal.entries.length > 0, "Drizzle journal is empty");
@@ -223,7 +237,7 @@ function main() {
   const snapshot = JSON.parse(readFile(snapshotPath));
   assert.ok(snapshot.tables && typeof snapshot.tables === "object", "Latest Drizzle snapshot has no table map");
 
-  const schemaTables = [...schemaIndexTables, ...organizationTables, ...apiKeyTables];
+  const schemaTables = [...schemaIndexTables, ...organizationTables, ...apiKeyTables, ...userProfileTables, ...userTables];
   assert.equal(unique(schemaTables).length, schemaTables.length, "Duplicate canonical schema table declaration");
   const snapshotTables = Object.values(snapshot.tables).map((table) => table.name);
   assert.equal(unique(snapshotTables).length, snapshotTables.length, "Duplicate table name in latest snapshot");
@@ -263,6 +277,7 @@ function main() {
   const localCount = schemaIndexTables.length;
   const migrationCount = journal.entries.length;
   const migrationTableCount = unique(migrationTables).length;
+  const modularCount = organizationTables.length + apiKeyTables.length + userProfileTables.length + userTables.length;
 
   assert.match(baseline, /^# OXENN.*MVP Engineering Baseline/m, "Current MVP engineering baseline heading is missing");
   assert.match(baseline, /Repository snapshot|Repository implementation snapshot/i, "Engineering baseline must identify its repository snapshot");
@@ -270,7 +285,7 @@ function main() {
 
   const baselineMetrics = [
     ["Schema index pgTable declarations", localCount],
-    ["Additional modular schema declarations", organizationTables.length + apiKeyTables.length],
+    ["Additional modular schema declarations", modularCount],
     ["Effective schema table declarations", totalTables],
     ["Latest Drizzle snapshot tables", snapshotTables.length],
     ["Ordered migration journal entries", migrationCount],
@@ -301,7 +316,7 @@ function main() {
 
   console.log(
     "MVP engineering baseline verification passed: " +
-      totalTables + " schema/snapshot/migration tables (" + localCount + " + 2 modular), " +
+      totalTables + " schema/snapshot/migration tables (" + localCount + " + " + modularCount + " modular), " +
       migrationCount + " migration files, " +
       rlsCount + " RLS tables aligned across snapshot/runtime/ENABLE/FORCE, " +
       projectIndexLinks.length + " project-index links, " +

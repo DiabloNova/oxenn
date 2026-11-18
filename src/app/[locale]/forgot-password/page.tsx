@@ -9,6 +9,7 @@ import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle, Mail, KeyRound } from "lucide-react";
 import { requestPasswordReset, confirmPasswordReset } from "@/app/actions/auth";
 import { useSearchParams } from "next/navigation";
+import { getAccountEmailValidationError, getPasswordValidationError } from "@/services/auth/registration-validation";
 
 
 export default function ForgotPasswordPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -36,7 +37,10 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
     emailLabel: isFa ? "آدرس ایمیل ثبت‌نام شده" : "Registered Email Address",
     emailPlaceholder: isFa ? "name@company.com" : "name@company.com",
     passwordLabel: isFa ? "رمز عبور جدید" : "New Password",
-    passwordPlaceholder: isFa ? "حداقل ۱۰ کاراکتر" : "At least 10 characters",
+    passwordPlaceholder: isFa ? "رمز عبور جدید را وارد کنید" : "Enter your new password",
+    passwordHint: isFa
+      ? "رمز عبور باید ۱۰ تا ۲۵۵ نویسه انگلیسیِ قابل‌چاپ، بدون فاصله، شامل حداقل یک حرف بزرگ، یک عدد و دو نویسه خاص باشد."
+      : "Use 10–255 printable ASCII characters with no spaces, at least one uppercase letter, one number, and two special characters.",
     submitBtn: isConfirmMode
       ? (isFa ? "تغییر رمز عبور" : "Change Password")
       : (isFa ? "ارسال لینک بازیابی" : "Send Reset Instructions"),
@@ -57,23 +61,46 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
 
   const validateForm = () => {
     if (isConfirmMode) {
-      if (!password || password.length < 10) {
-        setPasswordError(isFa ? "رمز عبور باید حداقل ۱۰ کاراکتر باشد." : "Password must be at least 10 characters.");
+      const errorCode = getPasswordValidationError(password);
+      if (errorCode) {
+        const messages: Record<string, string> = isFa ? {
+          PASSWORD_REQUIRED: "رمز عبور الزامی است.",
+          PASSWORD_TOO_SHORT: "رمز عبور باید حداقل ۱۰ نویسه باشد.",
+          PASSWORD_TOO_LONG: "رمز عبور نمی‌تواند بیشتر از ۲۵۵ نویسه باشد.",
+          PASSWORD_ENGLISH_ONLY: "رمز عبور باید فقط از نویسه‌های انگلیسی و ASCII باشد و فاصله نداشته باشد.",
+          PASSWORD_UPPERCASE_REQUIRED: "رمز عبور باید حداقل یک حرف بزرگ انگلیسی داشته باشد.",
+          PASSWORD_NUMBER_REQUIRED: "رمز عبور باید حداقل یک عدد داشته باشد.",
+          PASSWORD_TWO_SPECIAL_REQUIRED: "رمز عبور باید حداقل دو کاراکتر خاص داشته باشد.",
+        } : {
+          PASSWORD_REQUIRED: "Password is required.",
+          PASSWORD_TOO_SHORT: "Password must contain at least 10 characters.",
+          PASSWORD_TOO_LONG: "Password cannot exceed 255 characters.",
+          PASSWORD_ENGLISH_ONLY: "Password must use printable ASCII characters only and contain no spaces.",
+          PASSWORD_UPPERCASE_REQUIRED: "Password must include at least one uppercase letter.",
+          PASSWORD_NUMBER_REQUIRED: "Password must include at least one number.",
+          PASSWORD_TWO_SPECIAL_REQUIRED: "Password must include at least two special characters.",
+        };
+        setPasswordError(messages[errorCode]);
         return false;
       }
       setPasswordError("");
       return true;
-    } else {
-      if (!email) {
-        setEmailError(isFa ? "وارد کردن ایمیل الزامی است." : "Email is required.");
-        return false;
-      } else if (!/\S+@\S+\.\S+/.test(email)) {
-        setEmailError(isFa ? "لطفاً یک ایمیل معتبر وارد کنید." : "Please enter a valid email address.");
-        return false;
-      }
-      setEmailError("");
-      return true;
     }
+
+    const errorCode = getAccountEmailValidationError(email);
+    if (errorCode) {
+      const messages: Record<string, string> = isFa ? {
+        EMAIL_REQUIRED: "وارد کردن ایمیل الزامی است.",
+        EMAIL_INVALID_FORMAT: "لطفاً یک آدرس ایمیل معتبر وارد کنید.",
+      } : {
+        EMAIL_REQUIRED: "Email is required.",
+        EMAIL_INVALID_FORMAT: "Enter a valid email address.",
+      };
+      setEmailError(messages[errorCode]);
+      return false;
+    }
+    setEmailError("");
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,10 +113,20 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
     try {
       if (isConfirmMode && token) {
         await confirmPasswordReset(token, password);
+        setIsSuccess(true);
       } else {
-        await requestPasswordReset(email);
+        const result = await requestPasswordReset(email);
+        if (!result.success) {
+          const message = result.error === "EMAIL_DELIVERY_FAILED"
+            ? (isFa ? "ارسال ایمیل بازیابی ناموفق بود. لطفاً بعداً دوباره تلاش کنید." : "The recovery email could not be delivered. Please try again later.")
+            : result.error === "TooManyRequests"
+              ? (isFa ? "تعداد درخواست‌ها بیش از حد مجاز است. بعداً تلاش کنید." : "Too many requests. Try again later.")
+              : (isFa ? "آدرس ایمیل معتبر نیست." : "The email address is invalid.");
+          setSubmitError(message);
+        } else {
+          setIsSuccess(true);
+        }
       }
-      setIsSuccess(true);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("Invalid or expired token")) {
         setSubmitError(isFa ? "لینک بازیابی نامعتبر یا منقضی شده است." : "The reset link is invalid or has expired.");
@@ -158,6 +195,7 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
 
                 {/* Input Fields */}
                 {isConfirmMode ? (
+                  <>
                   <Input
                     type="password"
                     label={strings.passwordLabel}
@@ -167,7 +205,12 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
                     error={passwordError}
                     disabled={isLoading}
                     required
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
+                  <p className="text-xs leading-relaxed text-[var(--text-muted)]">{strings.passwordHint}</p>
+                  </>
                 ) : (
                   <Input
                     type="email"
@@ -178,6 +221,9 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
                     error={emailError}
                     disabled={isLoading}
                     required
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                 )}
 

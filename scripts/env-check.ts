@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { isValidSessionSecret, normalizeRuntimeEnvValue } from "../src/services/auth/session-secret";
 
 type Mode = "dev" | "build" | "migrate" | "test";
 
@@ -7,8 +8,13 @@ interface VarRule {
   name: string;
   modes: Mode[];
   required: boolean;
+  // Preview can build public routes without provisioning runtime-only services.
+  // Production remains strict, and any supplied value is still validated.
+  optionalOnVercelPreview?: boolean;
+  optionalOnDatabaseFreePreview?: boolean;
   format?: RegExp;
   formatDescription?: string;
+  validate?: (value: string) => boolean;
 }
 
 const RULES: VarRule[] = [
@@ -16,6 +22,7 @@ const RULES: VarRule[] = [
     name: "DATABASE_URL",
     modes: ["dev", "build", "migrate", "test"],
     required: true,
+    optionalOnVercelPreview: true,
     format: /^postgres(ql)?:\/\/.+/,
     formatDescription: "must be a valid PostgreSQL connection URL (e.g. postgresql://user:pass@host:5432/db)",
   },
@@ -30,8 +37,9 @@ const RULES: VarRule[] = [
     name: "SESSION_SECRET",
     modes: ["dev", "build"],
     required: true,
-    format: /^.{16,}$/,
-    formatDescription: "must be at least 16 characters long",
+    optionalOnDatabaseFreePreview: true,
+    validate: isValidSessionSecret,
+    formatDescription: "must be a unique non-placeholder secret of at least 32 characters",
   },
   {
     name: "ALLOW_DB_PUSH",
@@ -70,6 +78,39 @@ const RULES: VarRule[] = [
   },
 ];
 
+export function parseDotenvValue(source: string): string {
+  const value = source.trimStart();
+  if (!value || value.startsWith("#")) return "";
+
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    let closingQuote = -1;
+    let escaped = false;
+    for (let index = 1; index < value.length; index += 1) {
+      const character = value[index];
+      if (quote === '"' && character === "\\" && !escaped) {
+        escaped = true;
+        continue;
+      }
+      if (character === quote && !escaped) {
+        closingQuote = index;
+        break;
+      }
+      escaped = false;
+    }
+    if (closingQuote < 0) return value;
+    const trailing = value.slice(closingQuote + 1).trimStart();
+    if (trailing && !trailing.startsWith("#")) return value;
+    let parsed = value.slice(1, closingQuote);
+    if (quote === '"') {
+      parsed = parsed.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\(["\\])/g, "$1");
+    }
+    return parsed;
+  }
+
+  return value.replace(/\s+#.*$/, "").trimEnd();
+}
+
 function loadEnvFile(filePath: string) {
   if (!fs.existsSync(filePath)) return;
   const content = fs.readFileSync(filePath, "utf8");
@@ -78,8 +119,8 @@ function loadEnvFile(filePath: string) {
     if (!trimmed || trimmed.startsWith("#")) continue;
     const eqIdx = trimmed.indexOf("=");
     if (eqIdx === -1) continue;
-    const key = trimmed.slice(0, eqIdx).trim();
-    const val = trimmed.slice(eqIdx + 1).trim();
+    const key = trimmed.slice(0, eqIdx).trim().replace(/^export\s+/, "");
+    const val = parseDotenvValue(trimmed.slice(eqIdx + 1));
     if (key && process.env[key] === undefined) {
       process.env[key] = val;
     }
@@ -106,22 +147,63 @@ export function validateEnv(modeArg?: string) {
   const invalid: { name: string; reason: string }[] = [];
 
   const activeRules = RULES.filter((r) => r.modes.includes(mode));
+  const isVercelPreviewBuild = mode === "build" && process.env.VERCEL_ENV === "preview";
+  const isDatabaseFreePreviewBuild = isVercelPreviewBuild && !process.env.DATABASE_URL?.trim();
 
   for (const rule of activeRules) {
-    const val = process.env[rule.name];
+    const rawValue = process.env[rule.name] ?? "";
+    // SESSION_SECRET uses the same normalization as authentication. db:push
+    // target inputs are trimmed by the runtime guard; all other settings retain
+    // their actual runtime representation so quotes cannot hide bad values.
+    const val = rule.name === "SESSION_SECRET"
+      ? normalizeRuntimeEnvValue(rawValue)
+      : rule.name === "DB_PUSH_TARGET_ID" || rule.name === "DB_PUSH_DATABASE_URL"
+        ? rawValue.trim()
+        : rawValue;
 
-    if (!val?.trim()) {
-      if (rule.required) {
+    if (!val.trim()) {
+      const optionalForPreview =
+        (rule.optionalOnVercelPreview && isVercelPreviewBuild) ||
+        (rule.optionalOnDatabaseFreePreview && isDatabaseFreePreviewBuild);
+      if (rule.required && !optionalForPreview) {
         missing.push(rule.name);
       }
       continue;
     }
 
-    if (rule.format && !rule.format.test(val)) {
+    if ((rule.validate && !rule.validate(val)) || (rule.format && !rule.format.test(val))) {
       invalid.push({
         name: rule.name,
         reason: rule.formatDescription || "invalid format",
       });
+    }
+  }
+
+  if (mode === "build" && process.env.NODE_ENV === "production") {
+    const isDatabaseFreePreview = isDatabaseFreePreviewBuild;
+    const hasEmailSettings = [
+      process.env.EMAIL_PROVIDER,
+      process.env.MAILEROO_API_KEY,
+      process.env.RESEND_API_KEY,
+      process.env.EMAIL_FROM_ADDRESS,
+    ].some((value) => Boolean(value?.trim()));
+
+    // Only a Preview with no configured database may omit email credentials.
+    // If a database is configured, registration can run and email delivery
+    // must be configured as well. Any partially supplied settings are checked.
+    if (!isDatabaseFreePreview || hasEmailSettings) {
+      const provider = (process.env.EMAIL_PROVIDER ?? "maileroo").toLowerCase();
+      if (provider !== "maileroo" && provider !== "resend") {
+        invalid.push({ name: "EMAIL_PROVIDER", reason: "must be maileroo or resend" });
+      } else {
+        const keyName = provider === "maileroo" ? "MAILEROO_API_KEY" : "RESEND_API_KEY";
+        if (!isDatabaseFreePreview && !process.env[keyName]?.trim()) missing.push(keyName);
+      }
+
+      const fromAddress = process.env.EMAIL_FROM_ADDRESS ?? "";
+      if ((!isDatabaseFreePreview || fromAddress.trim()) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)) {
+        invalid.push({ name: "EMAIL_FROM_ADDRESS", reason: "must be a valid address on the verified sending domain" });
+      }
     }
   }
 

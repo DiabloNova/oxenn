@@ -130,15 +130,8 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
   await requireWorkspaceMembership(session.user.id, workspaceId);
   const actorRole = await requireRole("workspace_admin", workspaceId);
 
-  // Test email setup before creating token
-  let sender;
-  try {
-    sender = getEmailSender();
-  } catch (e) {
-    // If it fails (e.g. no EMAIL_PROVIDER in prod), we will just fallback to returning the token directly.
-    console.error("Email sender creation error during invite (fallback to raw token response)", e);
-    sender = null;
-  }
+  // Fail before creating a pending invitation if the transactional sender is unavailable.
+  const sender = getEmailSender();
 
   const result = await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-invite-user", async () => {
     const client = TenantContextManager.getDbClient();
@@ -155,60 +148,70 @@ export async function inviteUserAction(workspaceId: string, email: string, role:
     }
 
     const db = drizzle(client);
-
-    // Ensure user doesn't already exist in workspace
     const existing = await db
       .select({ id: organizationMembers.id })
       .from(organizationMembers)
       .innerJoin(users, eq(organizationMembers.userId, users.id))
-      .where(
-        and(
-          eq(users.email, email),
-          eq(organizationMembers.organizationId, workspaceId)
-        )
-      )
+      .where(and(
+        eq(users.email, email),
+        eq(organizationMembers.organizationId, workspaceId)
+      ))
       .limit(1);
-
     if (existing.length > 0) throw new Error("User already exists in workspace.");
 
     const token = randomUUID();
-    const tokenHash = createHash('sha256').update(token).digest('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await db.insert(organizationInvitations).values({
-        organizationId: workspaceId,
-        email,
-        role,
-        tokenHash,
-        expiresAt
+      organizationId: workspaceId,
+      email,
+      role,
+      tokenHash,
+      expiresAt
     });
 
-    // Fetch workspace name for email
     const orgs = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, workspaceId)).limit(1);
-    const workspaceName = orgs[0]?.name || "Workspace";
-
-    return { success: true, email, workspaceName, token, inviterName: session.user!.name };
+    return {
+      email,
+      workspaceName: orgs[0]?.name || "Workspace",
+      token,
+      tokenHash,
+      inviterName: session.user!.name
+    };
   });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  if (sender) {
-    // Do not await to avoid blocking response
-    sender.send({
+  try {
+    await sender.send({
       to: result.email,
       templateId: "workspace_invitation",
       params: {
         workspaceName: result.workspaceName,
         inviterName: result.inviterName,
-        url: `${appUrl}/en/accept-invite?token=${result.token}` // Assuming some front-end route to handle it later
+        url: `${appUrl}/en/accept-invite?token=${result.token}`
       }
-    }).catch((e) => console.error("Email send async error", e));
-
-    return { success: true };
-  } else {
-    // Fallback: If no provider is available, we return the token in the response so admins can share it manually.
-    // This gates the email provider feature while preserving the prior acceptance loop logic in Production.
-    return { success: true, token: result.token };
+    });
+  } catch (error) {
+    console.error("Workspace invitation email delivery failed.", error);
+    try {
+      await TenantContextManager.runWithTenantContext(workspaceId, session.user.id, "ctx-revoke-undelivered-invite", async () => {
+        const client = TenantContextManager.getDbClient();
+        if (!client) throw new Error("Failed to get DB client in tenant context");
+        await client.query(
+          "UPDATE organization_invitations SET status = 'revoked', updated_at = NOW() WHERE organization_id = $1 AND token_hash = $2 AND status = 'pending'",
+          [workspaceId, result.tokenHash],
+        );
+      });
+    } catch (cleanupError) {
+      console.error("Failed to revoke an undelivered workspace invitation.", cleanupError);
+    }
+    throw new Error("The invitation could not be delivered. Please retry; no active invitation will be shared.");
   }
+
+  return { success: true };
+
+
 }
 
 export async function acceptInvitationAction(token: string) {

@@ -18,7 +18,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { organizations } from "./organization-table";
-export { organizations };
+import { users } from "./users";
+export { organizations, users };
+export * from "./user-profile";
 
 // Custom vector type for pgvector
 const vector = customType<{ data: number[] }>({
@@ -73,18 +75,6 @@ function textTenantPolicy() {
 // 1.1 USERS & MEMBERSHIPS (WORKSPACE MODEL)
 // ==========================================
 import { AnyPgColumn } from "drizzle-orm/pg-core";
-
-export const users = pgTable("users", {
-  id: text("id").primaryKey(), // using text to match the existing usr-xxx pattern if needed
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
-}, (table) => [
-  uniqueIndex("idx_users_lower_email").on(sql`lower(${table.email})`)
-]);
 
 export const emailVerificationTokens = pgTable("email_verification_tokens", {
   id: uuid("id").primaryKey().default(defaultUuid),

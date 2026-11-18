@@ -116,12 +116,13 @@ export async function getSession(): Promise<Session | null> {
       }
       const { rows } = await client.query(`
         SELECT s.id, s.user_id as "userId", s.workspace_id as "workspaceId", s.expires_at as "expiresAt", s.revoked_at as "revokedAt", s.replaced_by as "replacedBy",
-               u.email, u.name,
+               u.email, u.name, up.username,
                m.role
         FROM sessions s
         JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
         JOIN organizations o ON o.id = s.workspace_id AND o.deleted_at IS NULL
-        LEFT JOIN organization_members m ON s.workspace_id = m.organization_id AND s.user_id = m.user_id
+        LEFT JOIN user_profiles up ON up.user_id = u.id
+         LEFT JOIN organization_members m ON s.workspace_id = m.organization_id AND s.user_id = m.user_id
         WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
       `, [tokenHash]);
 
@@ -139,6 +140,7 @@ export async function getSession(): Promise<Session | null> {
         id: sessionData.userId,
         name: sessionData.name,
         email: sessionData.email,
+        username: sessionData.username ?? null,
         role: sessionData.role,
         workspaceId: sessionData.workspaceId,
       },

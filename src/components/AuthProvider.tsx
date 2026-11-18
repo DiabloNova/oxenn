@@ -1,13 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Session, UserRole } from "@/types/auth";
 import { loginAction, logoutAction, getServerSessionAction, registerAction } from "@/app/actions/auth";
 
 interface AuthContextType {
   session: Session;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, workspaceName?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ errorCode?: "EMAIL_NOT_VERIFIED" }>;
+  register: (firstName: string, lastName: string, email: string, password: string, username: string, locale: "fa" | "en") => Promise<{ verificationEmailSent: boolean }>;
+  refreshSession: () => Promise<Session>;
   logout: () => Promise<void>;
   hasPermission: (requiredRole: UserRole) => boolean;
 }
@@ -19,6 +20,45 @@ const PUBLIC_UNAUTHENTICATED_SESSION: Session = {
   status: "unauthenticated",
 };
 
+// This legacy cache is best-effort only. The server-backed session remains authoritative.
+function cacheSessionUser(user: Session["user"]): void {
+  try {
+    if (typeof window === "undefined") return;
+    if (user) {
+      window.localStorage.setItem("auth_session_user", JSON.stringify(user));
+    } else {
+      window.localStorage.removeItem("auth_session_user");
+    }
+  } catch {
+    // Browser storage can be unavailable (for example, in restricted contexts).
+  }
+}
+
+function clearCachedSessionUser(): void {
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("auth_session_user");
+    }
+  } catch {
+    // Cache cleanup must never prevent server-side authentication actions.
+  }
+}
+
+async function synchronizeServerSession(): Promise<Session> {
+  try {
+    const serverSession = await getServerSessionAction();
+    if (serverSession.status === "authenticated" && serverSession.user) {
+      cacheSessionUser(serverSession.user);
+    } else {
+      clearCachedSessionUser();
+    }
+    return serverSession;
+  } catch (error) {
+    clearCachedSessionUser();
+    throw error;
+  }
+}
+
 export function AuthProvider({
   children,
   skipSessionCheck = false,
@@ -26,11 +66,19 @@ export function AuthProvider({
   children: React.ReactNode;
   skipSessionCheck?: boolean;
 }) {
-  const [session, setSession] = useState<Session>(() => ({
-    user: null,
-    expiresAt: null,
-    status: "loading",
-  }));
+  const [session, setSession] = useState<Session>({ user: null, expiresAt: null, status: "loading" });
+
+  const refreshSession = useCallback(async (): Promise<Session> => {
+    try {
+      const serverSession = await synchronizeServerSession();
+      setSession(serverSession);
+      return serverSession;
+    } catch (error) {
+      const unauthenticated: Session = { user: null, expiresAt: null, status: "unauthenticated" };
+      setSession(unauthenticated);
+      throw error;
+    }
+  }, []);
 
   useEffect(() => {
     if (skipSessionCheck) {
@@ -39,19 +87,17 @@ export function AuthProvider({
     }
 
     let active = true;
-    getServerSessionAction()
+
+    synchronizeServerSession()
       .then((serverSession) => {
         if (!active) return;
-        if (serverSession.status === "authenticated" && serverSession.user) {
-          setSession(serverSession);
-        } else {
-          setSession(PUBLIC_UNAUTHENTICATED_SESSION);
-        }
+        setSession(serverSession);
       })
-      .catch((err) => {
+      .catch((error) => {
         if (!active) return;
-        console.error("Failed to fetch authoritative server session:", err);
-        setSession(PUBLIC_UNAUTHENTICATED_SESSION);
+        clearCachedSessionUser();
+        setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+        console.error("Failed to fetch authoritative server session:", error);
       });
 
     return () => {
@@ -60,46 +106,61 @@ export function AuthProvider({
   }, [skipSessionCheck]);
 
   const login = async (email: string, password: string) => {
-    setSession((prev) => ({ ...prev, status: "loading" }));
+    setSession((previous) => ({ ...previous, status: "loading" }));
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const user = await loginAction(email, password);
-      setSession({
-        user,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        status: "authenticated",
-      });
-    } catch (e) {
-      setSession(PUBLIC_UNAUTHENTICATED_SESSION);
-      throw e;
+      const result = await loginAction(email, password);
+      if (!result.success) {
+        clearCachedSessionUser();
+        setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+        return { errorCode: result.errorCode };
+      }
+      cacheSessionUser(result.user);
+      setSession({ user: result.user, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), status: "authenticated" });
+      return {};
+    } catch (error) {
+      clearCachedSessionUser();
+      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+      throw error;
     }
   };
 
-  const register = async (name: string, email: string, password: string, workspaceName?: string) => {
-    setSession((prev) => ({ ...prev, status: "loading" }));
+  const register = async (firstName: string, lastName: string, email: string, password: string, username: string, locale: "fa" | "en") => {
+    setSession((previous) => ({ ...previous, status: "loading" }));
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const result = await registerAction(name, email, password, workspaceName);
+      const result = await registerAction(firstName, lastName, email, password, username, locale);
       if ("errorCode" in result) {
         throw Object.assign(new Error("Registration failed."), { code: result.errorCode });
       }
-      setSession(PUBLIC_UNAUTHENTICATED_SESSION);
-    } catch (e) {
-      setSession(PUBLIC_UNAUTHENTICATED_SESSION);
-      throw e;
+      clearCachedSessionUser();
+      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+      return { verificationEmailSent: result.verificationEmailSent };
+    } catch (error) {
+      clearCachedSessionUser();
+      setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+      throw error;
     }
   };
 
   const logout = async () => {
-    setSession((prev) => ({ ...prev, status: "loading" }));
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    await logoutAction();
+    setSession((previous) => ({ ...previous, status: "loading" }));
     try {
-      window.localStorage.removeItem("auth_session_user");
-    } catch {
-      // Storage may be unavailable; the authoritative server session is already invalidated.
+      // Revoke the authoritative server session before doing any client-side cleanup.
+      await logoutAction();
+    } catch (error) {
+      // The action can fail after the server has already revoked the cookie/session.
+      // Re-read server truth rather than restoring a potentially stale authenticated state.
+      try {
+        const authoritativeSession = await synchronizeServerSession();
+        setSession(authoritativeSession);
+      } catch (sessionError) {
+        clearCachedSessionUser();
+        setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+        console.error("Failed to re-synchronize the session after logout failure:", sessionError);
+      }
+      throw error;
     }
-    setSession(PUBLIC_UNAUTHENTICATED_SESSION);
+    clearCachedSessionUser();
+    setSession({ user: null, expiresAt: null, status: "unauthenticated" });
   };
 
   const effectiveSession = skipSessionCheck ? PUBLIC_UNAUTHENTICATED_SESSION : session;
@@ -115,7 +176,7 @@ export function AuthProvider({
   };
 
   return (
-    <AuthContext.Provider value={{ session: effectiveSession, login, register, logout, hasPermission }}>
+    <AuthContext.Provider value={{ session: effectiveSession, login, register, refreshSession, logout, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );
@@ -123,8 +184,6 @@ export function AuthProvider({
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

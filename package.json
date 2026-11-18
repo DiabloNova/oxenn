@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm exec next dev",
-    "build": "pnpm exec tsx scripts/generate-docs-data.ts && pnpm exec next build",
+    "build": "pnpm run env:check build && pnpm exec tsx scripts/generate-docs-data.ts && pnpm exec next build",
     "start": "pnpm exec next start",
     "lint": "pnpm exec eslint",
     "typecheck": "pnpm exec tsc --noEmit",

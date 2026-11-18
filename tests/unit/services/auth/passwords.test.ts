@@ -3,7 +3,7 @@ import { hashPassword, verifyPassword, validatePasswordRequirements } from "@/se
 
 describe("Password Service", () => {
   it("hashes password with exact D-4 scrypt parameters", async () => {
-    const pwd = "mySecurePassword123";
+    const pwd = "MySecurePassword123!!";
     const result = await hashPassword(pwd);
     expect(result.algorithm).toBe("scrypt");
     expect(result.params.n).toBe(32768);
@@ -14,21 +14,21 @@ describe("Password Service", () => {
   });
 
   it("correct password verifies successfully", async () => {
-    const pwd = "mySecurePassword123";
+    const pwd = "MySecurePassword123!!";
     const result = await hashPassword(pwd);
     const isValid = await verifyPassword(pwd, result.hash, result.params);
     expect(isValid).toBe(true);
   });
 
   it("wrong password fails", async () => {
-    const pwd = "mySecurePassword123";
+    const pwd = "MySecurePassword123!!";
     const result = await hashPassword(pwd);
     const isValid = await verifyPassword("wrongPassword", result.hash, result.params);
     expect(isValid).toBe(false);
   });
 
   it("malformed/untrusted stored parameters are rejected safely", async () => {
-    const pwd = "mySecurePassword123";
+    const pwd = "MySecurePassword123!!";
     const result = await hashPassword(pwd);
 
     // Test with missing params
@@ -71,10 +71,16 @@ describe("Password Service", () => {
     expect(isValid).toBe(false);
   });
 
-  it("validates password length correctly", () => {
-    expect(validatePasswordRequirements("123456789")).toBe(false); // < 10
-    expect(validatePasswordRequirements("1234567890")).toBe(true); // == 10
-    expect(validatePasswordRequirements("".padStart(255, 'a'))).toBe(true); // == 255
-    expect(validatePasswordRequirements("".padStart(256, 'a'))).toBe(false); // > 255
+  it("enforces the complete registration password policy", () => {
+    expect(validatePasswordRequirements("1234567890")).toBe(false);
+    expect(validatePasswordRequirements("Aa123456!!")).toBe(true);
+    expect(validatePasswordRequirements("Aa12345 !!")).toBe(false);
+    expect(validatePasswordRequirements("aa123456!!")).toBe(false);
+    expect(validatePasswordRequirements("AAabcdef!!")).toBe(false);
+    expect(validatePasswordRequirements("Aa1234567!")).toBe(false);
+    expect(validatePasswordRequirements("Aa123456! ")).toBe(false);
+    expect(validatePasswordRequirements("Aa123456!پ")).toBe(false);
+    expect(validatePasswordRequirements("A1!!" + "a".repeat(251))).toBe(true);
+    expect(validatePasswordRequirements("A1!!" + "a".repeat(252))).toBe(false);
   });
 });

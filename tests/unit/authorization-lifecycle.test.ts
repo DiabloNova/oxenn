@@ -1,32 +1,32 @@
 vi.mock("pg");
+const lifecycleSession = vi.hoisted(() => ({
+  user: null as null | { id: string; name: string; email: string; role: "workspace_admin"; workspaceId: string },
+  registeredUserId: "",
+}));
 vi.mock("../../src/services/auth/session", async (importOriginal) => {
     const mod = await importOriginal<typeof import("../../src/services/auth/session")>();
-
-    const mockSession = {
-        user: {
-            id: 'usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37',
-            name: 'Probe',
-            email: 'probe@example.com',
-            role: 'workspace_admin',
-            workspaceId: 'd4001873-8482-4977-b746-ab085a855012'
-        },
-        expiresAt: new Date(Date.now() + 3600000).toISOString(),
-        status: "authenticated"
-    };
-
+    const currentSession = () => ({
+      user: lifecycleSession.user ?? {
+        id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
+        name: "Probe", email: "probe@example.com", role: "workspace_admin" as const,
+        workspaceId: "d4001873-8482-4977-b746-ab085a855012",
+      },
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      status: "authenticated" as const,
+    });
     return {
       ...mod,
-      getSession: vi.fn().mockResolvedValue(mockSession),
-      requireSession: vi.fn().mockResolvedValue(mockSession),
-      createSession: vi.fn().mockResolvedValue(undefined),
-      invalidateSession: vi.fn().mockResolvedValue(undefined)
+      getSession: vi.fn(async () => currentSession()),
+      requireSession: vi.fn(async () => currentSession()),
+      createSession: vi.fn(async (user) => { lifecycleSession.user = user as typeof lifecycleSession.user; }),
+      invalidateSession: vi.fn().mockResolvedValue(undefined),
     };
 });
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { registerAction, loginAction } from "../../src/app/actions/auth";
+import { registerAction, loginAction, verifyEmailAction } from "../../src/app/actions/auth";
+import { CaptureEmailSender } from "../../src/services/email/adapters";
 import { requireWorkspaceMembership, requireRole } from "../../src/services/auth/authorization";
-import { switchWorkspaceAction } from "../../src/app/actions/workspace";
 
 // Ensure DATABASE_URL is set before importing PostgresClient
 if (!process.env.DATABASE_URL) {
@@ -36,44 +36,85 @@ if (!process.env.DATABASE_URL) {
 describe("Auth Lifecycle Tests", () => {
   let PostgresClientModule: typeof import("../../src/features/admin/infrastructure/persistence/postgres");
 
-  beforeEach(async () => {
-    PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
 
+  beforeEach(async () => {
+    process.env.SESSION_SECRET = "lifecycle-test-session-secret-with-32-chars";
+    lifecycleSession.user = null;
+    lifecycleSession.registeredUserId = "";
+    CaptureEmailSender.clear();
+    PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
     const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
-    let capturedHash = "";
-    let capturedParams = "";
+    let createdUserId = "";
+    let createdWorkspaceId = "";
+    let createdEmail = "";
+    let isEmailVerified = false;
+    let capturedPasswordHash = "";
+    let capturedPasswordParams = "";
+    let verificationTokenHash = "";
+    let verificationTokenUserId = "";
 
     const mockClient = {
-      query: vi.fn().mockImplementation(async (sqlOrObj: unknown, params: unknown[]) => {
-        const sql = typeof sqlOrObj === 'string' ? sqlOrObj : (sqlOrObj as {text?: string}).text || String(sqlOrObj);
-
-        if (sql.includes("INSERT INTO users")) return { rowCount: 1 };
-        if (sql.includes("SELECT id FROM users WHERE email")) return { rows: [], rowCount: 0 }; // Register unique
+      query: vi.fn().mockImplementation(async (sqlOrObj: unknown, params: unknown[] = []) => {
+        const sql = typeof sqlOrObj === "string" ? sqlOrObj : (sqlOrObj as { text?: string }).text || String(sqlOrObj);
         if (sql.includes("INSERT INTO auth_rate_limits")) return { rows: [{ attempts: 1 }], rowCount: 1 };
+        if (sql.trimStart().startsWith("SELECT id FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 };
+        if (sql.includes("SELECT user_id FROM user_profiles")) return { rows: [], rowCount: 0 };
+        if (sql.includes("INSERT INTO users")) {
+          createdUserId = String(params[0]);
+          lifecycleSession.registeredUserId = createdUserId;
+          createdEmail = String(params[2]);
+          return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes("INSERT INTO user_profiles")) return { rows: [], rowCount: 1 };
         if (sql.includes("INSERT INTO user_credentials")) {
-           capturedHash = params[2] as string;
-           capturedParams = params[4] as string;
-           return { rowCount: 1 };
+          capturedPasswordHash = String(params[2]); capturedPasswordParams = String(params[4]);
+          return { rows: [], rowCount: 1 };
         }
-        if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37", name: "Probe", email: "probe@example.com" }], rowCount: 1 }; // Login
+        if (sql.includes("INSERT INTO organizations")) {
+          createdWorkspaceId = String(params[0]); return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes("INSERT INTO organization_members")) return { rows: [], rowCount: 1 };
+        if (sql.includes("SELECT id, email_verified_at FROM users")) {
+          return { rows: [{ id: createdUserId, email_verified_at: isEmailVerified ? new Date() : null }], rowCount: 1 };
+        }
+        if (sql.includes("INSERT INTO email_verification_tokens")) {
+          verificationTokenUserId = String(params[0]); verificationTokenHash = String(params[1]);
+          return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes("UPDATE email_verification_tokens")) {
+          if (params.length > 1) {
+            const emailMatches = String(params[0] ?? "").trim().toLowerCase() === createdEmail.trim().toLowerCase();
+            const hashMatches = String(params[1]) === verificationTokenHash;
+            const ownerMatches = verificationTokenUserId === createdUserId;
+            if (!emailMatches || !hashMatches || !ownerMatches) {
+              throw new Error(`Verification fixture binding mismatch: ${JSON.stringify({ emailMatches, hashMatches, ownerMatches, createdUserId, verificationTokenUserId, createdEmail, suppliedEmail: params[0] })}`);
+            }
+            return { rows: [{ user_id: verificationTokenUserId }], rowCount: 1 };
+          }
+          return { rows: [], rowCount: 1 };
+        }
+        if (sql.includes("UPDATE users SET email_verified_at")) {
+          if (String(params[0]) !== createdUserId) return { rows: [], rowCount: 0 };
+          isEmailVerified = true;
+          return { rows: [{ id: createdUserId, name: "Probe User", email: createdEmail }], rowCount: 1 };
+        }
+        if (sql.includes("SELECT * FROM users WHERE lower(email)")) {
+          return { rows: [{ id: createdUserId, name: "Probe User", email: createdEmail, email_verified_at: isEmailVerified ? new Date() : null }], rowCount: 1 };
+        }
         if (sql.includes("SELECT * FROM user_credentials WHERE user_id")) {
-           return { rows: [{
-              user_id: "usr-b2310ea4-5f56-4740-88ce-38f6a1bb4e37",
-              password_hash: capturedHash || "5X942op26r/rCdLWgb3HfA==:6nwvtKsXerwaU9lugHy4cE6FoYTBrqg0BWn/tg9aiRXradK2OPsdpRNRtMbQV1qFeL+ZEIcm/ZsoKeazAD2EvA==",
-              params: capturedParams ? JSON.parse(capturedParams) : { n: 32768, r: 8, p: 1, keyLength: 64 },
-              failed_attempts: 0
-           }], rowCount: 1 };
+          return { rows: [{ user_id: createdUserId, password_hash: capturedPasswordHash, params: JSON.parse(capturedPasswordParams), failed_attempts: 0 }], rowCount: 1 };
         }
-        if (sql.includes("UPDATE user_credentials")) return { rowCount: 1 };
-        if (sql.includes("SELECT m.organization_id")) return { rows: [{ workspaceId: "d4001873-8482-4977-b746-ab085a855012", role: "workspace_admin", workspaceName: "Probe's Workspace" }], rowCount: 1 };
-        if (sql.includes("organization_members")) return { rows: [{ id: "1", role: "workspace_admin" }], rowCount: 1 }; // Membership passes
-        if (sql.includes("organizations")) return { rows: [{ id: "d4001873-8482-4977-b746-ab085a855012" }], rowCount: 1 };
+        if (sql.includes("UPDATE user_credentials") || sql.includes("DELETE FROM auth_rate_limits")) return { rows: [], rowCount: 1 };
+        if (sql.includes("SELECT m.organization_id")) {
+          return { rows: [{ workspaceId: createdWorkspaceId, role: "workspace_admin", workspaceName: "Probe User's Workspace", username: "probeuser" }], rowCount: 1 };
+        }
+        if (sql.includes("organization_members")) return { rows: [{ id: "1", role: "workspace_admin" }], rowCount: 1 };
+        if (sql.includes("organizations")) return { rows: [{ id: createdWorkspaceId }], rowCount: 1 };
         return { rows: [], rowCount: 0 };
       }),
       release: vi.fn(),
     };
-
     vi.spyOn(pgClient, "connectSystemClient").mockResolvedValue(mockClient as unknown as import("pg").PoolClient);
   });
 
@@ -81,22 +122,29 @@ describe("Auth Lifecycle Tests", () => {
     vi.restoreAllMocks();
   });
 
-  it("completes full auth lifecycle", async () => {
-    // 1. Register
-    const registeredUser = await registerAction("Probe", "probe@example.com", "Password123");
-    expect((registeredUser as { id: string }).id).toBeDefined();
+  it("completes registration, recipient-bound email verification, and login lifecycle", async () => {
+    const registeredUser = await registerAction("Probe", "User", "probe@example.com", "Password123!!", "probeuser", "en");
+    expect(registeredUser).toMatchObject({ success: true, verificationEmailSent: true });
 
-    // 2. Login
-    const loggedInUser = await loginAction("probe@example.com", "Password123");
+    const verificationEmail = CaptureEmailSender.capturedEmails.find((message) => message.to === "probe@example.com");
+    expect(verificationEmail?.params.code).toMatch(/^\d{8}$/);
+    expect(verificationEmail?.to).toBe("probe@example.com");
+    const verificationResult = await verifyEmailAction("probe@example.com", verificationEmail!.params.code!);
+    expect(verificationResult).toEqual({ success: true, sessionCreated: true });
+
+    const loginResult = await loginAction("probe@example.com", "Password123!!");
+    expect(loginResult.success).toBe(true);
+    if (!loginResult.success) throw new Error("Expected the verified user to sign in.");
+    const loggedInUser = loginResult.user;
     expect(loggedInUser.email).toBe("probe@example.com");
+    expect(loggedInUser.id).toBe(lifecycleSession.registeredUserId);
+    expect(loggedInUser.id).toMatch(/^usr-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    expect(loggedInUser.id).toBe(lifecycleSession.user?.id);
+    expect(loggedInUser.workspaceId).toBe(lifecycleSession.user?.workspaceId);
 
-    // 3. requireWorkspaceMembership (pass)
     await requireWorkspaceMembership(loggedInUser.id, loggedInUser.workspaceId);
-
-    // 4. requireRole returns the authoritative role for a different workspace.
     const crossWorkspaceRole = await requireRole("workspace_admin", "ws-cross-workspace");
     expect(crossWorkspaceRole).toBe("workspace_admin");
-
   });
 
   it("negative test: wrong workspace denied", async () => {
@@ -180,13 +228,15 @@ describe("Auth Lifecycle Tests", () => {
       const PostgresClientModule = await import("../../src/features/admin/infrastructure/persistence/postgres");
       const pgClient = PostgresClientModule.PostgresClient.getInstance();
 
-      let calls = 0;
+      const callsByBucket = new Map<string, number>();
       const mockClient = {
         query: vi.fn().mockImplementation(async (sql: string, params: unknown[]) => {
           if (sql.includes("INSERT INTO auth_rate_limits")) {
-            calls++;
-            // Simulate threshold for login (10)
-            return { rows: [{ attempts: calls }], rowCount: 1 };
+            const bucket = `${String(params[0])}:${String(params[1])}`;
+            const attempts = (callsByBucket.get(bucket) ?? 0) + 1;
+            callsByBucket.set(bucket, attempts);
+            // Simulate the login account/IP bucket threshold independently from the IP-wide bucket.
+            return { rows: [{ attempts }], rowCount: 1 };
           }
           // Fail login deliberately to test rate limit tripping without clearing the bucket
         if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [], rowCount: 0 };
@@ -222,7 +272,7 @@ describe("Auth Lifecycle Tests", () => {
             bucketCleared = true;
             return { rowCount: 1 };
           }
-          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com" }], rowCount: 1 };
+          if (sql.includes("SELECT * FROM users WHERE lower(email)")) return { rows: [{ id: "usr-1", name: "Probe", email: "probe@example.com", email_verified_at: new Date() }], rowCount: 1 };
           if (sql.includes("SELECT * FROM user_credentials")) {
              return { rows: [{
                 user_id: "usr-1",
@@ -242,16 +292,12 @@ describe("Auth Lifecycle Tests", () => {
       // 10 successful logins
       for (let i = 0; i < 10; i++) {
           const res = await loginAction("trip@example.com", "Password123");
-          expect(res).toBeDefined();
-          if (res && typeof res === 'object' && 'error' in res) {
-             throw new Error("Unexpected error");
-          }
+          expect(res.success).toBe(true);
+          if (!res.success) throw new Error("Expected verified user to sign in.");
       }
       // 11th should still succeed because the bucket is cleared every time
       const res = await loginAction("trip@example.com", "Password123");
-      expect(res).toBeDefined();
-      if (res && typeof res === 'object' && 'error' in res) {
-         throw new Error("Unexpected error");
-      }
+      expect(res.success).toBe(true);
+      if (!res.success) throw new Error("Expected verified user to sign in.");
       expect(bucketCleared).toBe(true);
     });

@@ -8,318 +8,177 @@ import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
-import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, UserPlus, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, UserPlus } from "lucide-react";
+import {
+  emailLocalPartHasUppercase,
+  getEmailValidationError,
+  getPasswordValidationError,
+  getPersonNameValidationError,
+  getUsernameValidationError,
+  passwordHasUppercase,
+} from "@/services/auth/registration-validation";
+import { getSafeLocaleReturnTo } from "@/services/auth/return-to";
 
 export default function RegisterPage({ params }: { params: Promise<{ locale: string }> }) {
-  const resolvedParams = use(params);
-  const locale = resolvedParams.locale;
+  const { locale } = use(params);
   const isFa = locale === "fa";
   const router = useRouter();
   const searchParams = useSearchParams();
   const { register } = useAuth();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState(searchParams?.get("email") || "");
+  const requestedReturnTo = searchParams.get("returnTo");
+  const returnTo = getSafeLocaleReturnTo(requestedReturnTo, locale) ?? "";
+  const loginHref = returnTo ? `/${locale}/login?returnTo=${encodeURIComponent(returnTo)}` : `/${locale}/login`;
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
-  const [workspaceName, setWorkspaceName] = useState("");
-
-  const [nameError, setNameError] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [workspaceError, setWorkspaceError] = useState("");
+  const [username, setUsername] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
-
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const liveEmailValidationError = getEmailValidationError(email);
 
-  const strings = {
-    title: isFa ? "ایجاد حساب کاربری سازمانی" : "Create Enterprise Account",
-    desc: isFa ? "برای شروع پایش سهم استناد و حضور برند در هوش مصنوعی، فرم زیر را کامل کنید." : "Establish your multi-tenant workspace and monitor AI search presence.",
-    nameLabel: isFa ? "نام و نام خانوادگی" : "Full Name",
-    namePlaceholder: isFa ? "علی علوی" : "John Doe",
-    emailLabel: isFa ? "ایمیل سازمانی (شخصی یا شرکتی)" : "Enterprise Email Address",
-    emailPlaceholder: isFa ? "name@company.com" : "name@company.com",
-    passwordLabel: isFa ? "رمز عبور" : "Password",
-    passwordPlaceholder: isFa ? "••••••••" : "••••••••",
-    workspaceLabel: isFa ? "نام برند یا شرکت (جهت ایجاد قلمرو)" : "Brand or Organization Name (Workspace)",
-    workspacePlaceholder: isFa ? "مثلاً: سئورچبل" : "e.g. Acme Corp",
-    registerBtn: isFa ? "ثبت‌نام و ایجاد قلمرو" : "Register & Provision Workspace",
-    loading: isFa ? "در حال پردازش و ساخت قلمرو..." : "Provisioning workspace...",
-    orOAuth: isFa ? "یا ثبت‌نام با حساب سازمانی یکپارچه" : "Or provision via enterprise SSO",
-    oauthGoogle: isFa ? "ثبت‌نام با گوگل (Google)" : "Sign up with Google Workspace",
-    oauthMicrosoft: isFa ? "ثبت‌نام با مایکروسافت" : "Sign up with Microsoft Entra ID",
-    hasAccount: isFa ? "قبلاً ثبت‌نام کرده‌اید؟" : "Already registered?",
-    loginLink: isFa ? "ورود به حساب کاربری" : "Sign In to Account",
-    backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
-    successTitle: isFa ? "ثبت‌نام با موفقیت انجام شد!" : "Account Provisioned Successfully!",
-    successDesc: isFa ? "در حال ایجاد کانال‌های خزش و تخصیص شناسه ابری شما..." : "Deploying private crawling instances and allocating tenant space...",
-    successBtn: isFa ? "ورود به پیشخوان کاربری" : "Proceed to Dashboard",
+  const t = {
+    title: isFa ? "ایجاد حساب کاربری" : "Create your account",
+    desc: isFa ? "برای ساخت حساب، اطلاعات زیر را وارد کنید." : "Enter your details to create your Oxenn account.",
+    firstName: isFa ? "نام" : "First name",
+    lastName: isFa ? "نام خانوادگی" : "Last name",
+    email: isFa ? "آدرس ایمیل" : "Email address",
+    password: isFa ? "رمز عبور" : "Password",
+    username: isFa ? "نام کاربری" : "Username",
+    submit: isFa ? "ثبت‌نام و ارسال کد تأیید" : "Register and send verification code",
+    loading: isFa ? "در حال ایجاد حساب..." : "Creating account...",
+    home: isFa ? "بازگشت به صفحه اصلی" : "Back to home",
+    haveAccount: isFa ? "قبلاً حساب دارید؟" : "Already have an account?",
+    login: isFa ? "ورود" : "Sign in",
+    localUpperWarning: isFa ? "حروف بزرگ در بخش ابتدایی ایمیل مجاز است؛ آدرس هنگام ذخیره‌سازی یکسان‌سازی می‌شود." : "Uppercase letters in the part before @ are allowed; the address is normalized when saved.",
+    domainUpperError: isFa ? "حروف بزرگ در بخش دامنه ایمیل مجاز نیست. دامنه را کاملاً با حروف کوچک بنویسید." : "Uppercase letters are not allowed in the email domain. Use lowercase letters only.",
+    passwordUpperWarning: isFa ? "رمز عبور باید حداقل یک حرف بزرگ انگلیسی داشته باشد." : "Add at least one uppercase letter to your password.",
+    passwordHint: isFa ? "۱۰ تا ۲۵۵ نویسه انگلیسیِ قابل‌چاپ، بدون فاصله؛ شامل حداقل یک حرف بزرگ، یک عدد و دو نویسه خاص." : "Use 10–255 printable ASCII characters with no spaces, at least one uppercase letter, one number, and two special characters.",
   };
 
-  const validateForm = () => {
-    let isValid = true;
-
-    // Name validation
-    if (!name.trim()) {
-      setNameError(isFa ? "نام الزامی است." : "Full Name is required.");
-      isValid = false;
-    } else {
-      setNameError("");
+  const validate = () => {
+    const next: Record<string, string> = {};
+    const firstError = getPersonNameValidationError(firstName, locale as "fa" | "en");
+    const lastError = getPersonNameValidationError(lastName, locale as "fa" | "en");
+    const emailError = getEmailValidationError(email);
+    const passwordError = getPasswordValidationError(password);
+    const usernameError = getUsernameValidationError(username);
+    if (firstError) next.firstName = firstError === "NAME_REQUIRED"
+      ? (isFa ? "وارد کردن نام الزامی است." : "First name is required.")
+      : firstError === "NAME_TOO_LONG"
+        ? (isFa ? "نام نمی‌تواند بیش از ۱۰۰ نویسه باشد." : "First name cannot exceed 100 characters.")
+        : (isFa ? "نام باید به زبان فارسی وارد شود." : "Enter your first name using English letters only.");
+    if (lastError) next.lastName = lastError === "NAME_REQUIRED"
+      ? (isFa ? "وارد کردن نام خانوادگی الزامی است." : "Last name is required.")
+      : lastError === "NAME_TOO_LONG"
+        ? (isFa ? "نام خانوادگی نمی‌تواند بیش از ۱۰۰ نویسه باشد." : "Last name cannot exceed 100 characters.")
+        : (isFa ? "نام خانوادگی باید به زبان فارسی وارد شود." : "Enter your last name using English letters only.");
+    if (emailError) {
+      const messages: Record<string, string> = isFa ? {
+        EMAIL_REQUIRED: "ایمیل الزامی است.", EMAIL_ENGLISH_ONLY: "ایمیل باید فقط شامل نویسه‌های انگلیسی باشد.", EMAIL_DOMAIN_UPPERCASE: "حروف بزرگ در بخش دامنه ایمیل مجاز نیست؛ دامنه را با حروف کوچک وارد کنید.", EMAIL_HYPHEN_NOT_ALLOWED: "استفاده از خط فاصله در ایمیل مجاز نیست.", EMAIL_INVALID_FORMAT: "قالب ایمیل باید مانند x@x.x باشد.",
+      } : {
+        EMAIL_REQUIRED: "Email is required.", EMAIL_ENGLISH_ONLY: "Email must contain English ASCII characters only.", EMAIL_DOMAIN_UPPERCASE: "Uppercase letters are not allowed in the email domain. Use lowercase letters.", EMAIL_HYPHEN_NOT_ALLOWED: "Hyphens are not allowed in email addresses.", EMAIL_INVALID_FORMAT: "Email must use the x@x.x format.",
+      };
+      next.email = messages[emailError];
     }
-
-    // Email validation
-    if (!email) {
-      setEmailError(isFa ? "ایمیل الزامی است." : "Email is required.");
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setEmailError(isFa ? "لطفاً یک ایمیل معتبر وارد کنید." : "Please enter a valid email address.");
-      isValid = false;
-    } else {
-      setEmailError("");
+    if (passwordError) {
+      const messages: Record<string, string> = isFa ? {
+        PASSWORD_REQUIRED: "رمز عبور الزامی است.", PASSWORD_TOO_SHORT: "رمز عبور باید حداقل ۱۰ نویسه باشد.", PASSWORD_TOO_LONG: "رمز عبور نمی‌تواند بیشتر از ۲۵۵ نویسه باشد.", PASSWORD_ENGLISH_ONLY: "رمز عبور باید فقط از نویسه‌های انگلیسی استفاده کند و فاصله نداشته باشد.", PASSWORD_UPPERCASE_REQUIRED: "رمز عبور باید حداقل یک حرف بزرگ انگلیسی داشته باشد.", PASSWORD_NUMBER_REQUIRED: "رمز عبور باید حداقل یک عدد داشته باشد.", PASSWORD_TWO_SPECIAL_REQUIRED: "رمز عبور باید حداقل دو کاراکتر خاص داشته باشد.",
+      } : {
+        PASSWORD_REQUIRED: "Password is required.", PASSWORD_TOO_SHORT: "Password must contain at least 10 characters.", PASSWORD_TOO_LONG: "Password cannot exceed 255 characters.", PASSWORD_ENGLISH_ONLY: "Password must use English ASCII characters only and contain no spaces.", PASSWORD_UPPERCASE_REQUIRED: "Password must include at least one uppercase letter.", PASSWORD_NUMBER_REQUIRED: "Password must include at least one number.", PASSWORD_TWO_SPECIAL_REQUIRED: "Password must include at least two special characters.",
+      };
+      next.password = messages[passwordError];
     }
-
-    // Password validation
-    if (!password) {
-      setPasswordError(isFa ? "رمز عبور الزامی است." : "Password is required.");
-      isValid = false;
-    } else if (password.length < 10 || password.length > 255) {
-      setPasswordError(isFa ? "رمز عبور باید بین ۱۰ تا ۲۵۵ کاراکتر باشد." : "Password must be between 10 and 255 characters.");
-      isValid = false;
-    } else {
-      setPasswordError("");
-    }
-
-    // Workspace validation
-    if (!workspaceName.trim()) {
-      setWorkspaceError(isFa ? "وارد کردن نام برند برای ایجاد قلمرو الزامی است." : "Workspace name is required.");
-      isValid = false;
-    } else {
-      setWorkspaceError("");
-    }
-
-    return isValid;
+    if (usernameError) next.username = isFa
+      ? "نام کاربری باید ۳ تا ۳۲ نویسه و فقط شامل حروف، اعداد، نقطه، زیرخط یا خط تیره باشد."
+      : "Username must be 3–32 characters and use only letters, numbers, dots, underscores, or hyphens.";
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setSubmitError("");
-
-    if (!validateForm()) return;
-
+    if (!validate()) return;
     setIsLoading(true);
     try {
-      await register(name, email, password, workspaceName);
-      setIsSuccess(true);
-      // Let the user proceed to verify email or directly to dashboard
-      setTimeout(() => {
-        router.push(`/${locale}/verify-email`);
-      }, 1500);
-    } catch (err: unknown) {
-      const code = (err as { code?: string })?.code;
-      const finalMsg = code === "USER_EXISTS"
-        ? (isFa ? "این ایمیل قبلاً ثبت شده است." : "This email may already exist.")
-        : (isFa ? "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید." : "Registration failed. Please try again.");
-      setSubmitError(finalMsg);
+      const result = await register(firstName.trim(), lastName.trim(), email.trim(), password, username.trim(), locale as "fa" | "en");
+      const verificationParams = new URLSearchParams({ email: email.trim() });
+      if (!result.verificationEmailSent) verificationParams.set("delivery", "failed");
+      if (returnTo) verificationParams.set("returnTo", returnTo);
+      router.replace(`/${locale}/verify-email?${verificationParams.toString()}`);
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      const errors: Record<string, string> = isFa ? {
+        USERNAME_EXISTS: "این نام کاربری قبلاً انتخاب شده است.", TooManyRequests: "تعداد درخواست‌ها بیش از حد مجاز است. بعداً تلاش کنید.", INVALID_REGISTRATION: "اطلاعات واردشده معتبر نیست.",
+      } : {
+        USERNAME_EXISTS: "This username is already taken.", TooManyRequests: "Too many registration attempts. Try again later.", INVALID_REGISTRATION: "The registration details are invalid.",
+      };
+      setSubmitError((code && errors[code]) || (isFa ? "ثبت‌نام انجام نشد. اطلاعات را بررسی و دوباره تلاش کنید." : "Registration failed. Check your details and try again."));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOAuthClick = (provider: string) => {
-    console.log(`OAuth provisioning triggered for: ${provider}`);
-    alert(isFa
-      ? `لایه اتصال یکپارچه ${provider} آماده است. در فاز بعدی به سرویس بک‌اند متصل خواهد شد.`
-      : `${provider} SSO integration layer ready. Connecting to backend identity service in the next phase.`
-    );
-  };
-
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-[var(--background)] relative overflow-hidden" style={{ direction: isFa ? "rtl" : "ltr" }}>
-      {/* Decorative Signature Gradients */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--sky-blue-500)]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--orange-500)]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute inset-0 grid-backdrop opacity-[0.2] pointer-events-none -z-10" />
-
-      {/* Main Container */}
-      <div className="w-full max-w-[480px] space-y-6">
-        {/* Brand Logo & Heading */}
-        <div className="flex flex-col items-center text-center space-y-3">
-          <Link href={`/${locale}`} className="flex items-center gap-2 group cursor-pointer">
-            <SeorchableLogo className="w-10 h-10 group-hover:scale-105 transition-transform duration-300" glow={true} />
-            <span className="font-display font-black text-xl bg-gradient-to-r from-[var(--sky-blue-500)] to-[var(--orange-500)] bg-clip-text text-transparent">
-              {isFa ? "سئورچبل" : "seorchable.ir"}
-            </span>
-          </Link>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[var(--background)] p-4" dir={isFa ? "rtl" : "ltr"}>
+      <div className="pointer-events-none absolute inset-0 grid-backdrop opacity-20" />
+      <div className="relative z-10 w-full max-w-[480px] space-y-6">
+        <div className="flex flex-col items-center text-center">
+          <Link href={`/${locale}`} className="flex items-center gap-2"><SeorchableLogo className="h-10 w-10" /><span className="text-xl font-black text-[var(--text-primary)]">Oxenn</span></Link>
         </div>
-
-        {/* Card */}
-        <Card className="glass-panel border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-2xl rounded-3xl p-2 sm:p-4">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl font-black font-display text-[var(--text-primary)]">
-              {isSuccess ? strings.successTitle : strings.title}
-            </CardTitle>
-            <CardDescription className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed mt-1">
-              {isSuccess ? strings.successDesc : strings.desc}
-            </CardDescription>
+        <Card className="rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-2 shadow-2xl sm:p-4">
+          <CardHeader className="pb-2 text-center">
+            <CardTitle className="text-xl font-black">{t.title}</CardTitle>
+            <CardDescription className="mt-1 text-xs leading-relaxed">{t.desc}</CardDescription>
           </CardHeader>
           <CardContent>
-            {isSuccess ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-fade-in text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <CheckCircle2 size={36} className="animate-pulse" />
-                </div>
-                <div className="text-sm font-semibold text-[var(--text-primary)]">{isFa ? "درحال هدایت به صفحه تایید ایمیل..." : "Redirecting to verification page..."}</div>
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              {submitError && <div role="alert" className="flex items-start gap-2 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 p-3 text-xs text-[var(--color-error)]"><AlertCircle size={15} className="mt-0.5 shrink-0"/><span>{submitError}</span></div>}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input label={t.firstName} value={firstName} onChange={(e) => setFirstName(e.target.value)} error={fieldErrors.firstName} disabled={isLoading} required autoComplete="given-name" />
+                <Input label={t.lastName} value={lastName} onChange={(e) => setLastName(e.target.value)} error={fieldErrors.lastName} disabled={isLoading} required autoComplete="family-name" />
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {submitError && (
-                  <div className="p-3.5 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs flex items-start gap-2 animate-shake">
-                    <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                    <p className="font-bold">{submitError}</p>
-                  </div>
-                )}
-
-                {/* Name Input */}
-                <Input
-                  type="text"
-                  label={strings.nameLabel}
-                  placeholder={strings.namePlaceholder}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  error={nameError}
-                  disabled={isLoading}
-                  required
-                />
-
-                {/* Email Input */}
-                <Input
-                  type="email"
-                  label={strings.emailLabel}
-                  placeholder={strings.emailPlaceholder}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  error={emailError}
-                  disabled={isLoading}
-                  required
-                />
-
-                {/* Password Input */}
-                <Input
-                  type="password"
-                  label={strings.passwordLabel}
-                  placeholder={strings.passwordPlaceholder}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  error={passwordError}
-                  disabled={isLoading}
-                  required
-                />
-
-                {/* Workspace Input */}
-                <Input
-                  type="text"
-                  label={strings.workspaceLabel}
-                  placeholder={strings.workspacePlaceholder}
-                  value={workspaceName}
-                  onChange={(e) => setWorkspaceName(e.target.value)}
-                  error={workspaceError}
-                  disabled={isLoading}
-                  required
-                />
-
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={isLoading}
-                  className="w-full py-3 mt-2 rounded-xl text-xs font-black shadow-lg shadow-sky-500/10 flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span>{strings.loading}</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus size={15} />
-                      <span>{strings.registerBtn}</span>
-                    </>
-                  )}
-                </Button>
-              </form>
-            )}
-
-            {!isSuccess && (
-              <>
-                {/* SSO / OAuth Separation Layer */}
-                <div className="mt-6 space-y-4">
-                  <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-[var(--border)]" />
-                    </div>
-                    <span className="relative px-3 text-[10px] font-bold uppercase tracking-widest bg-[var(--background)] text-[var(--text-muted)]">
-                      {strings.orOAuth}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2.5">
-                    {/* Google Button */}
-                    <button
-                      onClick={() => handleOAuthClick("Google")}
-                      type="button"
-                      className="w-full py-2.5 px-4 rounded-xl border border-[var(--border)] hover:border-[var(--sky-blue-500)]/50 bg-[var(--muted-surface)] hover:bg-[var(--background)] text-xs font-bold text-[var(--text-primary)] transition-all flex items-center justify-center gap-2.5 cursor-pointer"
-                    >
-                      <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                      </svg>
-                      <span>{strings.oauthGoogle}</span>
-                    </button>
-
-                    {/* Microsoft Button */}
-                    <button
-                      onClick={() => handleOAuthClick("Microsoft")}
-                      type="button"
-                      className="w-full py-2.5 px-4 rounded-xl border border-[var(--border)] hover:border-[var(--sky-blue-500)]/50 bg-[var(--muted-surface)] hover:bg-[var(--background)] text-xs font-bold text-[var(--text-primary)] transition-all flex items-center justify-center gap-2.5 cursor-pointer"
-                    >
-                      <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="11" height="11" fill="#F25022"/>
-                        <rect x="12" width="11" height="11" fill="#7FBA00"/>
-                        <rect y="12" width="11" height="11" fill="#00A1F1"/>
-                        <rect x="12" y="12" width="11" height="11" fill="#FFB900"/>
-                      </svg>
-                      <span>{strings.oauthMicrosoft}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Login redirection option */}
-                <div className="mt-6 pt-4 border-t border-[var(--border)] text-center text-xs font-bold">
-                  <span className="text-[var(--text-muted)] mr-1">{strings.hasAccount}</span>
-                  <Link
-                    href={`/${locale}/login`}
-                    className="text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] hover:underline transition-colors"
-                  >
-                    {strings.loginLink}
-                  </Link>
-                </div>
-              </>
-            )}
+              <Input
+                type="email"
+                inputMode="email"
+                label={t.email}
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (!getEmailValidationError(event.target.value)) {
+                    setFieldErrors((previous) => ({ ...previous, email: "" }));
+                  }
+                }}
+                error={fieldErrors.email}
+                disabled={isLoading}
+                required
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              {!fieldErrors.email && liveEmailValidationError === "EMAIL_DOMAIN_UPPERCASE" && (
+                <p className="text-xs text-[var(--color-error)]">{t.domainUpperError}</p>
+              )}
+              {!fieldErrors.email && emailLocalPartHasUppercase(email) && (
+                <p className="text-xs text-amber-600">{t.localUpperWarning}</p>
+              )}
+              <Input type="password" label={t.password} value={password} onChange={(e) => setPassword(e.target.value)} error={fieldErrors.password} disabled={isLoading} required autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+              <p className="text-xs text-[var(--text-muted)]">{t.passwordHint}</p>
+              {password.length > 0 && !passwordHasUppercase(password) && <p className="text-xs text-amber-600">{t.passwordUpperWarning}</p>}
+              <Input label={t.username} value={username} onChange={(e) => setUsername(e.target.value)} error={fieldErrors.username} disabled={isLoading} required autoComplete="username" />
+              <Button type="submit" variant="primary" disabled={isLoading} className="w-full py-3">
+                {isLoading ? t.loading : <span className="inline-flex items-center justify-center gap-2"><UserPlus size={15}/>{t.submit}</span>}
+              </Button>
+            </form>
+            <div className="mt-6 border-t border-[var(--border)] pt-4 text-center text-xs font-semibold">
+              <span className="text-[var(--text-muted)]">{t.haveAccount} </span><Link href={loginHref} className="text-[var(--sky-blue-500)] hover:underline">{t.login}</Link>
+            </div>
           </CardContent>
         </Card>
-
-        {/* Back to Home CTA */}
-        <div className="text-center">
-          <Link
-            href={`/${locale}`}
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-bold cursor-pointer"
-          >
-            {isFa ? <ArrowRight size={14} /> : <ArrowLeft size={14} />}
-            <span>{strings.backToHome}</span>
-          </Link>
-        </div>
+        <div className="text-center"><Link href={`/${locale}`} className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]">{isFa ? <ArrowRight size={14}/> : <ArrowLeft size={14}/>}<span>{t.home}</span></Link></div>
       </div>
     </div>
   );

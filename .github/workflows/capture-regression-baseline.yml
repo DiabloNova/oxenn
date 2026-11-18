@@ -77,7 +77,7 @@ jobs:
           capture unit "pnpm test:unit" pnpm test:unit
           capture ui "pnpm test:ui" pnpm test:ui
           capture isolation "pnpm run test:isolation" env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/isolation_test_db MIGRATION_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/isolation_test_db pnpm run test:isolation
-          capture build "pnpm build" pnpm build
+          capture build "pnpm build" env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres SESSION_SECRET=ci-only-session-secret-not-used-for-deployment-000000000000 pnpm build
           capture reference_matrix "pnpm run docs:matrix" pnpm run docs:matrix
           capture drizzle_check "pnpm exec drizzle-kit check" pnpm exec drizzle-kit check
           capture generated_drift "git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts docs/database/reference-matrix.md" git diff --exit-code src/lib/docsIndex.ts src/core/database/tenant-tables.generated.ts docs/database/reference-matrix.md

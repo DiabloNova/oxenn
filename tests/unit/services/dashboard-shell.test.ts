@@ -5,23 +5,50 @@ import {
   matchesDashboardNavigationSearch,
 } from "@/config/dashboardNavigation";
 
+type NavigationNode = { href?: string; children?: NavigationNode[] };
+
+function collectNavigationHrefs(items: NavigationNode[]): string[] {
+  return items.flatMap((item) => [
+    ...(item.href ? [item.href] : []),
+    ...(item.children ? collectNavigationHrefs(item.children) : []),
+  ]);
+}
+
 describe("Dashboard Shell Architecture", () => {
   it("matches the four owner-defined dashboard groups and their exact entries", () => {
     const expected = {
-      analytics: ["brand", "aeo", "seo", "geo", "quick-analysis"],
+      analytics: ["brand", "aeo", "seo", "geo", "quick-analysis", "aeo-audits", "aeo-playground", "aeo-content", "competitors-radar", "brand-citations", "entities-graph", "analytics-llm-bias"],
       reports: ["seo-user-reports", "periodic-reports", "aeo-brand-reports", "geo-prompt-reports"],
-      actions: ["content-studio", "prompt-research", "execution-plan", "marketing"],
-      "on-page": ["search-ranking", "site-health", "technical-issues", "product-review"],
+      actions: ["content-studio", "prompt-research", "execution-plan", "marketing", "content-ingestion", "profile", "settings", "billing", "help"],
+      "on-page": ["search-ranking", "site-health", "technical-issues", "product-review", "seo-schema"],
     };
     expect(dashboardNavigation.map((section) => section.id)).toEqual(["analytics", "reports", "actions", "on-page"]);
-    const hrefs = dashboardNavigation.flatMap((section) => section.items.map((item) => item.href));
+    const hrefs = dashboardNavigation.flatMap((section) => collectNavigationHrefs(section.items));
     expect(new Set(hrefs).size).toBe(hrefs.length);
     for (const [sectionId, itemIds] of Object.entries(expected)) {
       const section = dashboardNavigation.find((entry) => entry.id === sectionId);
       expect(section).toBeDefined();
       expect(section?.items.map((item) => item.id)).toEqual(itemIds);
-      expect(section?.items.every((item) => Boolean(item.href))).toBe(true);
+      expect(
+        section?.items.every(
+          (item) =>
+            Boolean(item.href) ||
+            Boolean(item.children?.length && item.children.every((child) => Boolean(child.href))),
+        ),
+      ).toBe(true);
     }
+  });
+
+  it("includes parent routes and nested child routes when checking uniqueness", () => {
+    const fixture: NavigationNode[] = [
+      { href: "/dashboard/parent", children: [{ href: "/dashboard/parent/child" }] },
+      { href: "/dashboard/duplicate", children: [{ href: "/dashboard/parent/child" }] },
+    ];
+    const hrefs = collectNavigationHrefs(fixture);
+
+    expect(hrefs).toContain("/dashboard/parent");
+    expect(hrefs).toHaveLength(4);
+    expect(new Set(hrefs).size).toBe(3);
   });
 
   it("matches localized nested routes using the production matcher", () => {

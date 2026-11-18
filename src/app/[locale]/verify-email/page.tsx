@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use, useEffect } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
@@ -8,284 +8,211 @@ import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import { SeorchableLogo } from "@/components/marketing/SeorchableLogo";
-import { AlertCircle, CheckCircle2, ShieldAlert, ArrowLeft, ArrowRight, RotateCw } from "lucide-react";
-import { verifyEmailAction } from "@/app/actions/auth";
-import { requestVerification } from "@/app/actions/auth";
-
-
+import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Mail, RotateCw } from "lucide-react";
+import { requestVerification, verifyEmailAction, verifyLegacyEmailAction } from "@/app/actions/auth";
+import { getSafeLocaleReturnTo } from "@/services/auth/return-to";
+import { normalizeVerificationCodeInput } from "@/services/auth/verification-code";
 
 export default function VerifyEmailPage({ params }: { params: Promise<{ locale: string }> }) {
-  const resolvedParams = use(params);
-  const locale = resolvedParams.locale;
+  const { locale } = use(params);
   const isFa = locale === "fa";
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const [code, setCode] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [submitError, setSubmitError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(60);
+  const { refreshSession } = useAuth();
+  const [email, setEmail] = useState(searchParams?.get("email") ?? "");
+  const [code, setCode] = useState(searchParams?.get("code") ?? "");
+  const legacyToken = searchParams?.get("token") ?? "";
+  const requestedReturnTo = searchParams?.get("returnTo") ?? "";
+  const postVerificationDestination = getSafeLocaleReturnTo(requestedReturnTo, locale) ?? `/${locale}/dashboard/profile`;
+  const loginHref = `/${locale}/login?returnTo=${encodeURIComponent(postVerificationDestination)}`;
+  const deliveryFailed = searchParams?.get("delivery") === "failed";
+  const recoveryRequested = searchParams?.get("recovery") === "1";
+  const [error, setError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isLegacyVerifying, setIsLegacyVerifying] = useState(Boolean(legacyToken));
+  const legacyVerificationStarted = useRef("");
   const [isResending, setIsResending] = useState(false);
-  const [showResendFlow, setShowResendFlow] = useState(false);
-  const [resendEmail, setResendEmail] = useState("");
-  const [resendSuccess, setResendSuccess] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [sessionError, setSessionError] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(recoveryRequested || deliveryFailed ? 0 : 60);
+  const [resendMessage, setResendMessage] = useState("");
 
-  // Fill token from URL if available, but only if it changed to prevent overwriting manual input unexpectedly
-  const tokenParam = searchParams?.get("token");
-  const [lastUrlToken, setLastUrlToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (tokenParam && tokenParam !== lastUrlToken) {
-      // Defer state update slightly to avoid synchronous cascade warnings in some React configurations
-      setTimeout(() => {
-        setCode(tokenParam);
-        setLastUrlToken(tokenParam);
-      }, 0);
-    }
-  }, [tokenParam, lastUrlToken]);
-
-  // Resend code countdown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;
-    const timer = setTimeout(() => {
-      setResendCooldown((prev) => prev - 1);
-    }, 1000);
+    const timer = setTimeout(() => setResendCooldown((value) => value - 1), 1000);
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  const strings = {
-    title: isFa ? "تایید ایمیل سازمانی" : "Verify Your Email Address",
-    desc: isFa
-      ? `یک لینک و توکن تایید به آدرس ایمیل شما ارسال گردید. لطفاً توکن را وارد نمایید.`
-      : `We sent a secure confirmation link to your email. Enter your token to continue.`,
-    resendTitle: isFa ? "ارسال مجدد لینک تایید" : "Request New Verification Link",
-    resendDesc: isFa ? "ایمیل خود را وارد کنید تا لینک تایید جدیدی دریافت کنید." : "Enter your email to receive a new verification link.",
-    resendEmailLabel: isFa ? "آدرس ایمیل" : "Email Address",
-    resendEmailPlaceholder: isFa ? "ایمیل خود را وارد کنید" : "Enter your email",
-    resendSubmitBtn: isFa ? "ارسال لینک جدید" : "Send New Link",
-    resendSuccessTitle: isFa ? "لینک جدید ارسال شد" : "New Link Sent",
-    resendSuccessDesc: isFa ? "اگر ایمیل شما در سیستم ثبت شده باشد، لینک تایید جدیدی دریافت خواهید کرد." : "If your email is registered, you will receive a new verification link.",
-    codeLabel: isFa ? "توکن تایید" : "Verification Token",
-    codePlaceholder: isFa ? "توکن تایید را اینجا وارد کنید" : "Enter confirmation token here",
-    submitBtn: isFa ? "تایید نهایی و فعال‌سازی" : "Verify & Activate Workspace",
-    loading: isFa ? "در حال اعتبارسنجی توکن..." : "Validating token...",
-    resendBtn: isFa ? "ارسال مجدد توکن" : "Resend Verification Token",
-    resendWait: isFa
-      ? `ارسال مجدد تا ${resendCooldown} ثانیه دیگر`
-      : `Resend token in ${resendCooldown}s`,
-    successTitle: isFa ? "فعال‌سازی با موفقیت انجام شد!" : "Verification Complete!",
-    successDesc: isFa
-      ? "ایمیل سازمانی شما تایید گردید. در حال انتقال به پیشخوان کاربری..."
-      : "Your workspace has been successfully verified. Entering the dashboard...",
-    backToHome: isFa ? "بازگشت به صفحه اصلی" : "Back to landing page",
-    validationCodeRequired: isFa ? "وارد کردن توکن تایید الزامی است." : "Verification token is required.",
-    validationCodeLength: isFa ? "توکن وارد شده معتبر نمی‌باشد." : "The token format is invalid.",
+  const t = {
+    title: isFa ? "تأیید ایمیل" : "Verify your email",
+    desc: isFa ? "کد ۸ رقمی ارسال‌شده به ایمیل خود را وارد کنید تا ثبت‌نام تکمیل شود." : "Enter the 8-digit code sent to your email to complete registration.",
+    email: isFa ? "آدرس ایمیل" : "Email address",
+    code: isFa ? "کد تأیید ۸ رقمی" : "8-digit verification code",
+    verify: isFa ? "تأیید ایمیل و ورود به حساب" : "Verify email and sign in",
+    verifying: isFa ? "در حال تأیید..." : "Verifying...",
+    resend: isFa ? "ارسال مجدد کد" : "Resend code",
+    resendIn: isFa ? `ارسال مجدد تا ${resendCooldown} ثانیه دیگر` : `Resend in ${resendCooldown}s`,
+    home: isFa ? "بازگشت به صفحه اصلی" : "Back to home",
+    login: isFa ? "ورود به حساب" : "Sign in",
+    verified: isFa ? "ایمیل تأیید شد" : "Email verified",
+    account: isFa ? "حساب شما تأیید شد؛ برای ورود به پیشخوان از گزینه زیر استفاده کنید." : "Your account is verified. Use the button below to open your dashboard account.",
+    resendFailed: isFa ? "ارسال کد انجام نشد. لطفاً دوباره تلاش کنید." : "The code could not be sent. Please try again.",
+    invalid: isFa ? "کد واردشده معتبر نیست یا منقضی شده است." : "The code is invalid or has expired.",
+    legacyPending: isFa ? "در حال بررسی لینک تأیید قدیمی..." : "Verifying your existing email confirmation link...",
+    sessionFailed: isFa ? "ایمیل تأیید شد، اما ایجاد نشست خودکار موفق نشد. لطفاً وارد حساب خود شوید." : "Email was verified, but automatic sign-in could not be completed. Please sign in.",
+    deliveryFailed: isFa ? "ارسال اولیه ایمیل ناموفق بود. می‌توانید کد را از این صفحه دوباره درخواست کنید." : "The initial email could not be delivered. You can request a new code here.",
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError("");
-    setCodeError("");
+  // Preserve verification links already emailed by the previous SHA-256 token flow.
+  // New registrations use the 8-digit code form below.
+  useEffect(() => {
+    if (!legacyToken || legacyVerificationStarted.current === legacyToken) return;
+    legacyVerificationStarted.current = legacyToken;
+    setIsLegacyVerifying(true);
+    setError("");
+    setIsVerified(false);
+    setSessionError(false);
+    const verifyLegacyLink = async () => {
+      try {
+        const result = await verifyLegacyEmailAction(legacyToken);
+        if (legacyVerificationStarted.current !== legacyToken) return;
+        if (!result.success) {
+          setError(isFa ? "لینک تأیید نامعتبر یا منقضی شده است." : "This verification link is invalid or has expired.");
+          return;
+        }
+        setIsVerified(true);
+        if (!result.sessionCreated) {
+          setSessionError(true);
+          return;
+        }
+        try {
+          const session = await refreshSession();
+          if (legacyVerificationStarted.current !== legacyToken) return;
+          if (!session.user || session.status !== "authenticated") {
+            setSessionError(true);
+            return;
+          }
+          router.replace(postVerificationDestination);
+          router.refresh();
+        } catch {
+          if (legacyVerificationStarted.current === legacyToken) setSessionError(true);
+        }
+      } catch {
+        if (legacyVerificationStarted.current === legacyToken) {
+          setError(isFa ? "تأیید لینک انجام نشد. ایمیل خود را وارد کنید و کد تازه بگیرید." : "The link could not be verified. Enter your email to request a new code.");
+        }
+      } finally {
+        if (legacyVerificationStarted.current === legacyToken) setIsLegacyVerifying(false);
+      }
+    };
 
-    if (!code.trim()) {
-      setCodeError(strings.validationCodeRequired);
+    void verifyLegacyLink();
+  }, [legacyToken, isFa, locale, refreshSession, router, postVerificationDestination]);
+
+  const handleVerify = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    if (!email.trim() || !/^\d{8}$/.test(code)) {
+      setError(isFa ? "ایمیل و کد ۸ رقمی را به‌درستی وارد کنید." : "Enter a valid email address and an 8-digit code.");
       return;
     }
-    // we drop exact length requirements since it's an opaque token
-
-    setIsLoading(true);
+    setIsVerifying(true);
     try {
-      // Use the actual backend action
-      const res = await verifyEmailAction(code.trim());
-      if (res && res.success) {
-        setIsSuccess(true);
-        setTimeout(() => {
-          router.push(`/${locale}/dashboard`);
-        }, 1500);
-      } else {
-        throw new Error("Invalid token");
+      const result = await verifyEmailAction(email.trim(), code);
+      if (!result.success) throw new Error("INVALID_CODE");
+      setIsVerified(true);
+      if (!result.sessionCreated) {
+        setSessionError(true);
+        return;
       }
-    } catch (err: unknown) {
-      setSubmitError(isFa ? "کد تایید نامعتبر یا منقضی شده است." : "The verification token is invalid or has expired.");
+      try {
+        const session = await refreshSession();
+        if (session.status !== "authenticated" || !session.user) {
+          setSessionError(true);
+          return;
+        }
+        router.replace(postVerificationDestination);
+        router.refresh();
+      } catch {
+        setSessionError(true);
+      }
+    } catch {
+      setError(t.invalid);
     } finally {
-      setIsLoading(false);
+      setIsVerifying(false);
     }
   };
 
-  const handleResendRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resendEmail.trim() || isResending) return;
-
+  const handleResend = async () => {
+    if (!email.trim() || isResending || resendCooldown > 0) return;
     setIsResending(true);
-    setSubmitError("");
+    setError("");
+    setResendMessage("");
     try {
-      await requestVerification(resendEmail.trim());
-      setResendSuccess(true);
-      // Notice: token is intentionally not returned, so we avoid enumeration timing logic in actions/auth.ts
-    } catch (e) {
-      setSubmitError(isFa ? "خطا در ارسال مجدد توکن." : "Failed to resend verification token.");
+      const result = await requestVerification(email.trim(), locale as "fa" | "en");
+      if (!result.success) throw new Error(result.errorCode ?? "SEND_FAILED");
+      setResendCooldown(60);
+      setResendMessage(isFa ? "در صورت ثبت بودن ایمیل و فعال بودن سرویس ارسال، کد جدید ارسال می‌شود." : "If the email is registered and delivery is configured, a new code will be sent.");
+    } catch {
+      setError(t.resendFailed);
     } finally {
       setIsResending(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-[var(--background)] relative overflow-hidden" style={{ direction: isFa ? "rtl" : "ltr" }}>
-      {/* Decorative Gradients */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--sky-blue-500)]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--orange-500)]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute inset-0 grid-backdrop opacity-[0.2] pointer-events-none -z-10" />
-
-      {/* Main Container */}
-      <div className="w-full max-w-[460px] space-y-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center text-center">
-          <Link href={`/${locale}`} className="flex items-center gap-2 group cursor-pointer">
-            <SeorchableLogo className="w-10 h-10 group-hover:scale-105 transition-transform duration-300" />
-            <span className="font-display font-black text-xl bg-gradient-to-r from-[var(--sky-blue-500)] to-[var(--orange-500)] bg-clip-text text-transparent">
-              {isFa ? "سئورچبل" : "seorchable.ir"}
-            </span>
-          </Link>
-        </div>
-
-        {/* Card */}
-        <Card className="glass-panel border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-2xl rounded-3xl p-2 sm:p-4">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl font-black font-display text-[var(--text-primary)]">
-              {isSuccess ? strings.successTitle : (showResendFlow ? strings.resendTitle : strings.title)}
-            </CardTitle>
-            <CardDescription className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed mt-1">
-              {isSuccess ? strings.successDesc : (showResendFlow ? strings.resendDesc : strings.desc)}
-            </CardDescription>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[var(--background)] p-4" dir={isFa ? "rtl" : "ltr"}>
+      <div className="pointer-events-none absolute inset-0 grid-backdrop opacity-20" />
+      <div className="relative z-10 w-full max-w-[460px] space-y-6">
+        <div className="flex flex-col items-center"><Link href={`/${locale}`} className="flex items-center gap-2"><SeorchableLogo className="h-10 w-10"/><span className="text-xl font-black text-[var(--text-primary)]">Oxenn</span></Link></div>
+        <Card className="rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-2 shadow-2xl sm:p-4">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl font-black">{isVerified ? t.verified : t.title}</CardTitle>
+            <CardDescription className="mt-1 text-xs leading-relaxed">{isVerified ? t.account : t.desc}</CardDescription>
           </CardHeader>
           <CardContent>
-            {isSuccess ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-fade-in text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <CheckCircle2 size={36} className="animate-pulse" />
-                </div>
-                <div className="text-sm font-semibold text-[var(--text-primary)]">{isFa ? "درحال ورود به محیط داشبورد..." : "Loading Workspace Dashboard..."}</div>
+            {isVerified ? (
+              <div className="space-y-4 text-center">
+                <CheckCircle2 className="mx-auto text-emerald-500" size={42}/>
+                {sessionError && <p role="alert" className="text-sm text-amber-600">{t.sessionFailed}</p>}
+                <Link href={sessionError ? loginHref : postVerificationDestination} className="block rounded-xl bg-[var(--sky-blue-500)] px-4 py-3 text-sm font-bold text-white">{sessionError ? t.login : (isFa ? "رفتن به حساب کاربری" : "Go to my account")}</Link>
               </div>
-            ) : showResendFlow ? (
-              resendSuccess ? (
-                 <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-fade-in text-center">
-                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                    <CheckCircle2 size={36} />
-                  </div>
-                  <div className="text-sm font-semibold text-[var(--text-primary)]">{strings.resendSuccessTitle}</div>
-                  <p className="text-xs text-[var(--text-muted)]">{strings.resendSuccessDesc}</p>
-                </div>
-              ) : (
-                <form onSubmit={handleResendRequest} className="space-y-4">
-                  {submitError && (
-                    <div className="p-3.5 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs flex items-start gap-2 animate-shake">
-                      <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                      <p className="font-bold">{submitError}</p>
-                    </div>
-                  )}
-                  <Input
-                    type="email"
-                    label={strings.resendEmailLabel}
-                    placeholder={strings.resendEmailPlaceholder}
-                    value={resendEmail}
-                    onChange={(e) => setResendEmail(e.target.value)}
-                    disabled={isResending}
-                    required
-                    className="text-center text-sm"
-                  />
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={isResending}
-                    className="w-full py-3 mt-2 rounded-xl text-xs font-black flex items-center justify-center gap-2"
-                  >
-                    {isResending ? (
-                      <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <CheckCircle2 size={15} />
-                    )}
-                    <span>{strings.resendSubmitBtn}</span>
-                  </Button>
-                  <div className="pt-4 border-t border-[var(--border)] text-center flex flex-col items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowResendFlow(false)}
-                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-bold cursor-pointer"
-                    >
-                      {isFa ? "بازگشت به وارد کردن توکن" : "Back to token entry"}
-                    </button>
-                  </div>
-                </form>
-              )
+            ) : isLegacyVerifying ? (
+              <p role="status" className="py-6 text-center text-sm text-[var(--text-muted)]">{t.legacyPending}</p>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {submitError && (
-                  <div className="p-3.5 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs flex items-start gap-2 animate-shake">
-                    <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                    <p className="font-bold">{submitError}</p>
-                  </div>
-                )}
-
-                {/* Verification Code Input */}
-                <Input
-                  type="text"
-                  label={strings.codeLabel}
-                  placeholder={strings.codePlaceholder}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  error={codeError}
-                  disabled={isLoading}
-                  required
-                  className="text-center text-sm font-mono focus:tracking-normal"
-                />
-
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={isLoading}
-                  className="w-full py-3 mt-2 rounded-xl text-xs font-black flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span>{strings.loading}</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={15} />
-                      <span>{strings.submitBtn}</span>
-                    </>
-                  )}
-                </Button>
-
-                {/* Resend Code controls */}
-                <div className="pt-4 border-t border-[var(--border)] text-center flex flex-col items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowResendFlow(true)}
-                    className="text-xs text-[var(--sky-blue-500)] hover:text-[var(--orange-500)] transition-colors font-bold flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <RotateCw size={13} />
-                    <span>{isFa ? "توکن نامعتبر است؟ درخواست لینک جدید" : "Invalid token? Request a new link"}</span>
+              <div className="space-y-4">
+                {deliveryFailed && <p className="rounded-xl bg-amber-500/10 p-3 text-xs text-amber-700">{t.deliveryFailed}</p>}
+                {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 p-3 text-xs text-[var(--color-error)]"><AlertCircle size={15} className="mt-0.5 shrink-0"/><span>{error}</span></div>}
+                <form onSubmit={handleVerify} className="space-y-4">
+                  <Input type="email" inputMode="email" label={t.email} value={email} onChange={(event) => setEmail(event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={isVerifying} required />
+                  <Input
+                    label={t.code}
+                    value={code}
+                    onChange={(event) => {
+                      setCode(normalizeVerificationCodeInput(event.target.value));
+                    }}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={16}
+                    disabled={isVerifying}
+                    required
+                    className="text-center text-lg tracking-[0.35em]"
+                  />
+                  <Button type="submit" variant="primary" disabled={isVerifying} className="w-full py-3">{isVerifying ? t.verifying : <span className="inline-flex items-center justify-center gap-2"><CheckCircle2 size={15}/>{t.verify}</span>}</Button>
+                </form>
+                <div className="border-t border-[var(--border)] pt-4 text-center">
+                  <button type="button" onClick={handleResend} disabled={isResending || resendCooldown > 0 || !email.trim()} className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--sky-blue-500)] disabled:cursor-not-allowed disabled:opacity-50">
+                    {isResending ? <RotateCw size={14} className="animate-spin"/> : <Mail size={14}/>} {resendCooldown > 0 ? t.resendIn : t.resend}
                   </button>
+                  {resendMessage && <p className="mt-2 text-xs text-emerald-600">{resendMessage}</p>}
                 </div>
-              </form>
+              </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Back to Home CTA */}
-        <div className="text-center">
-          <Link
-            href={`/${locale}`}
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-bold cursor-pointer"
-          >
-            {isFa ? <ArrowRight size={14} /> : <ArrowLeft size={14} />}
-            <span>{strings.backToHome}</span>
-          </Link>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Link href={`/${locale}`} className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]">{isFa ? <ArrowRight size={14}/> : <ArrowLeft size={14}/>}<span>{t.home}</span></Link>
+          <Link href={loginHref} className="text-xs text-[var(--sky-blue-500)] hover:underline">{t.login}</Link>
         </div>
       </div>
     </div>
