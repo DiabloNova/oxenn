@@ -4,9 +4,16 @@ import { AuthProvider, useAuth } from "@/components/AuthProvider";
 
 const actions = vi.hoisted(() => ({
   getServerSessionAction: vi.fn(async () => ({
-    user: null,
-    expiresAt: null,
-    status: "unauthenticated" as const,
+    user: null as {
+      id: string;
+      name: string;
+      email: string;
+      username: string | null;
+      role: "super_admin" | "workspace_admin" | "viewer";
+      workspaceId: string;
+    } | null,
+    expiresAt: null as string | null,
+    status: "unauthenticated" as "authenticated" | "unauthenticated",
   })),
   loginAction: vi.fn(),
   logoutAction: vi.fn(),
