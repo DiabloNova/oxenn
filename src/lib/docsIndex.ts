@@ -433,7 +433,6 @@ export const DOCS_INDEX: DocMeta[] = [
     categoryFa: "tasks_reports",
     snippet: `# PR #146 — Graph provenance and ingestion remediation  ## Scope  This report records the database/ingestion work performed after refreshing PR #146 from \`main\` at commit \`46d0e80d34fb432457e9d89781acd88d9ad96ac3\`.  ## Changes  - Relationship provenance is now represented as the server-managed JSONB array \`source_chunk_ids\`. New graph upserts append the current source atomically in PostgreSQL, and an edge-scoped transaction advisory lock serializes concurrent upserts. Extraction output cannot su`
   },
-
   {
     slug: "registration-migration-0016-snapshot-ownership-integrity",
     titleEn: "Registration Migration 0016: Snapshot and Ownership Integrity",
