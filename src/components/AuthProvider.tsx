@@ -20,17 +20,41 @@ const PUBLIC_UNAUTHENTICATED_SESSION: Session = {
   status: "unauthenticated",
 };
 
+// This legacy cache is best-effort only. The server-backed session remains authoritative.
+function cacheSessionUser(user: Session["user"]): void {
+  try {
+    if (typeof window === "undefined") return;
+    if (user) {
+      window.localStorage.setItem("auth_session_user", JSON.stringify(user));
+    } else {
+      window.localStorage.removeItem("auth_session_user");
+    }
+  } catch {
+    // Browser storage can be unavailable (for example, in restricted contexts).
+  }
+}
+
+function clearCachedSessionUser(): void {
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("auth_session_user");
+    }
+  } catch {
+    // Cache cleanup must never prevent server-side authentication actions.
+  }
+}
+
 async function synchronizeServerSession(): Promise<Session> {
   try {
     const serverSession = await getServerSessionAction();
     if (serverSession.status === "authenticated" && serverSession.user) {
-      localStorage.setItem("auth_session_user", JSON.stringify(serverSession.user));
+      cacheSessionUser(serverSession.user);
     } else {
-      localStorage.removeItem("auth_session_user");
+      clearCachedSessionUser();
     }
     return serverSession;
   } catch (error) {
-    localStorage.removeItem("auth_session_user");
+    clearCachedSessionUser();
     throw error;
   }
 }
@@ -71,7 +95,7 @@ export function AuthProvider({
       })
       .catch((error) => {
         if (!active) return;
-        localStorage.removeItem("auth_session_user");
+        clearCachedSessionUser();
         setSession({ user: null, expiresAt: null, status: "unauthenticated" });
         console.error("Failed to fetch authoritative server session:", error);
       });
@@ -86,15 +110,15 @@ export function AuthProvider({
     try {
       const result = await loginAction(email, password);
       if (!result.success) {
-        localStorage.removeItem("auth_session_user");
+        clearCachedSessionUser();
         setSession({ user: null, expiresAt: null, status: "unauthenticated" });
         return { errorCode: result.errorCode };
       }
-      localStorage.setItem("auth_session_user", JSON.stringify(result.user));
+      cacheSessionUser(result.user);
       setSession({ user: result.user, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), status: "authenticated" });
       return {};
     } catch (error) {
-      localStorage.removeItem("auth_session_user");
+      clearCachedSessionUser();
       setSession({ user: null, expiresAt: null, status: "unauthenticated" });
       throw error;
     }
@@ -107,20 +131,27 @@ export function AuthProvider({
       if ("errorCode" in result) {
         throw Object.assign(new Error("Registration failed."), { code: result.errorCode });
       }
-      localStorage.removeItem("auth_session_user");
+      clearCachedSessionUser();
       setSession({ user: null, expiresAt: null, status: "unauthenticated" });
       return { verificationEmailSent: result.verificationEmailSent };
     } catch (error) {
-      localStorage.removeItem("auth_session_user");
+      clearCachedSessionUser();
       setSession({ user: null, expiresAt: null, status: "unauthenticated" });
       throw error;
     }
   };
 
   const logout = async () => {
+    const previousSession = session;
     setSession((previous) => ({ ...previous, status: "loading" }));
-    localStorage.removeItem("auth_session_user");
-    await logoutAction();
+    try {
+      // Revoke the authoritative server session before doing any client-side cleanup.
+      await logoutAction();
+    } catch (error) {
+      setSession(previousSession);
+      throw error;
+    }
+    clearCachedSessionUser();
     setSession({ user: null, expiresAt: null, status: "unauthenticated" });
   };
 
