@@ -163,11 +163,43 @@ test('missing-path fallback only applies to the exact accepted unpatched advisor
   }), new Map([['braces', ['oxenn > braces']]]), DATE).action, 'FAIL', 'actual production exposure overrides the false-positive path fallback');
   assert.equal(decideMissingPathFallback(base, new Map([['braces', ['oxenn > braces']]]), DATE).action, 'FAIL');
   assert.equal(decideMissingPathFallback(base, new Map([['braces', ['oxenn > next > braces']]]), DATE).action, 'FAIL');
+  assert.equal(
+    decideMissingPathFallback(accepted(), new Map([['braces', ['oxenn > braces']]]), DATE).action,
+    'FAIL',
+    'a production-tree hit must reject an exception even when audit metadata marks paths dev-only',
+  );
   assert.equal(decideMissingPathFallback(base, new Map(), '2026-11-20').action, 'FAIL');
   assert.equal(decideMissingPathFallback(accepted({ patched: '<= 3.0.3', patchStatus: 'patched', paths: [] }), new Map(), DATE).action, 'FAIL');
   assert.equal(decideMissingPathFallback(accepted({ patchStatus: 'unknown', patchStatusUnknown: true, paths: [] }), new Map(), DATE).action, 'FAIL');
   assert.equal(decideMissingPathFallback(accepted({ name: 'other-package', paths: [] }), new Map(), DATE).action, 'FAIL');
   assert.equal(decideMissingPathFallback(accepted({ id: 'GHSA-wrong', paths: [] }), new Map(), DATE).action, 'FAIL');
+});
+
+test('picomatch receives only a short-lived exception while absent from the production dependency tree', () => {
+  const advisory = {
+    id: 'GHSA-fc5q-39xc-vjpf',
+    name: 'picomatch',
+    severity: 'high',
+    patched: '<0.0.0',
+    patchStatus: 'unpatched',
+    patchStatusUnknown: false,
+    paths: [],
+  };
+
+  assert.equal(decideMissingPathFallback(advisory, new Map(), '2026-11-18').action, 'ALLOW');
+  assert.equal(
+    decideMissingPathFallback(advisory, new Map([['picomatch', ['oxenn > runtime-package > picomatch']]]), '2026-11-18').action,
+    'FAIL',
+  );
+  assert.equal(decideMissingPathFallback(advisory, new Map(), '2026-11-26').action, 'FAIL');
+  assert.equal(
+    decideMissingPathFallback({ ...advisory, patchStatus: 'patched', patched: '>=4.0.8' }, new Map(), '2026-11-18').action,
+    'FAIL',
+  );
+  assert.equal(
+    decideMissingPathFallback({ ...advisory, paths: [{ path: 'vitest > vite > picomatch', dev: true }] }, new Map(), '2026-11-18').action,
+    'ALLOW',
+  );
 });
 
 test('risk acceptance expiry is deterministic', () => {
