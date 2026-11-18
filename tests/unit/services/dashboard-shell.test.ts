@@ -5,6 +5,15 @@ import {
   matchesDashboardNavigationSearch,
 } from "@/config/dashboardNavigation";
 
+type NavigationNode = { href?: string; children?: NavigationNode[] };
+
+function collectNavigationHrefs(items: NavigationNode[]): string[] {
+  return items.flatMap((item) => [
+    ...(item.href ? [item.href] : []),
+    ...(item.children ? collectNavigationHrefs(item.children) : []),
+  ]);
+}
+
 describe("Dashboard Shell Architecture", () => {
   it("matches the four owner-defined dashboard groups and their exact entries", () => {
     const expected = {
@@ -14,7 +23,7 @@ describe("Dashboard Shell Architecture", () => {
       "on-page": ["search-ranking", "site-health", "technical-issues", "product-review", "seo-schema"],
     };
     expect(dashboardNavigation.map((section) => section.id)).toEqual(["analytics", "reports", "actions", "on-page"]);
-    const hrefs = dashboardNavigation.flatMap((section) => section.items.flatMap((item) => item.href ? [item.href] : (item.children ?? []).map((child) => child.href)));
+    const hrefs = dashboardNavigation.flatMap((section) => collectNavigationHrefs(section.items));
     expect(new Set(hrefs).size).toBe(hrefs.length);
     for (const [sectionId, itemIds] of Object.entries(expected)) {
       const section = dashboardNavigation.find((entry) => entry.id === sectionId);
@@ -28,6 +37,18 @@ describe("Dashboard Shell Architecture", () => {
         ),
       ).toBe(true);
     }
+  });
+
+  it("includes parent routes and nested child routes when checking uniqueness", () => {
+    const fixture: NavigationNode[] = [
+      { href: "/dashboard/parent", children: [{ href: "/dashboard/parent/child" }] },
+      { href: "/dashboard/duplicate", children: [{ href: "/dashboard/parent/child" }] },
+    ];
+    const hrefs = collectNavigationHrefs(fixture);
+
+    expect(hrefs).toContain("/dashboard/parent");
+    expect(hrefs).toHaveLength(4);
+    expect(new Set(hrefs).size).toBe(3);
   });
 
   it("matches localized nested routes using the production matcher", () => {
