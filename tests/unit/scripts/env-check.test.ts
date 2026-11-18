@@ -46,6 +46,53 @@ describe("resolveMode", () => {
 
 
 describe("production build email configuration", () => {
+  it("allows a Vercel Preview build without a database, session secret, or email provider", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("SESSION_SECRET", "");
+
+    expect(validateEnv("build")).toMatchObject({
+      mode: "build",
+      missing: [],
+      invalid: [],
+      valid: true,
+    });
+  });
+
+  it("still validates a supplied Preview database URL and sender address", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("DATABASE_URL", "not-a-postgres-url");
+    vi.stubEnv("EMAIL_FROM_ADDRESS", "not-an-email");
+
+    const result = validateEnv("build");
+    expect(result.invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "DATABASE_URL" }),
+      expect.objectContaining({ name: "EMAIL_FROM_ADDRESS" }),
+    ]));
+  });
+
+  it("keeps database, session, and email requirements strict for Production builds", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("SESSION_SECRET", "");
+    vi.stubEnv("EMAIL_PROVIDER", "maileroo");
+    vi.stubEnv("MAILEROO_API_KEY", "");
+    vi.stubEnv("EMAIL_FROM_ADDRESS", "");
+
+    const result = validateEnv("build");
+    expect(result.missing).toEqual(expect.arrayContaining([
+      "DATABASE_URL",
+      "SESSION_SECRET",
+      "MAILEROO_API_KEY",
+    ]));
+    expect(result.invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "EMAIL_FROM_ADDRESS" }),
+    ]));
+  });
+
   function stubProductionBase() {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("DATABASE_URL", "postgresql://app:secret@127.0.0.1:5432/oxenn");
