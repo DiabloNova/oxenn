@@ -16,14 +16,19 @@ const actions = vi.hoisted(() => ({
 vi.mock("@/app/actions/auth", () => actions);
 
 function SessionStatus() {
-  const { session, logout } = useAuth();
-  return <><output>{session.status}</output><button type="button" onClick={() => void logout()}>Sign out</button></>;
+  const { session, login, logout } = useAuth();
+  return <>
+    <output>{session.status}</output>
+    <button type="button" onClick={() => void login("user@example.com", "Password123!!")}>Sign in</button>
+    <button type="button" onClick={() => void logout()}>Sign out</button>
+  </>;
 }
 
 describe("AuthProvider public homepage isolation", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     cleanup();
-    window.localStorage.removeItem("auth_session_user");
+    window.localStorage.clear();
     vi.clearAllMocks();
   });
 
@@ -52,8 +57,39 @@ describe("AuthProvider public homepage isolation", () => {
     });
     expect(await screen.findByText("unauthenticated")).toBeInTheDocument();
   });
-  it("clears the legacy cached user after a successful server logout", async () => {
+  it("keeps the server session when browser storage rejects cache writes", async () => {
+    actions.getServerSessionAction.mockResolvedValueOnce({
+      user: {
+        id: "usr-1",
+        name: "Test User",
+        email: "user@example.com",
+        username: "testuser",
+        role: "workspace_admin",
+        workspaceId: "org-1",
+      },
+      expiresAt: "2026-11-19T00:00:00.000Z",
+      status: "authenticated",
+    });
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Storage unavailable", "SecurityError");
+    });
+
+    render(
+      <AuthProvider>
+        <SessionStatus />
+      </AuthProvider>
+    );
+
+    expect(await screen.findByText("authenticated")).toBeInTheDocument();
+    expect(setItem).toHaveBeenCalledWith("auth_session_user", expect.any(String));
+  });
+
+  it("performs server logout even when browser storage cleanup throws", async () => {
     window.localStorage.setItem("auth_session_user", JSON.stringify({ name: "Legacy user" }));
+    const removeItem = vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new DOMException("Storage unavailable", "SecurityError");
+    });
+
     render(
       <AuthProvider>
         <SessionStatus />
@@ -63,9 +99,9 @@ describe("AuthProvider public homepage isolation", () => {
     await screen.findByText("unauthenticated");
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     await waitFor(() => {
-      expect(window.localStorage.getItem("auth_session_user")).toBeNull();
       expect(actions.logoutAction).toHaveBeenCalledTimes(1);
     });
+    expect(removeItem).toHaveBeenCalledWith("auth_session_user");
   });
 
 });
