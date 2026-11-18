@@ -142,13 +142,21 @@ export function AuthProvider({
   };
 
   const logout = async () => {
-    const previousSession = session;
     setSession((previous) => ({ ...previous, status: "loading" }));
     try {
       // Revoke the authoritative server session before doing any client-side cleanup.
       await logoutAction();
     } catch (error) {
-      setSession(previousSession);
+      // The action can fail after the server has already revoked the cookie/session.
+      // Re-read server truth rather than restoring a potentially stale authenticated state.
+      try {
+        const authoritativeSession = await synchronizeServerSession();
+        setSession(authoritativeSession);
+      } catch (sessionError) {
+        clearCachedSessionUser();
+        setSession({ user: null, expiresAt: null, status: "unauthenticated" });
+        console.error("Failed to re-synchronize the session after logout failure:", sessionError);
+      }
       throw error;
     }
     clearCachedSessionUser();
