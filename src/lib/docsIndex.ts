@@ -39,7 +39,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Seorchable — Dashboard Shell Architecture & Specification",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Seorchable — Dashboard Shell Architecture & Specification  This document details the production-grade architectural design of the unified authenticated Dashboard Shell implemented in **Task 3.0**. The shell serves as the layout foundation for all authenticated sub-modules, establishing strict client-server component boundaries, unified configuration-driven navigation, multi-tenant workspace context integration, and comprehensive LTR/RTL bidirectional layout controls.  ---  ## 1. Directory Stru`
+    snippet: `# Seorchable — Dashboard Shell Architecture & Specification  > **Status — partially superseded (2026-11-16):** The navigation taxonomy, menu hierarchy, account-menu placement, and other owner-controlled dashboard information-architecture decisions in this document are historical. They must not override [the current owner-approved frontend requirements](./FRONTEND_OWNER_REQUIREMENTS_2026-11-16.md). The remaining technical guidance is retained only where it does not conflict with that owner decisi`
   },
   {
     slug: "OBSERVABILITY_AND_GOVERNANCE",
@@ -433,14 +433,7 @@ export const DOCS_INDEX: DocMeta[] = [
     categoryFa: "tasks_reports",
     snippet: `# PR #146 — Graph provenance and ingestion remediation  ## Scope  This report records the database/ingestion work performed after refreshing PR #146 from \`main\` at commit \`46d0e80d34fb432457e9d89781acd88d9ad96ac3\`.  ## Changes  - Relationship provenance is now represented as the server-managed JSONB array \`source_chunk_ids\`. New graph upserts append the current source atomically in PostgreSQL, and an edge-scoped transaction advisory lock serializes concurrent upserts. Extraction output cannot su`
   },
-  {
-    slug: "pr-146-dashboard-audit-remediation-2026-11-17",
-    titleEn: "PR #146 — Dashboard and UI remediation",
-    titleFa: "PR #146 — Dashboard and UI remediation",
-    category: "tasks_reports",
-    categoryFa: "tasks_reports",
-    snippet: `# PR #146 — Dashboard and UI remediation  ## Scope  This report records the frontend and dashboard work performed after refreshing PR #146 from \`main\` at commit \`46d0e80d34fb432457e9d89781acd88d9ad96ac3\`.  ## Changes  - Removed optimistic global language state during route changes. The route locale remains authoritative until Next.js commits the destination; a cancelled navigation no longer leaves a stale language preference. - Kept document theme classes synchronized with the active theme throu`
-  },
+
   {
     slug: "registration-migration-0016-snapshot-ownership-integrity",
     titleEn: "Registration Migration 0016: Snapshot and Ownership Integrity",
@@ -456,6 +449,14 @@ export const DOCS_INDEX: DocMeta[] = [
     category: "tasks_reports",
     categoryFa: "tasks_reports",
     snippet: `# Phase 2 — Code Security (H1, M8)  **Status: INCOMPLETE — VERIFICATION PENDING**   **Date:** 2026-10-19   **Repository:** [DiabloNova/oxenn](https://github.com/DiabloNova/oxenn)   **Remediation source:** [Oxenn Audit Report and Remediation Plan](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/Audit.md), [PATCH-LlmAnalyticsPanel-XSS.md](https://github.com/DiabloNova/oxenn-remediation-kit/blob/main/PATCH-LlmAnalyticsPanel-XSS.md)   **Branch:** \`fix/audit-remediation-p2\`   **Pull req`
+  },
+  {
+    slug: "pr-146-dashboard-audit-remediation-2026-11-17",
+    titleEn: "PR #146 — Dashboard and UI remediation",
+    titleFa: "PR #146 — Dashboard and UI remediation",
+    category: "tasks_reports",
+    categoryFa: "tasks_reports",
+    snippet: `# PR #146 — Dashboard and UI remediation  ## Scope  This report records the frontend and dashboard work performed after refreshing PR #146 from \`main\` at commit \`46d0e80d34fb432457e9d89781acd88d9ad96ac3\`.  ## Changes  - Removed optimistic global language state during route changes. The route locale remains authoritative until Next.js commits the destination; a cancelled navigation no longer leaves a stale language preference. - Kept document theme classes synchronized with the active theme throu`
   },
   {
     slug: "pr-98-language-routing-navigation-flash",
