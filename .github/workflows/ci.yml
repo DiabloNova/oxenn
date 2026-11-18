@@ -60,10 +60,10 @@ jobs:
       - name: Verify Drizzle migration chain
         run: pnpm exec drizzle-kit check --config=drizzle.config.ts
 
-      - name: Build
+      - name: Build (Vercel Preview environment; database intentionally absent)
         run: pnpm build
         env:
-          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/oxenn_ci
+          VERCEL_ENV: preview
           SESSION_SECRET: ci-only-session-secret-not-used-for-deployment-000000000000
 
       - name: Build Reference Matrix
