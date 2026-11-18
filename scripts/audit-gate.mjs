@@ -41,6 +41,15 @@ const ALLOWLIST = [
     exitCriteria:
       'Remove this entry and bump the resolution as soon as (a) a patched braces release is published, or (b) the consuming dev-only chain is upgraded off braces (e.g. chokidar@3 -> chokidar@4, which dropped its glob deps).',
   },
+  {
+    id: 'GHSA-fc5q-39xc-vjpf', // CVE-2026-112366
+    package: 'picomatch',
+    reason:
+      'CVE-2026-112366 (HIGH 8.7) — the GitHub-reviewed advisory lists no patched release as of 2026-11-18 and affects versions through 4.0.7. Current lockfile resolutions (2.3.2 and 4.0.7) are absent from the verified production dependency tree. This is a temporary dev-tooling-only risk acceptance; the gate independently checks the production tree on every run.',
+    expiry: '2026-11-25',
+    exitCriteria:
+      'Remove this entry and update the lockfile as soon as a patched picomatch release is published. This exception must fail immediately if picomatch appears in the production dependency tree or an advisory path is identified as production-reachable.',
+  },
 ];
 
 const SEV_RANK = { critical: 0, high: 1, moderate: 2, low: 3, info: 4 };
@@ -214,6 +223,20 @@ function pad(s, n) {
 function decideMissingPathFallback(a, productionDependencyPaths, today = todayIso()) {
   const decision = decide(a, today);
   const entry = ALLOWLIST.find((e) => e.package === a.name && e.id === a.id);
+
+  // Audit path metadata can be incomplete or misclassify an optional peer.
+  // A documented exception is never valid when the independently resolved
+  // production dependency tree contains the package, even if all audit paths
+  // are marked as development-only.
+  if (
+    decision.action === 'ALLOW'
+    && entry
+    && productionDependencyPaths instanceof Map
+    && productionDependencyPaths.has(a.name)
+  ) {
+    return { action: 'FAIL', note: 'risk acceptance is restricted to dev-only paths; package is present in the verified production dependency tree' };
+  }
+
   const missingPathOnly = decision.action === 'FAIL'
     && decision.note === 'risk acceptance is restricted to verified dev-only paths; dependency path is missing or includes production'
     && entry
