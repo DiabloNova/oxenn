@@ -11,6 +11,7 @@ interface VarRule {
   // Preview can build public routes without provisioning runtime-only services.
   // Production remains strict, and any supplied value is still validated.
   optionalOnVercelPreview?: boolean;
+  optionalOnDatabaseFreePreview?: boolean;
   format?: RegExp;
   formatDescription?: string;
   validate?: (value: string) => boolean;
@@ -36,7 +37,7 @@ const RULES: VarRule[] = [
     name: "SESSION_SECRET",
     modes: ["dev", "build"],
     required: true,
-    optionalOnVercelPreview: true,
+    optionalOnDatabaseFreePreview: true,
     validate: isValidSessionSecret,
     formatDescription: "must be a unique non-placeholder secret of at least 32 characters",
   },
@@ -147,6 +148,7 @@ export function validateEnv(modeArg?: string) {
 
   const activeRules = RULES.filter((r) => r.modes.includes(mode));
   const isVercelPreviewBuild = mode === "build" && process.env.VERCEL_ENV === "preview";
+  const isDatabaseFreePreviewBuild = isVercelPreviewBuild && !process.env.DATABASE_URL?.trim();
 
   for (const rule of activeRules) {
     const rawValue = process.env[rule.name] ?? "";
@@ -160,7 +162,10 @@ export function validateEnv(modeArg?: string) {
         : rawValue;
 
     if (!val.trim()) {
-      if (rule.required && !(rule.optionalOnVercelPreview && isVercelPreviewBuild)) {
+      const optionalForPreview =
+        (rule.optionalOnVercelPreview && isVercelPreviewBuild) ||
+        (rule.optionalOnDatabaseFreePreview && isDatabaseFreePreviewBuild);
+      if (rule.required && !optionalForPreview) {
         missing.push(rule.name);
       }
       continue;
@@ -175,29 +180,28 @@ export function validateEnv(modeArg?: string) {
   }
 
   if (mode === "build" && process.env.NODE_ENV === "production") {
-    const isPreview = process.env.VERCEL_ENV === "preview";
+    const isDatabaseFreePreview = isDatabaseFreePreviewBuild;
     const hasEmailSettings = [
       process.env.EMAIL_PROVIDER,
       process.env.MAILEROO_API_KEY,
       process.env.RESEND_API_KEY,
       process.env.EMAIL_FROM_ADDRESS,
-    ].some((value) => value !== undefined);
+    ].some((value) => Boolean(value?.trim()));
 
-    // Production builds must be fully configured for transactional email.
-    // Preview builds may omit email credentials while the database-backed
-    // registration flow is intentionally unavailable; supplied values are
-    // still format-checked. Runtime mail delivery remains fail-closed.
-    if (!isPreview || hasEmailSettings) {
+    // Only a Preview with no configured database may omit email credentials.
+    // If a database is configured, registration can run and email delivery
+    // must be configured as well. Any partially supplied settings are checked.
+    if (!isDatabaseFreePreview || hasEmailSettings) {
       const provider = (process.env.EMAIL_PROVIDER ?? "maileroo").toLowerCase();
       if (provider !== "maileroo" && provider !== "resend") {
         invalid.push({ name: "EMAIL_PROVIDER", reason: "must be maileroo or resend" });
       } else {
         const keyName = provider === "maileroo" ? "MAILEROO_API_KEY" : "RESEND_API_KEY";
-        if (!isPreview && !process.env[keyName]?.trim()) missing.push(keyName);
+        if (!isDatabaseFreePreview && !process.env[keyName]?.trim()) missing.push(keyName);
       }
 
       const fromAddress = process.env.EMAIL_FROM_ADDRESS ?? "";
-      if ((!isPreview || fromAddress.trim()) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)) {
+      if ((!isDatabaseFreePreview || fromAddress.trim()) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)) {
         invalid.push({ name: "EMAIL_FROM_ADDRESS", reason: "must be a valid address on the verified sending domain" });
       }
     }
