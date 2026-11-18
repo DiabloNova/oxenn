@@ -51,6 +51,10 @@ describe("production build email configuration", () => {
     vi.stubEnv("VERCEL_ENV", "preview");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("SESSION_SECRET", "");
+    vi.stubEnv("EMAIL_PROVIDER", "");
+    vi.stubEnv("MAILEROO_API_KEY", "");
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("EMAIL_FROM_ADDRESS", "");
 
     expect(validateEnv("build")).toMatchObject({
       mode: "build",
@@ -58,6 +62,23 @@ describe("production build email configuration", () => {
       invalid: [],
       valid: true,
     });
+  });
+
+  it("requires session and email configuration when a Preview build has a database", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("DATABASE_URL", "postgresql://app:secret@127.0.0.1:5432/oxenn_preview");
+    vi.stubEnv("SESSION_SECRET", "");
+    vi.stubEnv("EMAIL_PROVIDER", "maileroo");
+    vi.stubEnv("MAILEROO_API_KEY", "");
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("EMAIL_FROM_ADDRESS", "");
+
+    const result = validateEnv("build");
+    expect(result.missing).toEqual(expect.arrayContaining(["SESSION_SECRET", "MAILEROO_API_KEY"]));
+    expect(result.invalid).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "EMAIL_FROM_ADDRESS" }),
+    ]));
   });
 
   it("still validates a supplied Preview database URL and sender address", () => {
