@@ -164,7 +164,16 @@ describe("Authentication Actions", () => {
 
       await expect(registerAction("John", "Doe", "john@doe.com", "Password123!!", "johndoe", "en"))
         .resolves.toEqual({ success: true, verificationEmailSent: true });
-      expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO user_profiles"), expect.any(Array));
+      const insertUser = mocks.query.mock.calls.find(([query]) => String(query).includes("INSERT INTO users"));
+      const insertProfile = mocks.query.mock.calls.find(([query]) => String(query).includes("INSERT INTO user_profiles"));
+      const insertCredentials = mocks.query.mock.calls.find(([query]) => String(query).includes("INSERT INTO user_credentials"));
+      const insertMembership = mocks.query.mock.calls.find(([query]) => String(query).includes("INSERT INTO organization_members"));
+      const generatedUserId = insertUser?.[1]?.[0];
+
+      expect(generatedUserId).toMatch(/^usr-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      expect(insertProfile?.[1]?.[0]).toBe(generatedUserId);
+      expect(insertCredentials?.[1]?.[1]).toBe(generatedUserId);
+      expect(insertMembership?.[1]?.[1]).toBe(generatedUserId);
       expect(mocks.createSession).not.toHaveBeenCalled();
       expect(mocks.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
         to: "john@doe.com",
