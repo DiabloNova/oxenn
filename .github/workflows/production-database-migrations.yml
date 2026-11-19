@@ -107,6 +107,7 @@ jobs:
       - name: Verify Neon URL targets and least-privilege roles
         shell: bash
         env:
+          MIGRATION_SCOPE: ${{ inputs.migration_scope }}
           WORKSPACE_RUNTIME_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
           WORKSPACE_MIGRATION_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
           PLATFORM_ADMIN_RUNTIME_DIRECT_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
