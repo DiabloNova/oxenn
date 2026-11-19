@@ -32,7 +32,7 @@ All database definitions and generated migration scripts are version-controlled 
 ```
 database/
   schema/
-    index.ts             # Canonical schema entry point (68 local table declarations)
+    index.ts             # Canonical schema barrel; see the ownership registry for the complete table inventory
     organization-table.ts # Separately declared organizations table, composed into the schema
     api-keys.ts          # Separately declared api_keys table, re-exported by index.ts
     organization.ts      # Legacy TableDefinition metadata file (retained for reference)
@@ -44,7 +44,7 @@ database/
     0001-0014_*.sql      # Historical hand-rolled SQL migrations (archived artifacts)
 ```
 
-The effective canonical schema contains **70 tables**: 68 `pgTable` declarations in `database/schema/index.ts`, plus `organizations` from `organization-table.ts` and `api_keys` from `api-keys.ts`. The latest checked-in snapshot is `database/drizzle/meta/0014_snapshot.json`.
+The canonical Workspace schema contains **71 tables**, as recorded in the reviewed inventory at `docs/database/table-ownership-registry.md`. This count includes the canonical modular schema sources composed through `database/schema/index.ts`; it must not be inferred by counting declarations in the barrel file alone. The latest checked-in Workspace snapshot is `database/drizzle/meta/0016_snapshot.json`, which includes `user_profiles`.
 
 ---
 
