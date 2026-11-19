@@ -141,7 +141,7 @@ jobs:
 
             try {
               const url = new URL(raw);
-              const actualDatabase = decodeURIComponent(url.pathname.replace(/^\\//, ""));
+              const actualDatabase = decodeURIComponent(url.pathname.slice(1));
               const actualRole = decodeURIComponent(url.username);
 
               if (!["postgres:", "postgresql:"].includes(url.protocol)) {
@@ -160,7 +160,7 @@ jobs:
                 errors.push(`${spec.label}: migrations require a direct, unpooled Neon endpoint`);
               }
 
-              const normalizedHost = url.hostname.replace(/-pooler(?=\\.)/, "");
+              const normalizedHost = url.hostname.replace("-pooler.", ".");
               if (canonicalHost === null) canonicalHost = normalizedHost;
               if (normalizedHost !== canonicalHost) {
                 errors.push(`${spec.label}: endpoint does not belong to the same Neon project/region host as the other URLs`);
