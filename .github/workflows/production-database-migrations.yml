@@ -136,6 +136,7 @@ jobs:
               database: "oxenn_platform_admin",
               role: "oxenn_platform_admin_runtime",
               kind: "runtime",
+              direct: true,
             },
             {
               label: "Platform Admin migrator",
@@ -185,8 +186,8 @@ jobs:
               if (!["require", "verify-ca", "verify-full"].includes((url.searchParams.get("sslmode") || "").toLowerCase())) {
                 errors.push(`${spec.label}: TLS must be required`);
               }
-              if (spec.kind === "migrator" && url.hostname.includes("-pooler.")) {
-                errors.push(`${spec.label}: migrations require a direct, unpooled Neon endpoint`);
+              if ((spec.kind === "migrator" || spec.direct) && url.hostname.includes("-pooler.")) {
+                errors.push(`${spec.label}: this connection requires a direct, unpooled Neon endpoint`);
               }
 
               const normalizedHost = url.hostname.replace("-pooler.", ".");
