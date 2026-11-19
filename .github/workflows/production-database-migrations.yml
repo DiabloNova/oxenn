@@ -12,6 +12,14 @@ on:
           - both
           - workspace
           - platform-admin
+      database_target:
+        description: "Choose the Neon branch target: isolated rehearsal or production."
+        type: choice
+        required: true
+        default: rehearsal
+        options:
+          - rehearsal
+          - production
       confirm_production:
         description: "Confirm that the selected migration scope should be applied to the production Neon databases."
         type: boolean
@@ -30,12 +38,13 @@ jobs:
     name: Validate manual production request
     runs-on: ubuntu-latest
     steps:
-      - name: Require main branch and explicit confirmation
+      - name: Require main branch and validate requested target
         shell: bash
         env:
           REQUESTED_REF: ${{ github.ref }}
           CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
           MIGRATION_SCOPE: ${{ inputs.migration_scope }}
+          DATABASE_TARGET: ${{ inputs.database_target }}
         run: |
           set -euo pipefail
 
@@ -44,10 +53,19 @@ jobs:
             exit 1
           fi
 
-          if [[ "$CONFIRM_PRODUCTION" != "true" ]]; then
-            echo "::error::Set confirm_production to true to authorize this manual production run."
-            exit 1
-          fi
+          case "$DATABASE_TARGET" in
+            rehearsal) ;;
+            production)
+              if [[ "$CONFIRM_PRODUCTION" != "true" ]]; then
+                echo "::error::Set confirm_production to true to authorize this manual production run."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Unsupported database target."
+              exit 1
+              ;;
+          esac
 
           case "$MIGRATION_SCOPE" in
             both|workspace|platform-admin) ;;
@@ -57,7 +75,7 @@ jobs:
               ;;
           esac
 
-          echo "Manual request validated for scope: $MIGRATION_SCOPE"
+          echo "Manual request validated for target: $DATABASE_TARGET; scope: $MIGRATION_SCOPE"
 
   migrate:
     name: Apply production database migrations
@@ -65,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
-      name: production-database-migrations
+      name: ${{ inputs.database_target == 'production' && 'production-database-migrations' || 'database-migration-rehearsal' }}
     steps:
       - name: Check out the approved main revision
         uses: actions/checkout@v4
@@ -97,7 +115,7 @@ jobs:
           node <<'NODE'
           const { Client } = require("pg");
 
-          const specs = [
+          const allSpecs = [
             {
               label: "Workspace runtime",
               env: "WORKSPACE_RUNTIME_URL",
@@ -113,7 +131,7 @@ jobs:
               kind: "migrator",
             },
             {
-              label: "Platform Admin runtime reference",
+              label: "Platform Admin runtime",
               env: "PLATFORM_ADMIN_RUNTIME_DIRECT_URL",
               database: "oxenn_platform_admin",
               role: "oxenn_platform_admin_runtime",
@@ -127,6 +145,17 @@ jobs:
               kind: "migrator",
             },
           ];
+
+          const specsByScope = {
+            workspace: allSpecs.filter((spec) => spec.database === "oxenn_workspace"),
+            "platform-admin": allSpecs.filter((spec) => spec.database === "oxenn_platform_admin"),
+            both: allSpecs,
+          };
+          const specs = specsByScope[process.env.MIGRATION_SCOPE];
+          if (!specs) {
+            console.error("Unsupported migration scope.");
+            process.exit(1);
+          }
 
           const parsed = new Map();
           const errors = [];
@@ -190,12 +219,16 @@ jobs:
             try {
               await client.connect();
               connected = true;
-              const result = await client.query(`
+              const otherDatabase = spec.database === "oxenn_workspace"
+              ? "oxenn_platform_admin"
+              : "oxenn_workspace";
+            const result = await client.query(`
                 SELECT
                   current_database() AS database_name,
                   current_user AS role_name,
                   has_database_privilege(current_user, current_database(), 'CONNECT') AS can_connect,
                   has_database_privilege(current_user, current_database(), 'CREATE') AS can_create_in_database,
+                  has_database_privilege(current_user, '${otherDatabase}', 'CONNECT') AS can_connect_other_database,
                   has_schema_privilege(current_user, 'public', 'USAGE') AS can_use_public,
                   has_schema_privilege(current_user, 'public', 'CREATE') AS can_create_in_public,
                   (
@@ -220,9 +253,10 @@ jobs:
                 row.database_name !== spec.database ||
                 row.role_name !== spec.role ||
                 row.can_connect !== true ||
+                row.can_connect_other_database !== false ||
                 row.can_use_public !== true ||
                 row.has_elevated_role_flags !== false ||
-                row.can_create_in_database !== shouldCreate ||
+                row.can_create_in_database !== false ||
                 row.can_create_in_public !== shouldCreate
               ) {
                 throw new Error("connection identity or least-privilege grant check failed");
@@ -259,6 +293,7 @@ jobs:
           NODE
 
       - name: Validate Workspace migration environment
+        if: ${{ inputs.migration_scope == 'workspace' || inputs.migration_scope == 'both' }}
         env:
           NODE_ENV: production
           APP_MODE: migrate
@@ -266,16 +301,30 @@ jobs:
           MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
         run: pnpm run env:check migrate
 
-      - name: Validate both Drizzle migration chains
+      - name: Validate Platform Admin migration environment
+        if: ${{ inputs.migration_scope == 'platform-admin' || inputs.migration_scope == 'both' }}
         env:
           NODE_ENV: production
-          DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
-          MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+          APP_MODE: migrate
+          DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_MIGRATION_DATABASE_URL }}
           PLATFORM_ADMIN_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
           PLATFORM_ADMIN_MIGRATION_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_MIGRATION_DATABASE_URL }}
-        run: |
-          pnpm exec drizzle-kit check --config=drizzle.config.ts
-          pnpm exec drizzle-kit check --config=drizzle.platform-admin.config.ts
+        run: pnpm run env:check migrate
+
+      - name: Validate Workspace Drizzle migration chain
+        if: ${{ inputs.migration_scope == 'workspace' || inputs.migration_scope == 'both' }}
+        env:
+          DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+        run: pnpm exec drizzle-kit check --config=drizzle.config.ts
+
+      - name: Validate Platform Admin Drizzle migration chain
+        if: ${{ inputs.migration_scope == 'platform-admin' || inputs.migration_scope == 'both' }}
+        env:
+          PLATFORM_ADMIN_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
+          PLATFORM_ADMIN_MIGRATION_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_MIGRATION_DATABASE_URL }}
+        run: pnpm exec drizzle-kit check --config=drizzle.platform-admin.config.ts
 
       - name: Apply Workspace migrations
         if: ${{ inputs.migration_scope == 'workspace' || inputs.migration_scope == 'both' }}
@@ -290,8 +339,6 @@ jobs:
         if: ${{ inputs.migration_scope == 'platform-admin' || inputs.migration_scope == 'both' }}
         env:
           NODE_ENV: production
-          DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
-          MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
           PLATFORM_ADMIN_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
           PLATFORM_ADMIN_MIGRATION_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_MIGRATION_DATABASE_URL }}
         run: pnpm platform-admin:migrate
@@ -299,18 +346,28 @@ jobs:
       - name: Record successful migration scope
         if: success()
         env:
+          DATABASE_TARGET: ${{ inputs.database_target }}
           MIGRATION_SCOPE: ${{ inputs.migration_scope }}
           RUN_REF: ${{ github.ref }}
           RUN_SHA: ${{ github.sha }}
         run: |
+          workspace_status="not requested"
+          platform_status="not requested"
+          if [[ "$MIGRATION_SCOPE" == "workspace" || "$MIGRATION_SCOPE" == "both" ]]; then
+            workspace_status="applied"
+          fi
+          if [[ "$MIGRATION_SCOPE" == "platform-admin" || "$MIGRATION_SCOPE" == "both" ]]; then
+            platform_status="applied"
+          fi
           {
-            echo "## Production database migration result"
+            echo "## Database migration result"
             echo
-            echo "- Requested scope: `$MIGRATION_SCOPE`"
-            echo "- Dispatch ref: `$RUN_REF`"
-            echo "- Checked-out revision: `$RUN_SHA`"
-            echo "- Workspace migrations: `$([[ "$MIGRATION_SCOPE" == "workspace" || "$MIGRATION_SCOPE" == "both" ]] && echo applied || echo not requested)`"
-            echo "- Platform Admin migrations: `$([[ "$MIGRATION_SCOPE" == "platform-admin" || "$MIGRATION_SCOPE" == "both" ]] && echo applied || echo not requested)`"
+            printf -- '- Target: %s\n' "$DATABASE_TARGET"
+            printf -- '- Requested scope: %s\n' "$MIGRATION_SCOPE"
+            printf -- '- Dispatch ref: %s\n' "$RUN_REF"
+            printf -- '- Checked-out revision: %s\n' "$RUN_SHA"
+            printf -- '- Workspace migrations: %s\n' "$workspace_status"
+            printf -- '- Platform Admin migrations: %s\n' "$platform_status"
             echo
             echo "The two databases are independent; this workflow runs the selected scopes sequentially and does not claim a cross-database transaction."
           } >> "$GITHUB_STEP_SUMMARY"
