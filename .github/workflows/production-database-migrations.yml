@@ -1,0 +1,326 @@
+name: Production Database Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_scope:
+        description: "Choose which independent database migration runner to execute."
+        type: choice
+        required: true
+        default: both
+        options:
+          - both
+          - workspace
+          - platform-admin
+      confirm_production:
+        description: "Confirm that the selected migration scope should be applied to the production Neon databases."
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oxenn-production-database-migrations
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Validate manual production request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main branch and explicit confirmation
+        shell: bash
+        env:
+          REQUESTED_REF: ${{ github.ref }}
+          CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
+          MIGRATION_SCOPE: ${{ inputs.migration_scope }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$REQUESTED_REF" != "refs/heads/main" ]]; then
+            echo "::error::Production database migrations may only be dispatched from main."
+            exit 1
+          fi
+
+          if [[ "$CONFIRM_PRODUCTION" != "true" ]]; then
+            echo "::error::Set confirm_production to true to authorize this manual production run."
+            exit 1
+          fi
+
+          case "$MIGRATION_SCOPE" in
+            both|workspace|platform-admin) ;;
+            *)
+              echo "::error::Unsupported migration scope."
+              exit 1
+              ;;
+          esac
+
+          echo "Manual request validated for scope: $MIGRATION_SCOPE"
+
+  migrate:
+    name: Apply production database migrations
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production-database-migrations
+    steps:
+      - name: Check out the approved main revision
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Neon URL targets and least-privilege roles
+        shell: bash
+        env:
+          WORKSPACE_RUNTIME_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
+          WORKSPACE_MIGRATION_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+          PLATFORM_ADMIN_RUNTIME_DIRECT_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
+          PLATFORM_ADMIN_MIGRATION_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_MIGRATION_DATABASE_URL }}
+        run: |
+          node <<'NODE'
+          const { Client } = require("pg");
+
+          const specs = [
+            {
+              label: "Workspace runtime",
+              env: "WORKSPACE_RUNTIME_URL",
+              database: "oxenn_workspace",
+              role: "oxenn_workspace_runtime",
+              kind: "runtime",
+            },
+            {
+              label: "Workspace migrator",
+              env: "WORKSPACE_MIGRATION_URL",
+              database: "oxenn_workspace",
+              role: "oxenn_workspace_migrator",
+              kind: "migrator",
+            },
+            {
+              label: "Platform Admin runtime reference",
+              env: "PLATFORM_ADMIN_RUNTIME_DIRECT_URL",
+              database: "oxenn_platform_admin",
+              role: "oxenn_platform_admin_runtime",
+              kind: "runtime",
+            },
+            {
+              label: "Platform Admin migrator",
+              env: "PLATFORM_ADMIN_MIGRATION_URL",
+              database: "oxenn_platform_admin",
+              role: "oxenn_platform_admin_migrator",
+              kind: "migrator",
+            },
+          ];
+
+          const parsed = new Map();
+          const errors = [];
+          let canonicalHost = null;
+
+          for (const spec of specs) {
+            const raw = process.env[spec.env];
+            if (!raw) {
+              errors.push(`${spec.label}: required environment secret is missing`);
+              continue;
+            }
+
+            try {
+              const url = new URL(raw);
+              const actualDatabase = decodeURIComponent(url.pathname.replace(/^\\//, ""));
+              const actualRole = decodeURIComponent(url.username);
+
+              if (!["postgres:", "postgresql:"].includes(url.protocol)) {
+                errors.push(`${spec.label}: URL must use PostgreSQL protocol`);
+              }
+              if (actualDatabase !== spec.database || actualRole !== spec.role) {
+                errors.push(`${spec.label}: database or role does not match the expected dedicated target`);
+              }
+              if (!url.password) {
+                errors.push(`${spec.label}: URL has no password`);
+              }
+              if (!["require", "verify-ca", "verify-full"].includes((url.searchParams.get("sslmode") || "").toLowerCase())) {
+                errors.push(`${spec.label}: TLS must be required`);
+              }
+              if (spec.kind === "migrator" && url.hostname.includes("-pooler.")) {
+                errors.push(`${spec.label}: migrations require a direct, unpooled Neon endpoint`);
+              }
+
+              const normalizedHost = url.hostname.replace(/-pooler(?=\\.)/, "");
+              if (canonicalHost === null) canonicalHost = normalizedHost;
+              if (normalizedHost !== canonicalHost) {
+                errors.push(`${spec.label}: endpoint does not belong to the same Neon project/region host as the other URLs`);
+              }
+
+              parsed.set(spec.env, { raw, url, spec });
+            } catch {
+              errors.push(`${spec.label}: URL is malformed`);
+            }
+          }
+
+          if (errors.length) {
+            for (const error of errors) console.error(error);
+            process.exit(1);
+          }
+
+          async function verifyConnection(entry) {
+            const { raw, spec } = entry;
+            const client = new Client({
+              connectionString: raw,
+              connectionTimeoutMillis: 10000,
+              statement_timeout: 15000,
+              application_name: "oxenn-production-migration-preflight",
+            });
+
+            let connected = false;
+            try {
+              await client.connect();
+              connected = true;
+              const result = await client.query(`
+                SELECT
+                  current_database() AS database_name,
+                  current_user AS role_name,
+                  has_database_privilege(current_user, current_database(), 'CONNECT') AS can_connect,
+                  has_database_privilege(current_user, current_database(), 'CREATE') AS can_create_in_database,
+                  has_schema_privilege(current_user, 'public', 'USAGE') AS can_use_public,
+                  has_schema_privilege(current_user, 'public', 'CREATE') AS can_create_in_public,
+                  (
+                    SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls
+                    FROM pg_roles
+                    WHERE rolname = current_user
+                  ) AS has_elevated_role_flags,
+                  (
+                    SELECT count(*)::int
+                    FROM pg_default_acl d
+                    JOIN pg_namespace n ON n.oid = d.defaclnamespace
+                    WHERE n.nspname = 'public'
+                      AND d.defaclrole = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+                  ) AS default_acl_entries,
+                  (SELECT extversion FROM pg_extension WHERE extname = 'vector') AS vector_version
+              `);
+
+              const row = result.rows[0];
+              const shouldCreate = spec.kind === "migrator";
+
+              if (
+                row.database_name !== spec.database ||
+                row.role_name !== spec.role ||
+                row.can_connect !== true ||
+                row.can_use_public !== true ||
+                row.has_elevated_role_flags !== false ||
+                row.can_create_in_database !== shouldCreate ||
+                row.can_create_in_public !== shouldCreate
+              ) {
+                throw new Error("connection identity or least-privilege grant check failed");
+              }
+
+              if (spec.kind === "migrator" && row.default_acl_entries < 2) {
+                throw new Error("migration role is missing future table/sequence default grants");
+              }
+              if (spec.database === "oxenn_workspace" && !row.vector_version) {
+                throw new Error("pgvector extension is not installed in the Workspace database");
+              }
+            } catch {
+              throw new Error(`${spec.label}: connection or privilege verification failed; no migration was started`);
+            } finally {
+              if (connected) {
+                try {
+                  await client.end();
+                } catch {
+                  // Do not print connection details during cleanup.
+                }
+              }
+            }
+          }
+
+          (async () => {
+            for (const spec of specs) {
+              await verifyConnection(parsed.get(spec.env));
+            }
+            console.log("Verified four Neon connections, exact database/role identities, direct migration endpoints, TLS, least-privilege grants, migration default privileges, and Workspace pgvector.");
+          })().catch((error) => {
+            console.error(error.message);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Validate Workspace migration environment
+        env:
+          NODE_ENV: production
+          APP_MODE: migrate
+          DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+        run: pnpm run env:check migrate
+
+      - name: Validate both Drizzle migration chains
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+          PLATFORM_ADMIN_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
+          PLATFORM_ADMIN_MIGRATION_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_MIGRATION_DATABASE_URL }}
+        run: |
+          pnpm exec drizzle-kit check --config=drizzle.config.ts
+          pnpm exec drizzle-kit check --config=drizzle.platform-admin.config.ts
+
+      - name: Apply Workspace migrations
+        if: ${{ inputs.migration_scope == 'workspace' || inputs.migration_scope == 'both' }}
+        env:
+          NODE_ENV: production
+          APP_MODE: migrate
+          DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+        run: pnpm db:migrate
+
+      - name: Apply Platform Admin migrations
+        if: ${{ inputs.migration_scope == 'platform-admin' || inputs.migration_scope == 'both' }}
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+          PLATFORM_ADMIN_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
+          PLATFORM_ADMIN_MIGRATION_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_MIGRATION_DATABASE_URL }}
+        run: pnpm platform-admin:migrate
+
+      - name: Record successful migration scope
+        if: success()
+        env:
+          MIGRATION_SCOPE: ${{ inputs.migration_scope }}
+          RUN_REF: ${{ github.ref }}
+          RUN_SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## Production database migration result"
+            echo
+            echo "- Requested scope: `$MIGRATION_SCOPE`"
+            echo "- Dispatch ref: `$RUN_REF`"
+            echo "- Checked-out revision: `$RUN_SHA`"
+            echo "- Workspace migrations: `$([[ "$MIGRATION_SCOPE" == "workspace" || "$MIGRATION_SCOPE" == "both" ]] && echo applied || echo not requested)`"
+            echo "- Platform Admin migrations: `$([[ "$MIGRATION_SCOPE" == "platform-admin" || "$MIGRATION_SCOPE" == "both" ]] && echo applied || echo not requested)`"
+            echo
+            echo "The two databases are independent; this workflow runs the selected scopes sequentially and does not claim a cross-database transaction."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record partial-failure warning
+        if: failure()
+        run: |
+          {
+            echo "## Production migration did not complete"
+            echo
+            echo "Inspect the failed step before retrying. The Workspace and Platform Admin databases are independent: a successful first migration is not rolled back if a later migration fails."
+            echo "Do not manually mark migrations as applied or edit Drizzle migration history to bypass a failure."
+          } >> "$GITHUB_STEP_SUMMARY"
