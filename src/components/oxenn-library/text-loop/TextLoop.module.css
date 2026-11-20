@@ -1,0 +1,30 @@
+.root {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.draggable {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.draggable:active {
+  cursor: grabbing;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.text {
+  user-select: none;
+}
+
+.measure {
+  visibility: hidden;
+  pointer-events: none;
+}

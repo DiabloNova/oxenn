@@ -1,5 +1,18 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
+@import "../components/oxenn-library/aurora/Aurora.css";
+@import "../components/oxenn-library/fluid-glass/FluidGlass.css";
+@import "../components/oxenn-library/glass-surface/GlassSurface.css";
+@import "../components/oxenn-library/gooey-nav/GooeyNav.css";
+@import "../components/oxenn-library/gradient-blinds/GradientBlinds.css";
+@import "../components/oxenn-library/gradient-waves/GradientWaves.css";
+@import "../components/oxenn-library/grid-motion/GridMotion.css";
+@import "../components/oxenn-library/logo-loop/LogoLoop.css";
+@import "../components/oxenn-library/metallic-paint/MetallicPaint.css";
+@import "../components/oxenn-library/option-wheel/OptionWheel.css";
+@import "../components/oxenn-library/radar/Radar.css";
+@import "../components/oxenn-library/split-flap-text/SplitFlapText.css";
+@import "../components/oxenn-library/topography/Topography.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
