@@ -13,6 +13,17 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    files: ["src/components/oxenn-library/**/*.{js,jsx,ts,tsx}"],
+    rules: {
+      // The upstream visual components intentionally use imperative refs for
+      // animation/WebGL loops. Keep their source behavior unchanged; the
+      // remaining ESLint rules still apply to this imported library.
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/immutability": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
