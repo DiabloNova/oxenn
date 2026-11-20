@@ -12,6 +12,7 @@
 @import "../components/oxenn-library/option-wheel/OptionWheel.css";
 @import "../components/oxenn-library/radar/Radar.css";
 @import "../components/oxenn-library/split-flap-text/SplitFlapText.css";
+@import "../components/oxenn-library/sidebar/Sidebar.css";
 @import "../components/oxenn-library/topography/Topography.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
