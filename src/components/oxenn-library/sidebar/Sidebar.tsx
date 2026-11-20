@@ -7,7 +7,7 @@ export type SidebarNavigationItem = {
   id: string;
   label: string;
   href: string;
-  icon: ComponentType<{ size?: number; className?: string }>;
+  icon: ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
   exact?: boolean;
 };
 
