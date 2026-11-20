@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { ArrowUpRight, Check, Compass, Layers3, Network, Radar, Scale, ShieldCheck, Waypoints } from "lucide-react";
+import { ArrowUpRight, Check, Compass, Layers3, Network, Radar as RadarIcon, Scale, ShieldCheck, Waypoints } from "lucide-react";
 import { getLandingContent } from "./landing-content";
+import TextLoop from "@/components/oxenn-library/text-loop/TextLoop";
+import { HomepageGradientBlinds } from "./HomepageGradientBlinds";
+import { HomepageRadar } from "./HomepageRadar";
 
 type LandingSectionsProps = { locale: string };
 
@@ -80,6 +83,7 @@ export function LandingSections({ locale }: LandingSectionsProps) {
   return (
     <main id="main-content" className="atlas-main" tabIndex={-1}>
       <section className="atlas-hero" aria-labelledby="atlas-hero-title">
+        <div className="atlas-hero-blinds" aria-hidden="true"><HomepageGradientBlinds /></div>
         <div className="atlas-hero-orbit atlas-hero-orbit-one" aria-hidden="true" />
         <div className="atlas-hero-orbit atlas-hero-orbit-two" aria-hidden="true" />
         <div className="atlas-container atlas-hero-grid">
@@ -111,7 +115,7 @@ export function LandingSections({ locale }: LandingSectionsProps) {
           <SectionHeading id="atlas-tracks-title" eyebrow={t.tracks.eyebrow} title={t.tracks.title} body={t.tracks.body} />
           <div className="atlas-track-grid">
             {tracks.map((track) => {
-              const Icon = track.id === "digital" ? Radar : Scale;
+              const Icon = track.id === "digital" ? RadarIcon : Scale;
               return (
                 <article className="atlas-track-card" key={track.id}>
                   <div className="atlas-card-topline"><span className="atlas-card-number">{track.number}</span><span className="atlas-card-icon"><Icon size={21} aria-hidden="true" /></span></div>
@@ -141,13 +145,39 @@ export function LandingSections({ locale }: LandingSectionsProps) {
             {steps.map((step, index) => (
               <li className="atlas-method-card" key={step.number}>
                 <div className="atlas-method-top"><span>{step.number}</span>
-                  {index === 0 ? <Compass size={18} aria-hidden="true" /> : index === 1 ? <Layers3 size={18} aria-hidden="true" /> : index === 2 ? <Radar size={18} aria-hidden="true" /> : index === 3 ? <Network size={18} aria-hidden="true" /> : <Waypoints size={18} aria-hidden="true" />}
+                  {index === 0 ? <Compass size={18} aria-hidden="true" /> : index === 1 ? <Layers3 size={18} aria-hidden="true" /> : index === 2 ? <RadarIcon size={18} aria-hidden="true" /> : index === 3 ? <Network size={18} aria-hidden="true" /> : <Waypoints size={18} aria-hidden="true" />}
                 </div>
                 <h3>{step.title}</h3><p>{step.description}</p>
               </li>
             ))}
           </ol>
           <div className="atlas-method-baseline"><span className="atlas-baseline-symbol" aria-hidden="true">↗</span><p>{t.method.baseline}</p></div>
+        </div>
+      </section>
+
+      <section className="atlas-signal-loop" aria-labelledby="atlas-signal-loop-title">
+        <div className="atlas-container">
+          <div className="atlas-signal-loop-heading">
+            <p className="atlas-eyebrow">{t.signalLoop.eyebrow}</p>
+            <h2 id="atlas-signal-loop-title">{t.signalLoop.title}</h2>
+          </div>
+          <TextLoop
+            text={t.signalLoop.text}
+            shape="wave"
+            speed={58}
+            separator="✦"
+            curviness={66}
+            fontSize={27}
+            fontWeight={800}
+            letterSpacing={1}
+            uppercase={locale === "en"}
+            color="var(--atlas-teal)"
+            ribbon={false}
+            edgeFade={0.16}
+            pauseOnHover
+            className="atlas-text-loop"
+            style={{ width: "100%", height: "142px" }}
+          />
         </div>
       </section>
 
@@ -190,6 +220,26 @@ export function LandingSections({ locale }: LandingSectionsProps) {
             <Link className="atlas-button atlas-button-primary" href={"/" + locale + "/register"}>{t.closing.primary}<ArrowUpRight size={17} aria-hidden="true" /></Link>
             <Link className="atlas-button atlas-button-secondary" href={"/" + locale + "/login"}>{t.closing.secondary}</Link>
           </div>
+        </div>
+      </section>
+
+      <section id="oxenn-radar" className="atlas-section atlas-radar" aria-labelledby="atlas-radar-title">
+        <div className="atlas-container">
+          <SectionHeading
+            id="atlas-radar-title"
+            eyebrow={t.radar.eyebrow}
+            title={t.radar.title}
+            body={t.radar.body}
+          />
+          <div className="atlas-radar-panel">
+            <div className="atlas-radar-visual"><HomepageRadar /></div>
+            <div className="atlas-radar-labels">
+              {t.radar.labels.map((label, index) => (
+                <span key={label}><i aria-hidden="true" />{label}</span>
+              ))}
+            </div>
+          </div>
+          <p className="atlas-radar-note">{t.radar.note}</p>
         </div>
       </section>
     </main>

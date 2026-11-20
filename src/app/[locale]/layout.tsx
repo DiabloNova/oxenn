@@ -27,14 +27,15 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
     title: { default: title, template: "%s | OXENN" },
     description,
     applicationName: "OXENN",
+    icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }], shortcut: ["/icon.svg"], apple: ["/icon.svg"] },
     openGraph: { title, description, siteName: "OXENN", type: "website" },
   };
 }
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#102024" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f7fc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1423" },
   ],
   colorScheme: "light dark",
 };

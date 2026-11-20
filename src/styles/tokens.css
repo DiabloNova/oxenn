@@ -115,10 +115,10 @@
      LIGHT THEME
      ========================================================= */
   :root.light {
-    --ox-background: #ffffff;
-    --ox-surface: #f8fafc;
-    --ox-surface-raised: #f1f5f9;
-    --ox-surface-muted: #f8fafc;
+    --ox-background: #f3f7fc;
+    --ox-surface: #ffffff;
+    --ox-surface-raised: #edf4fc;
+    --ox-surface-muted: #eaf2fb;
 
     --ox-border: rgba(148, 163, 184, 0.2);
     --ox-border-strong: rgba(148, 163, 184, 0.35);

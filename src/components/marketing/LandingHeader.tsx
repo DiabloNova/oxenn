@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Languages, Menu, Moon, Sun, X, ArrowUpRight } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { getLandingContent } from "./landing-content";
+import { MetallicBrandMark } from "./MetallicBrand";
 
 export function LandingHeader() {
   const { language, setLanguage, theme, setTheme } = useTheme();
@@ -44,7 +44,7 @@ export function LandingHeader() {
       <a className="atlas-skip-link" href="#page-content">{t.nav.skipToContent}</a>
       <div className="atlas-header-inner">
         <Link className="atlas-brand" href={`/${language}`} aria-label="OXENN">
-          <Image src="/icon.svg" alt="" width={38} height={38} priority /><span>OXENN</span>
+          <MetallicBrandMark size={38} priority /><span>OXENN</span>
         </Link>
         <nav className="atlas-desktop-nav" aria-label={t.nav.mainNavigationLabel}>
           {navItems.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}

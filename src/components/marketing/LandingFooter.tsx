@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import { getLandingContent } from "./landing-content";
+import { MetallicBrandMark, MetallicBrandWordmark } from "./MetallicBrand";
 
 export function LandingFooter() {
   const { language } = useTheme();
@@ -20,7 +20,7 @@ export function LandingFooter() {
         <div className="atlas-footer-main">
           <div className="atlas-footer-brand-block">
             <Link className="atlas-brand atlas-footer-brand" href={`/${language}`} aria-label="OXENN">
-              <Image src="/icon.svg" alt="" width={36} height={36} /><span>OXENN</span>
+              <MetallicBrandMark size={36} /><span>OXENN</span>
             </Link>
             <p>{t.footer.description}</p>
           </div>
@@ -30,7 +30,13 @@ export function LandingFooter() {
             <div><h2>{t.footer.account}</h2><Link href={`/${language}/login`}>{t.nav.login}</Link><Link href={`/${language}/register`}>{t.nav.signup}<ArrowUpRight size={13} aria-hidden="true" /></Link><Link href={`/${language}/privacy`}>{t.footer.privacy}</Link></div>
           </nav>
         </div>
-        <div className="atlas-footer-bottom"><span>OXENN. {t.footer.copyright}</span><span>{t.footer.strapline}</span></div>
+        <div className="atlas-footer-bottom">
+          <div className="atlas-footer-copyright">
+            <MetallicBrandWordmark width={88} height={25} />
+            <span>© {new Date().getFullYear()} {t.footer.copyright}</span>
+          </div>
+          <span>{t.footer.strapline}</span>
+        </div>
       </div>
     </footer>
   );
