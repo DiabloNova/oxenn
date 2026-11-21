@@ -2795,6 +2795,53 @@
 
 ---
 
+## Table: `user_legal_profiles`
+
+- **Ownership Scope:** USER_OWNED
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (USER_OWNED)
+- **Migration Coverage:** Not applicable (USER_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
+- **Status:** `WIRED`
+- **Consumers:** `src/app/actions/user-identity.ts`
+
+### Columns
+
+| Name | Type | Not Null | Primary Key | Default |
+|---|---|---|---|---|
+| `brand_name` | `text` | ❌ | ❌ | NULL |
+| `company_name` | `text` | ✅ | ❌ | NULL |
+| `created_at` | `timestamp with time zone` | ✅ | ❌ | `now()` |
+| `custom_industry` | `text` | ❌ | ❌ | NULL |
+| `headquarters_city` | `text` | ✅ | ❌ | NULL |
+| `headquarters_country_code` | `text` | ✅ | ❌ | NULL |
+| `headquarters_province` | `text` | ✅ | ❌ | NULL |
+| `industry` | `text` | ✅ | ❌ | NULL |
+| `legal_type` | `text` | ✅ | ❌ | NULL |
+| `national_id` | `text` | ❌ | ❌ | NULL |
+| `registration_country_code` | `text` | ✅ | ❌ | NULL |
+| `representative_phone_number` | `text` | ❌ | ❌ | NULL |
+| `representative_position` | `text` | ✅ | ❌ | NULL |
+| `representative_relationship` | `text` | ✅ | ❌ | NULL |
+| `updated_at` | `timestamp with time zone` | ✅ | ❌ | `now()` |
+| `user_id` | `text` | ✅ | ✅ | NULL |
+
+### Check Constraints
+
+| Name | Expression |
+|---|---|
+| `user_legal_profiles_headquarters_country_check` | `"user_legal_profiles"."headquarters_country_code" ~ '^[A-Z]{2}$'` |
+| `user_legal_profiles_registration_country_check` | `"user_legal_profiles"."registration_country_code" ~ '^[A-Z]{2}$'` |
+| `user_legal_profiles_representative_phone_check` | `"user_legal_profiles"."representative_phone_number" IS NULL OR "user_legal_profiles"."representative_phone_number" ~ '^\+[1-9][0-9]{7,14}$'` |
+
+### Foreign Keys
+
+| Name | Columns | Foreign Table | Foreign Columns | On Delete |
+|---|---|---|---|---|
+| `user_legal_profiles_user_id_users_id_fk` | `user_id` | `users` | `id` | cascade |
+
+---
+
 ## Table: `user_profiles`
 
 - **Ownership Scope:** USER_OWNED
@@ -2803,13 +2850,25 @@
 - **Migration Coverage:** Not applicable (USER_OWNED)
 - **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
 - **Status:** `WIRED`
-- **Consumers:** `src/app/actions/auth.ts`, `src/services/auth/session.ts`
+- **Consumers:** `src/app/actions/auth.ts`, `src/app/actions/user-identity.ts`, `src/services/auth/session.ts`
 
 ### Columns
 
 | Name | Type | Not Null | Primary Key | Default |
 |---|---|---|---|---|
+| `age_range` | `text` | ❌ | ❌ | NULL |
 | `created_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
+| `custom_industry` | `text` | ❌ | ❌ | NULL |
+| `custom_job_title` | `text` | ❌ | ❌ | NULL |
+| `first_name` | `text` | ❌ | ❌ | NULL |
+| `gender` | `text` | ❌ | ❌ | NULL |
+| `identity_type` | `text` | ✅ | ❌ | `'individual'` |
+| `industry` | `text` | ❌ | ❌ | NULL |
+| `job_title` | `text` | ❌ | ❌ | NULL |
+| `last_name` | `text` | ❌ | ❌ | NULL |
+| `phone_number` | `text` | ❌ | ❌ | NULL |
+| `phone_verified_at` | `timestamp with time zone` | ❌ | ❌ | NULL |
+| `sms_notifications_enabled` | `boolean` | ✅ | ❌ | `false` |
 | `updated_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
 | `user_id` | `text` | ✅ | ✅ | NULL |
 | `username` | `text` | ✅ | ❌ | NULL |
@@ -2820,11 +2879,63 @@
 |---|---|---|---|---|
 | `idx_user_profiles_lower_username` | `lower("username")` | `btree` | ✅ | — |
 
+### Check Constraints
+
+| Name | Expression |
+|---|---|
+| `user_profiles_age_range_check` | `"user_profiles"."age_range" IS NULL OR "user_profiles"."age_range" IN ('under_18', '18_24', '25_34', '35_44', '45_54', '55_64', '65_plus')` |
+| `user_profiles_gender_check` | `"user_profiles"."gender" IS NULL OR "user_profiles"."gender" IN ('male', 'female')` |
+| `user_profiles_identity_type_check` | `"user_profiles"."identity_type" IN ('individual', 'legal_entity')` |
+| `user_profiles_phone_e164_check` | `"user_profiles"."phone_number" IS NULL OR "user_profiles"."phone_number" ~ '^\+[1-9][0-9]{7,14}$'` |
+| `user_profiles_sms_verified_phone_check` | `"user_profiles"."sms_notifications_enabled" = false OR ("user_profiles"."phone_number" IS NOT NULL AND "user_profiles"."phone_verified_at" IS NOT NULL)` |
+
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
 | `user_profiles_user_id_users_id_fk` | `user_id` | `users` | `id` | cascade |
+
+---
+
+## Table: `user_websites`
+
+- **Ownership Scope:** USER_OWNED
+- **RLS Policies Declared:** None
+- **Tenant RLS Policy Coverage:** Not applicable (USER_OWNED)
+- **Migration Coverage:** Not applicable (USER_OWNED)
+- **Runtime Enforcement Verification:** Not applicable (USER_OWNED)
+- **Status:** `WIRED`
+- **Consumers:** `src/app/actions/user-identity.ts`, `src/services/user-identity/user-website-directory.ts`
+
+### Columns
+
+| Name | Type | Not Null | Primary Key | Default |
+|---|---|---|---|---|
+| `created_at` | `timestamp with time zone` | ✅ | ❌ | `now()` |
+| `id` | `uuid` | ✅ | ✅ | `gen_random_uuid()` |
+| `platform_type` | `text` | ✅ | ❌ | NULL |
+| `updated_at` | `timestamp with time zone` | ✅ | ❌ | `now()` |
+| `url` | `text` | ✅ | ❌ | NULL |
+| `user_id` | `text` | ✅ | ❌ | NULL |
+
+### Indexes
+
+| Name | Columns | Method | Unique | Predicate |
+|---|---|---|---|---|
+| `idx_user_websites_user_id` | `user_id` | `btree` | ❌ | — |
+| `idx_user_websites_user_url` | `user_id, url` | `btree` | ✅ | — |
+
+### Check Constraints
+
+| Name | Expression |
+|---|---|
+| `user_websites_platform_type_check` | `"user_websites"."platform_type" IN ('official_website', 'ecommerce_store', 'social_network', 'marketplace', 'other')` |
+
+### Foreign Keys
+
+| Name | Columns | Foreign Table | Foreign Columns | On Delete |
+|---|---|---|---|---|
+| `user_websites_user_id_users_id_fk` | `user_id` | `users` | `id` | cascade |
 
 ---
 
@@ -2957,6 +3068,6 @@
 
 
 ## Summary
-- Total Tables: 71
-- WIRED Tables: 60
+- Total Tables: 73
+- WIRED Tables: 62
 - ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 11
