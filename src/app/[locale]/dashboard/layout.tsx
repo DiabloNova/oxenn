@@ -6,6 +6,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import DashboardSidebar from "@/components/navigation/DashboardSidebar";
 import DashboardTopbar from "@/components/navigation/DashboardTopbar";
+import { UserWebsiteDirectoryProvider, UserWebsiteSelector } from "@/components/features/dashboard/UserWebsiteDirectoryProvider";
 import { HelpCircle, Mail, BookOpen, X } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ProtectedRoute>
+      <UserWebsiteDirectoryProvider>
       <div className="min-h-screen flex bg-[var(--background)] text-[var(--foreground)] relative overflow-hidden" dir={direction}>
         {/* Ambient Background orbs for premium enterprise look */}
         <div className="ambient-bg fixed inset-0 -z-10">
@@ -55,6 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onMenuTrigger={() => setMobileOpen(true)}
             mobileMenuOpen={mobileOpen}
           />
+          <UserWebsiteSelector />
 
           {/* Page Content viewport container */}
           <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8 max-w-[1600px] w-full mx-auto relative z-10">
@@ -170,6 +173,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </AnimatePresence>
       </div>
+      </UserWebsiteDirectoryProvider>
     </ProtectedRoute>
   );
 }

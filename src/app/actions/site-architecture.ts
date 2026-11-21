@@ -11,13 +11,14 @@ import {
   PostgresDiagnosticFindingRepository
 } from "@/features/ai-intelligence/repositories";
 import { SiteArchitectureAnalyzerService } from "@/features/ai-intelligence/services/site-architecture-analyzer-service";
+import { resolveAnalysisWebsiteSelection } from "@/services/user-identity/website-selection";
 
 /**
  * Server Action: Analyzes site architecture intelligence for the active tenant context.
  * Calculates deterministic crawl depth, identifies orphan pages, checks internal link distribution,
  * evaluates URL hierarchy, and returns standardized findings and metrics.
  */
-export async function getSiteArchitectureAction(websiteDomain = "secure-site.com") {
+export async function getSiteArchitectureAction(websiteId?: string) {
   let session;
   try {
     session = await requireSession();
@@ -29,6 +30,15 @@ export async function getSiteArchitectureAction(websiteDomain = "secure-site.com
 
   const tenantId = session.user.workspaceId;
   const userId = session.user.id;
+  let selectedWebsite: Awaited<ReturnType<typeof resolveAnalysisWebsiteSelection>>;
+  try {
+    selectedWebsite = await resolveAnalysisWebsiteSelection(userId, websiteId);
+  } catch (err: unknown) {
+    return mapErrorToResult(err);
+  }
+  if (!selectedWebsite) {
+    return { success: false as const, error: "Select an official website or online store from your user website directory first." };
+  }
 
   try {
     const requestId = `req-site-arch-${Date.now()}`;
@@ -40,13 +50,13 @@ export async function getSiteArchitectureAction(websiteDomain = "secure-site.com
       const analyzer = new SiteArchitectureAnalyzerService();
 
       // 1. Fetch website for active tenant
-      let website = await websiteRepo.findByDomain(tenantId, websiteDomain);
+      let website = await websiteRepo.findByDomain(tenantId, selectedWebsite.domain);
       if (!website) {
         website = await websiteRepo.save({
           id: crypto.randomUUID(),
           organizationId: tenantId,
-          domain: websiteDomain,
-          normalizedUrl: `https://${websiteDomain}`,
+          domain: selectedWebsite.domain,
+          normalizedUrl: selectedWebsite.normalizedUrl,
           status: "active",
           audit: {
             createdAt: new Date().toISOString(),
@@ -60,53 +70,18 @@ export async function getSiteArchitectureAction(websiteDomain = "secure-site.com
 
       // 2. Fetch pages for website
       const pagesRes = await pageRepo.findByWebsiteId(tenantId, website.id);
-      let pages = pagesRes.data;
+      const pages = pagesRes.data;
 
-      if (pages.length === 0) {
-        const home = await pageRepo.save({
-          id: crypto.randomUUID(),
-          organizationId: tenantId,
-          websiteId: website.id,
-          url: `https://${websiteDomain}/`,
-          normalizedUrl: `https://${websiteDomain}/`,
-          path: "/",
-          statusCode: 200,
-          indexability: "indexable",
-          title: "Homepage",
-          audit: { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy: userId, updatedBy: userId, version: 1 }
-        });
 
-        const blog = await pageRepo.save({
-          id: crypto.randomUUID(),
-          organizationId: tenantId,
-          websiteId: website.id,
-          url: `https://${websiteDomain}/blog`,
-          normalizedUrl: `https://${websiteDomain}/blog`,
-          path: "/blog",
-          statusCode: 200,
-          indexability: "indexable",
-          title: "Blog",
-          audit: { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy: userId, updatedBy: userId, version: 1 }
-        });
 
-        pages = [home, blog];
-      }
-
-      // 3. Construct links from pages
-      const links: Array<{ sourceUrl: string; targetUrl: string; normalizedTargetUrl: string; anchorText?: string }> = [
-        {
-          sourceUrl: `https://${websiteDomain}/`,
-          targetUrl: `https://${websiteDomain}/blog`,
-          normalizedTargetUrl: `https://${websiteDomain}/blog`,
-          anchorText: "Blog Hub"
-        }
-      ];
+      // The page repository does not currently expose persisted crawl-link records.
+      const links: Array<{ sourceUrl: string; targetUrl: string; normalizedTargetUrl: string; anchorText?: string }> = [];
 
       // 4. Run Analysis
       const result = analyzer.analyzeArchitecture(tenantId, website.id, {
         pages,
         links,
-        rootUrl: `https://${websiteDomain}/`
+        rootUrl: `${selectedWebsite.normalizedUrl}/`
       });
 
       // 5. Persist findings to diagnostic repository

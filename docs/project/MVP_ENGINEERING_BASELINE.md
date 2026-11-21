@@ -61,11 +61,11 @@ The following static inventory is tied to repository snapshot commit `81546254e8
 | Inventory metric | Recorded value |
 |---|---:|
 | Schema index pgTable declarations | 67 |
-| Additional modular schema declarations | 4 |
-| Effective schema table declarations | 71 |
-| Latest Drizzle snapshot tables | 71 |
-| Ordered migration journal entries | 17 |
-| Unique migration-created tables | 71 |
+| Additional modular schema declarations | 6 |
+| Effective schema table declarations | 73 |
+| Latest Drizzle snapshot tables | 73 |
+| Ordered migration journal entries | 18 |
+| Unique migration-created tables | 73 |
 | Policy-bearing tables in latest snapshot | 56 |
 | Generated runtime tenant-table entries | 56 |
 | Cumulative migration RLS ENABLE coverage | 56 |

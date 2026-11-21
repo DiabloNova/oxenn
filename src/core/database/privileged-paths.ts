@@ -8,6 +8,7 @@ export type PrivilegedPurposeTag =
   | "sys-list-workspaces"
   | "sys-accept-invitation"
   | "sys-switch-workspace"
+  | "sys-user-identity-profile"
   | "sys-api-key-auth"
   | "sys-free-audit"
   | "api-key-issue"
@@ -94,6 +95,11 @@ export const PRIVILEGED_PATHS_REGISTRY: Record<PrivilegedPurposeTag, PrivilegedP
     ["users", "organizations", "organization_members", "sessions"],
     ["src/app/actions/workspace.ts"],
     "Re-reads the target workspace role, creates the replacement session, and revokes the previous session."
+  ),
+  "sys-user-identity-profile": definePath(
+    ["users", "user_profiles", "user_legal_profiles", "user_websites", "audit_records"],
+    ["src/app/actions/user-identity.ts", "src/services/user-identity/user-website-directory.ts", "src/services/user-identity/website-selection.ts"],
+    "Reads and updates the authenticated user's personal identity profile, separately stored legal-entity details, and shared user-level website directory."
   ),
   "sys-api-key-auth": definePath(
     ["api_keys"],

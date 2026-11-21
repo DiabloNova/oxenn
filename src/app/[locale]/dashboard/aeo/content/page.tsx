@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { useUserWebsiteDirectory } from "@/components/features/dashboard/UserWebsiteDirectoryProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import {
   BookOpen,
@@ -31,6 +32,7 @@ import { Page, AeoAnalysis, FaqOpportunity, KgAlignment } from "@/features/ai-in
 export default function AeoContentIntelligenceDashboard() {
   const { language } = useTheme();
   const isRtl = language === "fa";
+  const { selectedWebsite, loading: websiteDirectoryLoading } = useUserWebsiteDirectory();
 
   const [pages, setPages] = useState<Page[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<string>("");
@@ -46,9 +48,17 @@ export default function AeoContentIntelligenceDashboard() {
   // Load Dashboard Data on Mount
   useEffect(() => {
     async function loadData() {
+      if (websiteDirectoryLoading) return;
+      if (!selectedWebsite) {
+        setPages([]); setAnalyses([]); setFaqOpportunities([]); setKgAlignments([]); setSignals([]); setSelectedPageId("");
+        setErrorMsg(isRtl ? "برای مشاهده تحلیل AEO، ابتدا یک وب‌سایت یا فروشگاه اینترنتی را از فهرست وب‌سایت‌های کاربر انتخاب کنید." : "Select an official website or online store from your user website directory to view AEO analysis.");
+        setIsLoading(false); return;
+      }
       setIsLoading(true);
       setErrorMsg(null);
-      const res = await getAeoContentDashboardDataAction();
+      setSelectedPageId("");
+      setPages([]); setAnalyses([]); setFaqOpportunities([]); setKgAlignments([]); setSignals([]);
+      const res = await getAeoContentDashboardDataAction(selectedWebsite.id);
       if (res.success && "result" in res && res.result) {
         const { pages: pgs, analyses: anas, faqOpportunities: faqs, kgAlignments: kgs, recommendationSignals: sigs } = res.result;
         setPages(pgs);
@@ -57,9 +67,7 @@ export default function AeoContentIntelligenceDashboard() {
         setKgAlignments(kgs);
         setSignals(sigs);
 
-        if (pgs.length > 0) {
-          setSelectedPageId(pgs[0].id);
-        }
+        setSelectedPageId(pgs[0]?.id ?? "");
       } else {
         const errorVal = res.success === false ? (res as unknown as { error?: string }).error : null;
         setErrorMsg(errorVal || (isRtl ? "خطا در بارگذاری اطلاعات هوشمندی محتوا" : "Failed to load AEO Content Intelligence data"));
@@ -67,7 +75,7 @@ export default function AeoContentIntelligenceDashboard() {
       setIsLoading(false);
     }
     loadData();
-  }, [isRtl]);
+  }, [isRtl, selectedWebsite?.id, websiteDirectoryLoading]);
 
   const activePage = pages.find(p => p.id === selectedPageId);
   const activeAnalysis = analyses.find(a => a.pageId === selectedPageId);
@@ -88,7 +96,7 @@ export default function AeoContentIntelligenceDashboard() {
         setAnalyses(prev => prev.map(a => a.pageId === selectedPageId ? updatedAnalysis : a));
 
         // Reload dashboard to refresh opportunities and KG alignments
-        const dashboardRes = await getAeoContentDashboardDataAction();
+        const dashboardRes = await getAeoContentDashboardDataAction(selectedWebsite?.id);
         if (dashboardRes.success && "result" in dashboardRes && dashboardRes.result) {
           setFaqOpportunities(dashboardRes.result.faqOpportunities);
           setKgAlignments(dashboardRes.result.kgAlignments);

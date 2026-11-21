@@ -15,6 +15,7 @@ import { SeoSignals } from "@/types/seo-signals";
  * ensuring the analyzers have real data to process when a live crawl has not been executed.
  */
 function createMockPageSeoSignals(url: string, title: string, desc: string, isHealthy = true): SeoSignals {
+  const origin = new URL(url).origin;
   return {
     page: {
       url,
@@ -55,7 +56,7 @@ function createMockPageSeoSignals(url: string, title: string, desc: string, isHe
     },
     sitemap: {
       discovered: true,
-      url: "https://secure-site.com/sitemap.xml",
+      url: `${origin}/sitemap.xml`,
       status: 200,
       parsedSuccessfully: true,
       urlsCount: 15,
@@ -76,14 +77,14 @@ function createMockPageSeoSignals(url: string, title: string, desc: string, isHe
     },
     internalLinks: {
       links: isHealthy
-        ? [{ sourceUrl: url, targetUrl: "https://secure-site.com/pricing", normalizedTargetUrl: "https://secure-site.com/pricing", anchorText: "پلن‌های تعرفه", rel: null, isRelative: true, isExternal: false, isFragmentOnly: false }]
+        ? [{ sourceUrl: url, targetUrl: `${origin}/pricing`, normalizedTargetUrl: `${origin}/pricing`, anchorText: "پلن‌های تعرفه", rel: null, isRelative: true, isExternal: false, isFragmentOnly: false }]
         : [],
       internalCount: isHealthy ? 1 : 0,
       externalCount: 0,
       relativeCount: isHealthy ? 1 : 0,
       absoluteCount: 0,
       fragmentOnlyCount: 0,
-      uniqueTargets: isHealthy ? ["https://secure-site.com/pricing"] : []
+      uniqueTargets: isHealthy ? [`${origin}/pricing`] : []
     },
     http: {
       statusCode: isHealthy ? 200 : 500,
@@ -142,7 +143,7 @@ function createMockPageSeoSignals(url: string, title: string, desc: string, isHe
  * Fetches Technical SEO Audit dashboard data for the active tenant context.
  * Performs deterministic audits, executes rules over crawl models, and persists findings idempotently.
  */
-export async function getTechnicalSeoDashboardAction() {
+export async function getTechnicalSeoDashboardAction(websiteId?: string) {
   let session;
   try {
     session = await requireSession();
@@ -154,6 +155,15 @@ export async function getTechnicalSeoDashboardAction() {
 
   const tenantId = session.user.workspaceId;
   const userId = session.user.id;
+  let selectedWebsite: Awaited<ReturnType<typeof resolveAnalysisWebsiteSelection>>;
+  try {
+    selectedWebsite = await resolveAnalysisWebsiteSelection(userId, websiteId);
+  } catch (err: unknown) {
+    return mapErrorToResult(err);
+  }
+  if (!selectedWebsite) {
+    return { success: false as const, error: "Select an official website or online store from your user website directory first." };
+  }
 
   try {
     const requestId = `req-tech-seo-${Date.now()}`;
@@ -166,13 +176,13 @@ export async function getTechnicalSeoDashboardAction() {
       const diagnosticEngine = new DiagnosticEngine();
 
       // 1. Fetch current website for tenant
-      let website = await websiteRepo.findByDomain(tenantId, "secure-site.com");
+      let website = await websiteRepo.findByDomain(tenantId, selectedWebsite.domain);
       if (!website) {
         website = await websiteRepo.save({
           id: crypto.randomUUID(),
           organizationId: tenantId,
-          domain: "secure-site.com",
-          normalizedUrl: "https://secure-site.com",
+          domain: selectedWebsite.domain,
+          normalizedUrl: selectedWebsite.normalizedUrl,
           status: "active",
           audit: {
             createdAt: new Date().toISOString(),
@@ -185,52 +195,9 @@ export async function getTechnicalSeoDashboardAction() {
       }
 
       const pagesRes = await pageRepo.findByWebsiteId(tenantId, website.id);
-      let pages = pagesRes.data;
+      const pages = pagesRes.data;
 
-      // Seed default pages if none exist
-      if (pages.length === 0) {
-        const homepage = await pageRepo.save({
-          id: crypto.randomUUID(),
-          organizationId: tenantId,
-          websiteId: website.id,
-          url: "https://secure-site.com/",
-          normalizedUrl: "https://secure-site.com/",
-          path: "/",
-          statusCode: 200,
-          indexability: "indexable",
-          title: "شرکت رشا گستر - صفحه اصلی بهینه‌سازی موتورهای هوش مصنوعی AEO",
-          description: "درباره ما: شرکت رشا گستر با راه‌حل‌های هوشمند سئو معنایی و بهینه‌سازی موتورهای هوش مصنوعی AEO.",
-          audit: {
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            createdBy: userId,
-            updatedBy: userId,
-            version: 1
-          }
-        });
 
-        const pricingPage = await pageRepo.save({
-          id: crypto.randomUUID(),
-          organizationId: tenantId,
-          websiteId: website.id,
-          url: "https://secure-site.com/pricing",
-          normalizedUrl: "https://secure-site.com/pricing",
-          path: "/pricing",
-          statusCode: 500, // Make this page have errors for testing
-          indexability: "noindex",
-          title: "",
-          description: "",
-          audit: {
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            createdBy: userId,
-            updatedBy: userId,
-            version: 1
-          }
-        });
-
-        pages = [homepage, pricingPage];
-      }
 
       // 2. Perform audits on all tenant pages
       const allFindings = [];

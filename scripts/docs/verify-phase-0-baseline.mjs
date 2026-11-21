@@ -209,10 +209,14 @@ function main() {
   const organizationTables = pgTables("database/schema/organization-table.ts");
   const apiKeyTables = pgTables("database/schema/api-keys.ts");
   const userProfileTables = pgTables("database/schema/user-profile.ts");
+  const userLegalProfileTables = pgTables("database/schema/user-legal-profile.ts");
+  const userWebsiteTables = pgTables("database/schema/user-websites.ts");
   const userTables = pgTables("database/schema/users.ts");
   assert.equal(organizationTables.length, 1, "Expected one organizations table in its schema module");
   assert.equal(apiKeyTables.length, 1, "Expected one api_keys table in its schema module");
   assert.equal(userProfileTables.length, 1, "Expected one user_profiles table in its schema module");
+  assert.equal(userLegalProfileTables.length, 1, "Expected one user_legal_profiles table in its schema module");
+  assert.equal(userWebsiteTables.length, 1, "Expected one user_websites table in its schema module");
   assert.equal(userTables.length, 1, "Expected one users table in its schema module");
 
   const schemaIndex = readFile("database/schema/index.ts");
@@ -222,6 +226,8 @@ function main() {
   assert.match(schemaIndex, /export\s*\{[^}]*\busers\b[^}]*\}/);
   assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/api-keys["']/);
   assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/user-profile["']/);
+  assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/user-legal-profile["']/);
+  assert.match(schemaIndex, /export\s*\*\s*from\s*["']\.\/user-websites["']/);
 
   for (const configPath of ["drizzle.config.ts", "drizzle.push.config.ts"]) {
     assert.ok(
@@ -237,7 +243,7 @@ function main() {
   const snapshot = JSON.parse(readFile(snapshotPath));
   assert.ok(snapshot.tables && typeof snapshot.tables === "object", "Latest Drizzle snapshot has no table map");
 
-  const schemaTables = [...schemaIndexTables, ...organizationTables, ...apiKeyTables, ...userProfileTables, ...userTables];
+  const schemaTables = [...schemaIndexTables, ...organizationTables, ...apiKeyTables, ...userProfileTables, ...userLegalProfileTables, ...userWebsiteTables, ...userTables];
   assert.equal(unique(schemaTables).length, schemaTables.length, "Duplicate canonical schema table declaration");
   const snapshotTables = Object.values(snapshot.tables).map((table) => table.name);
   assert.equal(unique(snapshotTables).length, snapshotTables.length, "Duplicate table name in latest snapshot");
@@ -277,7 +283,7 @@ function main() {
   const localCount = schemaIndexTables.length;
   const migrationCount = journal.entries.length;
   const migrationTableCount = unique(migrationTables).length;
-  const modularCount = organizationTables.length + apiKeyTables.length + userProfileTables.length + userTables.length;
+  const modularCount = organizationTables.length + apiKeyTables.length + userProfileTables.length + userLegalProfileTables.length + userWebsiteTables.length + userTables.length;
 
   assert.match(baseline, /^# OXENN.*MVP Engineering Baseline/m, "Current MVP engineering baseline heading is missing");
   assert.match(baseline, /Repository snapshot|Repository implementation snapshot/i, "Engineering baseline must identify its repository snapshot");

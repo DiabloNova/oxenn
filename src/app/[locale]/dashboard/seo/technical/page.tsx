@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { useUserWebsiteDirectory } from "@/components/features/dashboard/UserWebsiteDirectoryProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/Card";
 import {
   Settings,
@@ -46,33 +47,43 @@ interface RecommendationItem {
 export default function TechnicalSeoPage() {
   const { language } = useTheme();
   const isRtl = language === "fa";
+  const { selectedWebsite, loading: websiteDirectoryLoading } = useUserWebsiteDirectory();
 
   const [loading, setLoading] = useState(true);
   const [pages, setPages] = useState<unknown[]>([]);
   const [findings, setFindings] = useState<FindingItem[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchData = React.useCallback(async () => {
-    setLoading(true);
+    if (websiteDirectoryLoading) return;
+    if (!selectedWebsite) {
+      setPages([]); setFindings([]); setRecommendations([]); setLoading(false);
+      setErrorMsg(isRtl ? "برای بررسی فنی، ابتدا یک وب‌سایت یا فروشگاه اینترنتی را از فهرست وب‌سایت‌های کاربر انتخاب کنید." : "Select an official website or online store from your user website directory first.");
+      return;
+    }
+    setLoading(true); setErrorMsg(null);
     try {
-      const res = await getTechnicalSeoDashboardAction();
+      const res = await getTechnicalSeoDashboardAction(selectedWebsite.id);
       if (res.success && "result" in res && res.result) {
         setPages(res.result.pages || []);
         setFindings((res.result.findings as unknown as FindingItem[]) || []);
         setRecommendations((res.result.recommendations as unknown as RecommendationItem[]) || []);
+      } else {
+        setErrorMsg(isRtl ? "وب‌سایت انتخاب‌شده برای بررسی فنی پشتیبانی نمی‌شود یا هنوز داده‌ای برای آن ثبت نشده است." : "The selected item is not a supported website, or no crawl data is available yet.");
+        setPages([]); setFindings([]); setRecommendations([]);
       }
     } catch (err) {
       console.error("Failed to load Technical SEO dashboard data:", err);
+      setErrorMsg(isRtl ? "بارگذاری اطلاعات بررسی فنی با خطا مواجه شد." : "Failed to load technical SEO data.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedWebsite?.id, websiteDirectoryLoading, isRtl]);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      fetchData();
-    });
+    queueMicrotask(() => { fetchData(); });
   }, [fetchData]);
 
   const criticalCount = findings.filter(f => f.severity === "critical").length;
@@ -112,6 +123,8 @@ export default function TechnicalSeoPage() {
 
   return (
     <div className="space-y-6 animate-fade-in text-start">
+      {errorMsg && <div role="status" className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 text-xs leading-6 text-[var(--text-secondary)]">{errorMsg}</div>}
+
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
