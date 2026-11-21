@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import DashboardSidebar from "@/components/navigation/DashboardSidebar";
 import { Tabs } from "@/components/Tabs";
+
+const navigationState = vi.hoisted(() => ({ pathname: "/en/dashboard" }));
 
 vi.mock("@/components/ThemeProvider", () => ({
   useTheme: () => ({ language: "en", direction: "ltr" }),
@@ -14,7 +16,7 @@ vi.mock("@/components/AuthProvider", () => ({
   }),
 }));
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/en/dashboard",
+  usePathname: () => navigationState.pathname,
   useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock("@/lib/navigation-transition", () => ({
@@ -49,14 +51,15 @@ vi.mock("framer-motion", async () => {
 });
 
 const SidebarHarness = () => {
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <>
       <button type="button" onClick={() => setMobileOpen(true)}>Open navigation</button>
       <DashboardSidebar
-        collapsed={false}
-        setCollapsed={vi.fn()}
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
       />
@@ -65,6 +68,9 @@ const SidebarHarness = () => {
 };
 
 describe("dashboard navigation accessibility", () => {
+  afterEach(() => {
+    navigationState.pathname = "/en/dashboard";
+  });
   it("traps mobile drawer focus in both directions and restores focus to its trigger", async () => {
     render(<SidebarHarness />);
 
@@ -92,6 +98,43 @@ describe("dashboard navigation accessibility", () => {
 
     fireEvent.click(closeButton);
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+
+  it("keeps Analytics and Agent as independent navigation modes", () => {
+    const { rerender } = render(<SidebarHarness />);
+
+    expect(screen.getByRole("button", { name: "Analytics" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Your brand" })).toBeInTheDocument();
+
+    navigationState.pathname = "/en/dashboard/agent";
+    rerender(<SidebarHarness />);
+
+    expect(screen.getByRole("button", { name: "Agent" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "New conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Skills" })).toBeInTheDocument();
+    expect(screen.getByText("Conversation history")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Test User/ })).toBeInTheDocument();
+
+    navigationState.pathname = "/en/dashboard";
+    rerender(<SidebarHarness />);
+
+    expect(screen.getByRole("button", { name: "Analytics" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Your brand" })).toBeInTheDocument();
+  });
+
+  it("supports controlled desktop sidebar collapse and expansion without losing navigation controls", () => {
+    render(<SidebarHarness />);
+
+    expect(screen.getByText("Your brand")).toBeInTheDocument();
+    const collapseButton = screen.getByRole("button", { name: "Toggle Sidebar Collapse" });
+
+    fireEvent.click(collapseButton);
+    expect(screen.queryByText("Your brand")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Your brand" })).toBeInTheDocument();
+
+    fireEvent.click(collapseButton);
+    expect(screen.getByText("Your brand")).toBeInTheDocument();
   });
 
   it("exposes tab semantics and activates adjacent tabs with direction-aware arrow keys", () => {
