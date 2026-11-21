@@ -41,7 +41,26 @@ export function UserWebsiteDirectoryProvider({ children }: { children: ReactNode
     }
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    let active = true;
+    getUserWebsiteDirectoryAction().then((result) => {
+      if (!active || !result.success) return;
+      setWebsites(result.websites);
+      const stored = window.localStorage.getItem(STORAGE_KEY) ?? "";
+      setSelectedWebsiteIdState((current) => {
+        const candidate = current || stored;
+        if (candidate && result.websites.some((website) => website.id === candidate)) return candidate;
+        return result.websites.length === 1 ? result.websites[0].id : "";
+      });
+    }).catch(() => {
+      if (!active) return;
+      setWebsites([]);
+      setSelectedWebsiteIdState("");
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
 
   const setSelectedWebsiteId = useCallback((id: string) => {
     setSelectedWebsiteIdState(id);

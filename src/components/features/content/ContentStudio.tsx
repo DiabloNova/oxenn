@@ -27,8 +27,9 @@ export const ContentStudio: React.FC = () => {
   const isRtl = language === "fa";
   const { selectedWebsite } = useUserWebsiteDirectory();
 
-  const [url, setUrl] = useState("");
+  const [manualUrl, setManualUrl] = useState("");
   const [isUrlManuallyEdited, setIsUrlManuallyEdited] = useState(false);
+  const url = isUrlManuallyEdited ? manualUrl : selectedWebsite?.url ?? "";
   const [brandVoice, setBrandVoice] = useState("رسمی");
   const [keywordInput, setTargetKeywordInput] = useState("");
   const [keywords, setKeywords] = useState<string[]>(["سئو معنایی", "گراف دانش"]);
@@ -42,9 +43,6 @@ export const ContentStudio: React.FC = () => {
   const [animatedScore, setAnimatedScore] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (!isUrlManuallyEdited && selectedWebsite) setUrl(selectedWebsite.url);
-  }, [selectedWebsite?.id, selectedWebsite?.url, isUrlManuallyEdited]);
 
   // Copied text notification
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -228,7 +226,7 @@ export const ContentStudio: React.FC = () => {
                   <input
                     type="text"
                     value={url}
-                    onChange={(e) => { setIsUrlManuallyEdited(true); setUrl(e.target.value); }}
+                    onChange={(e) => { setIsUrlManuallyEdited(true); setManualUrl(e.target.value); }}
                     placeholder={strings.placeholderUrl}
                     className={`
                       w-full py-2.5 text-xs rounded-xl outline-none transition-all duration-300

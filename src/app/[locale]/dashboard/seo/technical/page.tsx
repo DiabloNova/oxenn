@@ -48,6 +48,7 @@ export default function TechnicalSeoPage() {
   const { language } = useTheme();
   const isRtl = language === "fa";
   const { selectedWebsite, loading: websiteDirectoryLoading } = useUserWebsiteDirectory();
+  const selectedWebsiteId = selectedWebsite?.id;
 
   const [loading, setLoading] = useState(true);
   const [pages, setPages] = useState<unknown[]>([]);
@@ -58,14 +59,14 @@ export default function TechnicalSeoPage() {
 
   const fetchData = React.useCallback(async () => {
     if (websiteDirectoryLoading) return;
-    if (!selectedWebsite) {
+    if (!selectedWebsiteId) {
       setPages([]); setFindings([]); setRecommendations([]); setLoading(false);
       setErrorMsg(isRtl ? "برای بررسی فنی، ابتدا یک وب‌سایت یا فروشگاه اینترنتی را از فهرست وب‌سایت‌های کاربر انتخاب کنید." : "Select an official website or online store from your user website directory first.");
       return;
     }
     setLoading(true); setErrorMsg(null);
     try {
-      const res = await getTechnicalSeoDashboardAction(selectedWebsite.id);
+      const res = await getTechnicalSeoDashboardAction(selectedWebsiteId);
       if (res.success && "result" in res && res.result) {
         setPages(res.result.pages || []);
         setFindings((res.result.findings as unknown as FindingItem[]) || []);
@@ -80,7 +81,7 @@ export default function TechnicalSeoPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedWebsite?.id, websiteDirectoryLoading, isRtl]);
+  }, [selectedWebsiteId, websiteDirectoryLoading, isRtl]);
 
   useEffect(() => {
     queueMicrotask(() => { fetchData(); });

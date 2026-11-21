@@ -67,7 +67,6 @@ export function UserIdentityForm({ initialData }: { initialData: InitialData }) 
   const [busy,setBusy]=useState(false); const [message,setMessage]=useState(""); const [error,setError]=useState(false);
   const text=(fa:string,en:string)=>isFa?fa:en;
   const selectedProvince=useMemo(()=>{const [code,index]=provinceKey.split(":");const country=countries.find(c=>c.code===code);const state=country?.states[Number(index)];return country&&state?{country,state}:null;},[provinceKey]);
-  const legalOptions=legalTypes[legal.registrationCountryCode] ?? legalTypes.IR;
   const setP=<K extends keyof Profile>(key:K,value:Profile[K])=>setProfile(p=>({...p,[key]:value}));
   const setL=<K extends keyof LegalEntity>(key:K,value:LegalEntity[K])=>setLegal(p=>({...p,[key]:value}));
   const opts=(items:ReadonlyArray<readonly [string,string,string]>)=>items.map(([v,fa,en])=><option key={v} value={v}>{text(fa,en)}</option>);

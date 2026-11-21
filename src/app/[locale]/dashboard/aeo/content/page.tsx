@@ -8,7 +8,6 @@ import {
   BookOpen,
   RefreshCw,
   Award,
-  HelpCircle,
   AlertTriangle,
   CheckCircle,
   FileText,
@@ -17,29 +16,26 @@ import {
   List,
   GitBranch,
   Network,
-  Compass,
   ArrowLeftRight,
-  TrendingUp,
   Clock,
-  Sparkles
 } from "lucide-react";
 import {
   getAeoContentDashboardDataAction,
   runAeoAnalysisForPageAction
 } from "@/app/actions/aeo-content-intelligence";
-import { Page, AeoAnalysis, FaqOpportunity, KgAlignment } from "@/features/ai-intelligence/domain/types";
+import { Page, AeoAnalysis, FaqOpportunity } from "@/features/ai-intelligence/domain/types";
 
 export default function AeoContentIntelligenceDashboard() {
   const { language } = useTheme();
   const isRtl = language === "fa";
   const { selectedWebsite, loading: websiteDirectoryLoading } = useUserWebsiteDirectory();
+  const selectedWebsiteId = selectedWebsite?.id;
 
   const [pages, setPages] = useState<Page[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<string>("");
   const [analyses, setAnalyses] = useState<AeoAnalysis[]>([]);
   const [faqOpportunities, setFaqOpportunities] = useState<FaqOpportunity[]>([]);
-  const [kgAlignments, setKgAlignments] = useState<KgAlignment[]>([]);
-  const [signals, setSignals] = useState<Array<{ pageId: string; level: string; code: string; message: string }>>([]);
+    const [signals, setSignals] = useState<Array<{ pageId: string; level: string; code: string; message: string }>>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -49,22 +45,21 @@ export default function AeoContentIntelligenceDashboard() {
   useEffect(() => {
     async function loadData() {
       if (websiteDirectoryLoading) return;
-      if (!selectedWebsite) {
-        setPages([]); setAnalyses([]); setFaqOpportunities([]); setKgAlignments([]); setSignals([]); setSelectedPageId("");
+      if (!selectedWebsiteId) {
+        setPages([]); setAnalyses([]); setFaqOpportunities([]); setSignals([]); setSelectedPageId("");
         setErrorMsg(isRtl ? "برای مشاهده تحلیل AEO، ابتدا یک وب‌سایت یا فروشگاه اینترنتی را از فهرست وب‌سایت‌های کاربر انتخاب کنید." : "Select an official website or online store from your user website directory to view AEO analysis.");
         setIsLoading(false); return;
       }
       setIsLoading(true);
       setErrorMsg(null);
       setSelectedPageId("");
-      setPages([]); setAnalyses([]); setFaqOpportunities([]); setKgAlignments([]); setSignals([]);
-      const res = await getAeoContentDashboardDataAction(selectedWebsite.id);
+      setPages([]); setAnalyses([]); setFaqOpportunities([]); setSignals([]);
+      const res = await getAeoContentDashboardDataAction(selectedWebsiteId);
       if (res.success && "result" in res && res.result) {
-        const { pages: pgs, analyses: anas, faqOpportunities: faqs, kgAlignments: kgs, recommendationSignals: sigs } = res.result;
+        const { pages: pgs, analyses: anas, faqOpportunities: faqs, recommendationSignals: sigs } = res.result;
         setPages(pgs);
         setAnalyses(anas);
         setFaqOpportunities(faqs);
-        setKgAlignments(kgs);
         setSignals(sigs);
 
         setSelectedPageId(pgs[0]?.id ?? "");
@@ -75,7 +70,7 @@ export default function AeoContentIntelligenceDashboard() {
       setIsLoading(false);
     }
     loadData();
-  }, [isRtl, selectedWebsite?.id, websiteDirectoryLoading]);
+  }, [isRtl, selectedWebsiteId, websiteDirectoryLoading]);
 
   const activePage = pages.find(p => p.id === selectedPageId);
   const activeAnalysis = analyses.find(a => a.pageId === selectedPageId);
@@ -96,10 +91,9 @@ export default function AeoContentIntelligenceDashboard() {
         setAnalyses(prev => prev.map(a => a.pageId === selectedPageId ? updatedAnalysis : a));
 
         // Reload dashboard to refresh opportunities and KG alignments
-        const dashboardRes = await getAeoContentDashboardDataAction(selectedWebsite?.id);
+        const dashboardRes = await getAeoContentDashboardDataAction(selectedWebsiteId);
         if (dashboardRes.success && "result" in dashboardRes && dashboardRes.result) {
           setFaqOpportunities(dashboardRes.result.faqOpportunities);
-          setKgAlignments(dashboardRes.result.kgAlignments);
           setSignals(dashboardRes.result.recommendationSignals);
         }
       } else {
