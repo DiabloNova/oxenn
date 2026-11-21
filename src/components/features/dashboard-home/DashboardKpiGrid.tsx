@@ -56,7 +56,8 @@ export const DashboardKpiGrid: React.FC<DashboardKpiGridProps> = ({
       <div className="cursor-pointer group relative" onClick={() => navigateTo("/dashboard/audits")}>
         <KPICard
           title={isRtl ? "شاخص سلامت سئو (SEO Health)" : "SEO Health Score"}
-          value={seoHealth !== "N/A" ? `${seoHealth}%` : "N/A"}
+          value={seoHealth !== "N/A" ? seoHealth : "—"}
+          unit="%"
           change={seoHealth !== "N/A" ? (isRtl ? "پایش فعال" : "Active Audited") : (isRtl ? "بدون داده" : "No Data")}
           changeType={getScoreChangeType(seoHealth)}
           description={isRtl ? "میانگین وزنی پارامترهای موتور جستجو" : "Overall crawled performance weight"}
@@ -72,7 +73,8 @@ export const DashboardKpiGrid: React.FC<DashboardKpiGridProps> = ({
       <div className="cursor-pointer group relative" onClick={() => navigateTo("/dashboard/aeo/audits")}>
         <KPICard
           title={isRtl ? "میزان دیده‌شدن هوش مصنوعی (AEO)" : "AI Visibility Score"}
-          value={aiVisibility !== "N/A" ? `${aiVisibility}%` : "N/A"}
+          value={aiVisibility !== "N/A" ? aiVisibility : "—"}
+          unit="%"
           change={aiVisibility !== "N/A" ? (isRtl ? "بهینه‌شده" : "Optimized") : (isRtl ? "غیرفعال" : "Unavailable")}
           changeType={getScoreChangeType(aiVisibility)}
           description={isRtl ? "سهم پاسخ در چت‌بات‌های بزرگ" : "Synthesized conversational share"}
@@ -88,7 +90,7 @@ export const DashboardKpiGrid: React.FC<DashboardKpiGridProps> = ({
       <div className="cursor-pointer group relative" onClick={() => navigateTo("/dashboard/brand/citations")}>
         <KPICard
           title={isRtl ? "اعتبار برند (Brand Authority)" : "Brand Authority"}
-          value={brandAuthority !== "N/A" ? brandAuthority : "N/A"}
+          value={brandAuthority !== "N/A" ? brandAuthority : "—"}
           change={isRtl ? "غیرفعال" : "Inactive"}
           changeType="info"
           description={isRtl ? "بررسی حضور معنایی در گراف" : "Semantic authority index"}
@@ -104,7 +106,7 @@ export const DashboardKpiGrid: React.FC<DashboardKpiGridProps> = ({
       <div className="cursor-pointer group relative" onClick={() => navigateTo("/dashboard/brand/citations")}>
         <KPICard
           title={isRtl ? "استناد به مراجع (Citations)" : "Citation Visibility"}
-          value={citationVisibility !== "N/A" ? citationVisibility : "N/A"}
+          value={citationVisibility !== "N/A" ? citationVisibility : "—"}
           change={isRtl ? "اتصال وب‌سرور" : "Disconnected"}
           changeType="info"
           description={isRtl ? "مجموع پیوندهای استناد شده" : "Inbound reference citations count"}
@@ -120,7 +122,8 @@ export const DashboardKpiGrid: React.FC<DashboardKpiGridProps> = ({
       <div className="cursor-pointer group relative" onClick={() => navigateTo("/dashboard/seo/technical")}>
         <KPICard
           title={isRtl ? "سلامت فنی (Technical SEO)" : "Technical Health"}
-          value={technicalHealth !== "N/A" ? `${technicalHealth}%` : "N/A"}
+          value={technicalHealth !== "N/A" ? technicalHealth : "—"}
+          unit="%"
           change={technicalHealth !== "N/A" ? (isRtl ? "تطبیق کامل" : "Compliant") : (isRtl ? "نیاز به اسکن" : "Needs Scan")}
           changeType={getScoreChangeType(technicalHealth)}
           description={isRtl ? "سرعت، متادیتا و لایه‌های امنیتی" : "Performance, SSL & structured meta tags"}
@@ -136,7 +139,8 @@ export const DashboardKpiGrid: React.FC<DashboardKpiGridProps> = ({
       <div className="cursor-pointer group relative" onClick={() => navigateTo("/dashboard/content/studio")}>
         <KPICard
           title={isRtl ? "سلامت محتوا (Content Quality)" : "Content Health"}
-          value={contentHealth !== "N/A" ? `${contentHealth}%` : "N/A"}
+          value={contentHealth !== "N/A" ? contentHealth : "—"}
+          unit="%"
           change={contentHealth !== "N/A" ? (isRtl ? "کلاستر غنی" : "Rich Cluster") : (isRtl ? "بدون داده" : "Empty")}
           changeType={getScoreChangeType(contentHealth)}
           description={isRtl ? "خوانایی معنایی و هم‌پوشانی" : "Semantic completeness and reading ease"}
@@ -152,7 +156,7 @@ export const DashboardKpiGrid: React.FC<DashboardKpiGridProps> = ({
       <div className="cursor-pointer group relative sm:col-span-2" onClick={() => navigateTo("/dashboard/competitors/radar")}>
         <KPICard
           title={isRtl ? "موقعیت رقابتی (Competitive Rank)" : "Competitive Position"}
-          value={competitivePosition !== "N/A" ? competitivePosition : (isRtl ? "موجود نیست" : "Unavailable")}
+          value={competitivePosition !== "N/A" ? competitivePosition : "—"}
           change={isRtl ? "نیاز به مانیتورینگ" : "Unmonitored"}
           changeType="warning"
           description={isRtl ? "شاخص برتری برند نسبت به رقبا" : "Performance baseline vs key competitors"}

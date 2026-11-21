@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
@@ -51,13 +51,19 @@ export default function DashboardSidebar({
   const { language, direction } = useTheme();
   const { session, logout } = useAuth();
   const isRtl = language === "fa";
-  const isAgentMode = pathname?.includes("/dashboard/agent") ?? false;
+  const agentBasePath = `/${language}/dashboard/agent`;
+  const isAgentMode = pathname === agentBasePath || Boolean(pathname?.startsWith(agentBasePath + "/"));
 
   // Accordion state manually toggled by user (key is item id, value is boolean)
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const closeMobileDrawer = useCallback(() => {
+  const mobileDrawerReturnFocusRef = useRef<HTMLElement | null>(null);
+  const wasMobileDrawerOpenRef = useRef(false);
+  const restoreFocusOnMobileCloseRef = useRef(true);
+
+  const closeMobileDrawer = useCallback((restoreFocus = true) => {
     setAccountMenuOpen(false);
+    restoreFocusOnMobileCloseRef.current = restoreFocus;
     setMobileOpen(false);
   }, [setMobileOpen]);
 
@@ -98,6 +104,7 @@ export default function DashboardSidebar({
     document.addEventListener("pointerdown", handleOutsidePointer);
     document.addEventListener("focusin", handleOutsideFocus);
     window.addEventListener("keydown", handleAccountEscape);
+    accountMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
     return () => {
       document.removeEventListener("pointerdown", handleOutsidePointer);
       document.removeEventListener("focusin", handleOutsideFocus);
@@ -106,36 +113,59 @@ export default function DashboardSidebar({
   }, [accountMenuOpen]);
 
 
-  // Trap focus implementation for mobile drawer
+  // Keep keyboard focus inside the mobile dialog and return it to the opener on dismissal.
+  // Query focusable controls for each Tab press so expanded sections and account-menu items
+  // are included even when the drawer contents change after it opens.
   useEffect(() => {
-    if (!mobileOpen || !drawerRef.current) return;
-
-    const focusableElements = drawerRef.current.querySelectorAll(
-      'a[href], button:not([disabled]), textarea, input, select'
-    );
-    if (focusableElements.length === 0) return;
-
-    const firstElement = focusableElements[0] as HTMLElement;
-    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-    const handleFocusTrap = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-
-      if (e.shiftKey) {
-        if (document.activeElement === firstElement) {
-          lastElement.focus();
-          e.preventDefault();
+    if (!mobileOpen) {
+      if (wasMobileDrawerOpenRef.current) {
+        wasMobileDrawerOpenRef.current = false;
+        if (restoreFocusOnMobileCloseRef.current) {
+          mobileDrawerReturnFocusRef.current?.focus();
         }
-      } else {
-        if (document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
+        mobileDrawerReturnFocusRef.current = null;
+      }
+      return;
+    }
+
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+
+    wasMobileDrawerOpenRef.current = true;
+    mobileDrawerReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const getFocusableElements = () =>
+      Array.from(
+        drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select'
+        )
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+
+    const handleFocusTrap = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const focusIsOutsideDrawer = !drawer.contains(document.activeElement);
+
+      if (event.shiftKey && (document.activeElement === firstElement || focusIsOutsideDrawer)) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && (document.activeElement === lastElement || focusIsOutsideDrawer)) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
     window.addEventListener("keydown", handleFocusTrap);
-    firstElement.focus();
+    getFocusableElements()[0]?.focus();
 
     return () => window.removeEventListener("keydown", handleFocusTrap);
   }, [mobileOpen]);
@@ -151,18 +181,21 @@ export default function DashboardSidebar({
     return `/${language}${href === "/" ? "" : href}`;
   };
 
-  const isRouteActive = (href?: string, exact = false) =>
-    isDashboardRouteActive(pathname, href, language, exact);
+  const isRouteActive = (
+    href?: string,
+    exact = false,
+    activeRoutePrefixes?: readonly string[],
+  ) => isDashboardRouteActive(pathname, href, language, exact, activeRoutePrefixes);
 
   const navigateTo = (href: string) => {
     const destination = getLocalizedHref(href);
     notifyNavigationStart(destination);
     router.push(destination);
-    closeMobileDrawer();
+    closeMobileDrawer(false);
   };
 
   const isParentActive = (item: NavigationItem) => {
-    if (item.href) return isRouteActive(item.href, item.exact);
+    if (item.href) return isRouteActive(item.href, item.exact, item.activeRoutePrefixes);
     if (item.children) {
       return item.children.some((child) => isRouteActive(child.href));
     }
@@ -172,13 +205,13 @@ export default function DashboardSidebar({
   const handleItemClick = (item: NavigationItem) => {
     if (item.href) {
       if (item.href === "#help") {
-        closeMobileDrawer();
+        closeMobileDrawer(false);
         if (onHelpClick) onHelpClick();
       } else {
         const destination = getLocalizedHref(item.href);
         notifyNavigationStart(destination);
         router.push(destination);
-        closeMobileDrawer();
+        closeMobileDrawer(false);
       }
     } else {
       toggleExpand(item.id);
@@ -189,7 +222,7 @@ export default function DashboardSidebar({
     const destination = getLocalizedHref(child.href);
     notifyNavigationStart(destination);
     router.push(destination);
-    closeMobileDrawer();
+    closeMobileDrawer(false);
   };
 
   const renderNavItems = (items: NavigationItem[], isMobileState: boolean) => {
@@ -209,6 +242,7 @@ export default function DashboardSidebar({
         <div key={item.id} className="space-y-1">
           {/* Main Item Button */}
           <button
+            type="button"
             onClick={() => handleItemClick(item)}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 border cursor-pointer group outline-none focus:ring-1 focus:ring-[var(--sky-blue-500)]
               ${isActive
@@ -218,6 +252,7 @@ export default function DashboardSidebar({
               ${collapsed && !isMobileState ? "justify-center" : ""}`}
             title={collapsed && !isMobileState ? (isRtl ? item.labelFa : item.labelEn) : undefined}
             aria-expanded={hasChildren ? isExpanded : undefined}
+            aria-current={isActive ? "page" : undefined}
             aria-label={isRtl ? item.labelFa : item.labelEn}
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -269,6 +304,28 @@ export default function DashboardSidebar({
     const showLabels = !collapsed || isMobileState;
     const accountName = session.user?.name || (isRtl ? "حساب کاربری" : "Account");
     const accountEmail = session.user?.email || (isRtl ? "اطلاعات حساب در دسترس نیست" : "Account details unavailable");
+    const accountMenuId = isMobileState ? "dashboard-account-menu-mobile" : "dashboard-account-menu-desktop";
+    const accountTriggerId = isMobileState ? "dashboard-account-trigger-mobile" : "dashboard-account-trigger-desktop";
+
+    const handleAccountMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      const items = Array.from(
+        event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])')
+      );
+      if (items.length === 0) return;
+
+      const currentIndex = Math.max(0, items.indexOf(document.activeElement as HTMLButtonElement));
+      let nextIndex: number | null = null;
+
+      if (event.key === "ArrowDown") nextIndex = (currentIndex + 1) % items.length;
+      if (event.key === "ArrowUp") nextIndex = (currentIndex - 1 + items.length) % items.length;
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = items.length - 1;
+
+      if (nextIndex !== null) {
+        event.preventDefault();
+        items[nextIndex].focus();
+      }
+    };
 
     return (
       <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -277,18 +334,18 @@ export default function DashboardSidebar({
           {showLabels && <span className="font-black text-[var(--text-primary)] text-sm tracking-tight font-display">OXENN</span>}
         </div>
 
-        <div className="grid grid-cols-2 gap-1 p-2 border-b border-[var(--border)] shrink-0">
+        <div className="grid grid-cols-2 gap-1 p-2 border-b border-[var(--border)] shrink-0" aria-label={isRtl ? "بخش‌های اصلی" : "Primary areas"}>
+          <button type="button" onClick={() => navigateTo("/dashboard")}
+            className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (!isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
+            aria-current={!isAgentMode ? "page" : undefined}
+            title={showLabels ? undefined : (isRtl ? "تجزیه و تحلیل" : "Analytics")}>
+            <LayoutDashboard size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "تجزیه و تحلیل" : "Analytics"}</span>}
+          </button>
           <button type="button" onClick={() => navigateTo("/dashboard/agent")}
             className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
             aria-current={isAgentMode ? "page" : undefined}
             title={showLabels ? undefined : (isRtl ? "عامل" : "Agent")}>
             <Bot size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "عامل" : "Agent"}</span>}
-          </button>
-          <button type="button" onClick={() => navigateTo("/dashboard")}
-            className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (!isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
-            aria-current={!isAgentMode ? "page" : undefined}
-            title={showLabels ? undefined : (isRtl ? "داشبورد" : "Dashboard")}>
-            <LayoutDashboard size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "داشبورد" : "Dashboard"}</span>}
           </button>
         </div>
 
@@ -333,7 +390,7 @@ export default function DashboardSidebar({
 
         <div ref={accountMenuRef} className="relative p-3 border-t border-[var(--border)] bg-[rgba(15,23,42,0.15)] shrink-0">
           {accountMenuOpen && (
-            <div className="absolute bottom-full left-2 right-2 mb-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-2xl z-[120]" role="menu">
+            <div id={accountMenuId} aria-labelledby={accountTriggerId} onKeyDown={handleAccountMenuKeyDown} className="absolute bottom-full left-2 right-2 mb-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-2xl z-[120]" role="menu">
               <button type="button" role="menuitem" onClick={() => navigateTo("/profile")} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
                 <UserCircle size={15} aria-hidden="true" />{isRtl ? "پروفایل کاربری" : "Account profile"}
               </button>
@@ -352,10 +409,10 @@ export default function DashboardSidebar({
               </button>
             </div>
           )}
-          <button ref={accountTriggerRef} type="button"
+          <button id={accountTriggerId} ref={accountTriggerRef} type="button"
             onClick={() => { if (collapsed && !isMobileState) setCollapsed(false); setAccountMenuOpen((open) => !open); }}
             className={"w-full flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white/[0.02] px-2.5 py-2 text-start hover:bg-[var(--muted-surface)] " + (showLabels ? "" : "justify-center")}
-            aria-expanded={accountMenuOpen} aria-haspopup="menu"
+            aria-expanded={accountMenuOpen} aria-haspopup="menu" aria-controls={accountMenuOpen ? accountMenuId : undefined}
             >
             <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--sky-blue-500)] to-[var(--orange-500)] text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
               {session.user?.name?.slice(0, 1) || (isRtl ? "ک" : "U")}
@@ -400,7 +457,7 @@ export default function DashboardSidebar({
       {/* MOBILE DRAWER (Controlled by mobileOpen) */}
       <AnimatePresence>
         {mobileOpen && (
-          <div className="fixed inset-0 z-[100] md:hidden" dir={direction} ref={drawerRef}>
+          <div id="dashboard-mobile-navigation" className="fixed inset-0 z-[100] md:hidden" dir={direction} ref={drawerRef} role="dialog" aria-modal="true" aria-label={isRtl ? "ناوبری" : "Navigation"}>
             {/* Backdrop Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -408,7 +465,7 @@ export default function DashboardSidebar({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={closeMobileDrawer}
+              onClick={() => closeMobileDrawer()}
             />
 
             {/* Sliding Drawer Panel */}
@@ -421,7 +478,7 @@ export default function DashboardSidebar({
             >
               {/* Close Button floating top inner */}
               <button
-                onClick={closeMobileDrawer}
+                onClick={() => closeMobileDrawer()}
                 className={`absolute top-4 ${isRtl ? "left-4" : "right-4"} p-1.5 rounded-full hover:bg-[var(--muted-surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer outline-none focus:ring-1 focus:ring-[var(--sky-blue-500)]`}
                 aria-label={isRtl ? "بستن منو" : "Close menu"}
               >

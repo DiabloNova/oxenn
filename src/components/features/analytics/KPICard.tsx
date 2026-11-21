@@ -6,6 +6,7 @@ import { ArrowUpRight, ArrowDownRight, LucideIcon } from "lucide-react";
 interface KPICardProps {
   title: string;
   value: string | number;
+  unit?: string;
   change?: string | number;
   changeType?: "success" | "error" | "warning" | "info";
   description?: string;
@@ -20,6 +21,7 @@ interface KPICardProps {
 export const KPICard: React.FC<KPICardProps> = ({
   title,
   value,
+  unit,
   change,
   changeType = "info",
   description,
@@ -54,9 +56,12 @@ export const KPICard: React.FC<KPICardProps> = ({
           <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
             {title}
           </span>
-          <span className="text-2xl font-black text-[var(--text-primary)] block font-display tracking-tight">
-            {value}
-          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-black text-[var(--text-primary)] block font-display tracking-tight">
+              {value}
+            </span>
+            {unit && <span className="text-xs font-semibold text-[var(--text-muted)]">{unit}</span>}
+          </div>
         </div>
         {Icon && (
           <div className="p-2.5 bg-[var(--color-info-bg)] border border-[var(--border)] rounded-[var(--radius-md)] text-[var(--color-primary-600)]">

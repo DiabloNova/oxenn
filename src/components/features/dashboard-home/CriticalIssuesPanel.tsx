@@ -67,12 +67,12 @@ export const CriticalIssuesPanel: React.FC<CriticalIssuesPanelProps> = ({
             </div>
             <div className="max-w-xs space-y-1">
               <p className="text-xs font-bold text-[var(--text-primary)]">
-                {isRtl ? "هیچ مشکل بحرانی شناسایی نشد" : "All Systems Fully Optimized"}
+                {isRtl ? "هنوز داده‌ای برای نمایش مشکلات بحرانی ثبت نشده است" : "No critical issue data available yet"}
               </p>
               <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
                 {isRtl
-                  ? "سلامت وب‌سایت شما در شرایط مطلوبی قرار دارد یا پایش جدیدی اجرا نشده است."
-                  : "No critical search retrieval issues detected. Run audits to scan your pages."}
+                  ? "پس از اجرای پایش و دریافت نتایج، موارد شناسایی‌شده در این بخش نمایش داده می‌شوند."
+                  : "Detected issues will appear here after a workspace audit has produced results."}
               </p>
             </div>
           </div>

@@ -67,12 +67,12 @@ export const RecommendedActionsPanel: React.FC<RecommendedActionsPanelProps> = (
             </div>
             <div className="max-w-xs space-y-1">
               <p className="text-xs font-bold text-[var(--text-primary)]">
-                {isRtl ? "همه توصیه‌ها پیاده‌سازی شده‌اند" : "Highly Optimized Profile"}
+                {isRtl ? "هنوز داده‌ای برای نمایش اقدامات پیشنهادی ثبت نشده است" : "No recommended actions available yet"}
               </p>
               <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
                 {isRtl
-                  ? "هیچ اقدام اولویت‌داری برای بهبود هم‌بستگی رتبه وب‌سایت در این مستأجر شناسایی نشده است."
-                  : "Excellent coverage! Register new target keywords to discover more opportunities."}
+                  ? "پس از تحلیل داده‌های فضای کاری، پیشنهادهای قابل اجرا در این بخش نمایش داده می‌شوند."
+                  : "Actionable recommendations will appear here after workspace data has been analyzed."}
               </p>
             </div>
           </div>
