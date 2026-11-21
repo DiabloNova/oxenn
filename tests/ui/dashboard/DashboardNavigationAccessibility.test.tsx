@@ -25,18 +25,22 @@ vi.mock("@/components/marketing/SeorchableLogo", () => ({
 }));
 vi.mock("framer-motion", async () => {
   const ReactModule = await import("react");
-  const MotionDiv = ReactModule.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>>(
-    (props, ref) => {
-      const domProps = { ...props };
-      delete domProps.initial;
-      delete domProps.animate;
-      delete domProps.exit;
-      delete domProps.transition;
-      const children = domProps.children;
-      delete domProps.children;
-      return ReactModule.createElement("div", { ...domProps, ref }, children);
-    }
-  );
+  type MotionDivProps = React.HTMLAttributes<HTMLDivElement> & {
+    initial?: unknown;
+    animate?: unknown;
+    exit?: unknown;
+    transition?: unknown;
+  };
+  const MotionDiv = ReactModule.forwardRef<HTMLDivElement, MotionDivProps>((props, ref) => {
+    const domProps = { ...props };
+    delete domProps.initial;
+    delete domProps.animate;
+    delete domProps.exit;
+    delete domProps.transition;
+    const children = domProps.children;
+    delete domProps.children;
+    return ReactModule.createElement("div", { ...domProps, ref }, children);
+  });
   MotionDiv.displayName = "MockMotionDiv";
   return {
     motion: { div: MotionDiv },
