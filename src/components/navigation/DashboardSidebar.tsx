@@ -209,6 +209,7 @@ export default function DashboardSidebar({
         <div key={item.id} className="space-y-1">
           {/* Main Item Button */}
           <button
+            type="button"
             onClick={() => handleItemClick(item)}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 border cursor-pointer group outline-none focus:ring-1 focus:ring-[var(--sky-blue-500)]
               ${isActive
@@ -218,6 +219,7 @@ export default function DashboardSidebar({
               ${collapsed && !isMobileState ? "justify-center" : ""}`}
             title={collapsed && !isMobileState ? (isRtl ? item.labelFa : item.labelEn) : undefined}
             aria-expanded={hasChildren ? isExpanded : undefined}
+            aria-current={isActive ? "page" : undefined}
             aria-label={isRtl ? item.labelFa : item.labelEn}
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -288,7 +290,7 @@ export default function DashboardSidebar({
             className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (!isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
             aria-current={!isAgentMode ? "page" : undefined}
             title={showLabels ? undefined : (isRtl ? "داشبورد" : "Dashboard")}>
-            <LayoutDashboard size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "داشبورد" : "Dashboard"}</span>}
+            <LayoutDashboard size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "تجزیه و تحلیل" : "Analytics"}</span>}
           </button>
         </div>
 
@@ -400,7 +402,7 @@ export default function DashboardSidebar({
       {/* MOBILE DRAWER (Controlled by mobileOpen) */}
       <AnimatePresence>
         {mobileOpen && (
-          <div className="fixed inset-0 z-[100] md:hidden" dir={direction} ref={drawerRef}>
+          <div className="fixed inset-0 z-[100] md:hidden" dir={direction} ref={drawerRef} role="dialog" aria-modal="true" aria-label={isRtl ? "ناوبری" : "Navigation"}>
             {/* Backdrop Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
