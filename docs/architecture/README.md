@@ -20,6 +20,9 @@ OXENN is a TypeScript/Next.js application whose product architecture is organize
 ### [Product architecture](./OXENN_PRODUCT_ARCHITECTURE.md)
 The nine product domains, service catalog, cross-cutting platform capabilities, execution boundaries, and product/technical principles.
 
+### [Shared Brand & Product Context Contract](./SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md)
+Normative one-time Brand intake and shared Workspace/Brand/Offer/PIP context for every dashboard page and integrated capability.
+
 ### [Database architecture](./database/README.md)
 The canonical Drizzle schema, generated ownership inventory, migration journal, reference matrix, and data contract define the repository database design. Consult [Database Reference Matrix](../database/reference-matrix.md) and [Canonical Data Contract](../database/canonical-data-contract.md) for current per-table metadata. Repository declarations do not prove live database state.
 

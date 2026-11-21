@@ -45,6 +45,8 @@ A customer's product profile must not be confused with the customer's OXENN subs
 
 The Product Intelligence Profile is the canonical, versioned representation of the customer's product and business context. It may also hold a separately versioned desired/target state (the product's digital-twin target model). OXENN compares observed evidence with this target, records measurable gaps, and uses approved plans to reduce them.
 
+The customer maintains reusable business context once through the Brand experience. The Workspace → Brand → Offer → versioned PIP model is the shared source consumed by authorized dashboard capabilities through the [Shared Brand & Product Context Contract](./SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md). Tool-specific execution inputs and derived observations remain separate; downstream tools must not ask the customer to re-enter facts already available in the selected profile. A partial profile remains valid where a service's own minimum input contract is met; comprehensive PIP completion is not a universal prerequisite for standalone SEO, AEO or GEO.
+
 Observed facts, user-provided goals, inferred attributes, assumptions, and predicted states must be explicitly distinguished. The target model is not a fabricated copy of reality and must never overwrite observed data. The AI copilot can explain the gap and discuss the plan, but cannot bypass approval or execution controls.
 
 ---
@@ -56,6 +58,8 @@ The nine domains in the source product architecture remain the core product doma
 ### 2.1 Product Intelligence Profile
 
 Canonical, versioned context for organization, brand, product/service, target audience, business model, markets, geography, languages, objectives, constraints, connected sources, historical assessments, and data gaps. Supports multiple products and markets as the product matures. Stores observed and target-state representations separately and records user corrections.
+
+The PIP is maintained through the Brand page as the one-time source for reusable dashboard context. It preserves field-level provenance, review state, confidence, freshness, immutable versions and evidence links. Every consuming capability resolves the active Workspace, Brand, Offer and PIP version server-side and retrieves only bounded fields needed for its task. The consumer map and input/output boundaries are normative in `SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md`.
 
 ### 2.2 Digital Product Assessment
 
@@ -157,15 +161,16 @@ The target pipeline consists of:
 
 1. Request intake and task classification.
 2. Product/workspace/market scope resolution.
-3. Evidence and context retrieval.
-4. Bounded context construction.
-5. Structured reasoning-unit/capsule preparation where useful.
-6. Model invocation through an internal provider/runtime adapter.
-7. Deterministic contract, provenance, policy, and evidence validation.
-8. Acceptance or rejection of the analytical artifact.
-9. Decision proposal generation.
-10. Approval and controlled execution.
-11. Result verification and outcome measurement.
+3. Resolve the active Workspace, Brand, Offer and applicable PIP version from trusted server context.
+4. Retrieve approved profile fields and evidence required by the declared task.
+5. Build bounded context; keep task-specific inputs, provider observations and derived outputs separate.
+6. Structured reasoning-unit/capsule preparation where useful.
+7. Model invocation through an internal provider/runtime adapter.
+8. Deterministic contract, provenance, policy, and evidence validation.
+9. Acceptance or rejection of the analytical artifact.
+10. Decision proposal generation.
+11. Approval and controlled execution.
+12. Result verification and outcome measurement.
 
 The Reasoning Orchestrator controls workflow selection and deterministic transitions. The Context Builder controls bounded, relevant context. Capsule structures are introduced only where they improve traceability, contracts, or evaluation; no fixed graph of reasoning steps is mandatory.
 
@@ -204,6 +209,9 @@ Accepted intelligence may create recommendations and decision proposals. Consequ
 PostgreSQL/pgvector is the target persistent foundation, but target architecture does not prove that production persistence is currently complete.
 
 The data layer must support:
+- One canonical Workspace-scoped Brand/Offer context with versioned PIP snapshots consumed by downstream tools; no parallel per-tool copies of reusable customer facts.
+- Field-level provenance, customer confirmation/review state, evidence references, freshness and confidence for material profile values.
+- Immutable links from each analysis/run/report to the exact profile version and task-specific scope it consumed.
 - Transactional domain records and referential integrity.
 - Versioned product profiles, targets, assessments, evidence, plans, decisions, executions, and outcomes.
 - Schema and migration versioning.

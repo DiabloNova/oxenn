@@ -20,6 +20,17 @@ Canonical requirements are FR-01–FR-11 in the owner-approved MVP Product Speci
 
 ## 2. Stage objective and boundaries
 
+### 2.1 Shared Brand & Product Context is the canonical downstream contract
+
+The Brand page is the single customer-facing intake and maintenance point for reusable business context across the dashboard. MVP-03 establishes the canonical Workspace → Brand → Offer → versioned PIP model so downstream capabilities resolve and consume approved context without repeated intake. Follow [`SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md`](../../../../docs/architecture/SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md).
+
+The profile contains reusable Brand/Offer facts and field-level provenance, review state, confidence, freshness, evidence links and version history. It is not a universal execution payload. URLs/pages, prompt sets, crawl scopes, providers, date ranges and report filters remain task-specific. Derived observations and generated artifacts remain separate and reference the PIP version they used.
+
+The profile may be partial. Standalone SEO/AEO/GEO use their own minimum shared fields and task-specific inputs; comprehensive PIP completion is reserved for workflows that genuinely require it, such as optional comprehensive Product Assessment. A missing shared fact is completed in Brand, not duplicated in each tool.
+
+MVP-03 defines server-side active Workspace/Brand/Offer resolution, explicit selection when multiple records are plausible, immutable PIP version references, stale-analysis behavior after material edits and negative cross-tenant tests. Do not create a parallel profile model if canonical domain records can satisfy the contract.
+
+
 Create the canonical model for who offers what, through which channels, and what is known about an existing Offer—without confusing the customer's product with OXENN's saleable services.
 
 ### In scope

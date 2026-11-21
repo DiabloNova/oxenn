@@ -20,6 +20,15 @@ Canonical requirements are FR-01–FR-11 in the owner-approved MVP Product Speci
 
 ## 2. Stage objective and boundaries
 
+### 2.1 Evidence preserves shared-profile version and purpose
+
+Evidence linked to reusable Brand/Offer facts must attach to the exact Workspace, Brand, Offer and PIP version. Each downstream run or assessment retains the exact profile version/context snapshot and evidence references it consumed. Follow [`SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md`](../../../../docs/architecture/SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md).
+
+Extracted text, crawled content, third-party claims, provider responses and AI inferences are not automatically customer-confirmed facts. Preserve evidence class, source, purpose, timestamp, scope, permission, confidence, freshness and review state. Promoting an extracted or inferred value into PIP requires explicit review and creates a new profile version.
+
+Evidence reuse across tools is allowed only when tenant ownership, source permission, purpose limitation and evidence class permit it. Shared context does not grant blanket access to restricted documents or external sources.
+
+
 Provide a permission-aware and auditable evidence layer that supports digital services and product/market assessment without treating user claims, third-party claims, estimates or AI-generated hypotheses as verified facts.
 
 ### In scope
@@ -33,7 +42,7 @@ Provide a permission-aware and auditable evidence layer that supports digital se
 - Validate and normalize source timestamps, locale, units, currencies and identifiers; retain original source values when normalization is needed.
 - Track freshness and revalidation status. A stale observation is not silently reused as a current measurement. Keep source unavailable, permission denied, partial collection, parser error and provider failure distinct.
 - Deduplicate where it is safe, but preserve source identity and collection history. Do not overwrite conflicting observations; store disagreement and its context.
-- Attach evidence to the exact Offer, PIP version, service run, market, geography and observation window it supports. Avoid evidence reuse across workspaces or purposes without permission.
+- Attach evidence to the exact Workspace, Brand, Offer, PIP version, service run, market, geography, purpose and observation window it supports. Avoid evidence reuse across workspaces or purposes without permission.
 - Create a minimum evidence explorer/reporting path that lets a reviewer inspect the source, method, timestamp, scope, limitations and the claim supported.
 
 ### Prerequisites and sequencing

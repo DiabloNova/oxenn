@@ -41,6 +41,15 @@ Every stage must preserve the following invariants:
 - Standalone SEO requires only service-specific inputs, permissions and consent, not a comprehensive PIP.
 - The system must not charge for an unselected or unauthorized service.
 
+### 2.3 Shared customer context across the dashboard
+- The Brand page is the one-time intake and ongoing maintenance point for reusable customer business context.
+- Workspace → Brand → Offer → versioned PIP is the canonical shared context; authorized dashboard capabilities consume relevant fields rather than asking customers to repeat them.
+- Shared profile facts, task-specific inputs, derived observations and service entitlements are distinct. URLs, prompt sets, date ranges and crawl scopes remain operation-specific.
+- Each run pins the exact profile version and evidence references it used. Confirmed facts, unreviewed extraction, observations, third-party claims and AI inferences remain distinguishable.
+- A partial profile is valid. Standalone SEO/AEO/GEO must not require comprehensive PIP completion; each service requests only its minimum shared fields and task-specific inputs.
+- Missing, ambiguous, stale, unreviewed or inaccessible context is handled explicitly. Do not create duplicate profiles, silently infer missing facts or use samples as customer context.
+- The [Shared Brand & Product Context Contract](../../../docs/architecture/SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md) is normative for all 17 pages and 13 integrated capabilities.
+
 ### 2.3 Evidence and truth
 - Distinguish user-provided information, direct observation, third-party claim, estimate, hypothesis and simulation.
 - Preserve applicable source, timestamp, geography, methodology, sample, scope, permission, freshness and confidence.
@@ -75,8 +84,8 @@ The roadmap is dependency-led. Build the shared security and commercial foundati
 | MVP-00 | Product decisions and delivery governance | No hidden product/commercial decisions; testable stage contracts | Owner decisions and repository snapshot |
 | MVP-01 | Identity, workspace and security foundation | Authenticated, tenant-safe service boundary | MVP-00 |
 | MVP-02 | Service catalog, entitlements and usage | Independent service selection and server-side access | MVP-01 |
-| MVP-03 | Seller, Offer and PIP | Canonical customer Offer model and versioned profile | MVP-01; service-specific inputs remain independent |
-| MVP-04 | Evidence acquisition and traceability | Permission-aware source collection and auditable evidence | MVP-01 and shared contracts from MVP-00 |
+| MVP-03 | Seller, Offer and PIP | Canonical Workspace-scoped Brand/Offer context, versioned PIP and shared consumer contract | MVP-01; preserve partial PIP and independent service-specific inputs |
+| MVP-04 | Evidence acquisition and traceability | Permission-aware evidence linked to exact Brand/Offer/PIP versions and consuming runs | MVP-01, MVP-03 and shared evidence contracts from MVP-00 |
 | MVP-05 | Standalone SEO | End-to-end SEO service independent of other SKUs | MVP-02, MVP-04 |
 | MVP-06 | Standalone AEO | End-to-end answer-engine assessment | MVP-02, MVP-04 |
 | MVP-07 | Standalone GEO | End-to-end generative-engine visibility assessment | MVP-02, MVP-04; AEO/ GEO separation decision |
@@ -144,6 +153,10 @@ A code change is not authorized merely because a stage brief describes it. The c
 - Retries, duplicate callbacks and concurrent requests cannot double-consume or double-charge.
 
 ### 6.3 Data and evidence
+- Reusable customer facts are captured and maintained once in Brand and consumed through the canonical shared-context contract.
+- Every consuming run records the selected Workspace/Brand/Offer and immutable PIP version or context snapshot.
+- Task-specific inputs are not duplicated into PIP; derived observations do not overwrite user-confirmed profile facts.
+- Missing/partial fields are requested only when required by the current task; comprehensive PIP is not a blanket prerequisite for standalone SEO/AEO/GEO.
 - Data ownership, scope, retention and access are explicit.
 - Important measurements are time- and scope-bound.
 - Evidence references are durable and auditable.
@@ -214,6 +227,7 @@ The roadmap must not invent launch geography/language/currency, pilot cohort, ex
 - [MVP Product Specification](../../../docs/product/OXENN_MVP_PRODUCT_SPECIFICATION.md)
 - [MVP Engineering Baseline](../../../docs/project/MVP_ENGINEERING_BASELINE.md)
 - [Product Architecture](../../../docs/architecture/OXENN_PRODUCT_ARCHITECTURE.md)
+- [Shared Brand & Product Context Contract](../../../docs/architecture/SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md)
 - [Project Map](../../architecture_map/project_map.md)
 - [MVP Map](../../architecture_map/MVP_map.md)
 - [Product Strategy v2 — DOC-18](https://app.stele-ai.dev/p/oxenn-59hxc/nodes/DOC-18)
