@@ -28,6 +28,8 @@ describe("Canonical table ownership registry", () => {
       "database/schema/organization-table.ts",
       "database/schema/api-keys.ts",
       "database/schema/user-profile.ts",
+      "database/schema/user-legal-profile.ts",
+      "database/schema/user-websites.ts",
     ];
     const schemaNames = readTableNames(workspaceSources);
     const migrationDirectory = path.join(repositoryRoot, "database/drizzle");
@@ -98,6 +100,8 @@ describe("Canonical table ownership registry", () => {
     expect(new Set(schemaNames).size).toBe(schemaNames.length);
     expect([...schemaNames].sort()).toEqual([...snapshotNames].sort());
     expect(snapshotNames).toContain("user_profiles");
+    expect(snapshotNames).toContain("user_legal_profiles");
+    expect(snapshotNames).toContain("user_websites");
     expect(userProfilesOwnership).toMatchObject({
       scope: "USER_OWNED",
       status: "current",
@@ -105,14 +109,16 @@ describe("Canonical table ownership registry", () => {
     expect(userProfilesOwnership.evidence).toEqual(
       expect.arrayContaining([
         "database/schema/user-profile.ts: userProfiles.userId references users.id; lower(username) has a unique index",
-        "database/drizzle/meta/0016_snapshot.json: canonical Workspace snapshot",
+        "database/drizzle/meta/0017_snapshot.json: canonical Workspace snapshot",
       ]),
     );
     expect(getOwnershipRegistryDrift("workspace", schemaNames)).toEqual({
       missingRegistryEntries: [],
       staleRegistryEntries: [],
     });
-    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(71);
+    expect(getTableOwnershipEntry("workspace", "user_legal_profiles")).toMatchObject({ scope: "USER_OWNED", status: "current" });
+    expect(getTableOwnershipEntry("workspace", "user_websites")).toMatchObject({ scope: "USER_OWNED", status: "current" });
+    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(73);
   });
 
   it("accounts for every table in the separate Platform Admin Drizzle schema", () => {

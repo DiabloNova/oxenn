@@ -25,15 +25,15 @@ status distinguishes current schema contracts from legacy records and unresolved
 
 ## Inventory coverage
 
-- Workspace schema: 71 tables, declared by database/schema/index.ts and its canonical modular schema sources. The user_profiles declaration lives in database/schema/user-profile.ts, references users from database/schema/users.ts, and is re-exported by database/schema/index.ts. Both Drizzle configurations and application consumers use the canonical barrel.
-- Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 6 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
+- Workspace schema: 73 tables, declared by database/schema/index.ts and its canonical modular schema sources. The user_profiles declaration lives in database/schema/user-profile.ts, references users from database/schema/users.ts, and is re-exported by database/schema/index.ts. Both Drizzle configurations and application consumers use the canonical barrel.
+- Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 8 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
 - Platform Admin schema: 7 tables in database/platform-admin/schema/index.ts, backed by its own database, configuration, migration directory, and migration history.
 - The Platform Admin Drizzle migration ledger is infrastructure metadata, not an application table, and is not included in the seven-table application inventory.
 - database/schema/_legacy/ is quarantined and is not an authoritative schema source.
 
 The Workspace migration journal records SQL migration execution order, while Drizzle snapshots represent generated schema states. A custom SQL-only migration does not necessarily have a same-index snapshot. In particular, 0005_force_rls.sql is the custom RLS migration between snapshots 0004 and 0006; 0006_snapshot.json correctly links to 0004_snapshot.json through prevId. This is an intentional snapshot-index gap, not a missing migration or a reason to manufacture an empty snapshot.
 
-The latest Workspace schema snapshot includes user_profiles. Its schema declaration, migration SQL, snapshot table definition, and explicit USER_OWNED registry entry must remain aligned. The focused unit test verifies the latest generated snapshot lineage, schema/snapshot table parity, and ownership-registry coverage.
+The latest Workspace schema snapshot includes user_profiles, user_legal_profiles, and user_websites. The profile stores the authenticated person’s identity attributes; the legal-profile table stores the separately maintained legal-entity details; and the user-websites table stores the user-level website and selling-channel directory shared by dashboard tools. All three are USER_OWNED through direct users.id foreign keys. Their schema declarations, migration SQL, snapshot table definitions, and explicit ownership-registry entries must remain aligned. The focused unit test verifies the latest generated snapshot lineage, schema/snapshot table parity, and ownership-registry coverage.
 
 ## Explicit unresolved Workspace entries
 

@@ -21,6 +21,8 @@ import { organizations } from "./organization-table";
 import { users } from "./users";
 export { organizations, users };
 export * from "./user-profile";
+export * from "./user-legal-profile";
+export * from "./user-websites";
 
 // Custom vector type for pgvector
 const vector = customType<{ data: number[] }>({

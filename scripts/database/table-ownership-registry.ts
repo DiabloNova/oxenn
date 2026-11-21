@@ -223,7 +223,19 @@ const workspaceOwnership = {
     "Each profile is globally owned by one user identity through its required user_id primary-key foreign key. Username is unique case-insensitively across the Workspace database and is not organization-scoped.",
     "userProfiles.userId references users.id; lower(username) has a unique index",
     "database/schema/user-profile.ts",
-    "database/drizzle/meta/0016_snapshot.json",
+    "database/drizzle/meta/0017_snapshot.json",
+  ),
+  user_legal_profiles: userOwned(
+    "Legal-entity details are entered and maintained by the authenticated user and are bound to that identity through the required user_id primary-key foreign key.",
+    "userLegalProfiles.userId references users.id",
+    "database/schema/user-legal-profile.ts",
+    "database/drizzle/meta/0017_snapshot.json",
+  ),
+  user_websites: userOwned(
+    "Website and selling-channel records are owned by the authenticated user through the required user_id foreign key and form the shared user-level website directory consumed by dashboard tools.",
+    "userWebsites.userId references users.id; (user_id, url) is unique",
+    "database/schema/user-websites.ts",
+    "database/drizzle/meta/0017_snapshot.json",
   ),
   users: userOwned(
     "The users table is the global identity directory; email is unique across the Workspace schema and dependent credentials/tokens/sessions reference users.id.",
