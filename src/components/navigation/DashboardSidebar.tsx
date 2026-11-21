@@ -181,8 +181,11 @@ export default function DashboardSidebar({
     return `/${language}${href === "/" ? "" : href}`;
   };
 
-  const isRouteActive = (href?: string, exact = false) =>
-    isDashboardRouteActive(pathname, href, language, exact);
+  const isRouteActive = (
+    href?: string,
+    exact = false,
+    activeRoutePrefixes?: readonly string[],
+  ) => isDashboardRouteActive(pathname, href, language, exact, activeRoutePrefixes);
 
   const navigateTo = (href: string) => {
     const destination = getLocalizedHref(href);
@@ -192,7 +195,7 @@ export default function DashboardSidebar({
   };
 
   const isParentActive = (item: NavigationItem) => {
-    if (item.href) return isRouteActive(item.href, item.exact);
+    if (item.href) return isRouteActive(item.href, item.exact, item.activeRoutePrefixes);
     if (item.children) {
       return item.children.some((child) => isRouteActive(child.href));
     }

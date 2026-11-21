@@ -82,6 +82,20 @@ describe("owner-defined dashboard navigation", () => {
     expect(isDashboardRouteActive("/fa/dashboard/aeo/playground", "/dashboard/aeo/playground", "fa")).toBe(true);
   });
 
+
+  it("activates AEO for its explicitly approved secondary routes without capturing Prompt Research or sibling paths", () => {
+    const aeo = dashboardNavigation.flatMap((section) => section.items)
+      .find((item) => item.id === "aeo");
+
+    expect(aeo?.activeRoutePrefixes).toEqual(["/dashboard/aeo/audits", "/dashboard/aeo/content"]);
+    expect(isDashboardRouteActive("/fa/dashboard/aeo/audits", aeo?.href, "fa", aeo?.exact, aeo?.activeRoutePrefixes)).toBe(true);
+    expect(isDashboardRouteActive("/en/dashboard/aeo/audits/123", aeo?.href, "en", aeo?.exact, aeo?.activeRoutePrefixes)).toBe(true);
+    expect(isDashboardRouteActive("/fa/dashboard/aeo/content", aeo?.href, "fa", aeo?.exact, aeo?.activeRoutePrefixes)).toBe(true);
+    expect(isDashboardRouteActive("/en/dashboard/aeo/content/editor", aeo?.href, "en", aeo?.exact, aeo?.activeRoutePrefixes)).toBe(true);
+    expect(isDashboardRouteActive("/fa/dashboard/aeo/content-extra", aeo?.href, "fa", aeo?.exact, aeo?.activeRoutePrefixes)).toBe(false);
+    expect(isDashboardRouteActive("/fa/dashboard/aeo/playground", aeo?.href, "fa", aeo?.exact, aeo?.activeRoutePrefixes)).toBe(false);
+  });
+
   it("keeps the SEO root separate from on-page SEO child routes", () => {
     expect(isDashboardRouteActive("/fa/dashboard/seo", "/dashboard/seo", "fa", true)).toBe(true);
     expect(isDashboardRouteActive("/fa/dashboard/seo/technical", "/dashboard/seo", "fa", true)).toBe(false);

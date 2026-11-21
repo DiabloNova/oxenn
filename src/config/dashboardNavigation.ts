@@ -34,6 +34,8 @@ export interface NavigationItem {
   icon: ComponentType<{ size?: number; className?: string }>;
   children?: NavigationSubItem[];
   exact?: boolean;
+  /** Explicit secondary route roots that should activate this parent without matching unrelated siblings. */
+  activeRoutePrefixes?: string[];
 }
 
 export interface NavigationSection {
@@ -48,10 +50,17 @@ export function isDashboardRouteActive(
   href: string | undefined,
   language: string,
   exact = false,
+  activeRoutePrefixes: readonly string[] = [],
 ): boolean {
   if (!href) return false;
   const pathOnly = href.split(/[?#]/, 1)[0];
   const localizedHref = `/${language}${pathOnly === "/" ? "" : pathOnly}`;
+  const matchesExplicitSecondaryRoute = activeRoutePrefixes.some((route) => {
+    const routeOnly = route.split(/[?#]/, 1)[0];
+    const localizedRoute = `/${language}${routeOnly === "/" ? "" : routeOnly}`;
+    return pathname === localizedRoute || Boolean(pathname?.startsWith(`${localizedRoute}/`));
+  });
+  if (matchesExplicitSecondaryRoute) return true;
   if (exact || pathOnly === "/dashboard") return pathname === localizedHref;
   return pathname === localizedHref || Boolean(pathname?.startsWith(localizedHref + "/"));
 }
@@ -81,7 +90,15 @@ export const dashboardNavigation: NavigationSection[] = [
     titleFa: "تجزیه و تحلیل",
     items: [
       { id: "brand", labelEn: "Your brand", labelFa: "برند شما", href: "/dashboard/brand", icon: Building2 },
-      { id: "aeo", labelEn: "AI answers (AEO)", labelFa: "پاسخ‌های هوش مصنوعی (AEO)", href: "/dashboard/aeo", icon: Sparkles, exact: true },
+      {
+        id: "aeo",
+        labelEn: "AI answers (AEO)",
+        labelFa: "پاسخ‌های هوش مصنوعی (AEO)",
+        href: "/dashboard/aeo",
+        icon: Sparkles,
+        exact: true,
+        activeRoutePrefixes: ["/dashboard/aeo/audits", "/dashboard/aeo/content"],
+      },
       { id: "seo", labelEn: "Brand search rankings (SEO)", labelFa: "رتبه برند در موتورهای جستجو (SEO)", href: "/dashboard/seo", icon: Search, exact: true },
       { id: "geo", labelEn: "AI answer optimization (GEO)", labelFa: "بهینه‌سازی پاسخ‌های هوش مصنوعی (GEO)", href: "/dashboard/geo", icon: BrainCircuit },
       { id: "quick-analysis", labelEn: "Quick analysis", labelFa: "تحلیل سریع", href: "/dashboard/audit/free", icon: Zap },
