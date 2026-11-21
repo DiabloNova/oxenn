@@ -104,6 +104,7 @@ export default function DashboardSidebar({
     document.addEventListener("pointerdown", handleOutsidePointer);
     document.addEventListener("focusin", handleOutsideFocus);
     window.addEventListener("keydown", handleAccountEscape);
+    accountMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
     return () => {
       document.removeEventListener("pointerdown", handleOutsidePointer);
       document.removeEventListener("focusin", handleOutsideFocus);
@@ -300,6 +301,28 @@ export default function DashboardSidebar({
     const showLabels = !collapsed || isMobileState;
     const accountName = session.user?.name || (isRtl ? "حساب کاربری" : "Account");
     const accountEmail = session.user?.email || (isRtl ? "اطلاعات حساب در دسترس نیست" : "Account details unavailable");
+    const accountMenuId = isMobileState ? "dashboard-account-menu-mobile" : "dashboard-account-menu-desktop";
+    const accountTriggerId = isMobileState ? "dashboard-account-trigger-mobile" : "dashboard-account-trigger-desktop";
+
+    const handleAccountMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const items = Array.from(
+        event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])')
+      );
+      if (items.length === 0) return;
+
+      const currentIndex = Math.max(0, items.indexOf(document.activeElement as HTMLButtonElement));
+      let nextIndex: number | null = null;
+
+      if (event.key === "ArrowDown") nextIndex = (currentIndex + 1) % items.length;
+      if (event.key === "ArrowUp") nextIndex = (currentIndex - 1 + items.length) % items.length;
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = items.length - 1;
+
+      if (nextIndex !== null) {
+        event.preventDefault();
+        items[nextIndex].focus();
+      }
+    };
 
     return (
       <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -364,7 +387,7 @@ export default function DashboardSidebar({
 
         <div ref={accountMenuRef} className="relative p-3 border-t border-[var(--border)] bg-[rgba(15,23,42,0.15)] shrink-0">
           {accountMenuOpen && (
-            <div className="absolute bottom-full left-2 right-2 mb-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-2xl z-[120]" role="menu">
+            <div id={accountMenuId} aria-labelledby={accountTriggerId} onKeyDown={handleAccountMenuKeyDown} className="absolute bottom-full left-2 right-2 mb-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-2xl z-[120]" role="menu">
               <button type="button" role="menuitem" onClick={() => navigateTo("/profile")} className="w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--muted-surface)] hover:text-[var(--text-primary)]">
                 <UserCircle size={15} aria-hidden="true" />{isRtl ? "پروفایل کاربری" : "Account profile"}
               </button>
@@ -383,10 +406,10 @@ export default function DashboardSidebar({
               </button>
             </div>
           )}
-          <button ref={accountTriggerRef} type="button"
+          <button id={accountTriggerId} ref={accountTriggerRef} type="button"
             onClick={() => { if (collapsed && !isMobileState) setCollapsed(false); setAccountMenuOpen((open) => !open); }}
             className={"w-full flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white/[0.02] px-2.5 py-2 text-start hover:bg-[var(--muted-surface)] " + (showLabels ? "" : "justify-center")}
-            aria-expanded={accountMenuOpen} aria-haspopup="menu"
+            aria-expanded={accountMenuOpen} aria-haspopup="menu" aria-controls={accountMenuOpen ? accountMenuId : undefined}
             >
             <span className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--sky-blue-500)] to-[var(--orange-500)] text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
               {session.user?.name?.slice(0, 1) || (isRtl ? "ک" : "U")}

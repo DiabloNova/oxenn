@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DashboardSidebar from "@/components/navigation/DashboardSidebar";
 import { Tabs } from "@/components/Tabs";
@@ -101,6 +101,32 @@ describe("dashboard navigation accessibility", () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
+
+
+  it("opens the account menu with focus and supports vertical menu keyboard navigation", async () => {
+    render(<SidebarHarness />);
+
+    const trigger = screen.getByRole("button", { name: /Test User/ });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const menu = screen.getByRole("menu");
+    const items = within(menu).getAllByRole("menuitem");
+    await waitFor(() => expect(document.activeElement).toBe(items[0]));
+
+    fireEvent.keyDown(items[0], { key: "ArrowDown" });
+    expect(items[1]).toHaveFocus();
+
+    fireEvent.keyDown(items[1], { key: "End" });
+    expect(items[items.length - 1]).toHaveFocus();
+
+    fireEvent.keyDown(items[items.length - 1], { key: "Home" });
+    expect(items[0]).toHaveFocus();
+
+    fireEvent.keyDown(items[0], { key: "Escape" });
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
 
   it("keeps Analytics and Agent as independent navigation modes", () => {
     const { rerender } = render(<SidebarHarness />);
