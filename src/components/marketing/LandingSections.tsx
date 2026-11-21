@@ -214,6 +214,9 @@ export function LandingSections({ locale }: LandingSectionsProps) {
       </section>
 
       <section id="start" className="atlas-closing" aria-labelledby="atlas-closing-title">
+        <div className="atlas-closing-radar" aria-hidden="true">
+          <HomepageRadar />
+        </div>
         <div className="atlas-container atlas-closing-inner">
           <div><p className="atlas-eyebrow">{t.closing.eyebrow}</p><h2 id="atlas-closing-title">{t.closing.title}</h2><p>{t.closing.body}</p></div>
           <div className="atlas-closing-actions">
@@ -223,25 +226,6 @@ export function LandingSections({ locale }: LandingSectionsProps) {
         </div>
       </section>
 
-      <section id="oxenn-radar" className="atlas-section atlas-radar" aria-labelledby="atlas-radar-title">
-        <div className="atlas-container">
-          <SectionHeading
-            id="atlas-radar-title"
-            eyebrow={t.radar.eyebrow}
-            title={t.radar.title}
-            body={t.radar.body}
-          />
-          <div className="atlas-radar-panel">
-            <div className="atlas-radar-visual"><HomepageRadar /></div>
-            <div className="atlas-radar-labels">
-              {t.radar.labels.map((label, index) => (
-                <span key={label}><i aria-hidden="true" />{label}</span>
-              ))}
-            </div>
-          </div>
-          <p className="atlas-radar-note">{t.radar.note}</p>
-        </div>
-      </section>
     </main>
   );
 }

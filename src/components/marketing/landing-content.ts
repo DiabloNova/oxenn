@@ -90,13 +90,6 @@ export const landingContent = {
       title: "مسیرهای مستقل، در یک نمای منسجم",
       text: "شناخت محصول و بازار • SEO • AEO • GEO • بررسی رقبا • برنامه بهبود",
     },
-    radar: {
-      eyebrow: "OXENN / نمای حوزه‌های هوشمندی",
-      title: "یک نگاه به مسیرهای ارزیابی و بهبود",
-      body: "از حضور دیجیتال تا شناخت ارزش پیشنهادی و رقابت‌پذیری محصول یا خدمت؛ هر مسیر با دامنه و شواهد متناسب خودش بررسی می‌شود.",
-      labels: ["SEO", "AEO", "GEO", "بررسی رقبا", "پروفایل هوشمندی محصول"],
-      note: "این نمایش مفهومی است و داده زنده، امتیاز یا نتیجه ارزیابی واقعی را نشان نمی‌دهد.",
-    },
     footer: {
       description: "پلتفرم هوشمندی ارزیابی و بهبود محصول و بازار؛ برای تصمیم‌های روشن‌تر و برنامه‌های مبتنی بر شواهد.",
       tracks: "مسیرهای ارزیابی", principles: "اصول و شواهد", account: "حساب کاربری",
@@ -193,13 +186,6 @@ export const landingContent = {
       eyebrow: "OXENN SERVICE AREAS",
       title: "Independent services. One coherent view.",
       text: "PRODUCT INTELLIGENCE • MARKET CONTEXT • SEO • AEO • GEO • COMPETITOR RESEARCH • IMPROVEMENT PLAN",
-    },
-    radar: {
-      eyebrow: "OXENN / INTELLIGENCE AREAS",
-      title: "A joined-up view of assessment and improvement",
-      body: "From digital visibility to value proposition and competitiveness, each assessment track keeps its own scope and supporting evidence.",
-      labels: ["SEO", "AEO", "GEO", "Competitor research", "Product intelligence profile"],
-      note: "This is a conceptual visual. It does not display live data, scores, or an actual assessment result.",
     },
     footer: {
       description: "Product and market improvement intelligence for clearer decisions and evidence-grounded plans.",

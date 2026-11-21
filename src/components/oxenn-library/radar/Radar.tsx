@@ -950,6 +950,8 @@ export default function Radar({
     });
     intersection.observe(container);
     window.addEventListener('pointermove', onPointerMove, { passive: true });
+    // A click at a stationary pointer should also create a live signal return.
+    window.addEventListener('pointerdown', onPointerMove, { passive: true });
     document.documentElement.addEventListener('pointerleave', onPointerLeave);
     document.addEventListener('visibilitychange', onVisibility);
     resize();
@@ -971,6 +973,7 @@ export default function Radar({
       resizeObserver.disconnect();
       intersection.disconnect();
       window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerdown', onPointerMove);
       document.documentElement.removeEventListener('pointerleave', onPointerLeave);
       document.removeEventListener('visibilitychange', onVisibility);
       for (const target of [scene, ...down, ...up]) {
