@@ -213,7 +213,7 @@ export function LandingSections({ locale }: LandingSectionsProps) {
         </div>
       </section>
 
-      <section id="start" className="atlas-closing" aria-labelledby="atlas-closing-title">
+      <section id="start" className="atlas-closing atlas-closing-radar-section" aria-labelledby="atlas-closing-title">
         <div className="atlas-closing-radar" aria-hidden="true">
           <HomepageRadar />
         </div>
