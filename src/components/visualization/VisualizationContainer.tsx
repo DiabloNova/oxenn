@@ -219,6 +219,7 @@ export const VisualizationContainer: React.FC<VisualizationContainerProps> = ({
               )}
             </>
           )}
+        </CardContent>
       </Card>
     </div>
   );
