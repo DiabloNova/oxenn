@@ -17,12 +17,13 @@ function collectNavigationHrefs(items: NavigationNode[]): string[] {
 describe("Dashboard Shell Architecture", () => {
   it("matches the four owner-defined dashboard groups and their exact entries", () => {
     const expected = {
-      analytics: ["brand", "aeo", "seo", "geo", "quick-analysis", "aeo-audits", "aeo-playground", "aeo-content", "competitors-radar", "brand-citations", "entities-graph", "analytics-llm-bias"],
+      analytics: ["brand", "aeo", "seo", "geo", "quick-analysis"],
       reports: ["seo-user-reports", "periodic-reports", "aeo-brand-reports", "geo-prompt-reports"],
-      actions: ["content-studio", "prompt-research", "execution-plan", "marketing", "content-ingestion", "profile", "settings", "billing", "help"],
-      "on-page": ["search-ranking", "site-health", "technical-issues", "product-review", "seo-schema"],
+      actions: ["content-studio", "prompt-research", "execution-plan", "marketing"],
+      "on-page": ["search-ranking", "site-health", "technical-issues", "product-review"],
     };
     expect(dashboardNavigation.map((section) => section.id)).toEqual(["analytics", "reports", "actions", "on-page"]);
+    expect(dashboardNavigation.map((section) => section.items.length)).toEqual([5, 4, 4, 4]);
     const hrefs = dashboardNavigation.flatMap((section) => collectNavigationHrefs(section.items));
     expect(new Set(hrefs).size).toBe(hrefs.length);
     for (const [sectionId, itemIds] of Object.entries(expected)) {
