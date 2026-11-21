@@ -30,7 +30,7 @@ import { Button } from "@/components/Button";
 
 interface DashboardTopbarProps {
   onMenuTrigger: () => void;
-  mobileMenuOpen: boolean;
+  mobileMenuOpen?: boolean;
 }
 
 interface Workspace {
@@ -41,7 +41,7 @@ interface Workspace {
 
 export default function DashboardTopbar({
   onMenuTrigger,
-  mobileMenuOpen,
+  mobileMenuOpen = false,
 }: DashboardTopbarProps) {
   const router = useRouter();
   const { theme, setTheme, direction, language, setLanguage } = useTheme();
@@ -163,7 +163,7 @@ export default function DashboardTopbar({
         {/* Left Section: Mobile Menu Trigger + Workspace Selector */}
         <div className="flex items-center gap-3">
           <button
-            onClick={onMenuTrigger}
+            onClick={(event) => { event.currentTarget.focus(); onMenuTrigger(); }}
             className="md:hidden p-2 rounded-xl hover:bg-[var(--muted-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer outline-none focus:ring-1 focus:ring-[var(--sky-blue-500)]"
             aria-label={isRtl ? "باز کردن منوی ناوبری" : "Open navigation menu"}
             aria-expanded={mobileMenuOpen}

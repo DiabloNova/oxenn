@@ -2,12 +2,11 @@ import { OwnerDefinedPage, type OwnerPageTab } from "@/components/features/dashb
 
 const tabs: OwnerPageTab[] = [
   { id: "visibility", labelFa: "قابلیت مشاهده", labelEn: "Visibility" },
-  { id: "sentiment", labelFa: "احساسات", labelEn: "Sentiment" },
-  { id: "mentions", labelFa: "اشاره‌ها", labelEn: "Mentions" },
+  { id: "perception", labelFa: "ادراک", labelEn: "Perception" },
   { id: "sources", labelFa: "منابع", labelEn: "Sources" },
-  { id: "fan-out", labelFa: "فن‌آوت", labelEn: "Fan-out" },
-  { id: "topics", labelFa: "مباحث", labelEn: "Topics" },
-  { id: "locations", labelFa: "مکان", labelEn: "Locations" },
+  { id: "topics", labelFa: "موضوعات", labelEn: "Topics" },
+  { id: "queries", labelFa: "کوئری‌ها", labelEn: "Queries" },
+  { id: "geography", labelFa: "جغرافیا", labelEn: "Geography" },
 ];
 
 export default function AeoInsightsPage() {

@@ -439,7 +439,7 @@ export default function DashboardSidebar({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={closeMobileDrawer}
+              onClick={() => closeMobileDrawer()}
             />
 
             {/* Sliding Drawer Panel */}
@@ -452,7 +452,7 @@ export default function DashboardSidebar({
             >
               {/* Close Button floating top inner */}
               <button
-                onClick={closeMobileDrawer}
+                onClick={() => closeMobileDrawer()}
                 className={`absolute top-4 ${isRtl ? "left-4" : "right-4"} p-1.5 rounded-full hover:bg-[var(--muted-surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer outline-none focus:ring-1 focus:ring-[var(--sky-blue-500)]`}
                 aria-label={isRtl ? "بستن منو" : "Close menu"}
               >

@@ -65,6 +65,7 @@ describe("dashboard navigation accessibility", () => {
     render(<SidebarHarness />);
 
     const trigger = screen.getByRole("button", { name: "Open navigation" });
+    trigger.focus();
     fireEvent.click(trigger);
 
     const dialog = screen.getByRole("dialog", { name: "Navigation" });
