@@ -149,7 +149,6 @@ export const HeatmapPrimitive: React.FC<HeatmapProps> = ({ dataset }) => {
 
           {/* Grid rows mapping Y axis and inner Cells */}
           {yLabels.map((y, rowIdx) => {
-            const rawYLabel = isRtl ? dataset.yLabelsFa[rowIdx] : dataset.yLabelsEn[rowIdx];
             return (
               <React.Fragment key={rowIdx}>
                 {/* Y Axis Label */}
@@ -159,13 +158,23 @@ export const HeatmapPrimitive: React.FC<HeatmapProps> = ({ dataset }) => {
 
                 {/* Grid cells across X columns */}
                 {xLabels.map((x, colIdx) => {
-                  const rawXLabel = isRtl ? dataset.xLabelsFa[colIdx] : dataset.xLabelsEn[colIdx];
                   // Find cell matching row (yLabel) and column (xLabel) using key mappings
                   const cell = dataset.cells.find(
                     (c) =>
                       (c.yLabel === dataset.yLabelsEn[rowIdx] || c.yLabel === dataset.yLabelsFa[rowIdx]) &&
                       (c.xLabel === dataset.xLabelsEn[colIdx] || c.xLabel === dataset.xLabelsFa[colIdx])
-                  ) || { xLabel: rawXLabel, yLabel: rawYLabel, value: 0 };
+                  );
+
+                  if (!cell) {
+                    return (
+                      <div
+                        key={colIdx}
+                        data-empty-cell="true"
+                        className="h-11 m-0.5 rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted-surface)]/30"
+                        aria-label={isRtl ? `داده‌ای برای ${y} و ${x} موجود نیست` : `No data available for ${y} and ${x}`}
+                      />
+                    );
+                  }
 
                   const cellColor = getCellColor(cell.value);
 

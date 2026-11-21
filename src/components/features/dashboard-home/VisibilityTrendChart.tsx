@@ -84,35 +84,6 @@ export const VisibilityTrendChart: React.FC<VisibilityTrendChartProps> = ({
     );
   }
 
-  // Handle empty state beautifully
-  if (data.length === 0) {
-    return (
-      <Card className="min-h-[350px] flex flex-col justify-center items-center p-8 border border-[var(--border)] bg-[var(--card)] text-center space-y-4">
-        <div className="p-4 bg-[var(--color-info-bg)] border border-[var(--border)] text-[var(--color-primary-600)] rounded-full">
-          <TrendingUp size={36} className="rtl:-scale-x-100" />
-        </div>
-        <div className="max-w-md space-y-2">
-          <h3 className="text-base font-black text-[var(--text-primary)] font-display tracking-normal">
-            {isRtl ? "نمودار هوشمندی روند حضور و سئو وب‌سایت" : "Search & AI Visibility Historical Trends"}
-          </h3>
-          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            {isRtl
-              ? "هنوز هیچ گزارش ممیزی یا اسکن دامنه‌ای ثبت نشده است. برای ترسیم نمودارهای تحلیلی و مقایسه‌ای بین سئو فنی و سهم دیده‌شدن هوش مصنوعی، اولین پایش را همین امروز اجرا کنید."
-              : "No historical audit metrics found for your workspace. Initiate a technical crawl on your website to begin tracking multi-model search trends."}
-          </p>
-        </div>
-        <Button
-          variant="primary"
-          onClick={() => router.push(`/${language}/dashboard/audits`)}
-          className="flex items-center gap-2"
-        >
-          <Sparkles size={14} />
-          <span>{isRtl ? "شروع اولین پایش برند" : "Initiate First Brand Audit"}</span>
-        </Button>
-      </Card>
-    );
-  }
-
   return (
     <Card className="min-h-[380px] flex flex-col justify-between border border-[var(--border)] bg-[var(--card)]">
       <CardHeader className="text-start">
@@ -194,6 +165,19 @@ export const VisibilityTrendChart: React.FC<VisibilityTrendChartProps> = ({
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        {data.length === 0 && (
+          <div role="status" aria-live="polite" className="mt-4 flex flex-col items-center gap-3 text-center">
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              {isRtl
+                ? "هنوز دادهٔ تاریخی برای نمایش روند حضور در جستجو و پاسخ‌های هوش مصنوعی ثبت نشده است."
+                : "No historical audit metrics are available yet. The trend will appear here after the first completed audit."}
+            </p>
+            <Button variant="primary" onClick={() => router.push(`/${language}/dashboard/audits`)} className="flex items-center gap-2">
+              <Sparkles size={14} />
+              <span>{isRtl ? "شروع اولین پایش برند" : "Initiate First Brand Audit"}</span>
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

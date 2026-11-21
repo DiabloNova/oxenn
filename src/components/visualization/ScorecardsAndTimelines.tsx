@@ -78,7 +78,11 @@ export const TimelinePrimitive: React.FC<TimelineProps> = ({ dataset }) => {
       />
 
       <div className="space-y-4">
-        {sortedEvents.map((event) => {
+        {sortedEvents.length === 0 ? (
+          <p role="status" className="py-8 text-center text-xs text-[var(--text-muted)]">
+            {isRtl ? "هنوز رویدادی برای نمایش ثبت نشده است." : "No timeline events available yet."}
+          </p>
+        ) : sortedEvents.map((event) => {
           const isExpanded = expandedId === event.id;
           const statusStyle = getStatusClasses(event.status);
 
@@ -198,7 +202,7 @@ export const ScorecardPrimitive: React.FC<ScorecardProps> = ({ metric }) => {
 
       <div className="mt-2.5 flex items-baseline gap-1.5 flex-wrap">
         <span className="text-2xl font-bold font-display text-[var(--text-primary)] tracking-tight">
-          {metric.value}
+          {metric.value ?? "—"}
         </span>
         {metric.unitEn && (
           <span className="text-xs text-[var(--text-muted)] font-medium">

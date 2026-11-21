@@ -455,7 +455,11 @@ export const DonutChartPrimitive: React.FC<PrimitiveProps> = ({ dataset, height 
 
       {/* Accessible Side Legend */}
       <div className="flex flex-col gap-2 min-w-[120px] text-start" dir={isRtl ? "rtl" : "ltr"}>
-        {adaptedData.map((item, idx) => (
+        {adaptedData.length === 0 ? (
+          <p role="status" className="text-xs text-[var(--text-muted)]">
+            {isRtl ? "داده‌ای برای دسته‌بندی‌ها ثبت نشده است." : "No category data available yet."}
+          </p>
+        ) : adaptedData.map((item, idx) => (
           <div key={idx} className="flex items-center gap-2 text-xs">
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0"

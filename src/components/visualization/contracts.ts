@@ -33,7 +33,7 @@ export interface BaseVisualizationConfig {
 
 export interface ChartDataPoint {
   label: string; // e.g., Date or Category name
-  [seriesKey: string]: number | string; // Numeric value per series
+  [seriesKey: string]: number | string | null; // Null represents an unavailable observation, not a zero value
 }
 
 export interface ChartSeries {
@@ -169,7 +169,7 @@ export interface ScorecardMetric {
   id: string;
   labelEn: string;
   labelFa: string;
-  value: string | number;
+  value: string | number | null;
   unitEn?: string;
   unitFa?: string;
   delta?: string | number; // e.g., +12%
@@ -238,7 +238,7 @@ export const VisualizationAdapters = {
       const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
       return {
         label: dateStr,
-        score: audit.visibility_score ?? 0,
+        score: audit.visibility_score,
       };
     });
 

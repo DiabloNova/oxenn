@@ -171,19 +171,9 @@ export const VisualizationContainer: React.FC<VisualizationContainerProps> = ({
                 </Button>
               )}
             </div>
-          ) : empty ? (
-            /* Empty Data State Panel */
-            <div className="flex flex-col items-center justify-center text-center space-y-3 py-12">
-              <div className="p-3 bg-[var(--border)]/50 text-[var(--text-muted)] rounded-full">
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m-9 1V4a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <p className="text-xs text-[var(--text-muted)] max-w-xs">
-                {isRtl ? emptyMessageFa : emptyMessageEn}
-              </p>
-            </div>
-          ) : viewMode === "tabular" && tabularData ? (
+          ) : (
+            <>
+              {viewMode === "tabular" && tabularData ? (
             /* Tabular representation of values (highly WCAG-compliant fallback for screen readers) */
             <div className="overflow-x-auto w-full h-full max-h-[300px] border border-[var(--border)] rounded-xl bg-[var(--background)]">
               <table className="min-w-full divide-y divide-[var(--border)] text-xs text-start">
@@ -221,8 +211,14 @@ export const VisualizationContainer: React.FC<VisualizationContainerProps> = ({
             <div className="w-full h-full animate-fade-in">
               {children}
             </div>
+              )}
+              {empty && (
+                <p role="status" aria-live="polite" className="mt-3 text-center text-xs text-[var(--text-muted)]">
+                  {isRtl ? emptyMessageFa : emptyMessageEn}
+                </p>
+              )}
+            </>
           )}
-        </CardContent>
       </Card>
     </div>
   );
