@@ -32,7 +32,6 @@ export const Tabs: React.FC<TabsProps> = ({
   const isControlled = activeTabId !== undefined;
   const activeTab = isControlled ? activeTabId : localActiveTab;
   const activeIndex = tabs.findIndex((tab) => tab.id === activeTab);
-  const panelId = `${tabsId}-panel`;
 
   const handleTabClick = (tabId: string) => {
     if (!isControlled) {
@@ -79,6 +78,7 @@ export const Tabs: React.FC<TabsProps> = ({
           {tabs.map((tab, index) => {
             const isActive = activeTab === tab.id;
             const tabId = `${tabsId}-tab-${index}`;
+            const tabPanelId = `${tabsId}-panel-${index}`;
 
             return (
               <button
@@ -90,7 +90,7 @@ export const Tabs: React.FC<TabsProps> = ({
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                aria-controls={panelId}
+                aria-controls={tabPanelId}
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => handleTabClick(tab.id)}
                 onKeyDown={(event) => handleTabKeyDown(event, index)}
@@ -107,14 +107,22 @@ export const Tabs: React.FC<TabsProps> = ({
         </nav>
       </div>
 
-      <div
-        id={panelId}
-        className="mt-6"
-        role="tabpanel"
-        aria-labelledby={activeIndex >= 0 ? `${tabsId}-tab-${activeIndex}` : undefined}
-        tabIndex={0}
-      >
-        {tabs[activeIndex]?.content}
+      <div className="mt-6">
+        {tabs.map((tab, index) => {
+          const isActive = index === activeIndex;
+          return (
+            <div
+              key={tab.id}
+              id={`${tabsId}-panel-${index}`}
+              role="tabpanel"
+              aria-labelledby={`${tabsId}-tab-${index}`}
+              tabIndex={isActive ? 0 : -1}
+              hidden={!isActive}
+            >
+              {isActive ? tab.content : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
