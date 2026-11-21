@@ -57,8 +57,13 @@ export default function DashboardSidebar({
   // Accordion state manually toggled by user (key is item id, value is boolean)
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const closeMobileDrawer = useCallback(() => {
+  const mobileDrawerReturnFocusRef = useRef<HTMLElement | null>(null);
+  const wasMobileDrawerOpenRef = useRef(false);
+  const restoreFocusOnMobileCloseRef = useRef(true);
+
+  const closeMobileDrawer = useCallback((restoreFocus = true) => {
     setAccountMenuOpen(false);
+    restoreFocusOnMobileCloseRef.current = restoreFocus;
     setMobileOpen(false);
   }, [setMobileOpen]);
 
@@ -107,36 +112,59 @@ export default function DashboardSidebar({
   }, [accountMenuOpen]);
 
 
-  // Trap focus implementation for mobile drawer
+  // Keep keyboard focus inside the mobile dialog and return it to the opener on dismissal.
+  // Query focusable controls for each Tab press so expanded sections and account-menu items
+  // are included even when the drawer contents change after it opens.
   useEffect(() => {
-    if (!mobileOpen || !drawerRef.current) return;
-
-    const focusableElements = drawerRef.current.querySelectorAll(
-      'a[href], button:not([disabled]), textarea, input, select'
-    );
-    if (focusableElements.length === 0) return;
-
-    const firstElement = focusableElements[0] as HTMLElement;
-    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-    const handleFocusTrap = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-
-      if (e.shiftKey) {
-        if (document.activeElement === firstElement) {
-          lastElement.focus();
-          e.preventDefault();
+    if (!mobileOpen) {
+      if (wasMobileDrawerOpenRef.current) {
+        wasMobileDrawerOpenRef.current = false;
+        if (restoreFocusOnMobileCloseRef.current) {
+          mobileDrawerReturnFocusRef.current?.focus();
         }
-      } else {
-        if (document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
+        mobileDrawerReturnFocusRef.current = null;
+      }
+      return;
+    }
+
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+
+    wasMobileDrawerOpenRef.current = true;
+    mobileDrawerReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const getFocusableElements = () =>
+      Array.from(
+        drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select'
+        )
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+
+    const handleFocusTrap = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const focusIsOutsideDrawer = !drawer.contains(document.activeElement);
+
+      if (event.shiftKey && (document.activeElement === firstElement || focusIsOutsideDrawer)) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && (document.activeElement === lastElement || focusIsOutsideDrawer)) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
     window.addEventListener("keydown", handleFocusTrap);
-    firstElement.focus();
+    getFocusableElements()[0]?.focus();
 
     return () => window.removeEventListener("keydown", handleFocusTrap);
   }, [mobileOpen]);
@@ -159,7 +187,7 @@ export default function DashboardSidebar({
     const destination = getLocalizedHref(href);
     notifyNavigationStart(destination);
     router.push(destination);
-    closeMobileDrawer();
+    closeMobileDrawer(false);
   };
 
   const isParentActive = (item: NavigationItem) => {
@@ -173,13 +201,13 @@ export default function DashboardSidebar({
   const handleItemClick = (item: NavigationItem) => {
     if (item.href) {
       if (item.href === "#help") {
-        closeMobileDrawer();
+        closeMobileDrawer(false);
         if (onHelpClick) onHelpClick();
       } else {
         const destination = getLocalizedHref(item.href);
         notifyNavigationStart(destination);
         router.push(destination);
-        closeMobileDrawer();
+        closeMobileDrawer(false);
       }
     } else {
       toggleExpand(item.id);
@@ -190,7 +218,7 @@ export default function DashboardSidebar({
     const destination = getLocalizedHref(child.href);
     notifyNavigationStart(destination);
     router.push(destination);
-    closeMobileDrawer();
+    closeMobileDrawer(false);
   };
 
   const renderNavItems = (items: NavigationItem[], isMobileState: boolean) => {
@@ -403,7 +431,7 @@ export default function DashboardSidebar({
       {/* MOBILE DRAWER (Controlled by mobileOpen) */}
       <AnimatePresence>
         {mobileOpen && (
-          <div className="fixed inset-0 z-[100] md:hidden" dir={direction} ref={drawerRef} role="dialog" aria-modal="true" aria-label={isRtl ? "ناوبری" : "Navigation"}>
+          <div id="dashboard-mobile-navigation" className="fixed inset-0 z-[100] md:hidden" dir={direction} ref={drawerRef} role="dialog" aria-modal="true" aria-label={isRtl ? "ناوبری" : "Navigation"}>
             {/* Backdrop Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
