@@ -50,7 +50,7 @@ Every stage must preserve the following invariants:
 - Missing, ambiguous, stale, unreviewed or inaccessible context is handled explicitly. Do not create duplicate profiles, silently infer missing facts or use samples as customer context.
 - The [Shared Brand & Product Context Contract](../../../docs/architecture/SHARED_BRAND_PRODUCT_CONTEXT_CONTRACT.md) is normative for all 17 pages and 13 integrated capabilities.
 
-### 2.3 Evidence and truth
+### 2.4 Evidence and truth
 - Distinguish user-provided information, direct observation, third-party claim, estimate, hypothesis and simulation.
 - Preserve applicable source, timestamp, geography, methodology, sample, scope, permission, freshness and confidence.
 - Keep UNKNOWN, NOT_PROVIDED, NOT_APPLICABLE, ZERO, NEGATIVE, INCOMPLETE and FAILED distinct.
@@ -59,13 +59,13 @@ Every stage must preserve the following invariants:
 - Describe only observable AI responses and available provider metadata; never claim access to hidden model reasoning.
 - Mark LIVE, MOCK, HYBRID, PARTIAL and FAILED truthfully; never present synthetic data as live.
 
-### 2.4 Execution safety
+### 2.5 Execution safety
 - OXENN may recommend, plan, assign, organize, remind and track.
 - Consequential external actions (publishing, price changes, payments, purchases, outbound messages, supplier/customer contact, social-account changes) require the applicable permissions and explicit customer approval.
 - Every important change and approval must have an auditable actor, time, scope and result.
 - Retry and execution behavior must be bounded and idempotent where relevant.
 
-### 2.5 Architecture
+### 2.6 Architecture
 - Preserve the nine product domains as interconnected capabilities, not nine mandatory purchases.
 - Keep service catalog, SKU, plan, subscription, entitlement, quota and usage ledger cross-cutting.
 - Put AI provider/framework dependencies behind OXENN-owned interfaces.

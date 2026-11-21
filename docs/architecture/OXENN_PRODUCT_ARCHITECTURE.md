@@ -160,7 +160,7 @@ The application layer owns request validation, authentication/authorization, ten
 The target pipeline consists of:
 
 1. Request intake and task classification.
-2. Product/workspace/market scope resolution.
+2. Identify the requested task scope and required service permissions.
 3. Resolve the active Workspace, Brand, Offer and applicable PIP version from trusted server context.
 4. Retrieve approved profile fields and evidence required by the declared task.
 5. Build bounded context; keep task-specific inputs, provider observations and derived outputs separate.
