@@ -81,7 +81,7 @@ export const dashboardNavigation: NavigationSection[] = [
     titleFa: "تجزیه و تحلیل",
     items: [
       { id: "brand", labelEn: "Your brand", labelFa: "برند شما", href: "/dashboard/brand", icon: Building2 },
-      { id: "aeo", labelEn: "AI answers (AEO)", labelFa: "پاسخ‌های هوش مصنوعی (AEO)", href: "/dashboard/aeo", icon: Sparkles },
+      { id: "aeo", labelEn: "AI answers (AEO)", labelFa: "پاسخ‌های هوش مصنوعی (AEO)", href: "/dashboard/aeo", icon: Sparkles, exact: true },
       { id: "seo", labelEn: "Brand search rankings (SEO)", labelFa: "رتبه برند در موتورهای جستجو (SEO)", href: "/dashboard/seo", icon: Search, exact: true },
       { id: "geo", labelEn: "AI answer optimization (GEO)", labelFa: "بهینه‌سازی پاسخ‌های هوش مصنوعی (GEO)", href: "/dashboard/geo", icon: BrainCircuit },
       { id: "quick-analysis", labelEn: "Quick analysis", labelFa: "تحلیل سریع", href: "/dashboard/audit/free", icon: Zap },

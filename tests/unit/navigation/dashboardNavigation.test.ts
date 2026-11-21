@@ -76,6 +76,12 @@ describe("owner-defined dashboard navigation", () => {
     expect(isDashboardRouteActive("/fa/dashboard/aeo-extra", "/dashboard/aeo", "fa")).toBe(false);
   });
 
+  it("keeps the AEO root separate from the Prompt Research destination", () => {
+    expect(isDashboardRouteActive("/fa/dashboard/aeo", "/dashboard/aeo", "fa", true)).toBe(true);
+    expect(isDashboardRouteActive("/fa/dashboard/aeo/playground", "/dashboard/aeo", "fa", true)).toBe(false);
+    expect(isDashboardRouteActive("/fa/dashboard/aeo/playground", "/dashboard/aeo/playground", "fa")).toBe(true);
+  });
+
   it("keeps the SEO root separate from on-page SEO child routes", () => {
     expect(isDashboardRouteActive("/fa/dashboard/seo", "/dashboard/seo", "fa", true)).toBe(true);
     expect(isDashboardRouteActive("/fa/dashboard/seo/technical", "/dashboard/seo", "fa", true)).toBe(false);
