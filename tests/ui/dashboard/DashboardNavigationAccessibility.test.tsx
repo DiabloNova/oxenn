@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DashboardSidebar from "@/components/navigation/DashboardSidebar";
 import { Tabs } from "@/components/Tabs";
@@ -69,6 +69,7 @@ const SidebarHarness = () => {
 
 describe("dashboard navigation accessibility", () => {
   afterEach(() => {
+    cleanup();
     navigationState.pathname = "/en/dashboard";
   });
   it("traps mobile drawer focus in both directions and restores focus to its trigger", async () => {
