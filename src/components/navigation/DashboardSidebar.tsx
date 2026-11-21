@@ -51,7 +51,8 @@ export default function DashboardSidebar({
   const { language, direction } = useTheme();
   const { session, logout } = useAuth();
   const isRtl = language === "fa";
-  const isAgentMode = pathname?.includes("/dashboard/agent") ?? false;
+  const agentBasePath = `/${language}/dashboard/agent`;
+  const isAgentMode = pathname === agentBasePath || Boolean(pathname?.startsWith(agentBasePath + "/"));
 
   // Accordion state manually toggled by user (key is item id, value is boolean)
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
@@ -279,18 +280,18 @@ export default function DashboardSidebar({
           {showLabels && <span className="font-black text-[var(--text-primary)] text-sm tracking-tight font-display">OXENN</span>}
         </div>
 
-        <div className="grid grid-cols-2 gap-1 p-2 border-b border-[var(--border)] shrink-0">
+        <div className="grid grid-cols-2 gap-1 p-2 border-b border-[var(--border)] shrink-0" aria-label={isRtl ? "بخش‌های اصلی" : "Primary areas"}>
+          <button type="button" onClick={() => navigateTo("/dashboard")}
+            className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (!isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
+            aria-current={!isAgentMode ? "page" : undefined}
+            title={showLabels ? undefined : (isRtl ? "تجزیه و تحلیل" : "Analytics")}>
+            <LayoutDashboard size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "تجزیه و تحلیل" : "Analytics"}</span>}
+          </button>
           <button type="button" onClick={() => navigateTo("/dashboard/agent")}
             className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
             aria-current={isAgentMode ? "page" : undefined}
             title={showLabels ? undefined : (isRtl ? "عامل" : "Agent")}>
             <Bot size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "عامل" : "Agent"}</span>}
-          </button>
-          <button type="button" onClick={() => navigateTo("/dashboard")}
-            className={"min-w-0 flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-colors " + (!isAgentMode ? "bg-[var(--sky-blue-500)]/15 text-[var(--text-primary)] border border-[var(--sky-blue-500)]/30" : "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--muted-surface)]")}
-            aria-current={!isAgentMode ? "page" : undefined}
-            title={showLabels ? undefined : (isRtl ? "داشبورد" : "Dashboard")}>
-            <LayoutDashboard size={16} aria-hidden="true" />{showLabels && <span>{isRtl ? "تجزیه و تحلیل" : "Analytics"}</span>}
           </button>
         </div>
 
