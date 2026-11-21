@@ -9,10 +9,11 @@ import { PageRepository, WebsiteRepository, PostgresDiagnosticFindingRepository 
 import { TechnicalSeoAnalyzerService, getDeterministicRecommendation } from "../../services/technical-seo-analyzer";
 import { DiagnosticEngine } from "@/services/diagnostic-engine";
 import { SeoSignals } from "@/types/seo-signals";
+import { resolveAnalysisWebsiteSelection } from "@/services/user-identity/website-selection";
 
 /**
- * Generates highly realistic mock crawl SeoSignals for a given URL and title/desc metadata,
- * ensuring the analyzers have real data to process when a live crawl has not been executed.
+ * Builds the legacy diagnostic signal shape from an already persisted page record.
+ * This helper does not create or seed website pages.
  */
 function createMockPageSeoSignals(url: string, title: string, desc: string, isHealthy = true): SeoSignals {
   const origin = new URL(url).origin;

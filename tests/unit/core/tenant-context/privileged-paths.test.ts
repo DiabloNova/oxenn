@@ -31,8 +31,8 @@ describe("Privileged Paths Registry Test Suite", () => {
 
   it("registers the user identity profile path with only user-owned identity and website tables", () => {
     expect(PRIVILEGED_PATHS_REGISTRY["sys-user-identity-profile"]).toMatchObject({
-      allowedTables: ["users", "user_profiles", "user_legal_profiles", "user_websites", "audit_records"],
-      callerModules: ["src/app/actions/user-identity.ts", "src/services/user-identity/user-website-directory.ts", "src/services/user-identity/website-selection.ts"],
+      allowedTables: ["user_profiles", "user_legal_profiles", "user_websites", "audit_records"],
+      callerModules: ["src/app/actions/user-identity.ts", "src/services/user-identity/user-website-directory.ts"],
       status: "in-use",
     });
   });
