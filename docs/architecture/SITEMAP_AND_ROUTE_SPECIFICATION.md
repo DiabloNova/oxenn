@@ -126,37 +126,40 @@ The Authenticated Dashboard Layer is protected via `<ProtectedRoute>` boundaries
 3.  **Audit Detail Scorecard (`/[locale]/dashboard/audits/[id]`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Granular analysis for a single crawl ID, displaying AI Visibility scores, technical recommendations, and citations.
-4.  **AI Query Lab / Prompt Monitor (`/[locale]/dashboard/query`)**
+4.  **Tenant RAG Diagnostics (`/[locale]/dashboard/query`)**
     *   *Status:* EXISTING / TARGET
-    *   *Purpose:* Playground for running simulated prompts across LLM models and tracking sentiment scores.
-5.  **Advanced Document Ingest (`/[locale]/dashboard/ingestion`)**
+    *   *Purpose:* Tenant-scoped RAG query and retrieval diagnostics. This route is separate from the Prompt Research workspace.
+5.  **Prompt Research / Prompt Intelligence (`/[locale]/dashboard/aeo/playground`)**
+    *   *Status:* EXISTING / TARGET
+    *   *Purpose:* Workspace for researching, running, and evaluating prompts across supported AI models.
+6. **Advanced Document Ingest (`/[locale]/dashboard/ingestion`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Upload portal for proprietary documents (.txt, .md, .json) to train tenant-isolated RAG vector engines.
-6.  **Competitive Intelligence (`/[locale]/dashboard/competitive`)**
+7. **Competitive Intelligence (`/[locale]/dashboard/competitive`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Interactive spider charts and tables comparing metrics across 5 domains.
-7.  **Brand & Citation Monitoring (`/[locale]/dashboard/brand-monitoring`)**
+8. **Brand & Citation Monitoring (`/[locale]/dashboard/brand-monitoring`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Real-time tracking of brand mentions and citation citations found in LLM answers.
-8.  **Knowledge & Entity Explorer (`/[locale]/dashboard/entities`)**
+9. **Knowledge & Entity Explorer (`/[locale]/dashboard/entities`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Visualization of the company’s semantic knowledge graph, entity authority, and connections.
-9.  **Content Studio (`/[locale]/dashboard/content`)**
+10. **Content Studio (`/[locale]/dashboard/content`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Semantic editor, topic cluster analyser, and content optimization scoring system.
-10. **Technical SEO Analyzer (`/[locale]/dashboard/optimization/technical`)**
+11. **Technical SEO Analyzer (`/[locale]/dashboard/optimization/technical`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Details canonical mismatch, robots.txt, sitemaps, structured schema data, and crawl logs.
-11. **LLM & Semantic Analytics (`/[locale]/dashboard/analytics/llm`)**
+12. **LLM & Semantic Analytics (`/[locale]/dashboard/analytics/llm`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Analytics dashboard tracking AI model response shares and prompt historical trends.
-12. **Automated Reports (`/[locale]/dashboard/reports`)**
+13. **Automated Reports (`/[locale]/dashboard/reports`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Schedule automated PDF / CSV visibility report delivery.
-13. **Billing & Subscriptions (`/[locale]/dashboard/billing`)**
+14. **Billing & Subscriptions (`/[locale]/dashboard/billing`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Upgrades, payment history, invoices, and quota details.
-14. **Workspace & Profile Settings (`/[locale]/dashboard/settings`)**
+15. **Workspace & Profile Settings (`/[locale]/dashboard/settings`)**
     *   *Status:* EXISTING / TARGET
     *   *Purpose:* Team management, API tokens, workspace-level preferences.
 
@@ -183,10 +186,13 @@ This maps the acquisition surface to the application workspace and the user educ
     *   *Marketing Page:* `/[locale]/solutions/aeo`
     *   *Application Path:* `/[locale]/dashboard/audits` (And details at `/[locale]/dashboard/audits/[id]`)
     *   *Documentation:* `/[locale]/docs/architecture`
-*   **AI Analytics & Prompting:**
+*   **Prompt Research & Intelligence:**
     *   *Marketing Page:* `/[locale]/solutions/geo`
-    *   *Application Path:* `/[locale]/dashboard/query`
+    *   *Application Path:* `/[locale]/dashboard/aeo/playground`
     *   *Documentation:* `/[locale]/docs/ai-pipeline-architecture`
+*   **Tenant RAG Diagnostics:**
+    *   *Application Path:* `/[locale]/dashboard/query`
+    *   *Purpose:* Tenant-scoped retrieval and query diagnostics; not the Prompt Research workspace.
 *   **Competitive Intelligence:**
     *   *Marketing Page:* `/[locale]/solutions/radar`
     *   *Application Path:* `/[locale]/dashboard/competitive`
@@ -316,7 +322,7 @@ Multiple duplicates and transitional routes exist in the repository to maintain 
 | Legacy Route (Source) | Canonical Route (Destination) | Redirect Type | Reason / Justification |
 | :--- | :--- | :--- | :--- |
 | `/[locale]/settings` | `/[locale]/profile` | `301` Permanent | Grouping separation. Global settings represent user profile info, whereas `/dashboard/settings` manages enterprise-level workspace variables. |
-| `/[locale]/dashboard/rag` | `/[locale]/dashboard/query` | `301` Permanent | Consolidation. Both directories render the RAG playground. The roadmap canonicalized this under Prompt Intelligence (`/query`). |
+| `/[locale]/dashboard/rag` | `/[locale]/dashboard/query` | `301` Permanent | Consolidation of the legacy RAG entry point. `/dashboard/query` remains the canonical tenant RAG diagnostics route; Prompt Research is separate at `/dashboard/aeo/playground`. |
 | `/[locale]/dashboard/ingest` | `/[locale]/dashboard/ingestion` | `301` Permanent | Consolidation. Both handle document ingestion. `/ingestion` is the fully client-side unified page. |
 | `/[locale]/dashboard/competitors`| `/[locale]/dashboard/competitive` | `301` Permanent | Consolidation. Avoids duplicate routing for Competitive Intelligence Spider Charts. |
 | `/[locale]/dashboard/graph` | `/[locale]/dashboard/entities` | `301` Permanent | Consolidation. Avoids duplicate routes for the Interactive Live Knowledge Graph. |
@@ -343,7 +349,7 @@ const nextConfig = {
         destination: '/:locale/profile',
         permanent: true,
       },
-      // 2. Legacy RAG page to Prompt Query Intelligence
+      // 2. Legacy RAG route to canonical tenant RAG diagnostics
       {
         source: '/:locale/dashboard/rag',
         destination: '/:locale/dashboard/query',
@@ -453,7 +459,10 @@ Every important route in Seorchable is cataloged below, displaying its classific
 | `/[locale]/dashboard` | EXISTING | TARGET | `/[locale]/dashboard` | Yes | Yes (`/en`, `/fa`) | No | None | Main authenticated executive overview. |
 | `/[locale]/dashboard/audits` | EXISTING | TARGET | `/[locale]/dashboard/audits` | Yes | Yes (`/en`, `/fa`) | No | None | Lists historical crawler logs & audits. |
 | `/[locale]/dashboard/audits/[id]` | EXISTING | TARGET | `/[locale]/dashboard/audits/[id]` | Yes | Yes (`/en`, `/fa`) | No | None | Scores AI footprints for crawl ID. |
-| `/[locale]/dashboard/query` | EXISTING | TARGET | `/[locale]/dashboard/query` | Yes | Yes (`/en`, `/fa`) | No | None | Playground to run models & test prompts. |
+| `/[locale]/dashboard/aeo/audits` | EXISTING | TARGET | `/[locale]/dashboard/aeo/audits` | Yes | Yes (`/en`, `/fa`) | No | None | AEO visibility audit workspace; linked from the dashboard KPI grid. |
+| `/[locale]/dashboard/aeo/content` | EXISTING | TARGET | `/[locale]/dashboard/aeo/content` | Yes | Yes (`/en`, `/fa`) | No | None | AEO content readiness and semantic structure analysis. |
+| `/[locale]/dashboard/aeo/playground` | EXISTING | TARGET | `/[locale]/dashboard/aeo/playground` | Yes | Yes (`/en`, `/fa`) | No | None | Prompt Research / Prompt Intelligence workspace. |
+| `/[locale]/dashboard/query` | EXISTING | TARGET | `/[locale]/dashboard/query` | Yes | Yes (`/en`, `/fa`) | No | None | Tenant-scoped RAG query and retrieval diagnostics; not Prompt Research. |
 | `/[locale]/dashboard/ingestion` | EXISTING | TARGET | `/[locale]/dashboard/ingestion` | Yes | Yes (`/en`, `/fa`) | No | None | Portal to upload files to vector DB. |
 | `/[locale]/dashboard/competitive` | EXISTING | TARGET | `/[locale]/dashboard/competitive` | Yes | Yes (`/en`, `/fa`) | No | None | Compare up to 5 domains. |
 | `/[locale]/dashboard/brand-monitoring` | EXISTING | TARGET | `/[locale]/dashboard/brand-monitoring` | Yes | Yes (`/en`, `/fa`) | No | None | Track brand mentions in AI outputs. |
