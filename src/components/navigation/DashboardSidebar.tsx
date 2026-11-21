@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
@@ -304,7 +304,7 @@ export default function DashboardSidebar({
     const accountMenuId = isMobileState ? "dashboard-account-menu-mobile" : "dashboard-account-menu-desktop";
     const accountTriggerId = isMobileState ? "dashboard-account-trigger-mobile" : "dashboard-account-trigger-desktop";
 
-    const handleAccountMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const handleAccountMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
       const items = Array.from(
         event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])')
       );
