@@ -117,13 +117,16 @@ export async function saveUserIdentityProfileAction(input: unknown) {
           legal.headquartersProvince, legal.headquartersCity, legal.representativePosition,
           legal.representativeRelationship, legal.representativePhoneNumber || null],
       );
-      await client.query(`DELETE FROM user_websites WHERE user_id = $1`, [session.user!.id]);
-      for (const website of value.websites) {
-        const url = new URL(website.url);
-        if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Only HTTP and HTTPS website addresses are supported.");
-        await client.query(`INSERT INTO user_websites (id, user_id, url, platform_type) VALUES ($1,$2,$3,$4)`,
-          [randomUUID(), session.user!.id, url.toString().replace(/\/$/, ""), website.platformType]);
-      }
+    }
+
+    // Website addresses belong to the user, not to the optional legal-entity profile.
+    // This runs inside runWithSystemContext's existing transaction with the profile writes.
+    await client.query(`DELETE FROM user_websites WHERE user_id = $1`, [session.user!.id]);
+    for (const website of value.websites) {
+      const url = new URL(website.url);
+      if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Only HTTP and HTTPS website addresses are supported.");
+      await client.query(`INSERT INTO user_websites (id, user_id, url, platform_type) VALUES ($1,$2,$3,$4)`,
+        [randomUUID(), session.user!.id, url.toString().replace(/\/$/, ""), website.platformType]);
     }
     return { success: true as const };
   });

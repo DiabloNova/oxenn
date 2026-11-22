@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const theme = vi.hoisted(() => ({ language: "fa", direction: "rtl" }));
 const refresh = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -28,12 +28,25 @@ describe("UserIdentityForm", () => {
     expect(screen.queryByText(/تحصیلات/)).not.toBeInTheDocument();
   });
 
-  it("shows the legal entity section and allows adding website directory entries", () => {
+  it("shows the legal entity section without coupling the user website directory to it", () => {
     render(<UserIdentityForm initialData={initialData} />);
     fireEvent.click(screen.getByLabelText("شخص حقوقی"));
     expect(screen.getByText("نام شرکت در آگهی تأسیس *")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "افزودن آدرس وبسایت" })).toBeInTheDocument();
+  });
+
+  it("allows an individual user to add and save website directory entries", async () => {
+    render(<UserIdentityForm initialData={{
+      ...initialData,
+      profile: { ...initialData.profile, gender: "female", ageRange: "25_34", jobTitle: "founder", industry: "services" },
+    }} />);
     fireEvent.click(screen.getByRole("button", { name: "افزودن آدرس وبسایت" }));
-    expect(screen.getByPlaceholderText("https://example.com")).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("https://example.com"), { target: { value: "https://example.com" } });
+    fireEvent.submit(screen.getByRole("button", { name: "ذخیره اطلاعات هویتی" }).closest("form")!);
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      identityType: "individual",
+      websites: [{ url: "https://example.com", platformType: "official_website" }],
+    })));
   });
 
   it("keeps SMS notifications disabled until the phone number is verified", () => {
