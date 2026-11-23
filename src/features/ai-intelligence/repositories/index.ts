@@ -2098,7 +2098,7 @@ function mapPageRow(row: Record<string, unknown>): Page {
   };
 }
 
-function validatePageIndexabilityInput(page: Page, httpStatus: number, canonicalUrl?: string): void {
+function validatePageIndexabilityInput(page: Page, httpStatus: number, canonicalUrl?: string | null): void {
   if (page.indexability === "blocked_by_robots") {
     throw new Error(
       "Cannot persist blocked_by_robots: the canonical pages schema does not store robots.txt access decisions."

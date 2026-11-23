@@ -16,8 +16,9 @@ The canonical pages table has no standalone indexability column. Values are deri
 
 ## Validation
 - Static comparison with canonical Drizzle schema and relevant callers: PASS.
-- Focused regression tests added in tests/unit/features/ai-intelligence/repositories.test.ts: NOT RUN.
-- Typecheck, lint, unit tests, build and CI: NOT RUN; this session has GitHub read/write access but no local checkout/terminal or connected Super runner.
+- Focused regression tests added in tests/unit/features/ai-intelligence/repositories.test.ts: NOT RUN locally.
+- The first Vercel preview build for commit 83df6e69 failed TypeScript TS2345 because the validation helper accepted string | undefined while the caller passed string | null. The helper signature is corrected in this follow-up commit; the replacement preview result is pending.
+- Lint and the full unit-test suite have not been run in this session; no local repository checkout/terminal or connected Super runner was available.
 - No database, schema, migration, snapshot or journal modified. No branch or PR created.
 
 ## Remaining Stage 3 gate
