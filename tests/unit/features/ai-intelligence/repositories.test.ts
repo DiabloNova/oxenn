@@ -12,7 +12,7 @@ vi.mock("@/features/admin/infrastructure/persistence/postgres", () => ({
 
 import { TenantContextManager } from "@/core/database/tenant-context";
 import type { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
-import { PageRepository, WebsiteRepository } from "@/features/ai-intelligence/repositories";
+import { db, PageRepository, WebsiteRepository } from "@/features/ai-intelligence/repositories";
 
 const WORKSPACE_ID = "11111111-1111-4111-8111-111111111111";
 const USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -228,6 +228,40 @@ describe("PageRepository canonical PostgreSQL contract", () => {
     expect(params[2]).toBe("33333333-3333-4333-8333-333333333333");
     expect(params[7]).toBe("About the company");
     expect(params[13]).toEqual(["noindex"]);
+  });
+
+  it("writes Page-to-Keyword links only to PostgreSQL", async () => {
+    const { client, query } = createPostgresMock();
+    const previousLength = db.pagesKeywords.length;
+    await inWorkspace(() =>
+      new PageRepository(client).linkKeyword(
+        WORKSPACE_ID,
+        "44444444-4444-4444-8444-444444444444",
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+      )
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO pages_keywords"),
+      [WORKSPACE_ID, "44444444-4444-4444-8444-444444444444", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+    );
+    expect(db.pagesKeywords).toHaveLength(previousLength);
+  });
+
+  it("writes Page-to-Topic links only to PostgreSQL", async () => {
+    const { client, query } = createPostgresMock();
+    const previousLength = db.pagesTopics.length;
+    await inWorkspace(() =>
+      new PageRepository(client).linkTopic(
+        WORKSPACE_ID,
+        "44444444-4444-4444-8444-444444444444",
+        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+      )
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO pages_topics"),
+      [WORKSPACE_ID, "44444444-4444-4444-8444-444444444444", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"]
+    );
+    expect(db.pagesTopics).toHaveLength(previousLength);
   });
 
   it("reads linked Keywords from PostgreSQL and maps canonical columns", async () => {
