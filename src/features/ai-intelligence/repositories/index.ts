@@ -1996,6 +1996,135 @@ export class BrandIntelligenceRepository implements IBrandIntelligenceRepository
   }
 }
 
+
+function databaseTimestamp(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (value instanceof Date) return value.toISOString();
+  const valueAsString = String(value);
+  const parsed = new Date(valueAsString);
+  return Number.isNaN(parsed.getTime()) ? valueAsString : parsed.toISOString();
+}
+
+function databaseAudit(row: Record<string, unknown>): AuditMetadata {
+  return {
+    createdAt: databaseTimestamp(row.created_at) ?? "",
+    updatedAt: databaseTimestamp(row.updated_at) ?? "",
+    createdBy: typeof row.created_by === "string" ? row.created_by : "system",
+    updatedBy: typeof row.updated_by === "string" ? row.updated_by : "system",
+    deletedAt: databaseTimestamp(row.deleted_at),
+    version: Number(row.version ?? 1)
+  };
+}
+
+function normalizePageComparisonUrl(value: string, base?: string): string | null {
+  try {
+    const url = base ? new URL(value, base) : new URL(value);
+    url.hash = "";
+    if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/+$/, "");
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function derivePageIndexability(input: {
+  httpStatus: number;
+  normalizedUrl: string;
+  canonicalUrl?: string;
+  robotsDirectives: string[];
+}): Page["indexability"] {
+  if (!Number.isFinite(input.httpStatus) || input.httpStatus < 200 || input.httpStatus >= 300) {
+    return "non_200_status";
+  }
+  const directives = input.robotsDirectives.join(" ").toLowerCase();
+  if (/(^|[\s,])(?:noindex|none)(?=$|[\s,])/.test(directives)) return "noindex";
+  if (input.canonicalUrl) {
+    const pageUrl = normalizePageComparisonUrl(input.normalizedUrl);
+    const canonicalUrl = normalizePageComparisonUrl(input.canonicalUrl, input.normalizedUrl);
+    if (pageUrl && canonicalUrl && pageUrl !== canonicalUrl) return "canonical_mismatch";
+  }
+  // No robots.txt allow/deny decision is persisted by the canonical Page schema.
+  return "undetermined";
+}
+
+function mapWebsiteRow(row: Record<string, unknown>): Website {
+  return {
+    id: String(row.id),
+    organizationId: String(row.organization_id),
+    domain: String(row.domain),
+    normalizedUrl: String(row.normalized_url),
+    status: typeof row.status === "string" ? row.status : "active",
+    cmsType: typeof row.cms_type === "string" ? row.cms_type : undefined,
+    lastCrawledAt: databaseTimestamp(row.last_crawled_at),
+    lastAnalyzedAt: databaseTimestamp(row.last_analyzed_at),
+    audit: databaseAudit(row)
+  };
+}
+
+function mapPageRow(row: Record<string, unknown>): Page {
+  const httpStatus = Number(row.http_status ?? 200);
+  const metaDescription = typeof row.meta_description === "string" ? row.meta_description : undefined;
+  const canonicalUrl = typeof row.canonical_url === "string" ? row.canonical_url : undefined;
+  const robotsDirectives = Array.isArray(row.robots_directives)
+    ? row.robots_directives.map((directive) => String(directive))
+    : [];
+  return {
+    id: String(row.id),
+    organizationId: String(row.organization_id),
+    websiteId: String(row.website_id),
+    url: String(row.url),
+    normalizedUrl: String(row.normalized_url),
+    path: String(row.path),
+    statusCode: httpStatus,
+    httpStatus,
+    indexability: derivePageIndexability({
+      httpStatus,
+      normalizedUrl: String(row.normalized_url),
+      canonicalUrl,
+      robotsDirectives
+    }),
+    title: typeof row.title === "string" ? row.title : undefined,
+    description: metaDescription,
+    metaDescription,
+    contentType: typeof row.content_type === "string" ? row.content_type : undefined,
+    contentHash: typeof row.content_hash === "string" ? row.content_hash : undefined,
+    wordCount: Number(row.word_count ?? 0),
+    canonicalUrl,
+    robotsDirectives,
+    inlinkCount: Number(row.inlink_count ?? 0),
+    outlinkCount: Number(row.outlink_count ?? 0),
+    lastCrawledAt: databaseTimestamp(row.last_crawled_at),
+    audit: databaseAudit(row)
+  };
+}
+
+function validatePageIndexabilityInput(page: Page, httpStatus: number, canonicalUrl?: string): void {
+  if (page.indexability === "blocked_by_robots") {
+    throw new Error(
+      "Cannot persist blocked_by_robots: the canonical pages schema does not store robots.txt access decisions."
+    );
+  }
+  if (page.indexability === "canonical_mismatch") {
+    const pageUrl = normalizePageComparisonUrl(page.normalizedUrl);
+    const canonical = canonicalUrl
+      ? normalizePageComparisonUrl(canonicalUrl, page.normalizedUrl)
+      : null;
+    if (!canonical || !pageUrl || canonical === pageUrl) {
+      throw new Error("Cannot persist canonical_mismatch without a canonicalUrl that demonstrates the mismatch.");
+    }
+  }
+  if (page.indexability === "non_200_status" && httpStatus >= 200 && httpStatus < 300) {
+    throw new Error("Cannot persist non_200_status with a successful HTTP status.");
+  }
+  if (
+    page.indexability === "noindex" &&
+    page.robotsDirectives &&
+    !/(^|[\s,])(?:noindex|none)(?=$|[\s,])/i.test(page.robotsDirectives.join(" "))
+  ) {
+    throw new Error("Cannot persist noindex when explicit robotsDirectives do not contain noindex or none.");
+  }
+}
+
 export class WebsiteRepository implements IWebsiteRepository {
   private pg: PostgresClient;
   constructor(pg?: PostgresClient) {
@@ -2004,71 +2133,54 @@ export class WebsiteRepository implements IWebsiteRepository {
 
   public async findById(organizationId: string, id: string): Promise<Website | null> {
     enforceTenantContext(organizationId);
-    const sql = `SELECT * FROM websites WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;`;
-    await this.pg.query(sql, [id, organizationId]);
-
-    const item = db.websites.get(id);
-    if (!item || item.organizationId !== organizationId || item.audit.deletedAt) return null;
-    return item;
+    const result = await this.pg.query(
+      "SELECT * FROM websites WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;",
+      [id, organizationId]
+    );
+    return result.rows[0] ? mapWebsiteRow(result.rows[0]) : null;
   }
 
   public async findByDomain(organizationId: string, domain: string): Promise<Website | null> {
     enforceTenantContext(organizationId);
-    const sql = `SELECT * FROM websites WHERE domain = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;`;
-    await this.pg.query(sql, [domain, organizationId]);
-
-    for (const item of db.websites.values()) {
-      if (item.domain === domain && item.organizationId === organizationId && !item.audit.deletedAt) {
-        return item;
-      }
-    }
-    return null;
+    const result = await this.pg.query(
+      "SELECT * FROM websites WHERE domain = $1 AND organization_id = $2 " +
+      "AND deleted_at IS NULL ORDER BY created_at ASC, id ASC LIMIT 1;",
+      [domain, organizationId]
+    );
+    return result.rows[0] ? mapWebsiteRow(result.rows[0]) : null;
   }
 
   public async save(website: Website): Promise<Website> {
     enforceTenantContext(website.organizationId);
-    const sql = `
-      INSERT INTO websites (id, organization_id, domain, normalized_url, status, last_crawled_at, last_analyzed_at, created_at, updated_at, created_by, updated_by, version)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      ON CONFLICT (organization_id, domain) DO UPDATE SET
-        normalized_url = EXCLUDED.normalized_url,
-        status = EXCLUDED.status,
-        last_crawled_at = EXCLUDED.last_crawled_at,
-        last_analyzed_at = EXCLUDED.last_analyzed_at,
-        updated_at = EXCLUDED.updated_at,
-        updated_by = EXCLUDED.updated_by,
-        version = websites.version + 1;
-    `;
-    await this.pg.query(sql, [
-      website.id,
-      website.organizationId,
-      website.domain,
-      website.normalizedUrl,
-      website.status,
-      website.lastCrawledAt || null,
-      website.lastAnalyzedAt || null,
-      website.audit.createdAt,
-      website.audit.updatedAt,
-      website.audit.createdBy,
-      website.audit.updatedBy,
-      website.audit.version
-    ]);
-
-    db.websites.set(website.id, website);
-    return website;
+    const result = await this.pg.query(
+      "INSERT INTO websites (" +
+      "id, organization_id, domain, normalized_url, status, cms_type, " +
+      "last_crawled_at, last_analyzed_at, created_at, updated_at, created_by, updated_by, version" +
+      ") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) " +
+      "ON CONFLICT (organization_id, domain) WHERE deleted_at IS NULL " +
+      "DO UPDATE SET normalized_url = EXCLUDED.normalized_url, status = EXCLUDED.status, " +
+      "cms_type = EXCLUDED.cms_type, last_crawled_at = EXCLUDED.last_crawled_at, " +
+      "last_analyzed_at = EXCLUDED.last_analyzed_at, updated_at = EXCLUDED.updated_at, " +
+      "updated_by = EXCLUDED.updated_by, version = websites.version + 1 RETURNING *;",
+      [
+        website.id, website.organizationId, website.domain, website.normalizedUrl,
+        website.status, website.cmsType ?? null, website.lastCrawledAt ?? null,
+        website.lastAnalyzedAt ?? null, website.audit.createdAt, website.audit.updatedAt,
+        website.audit.createdBy, website.audit.updatedBy, website.audit.version
+      ]
+    );
+    if (!result.rows[0]) throw new Error("Website save did not return the persisted Workspace-owned Website.");
+    return mapWebsiteRow(result.rows[0]);
   }
 
   public async deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean> {
     enforceTenantContext(organizationId);
-    const sql = `UPDATE websites SET deleted_at = NOW(), updated_by = $1 WHERE id = $2 AND organization_id = $3;`;
-    await this.pg.query(sql, [deletedBy, id, organizationId]);
-
-    const item = db.websites.get(id);
-    if (!item || item.organizationId !== organizationId) return false;
-    item.audit.deletedAt = new Date().toISOString();
-    item.audit.updatedBy = deletedBy;
-    item.audit.updatedAt = new Date().toISOString();
-    return true;
+    const result = await this.pg.query(
+      "UPDATE websites SET deleted_at = NOW(), updated_at = NOW(), updated_by = $1, version = version + 1 " +
+      "WHERE id = $2 AND organization_id = $3 AND deleted_at IS NULL RETURNING id;",
+      [deletedBy, id, organizationId]
+    );
+    return result.rows.length > 0;
   }
 }
 
@@ -2080,163 +2192,192 @@ export class PageRepository implements IPageRepository {
 
   public async findById(organizationId: string, id: string): Promise<Page | null> {
     enforceTenantContext(organizationId);
-    const sql = `SELECT * FROM pages WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;`;
-    await this.pg.query(sql, [id, organizationId]);
-
-    const item = db.pages.get(id);
-    if (!item || item.organizationId !== organizationId || item.audit.deletedAt) return null;
-    return item;
-  }
-
-  public async findByWebsiteId(organizationId: string, websiteId: string, params?: QueryParams): Promise<PaginatedResult<Page>> {
-    enforceTenantContext(organizationId);
-    const sql = `SELECT * FROM pages WHERE website_id = $1 AND organization_id = $2 AND deleted_at IS NULL;`;
-    await this.pg.query(sql, [websiteId, organizationId]);
-
-    const list = Array.from(db.pages.values()).filter(
-      p => p.websiteId === websiteId && p.organizationId === organizationId && (params?.includeDeleted || !p.audit.deletedAt)
+    const result = await this.pg.query(
+      "SELECT p.* FROM pages p INNER JOIN websites w ON w.id = p.website_id " +
+      "AND w.organization_id = p.organization_id AND w.deleted_at IS NULL " +
+      "WHERE p.id = $1 AND p.organization_id = $2 AND p.deleted_at IS NULL LIMIT 1;",
+      [id, organizationId]
     );
-    return paginateArray(list, params);
+    return result.rows[0] ? mapPageRow(result.rows[0]) : null;
   }
 
-  public async findByNormalizedUrl(organizationId: string, websiteId: string, normalizedUrl: string): Promise<Page | null> {
+  public async findByWebsiteId(
+    organizationId: string,
+    websiteId: string,
+    params?: QueryParams
+  ): Promise<PaginatedResult<Page>> {
     enforceTenantContext(organizationId);
-    const sql = `SELECT * FROM pages WHERE website_id = $1 AND normalized_url = $2 AND organization_id = $3 AND deleted_at IS NULL LIMIT 1;`;
-    await this.pg.query(sql, [websiteId, normalizedUrl, organizationId]);
+    const includeDeleted = Boolean(params?.includeDeleted);
+    const limit = Math.max(1, Math.floor(params?.limit || 50));
+    const offset = Math.max(0, Math.floor(params?.offset || 0));
+    const ownershipJoin = "FROM pages p INNER JOIN websites w ON w.id = p.website_id " +
+      "AND w.organization_id = p.organization_id AND w.deleted_at IS NULL " +
+      "WHERE p.website_id = $1 AND p.organization_id = $2 " +
+      "AND ($3::boolean OR p.deleted_at IS NULL)";
+    const [countResult, pageResult] = await Promise.all([
+      this.pg.query(
+        "SELECT COUNT(*)::int AS total_count " + ownershipJoin + ";",
+        [websiteId, organizationId, includeDeleted]
+      ),
+      this.pg.query(
+        "SELECT p.* " + ownershipJoin + " ORDER BY p.created_at ASC, p.id ASC LIMIT $4 OFFSET $5;",
+        [websiteId, organizationId, includeDeleted, limit, offset]
+      )
+    ]);
+    return {
+      data: pageResult.rows.map((row) => mapPageRow(row)),
+      totalCount: Number(countResult.rows[0]?.total_count ?? 0),
+      limit,
+      offset
+    };
+  }
 
-    for (const item of db.pages.values()) {
-      if (item.websiteId === websiteId && item.normalizedUrl === normalizedUrl && item.organizationId === organizationId && !item.audit.deletedAt) {
-        return item;
-      }
-    }
-    return null;
+  public async findByNormalizedUrl(
+    organizationId: string,
+    websiteId: string,
+    normalizedUrl: string
+  ): Promise<Page | null> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "SELECT p.* FROM pages p INNER JOIN websites w ON w.id = p.website_id " +
+      "AND w.organization_id = p.organization_id AND w.deleted_at IS NULL " +
+      "WHERE p.website_id = $1 AND p.normalized_url = $2 AND p.organization_id = $3 " +
+      "AND p.deleted_at IS NULL LIMIT 1;",
+      [websiteId, normalizedUrl, organizationId]
+    );
+    return result.rows[0] ? mapPageRow(result.rows[0]) : null;
   }
 
   public async save(page: Page): Promise<Page> {
     enforceTenantContext(page.organizationId);
-    const sql = `
-      INSERT INTO pages (id, organization_id, website_id, url, normalized_url, path, status_code, indexability, title, description, created_at, updated_at, created_by, updated_by, version)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      ON CONFLICT (website_id, normalized_url) DO UPDATE SET
-        url = EXCLUDED.url,
-        path = EXCLUDED.path,
-        status_code = EXCLUDED.status_code,
-        indexability = EXCLUDED.indexability,
-        title = EXCLUDED.title,
-        description = EXCLUDED.description,
-        updated_at = EXCLUDED.updated_at,
-        updated_by = EXCLUDED.updated_by,
-        version = pages.version + 1;
-    `;
-    await this.pg.query(sql, [
-      page.id,
-      page.organizationId,
-      page.websiteId,
-      page.url,
-      page.normalizedUrl,
-      page.path,
-      page.statusCode || null,
-      page.indexability,
-      page.title || null,
-      page.description || null,
-      page.audit.createdAt,
-      page.audit.updatedAt,
-      page.audit.createdBy,
-      page.audit.updatedBy,
-      page.audit.version
-    ]);
+    const httpStatus = page.httpStatus ?? page.statusCode ?? 200;
+    const canonicalUrl = page.canonicalUrl ?? null;
+    const metaDescription = page.metaDescription ?? page.description ?? null;
+    const robotsDirectives = page.robotsDirectives ??
+      (page.indexability === "noindex" ? ["noindex"] : []);
+    validatePageIndexabilityInput(page, httpStatus, canonicalUrl);
 
-    db.pages.set(page.id, page);
-    return page;
+    const result = await this.pg.query(
+      "WITH owned_website AS (SELECT id FROM websites " +
+      "WHERE id = $3 AND organization_id = $2 AND deleted_at IS NULL) " +
+      "INSERT INTO pages (" +
+      "id, organization_id, website_id, url, normalized_url, path, title, meta_description, " +
+      "http_status, content_type, content_hash, word_count, canonical_url, robots_directives, " +
+      "inlink_count, outlink_count, last_crawled_at, created_at, updated_at, created_by, updated_by, version" +
+      ") SELECT $1, $2, owned_website.id, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, " +
+      "$15, $16, $17, $18, $19, $20, $21, $22 FROM owned_website " +
+      "ON CONFLICT (organization_id, normalized_url) WHERE deleted_at IS NULL " +
+      "DO UPDATE SET url = EXCLUDED.url, path = EXCLUDED.path, title = EXCLUDED.title, " +
+      "meta_description = EXCLUDED.meta_description, http_status = EXCLUDED.http_status, " +
+      "content_type = EXCLUDED.content_type, content_hash = EXCLUDED.content_hash, " +
+      "word_count = EXCLUDED.word_count, canonical_url = EXCLUDED.canonical_url, " +
+      "robots_directives = EXCLUDED.robots_directives, inlink_count = EXCLUDED.inlink_count, " +
+      "outlink_count = EXCLUDED.outlink_count, last_crawled_at = EXCLUDED.last_crawled_at, " +
+      "updated_at = EXCLUDED.updated_at, updated_by = EXCLUDED.updated_by, " +
+      "version = pages.version + 1 WHERE pages.website_id = EXCLUDED.website_id RETURNING pages.*;",
+      [
+        page.id, page.organizationId, page.websiteId, page.url, page.normalizedUrl, page.path,
+        page.title ?? null, metaDescription, httpStatus, page.contentType ?? null,
+        page.contentHash ?? null, page.wordCount ?? 0, canonicalUrl, robotsDirectives,
+        page.inlinkCount ?? 0, page.outlinkCount ?? 0, page.lastCrawledAt ?? null,
+        page.audit.createdAt, page.audit.updatedAt, page.audit.createdBy, page.audit.updatedBy,
+        page.audit.version
+      ]
+    );
+    if (result.rows[0]) return mapPageRow(result.rows[0]);
+
+    const websiteResult = await this.pg.query(
+      "SELECT id FROM websites WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;",
+      [page.websiteId, page.organizationId]
+    );
+    if (!websiteResult.rows[0]) {
+      throw new Error("Cannot save Page: the target Website is not present in the same Workspace.");
+    }
+    const conflictingPage = await this.pg.query(
+      "SELECT website_id FROM pages WHERE organization_id = $1 AND normalized_url = $2 " +
+      "AND deleted_at IS NULL LIMIT 1;",
+      [page.organizationId, page.normalizedUrl]
+    );
+    if (conflictingPage.rows[0] && conflictingPage.rows[0].website_id !== page.websiteId) {
+      throw new Error("Cannot save Page: this normalized URL is already owned by another Website in the Workspace.");
+    }
+    throw new Error("Page save did not return the persisted Workspace- and Website-owned Page.");
   }
 
   public async deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean> {
     enforceTenantContext(organizationId);
-    const sql = `UPDATE pages SET deleted_at = NOW(), updated_by = $1 WHERE id = $2 AND organization_id = $3;`;
-    await this.pg.query(sql, [deletedBy, id, organizationId]);
-
-    const item = db.pages.get(id);
-    if (!item || item.organizationId !== organizationId) return false;
-    item.audit.deletedAt = new Date().toISOString();
-    item.audit.updatedBy = deletedBy;
-    item.audit.updatedAt = new Date().toISOString();
-    return true;
+    const result = await this.pg.query(
+      "UPDATE pages SET deleted_at = NOW(), updated_at = NOW(), updated_by = $1, version = version + 1 " +
+      "WHERE id = $2 AND organization_id = $3 AND deleted_at IS NULL RETURNING id;",
+      [deletedBy, id, organizationId]
+    );
+    return result.rows.length > 0;
   }
 
-  // Many-to-many associations
+  // Many-to-many association methods remain outside this repository/Project alignment.
   public async linkKeyword(organizationId: string, pageId: string, keywordId: string): Promise<void> {
     enforceTenantContext(organizationId);
-    const sql = `INSERT INTO pages_keywords (organization_id, page_id, keyword_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;`;
-    await this.pg.query(sql, [organizationId, pageId, keywordId]);
-
+    await this.pg.query(
+      "INSERT INTO pages_keywords (organization_id, page_id, keyword_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
+      [organizationId, pageId, keywordId]
+    );
     const exists = db.pagesKeywords.some(link => link.pageId === pageId && link.keywordId === keywordId);
-    if (!exists) {
-      db.pagesKeywords.push({ organizationId, pageId, keywordId });
-    }
+    if (!exists) db.pagesKeywords.push({ organizationId, pageId, keywordId });
   }
 
   public async linkTopic(organizationId: string, pageId: string, topicId: string): Promise<void> {
     enforceTenantContext(organizationId);
-    const sql = `INSERT INTO pages_topics (organization_id, page_id, topic_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;`;
-    await this.pg.query(sql, [organizationId, pageId, topicId]);
-
+    await this.pg.query(
+      "INSERT INTO pages_topics (organization_id, page_id, topic_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
+      [organizationId, pageId, topicId]
+    );
     const exists = db.pagesTopics.some(link => link.pageId === pageId && link.topicId === topicId);
-    if (!exists) {
-      db.pagesTopics.push({ organizationId, pageId, topicId });
-    }
+    if (!exists) db.pagesTopics.push({ organizationId, pageId, topicId });
   }
 
   public async linkEntity(organizationId: string, pageId: string, entityId: string): Promise<void> {
     enforceTenantContext(organizationId);
-    const sql = `INSERT INTO pages_entities (organization_id, page_id, entity_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;`;
-    await this.pg.query(sql, [organizationId, pageId, entityId]);
-
+    await this.pg.query(
+      "INSERT INTO pages_entities (organization_id, page_id, entity_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
+      [organizationId, pageId, entityId]
+    );
     const exists = db.pagesEntities.some(link => link.pageId === pageId && link.entityId === entityId);
-    if (!exists) {
-      db.pagesEntities.push({ organizationId, pageId, entityId });
-    }
+    if (!exists) db.pagesEntities.push({ organizationId, pageId, entityId });
   }
 
   public async getLinkedKeywords(organizationId: string, pageId: string): Promise<Keyword[]> {
     enforceTenantContext(organizationId);
-    const sql = `
-      SELECT k.* FROM keywords k
-      INNER JOIN pages_keywords pk ON k.id = pk.keyword_id
-      WHERE pk.page_id = $1 AND pk.organization_id = $2 AND k.deleted_at IS NULL;
-    `;
-    await this.pg.query(sql, [pageId, organizationId]);
-
+    await this.pg.query(
+      "SELECT k.* FROM keywords k INNER JOIN pages_keywords pk ON k.id = pk.keyword_id " +
+      "WHERE pk.page_id = $1 AND pk.organization_id = $2 AND k.deleted_at IS NULL;",
+      [pageId, organizationId]
+    );
     const keywordIds = db.pagesKeywords.filter(link => link.pageId === pageId && link.organizationId === organizationId).map(link => link.keywordId);
     return Array.from(db.keywords.values()).filter(k => keywordIds.includes(k.id) && k.organizationId === organizationId && !k.audit.deletedAt);
   }
 
   public async getLinkedTopics(organizationId: string, pageId: string): Promise<Topic[]> {
     enforceTenantContext(organizationId);
-    const sql = `
-      SELECT t.* FROM topics t
-      INNER JOIN pages_topics pt ON t.id = pt.topic_id
-      WHERE pt.page_id = $1 AND pt.organization_id = $2 AND t.deleted_at IS NULL;
-    `;
-    await this.pg.query(sql, [pageId, organizationId]);
-
+    await this.pg.query(
+      "SELECT t.* FROM topics t INNER JOIN pages_topics pt ON t.id = pt.topic_id " +
+      "WHERE pt.page_id = $1 AND pt.organization_id = $2 AND t.deleted_at IS NULL;",
+      [pageId, organizationId]
+    );
     const topicIds = db.pagesTopics.filter(link => link.pageId === pageId && link.organizationId === organizationId).map(link => link.topicId);
     return Array.from(db.topics.values()).filter(t => topicIds.includes(t.id) && t.organizationId === organizationId && !t.audit.deletedAt);
   }
 
   public async getLinkedEntities(organizationId: string, pageId: string): Promise<Entity[]> {
     enforceTenantContext(organizationId);
-    const sql = `
-      SELECT e.* FROM entities e
-      INNER JOIN pages_entities pe ON e.id = pe.entity_id
-      WHERE pe.page_id = $1 AND pe.organization_id = $2 AND e.deleted_at IS NULL;
-    `;
-    await this.pg.query(sql, [pageId, organizationId]);
-
+    await this.pg.query(
+      "SELECT e.* FROM entities e INNER JOIN pages_entities pe ON e.id = pe.entity_id " +
+      "WHERE pe.page_id = $1 AND pe.organization_id = $2 AND e.deleted_at IS NULL;",
+      [pageId, organizationId]
+    );
     const entityIds = db.pagesEntities.filter(link => link.pageId === pageId && link.organizationId === organizationId).map(link => link.entityId);
     return Array.from(db.entities.values()).filter(e => entityIds.includes(e.id) && e.organizationId === organizationId && !e.audit.deletedAt);
   }
 }
-
 export class KeywordRepository implements IKeywordRepository {
   private pg: PostgresClient;
   constructor(pg?: PostgresClient) {

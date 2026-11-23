@@ -1083,6 +1083,7 @@ export interface Website {
   domain: string; // canonical domain/origin
   normalizedUrl: string; // standardized URL
   status: "active" | "archived" | string;
+  cmsType?: string;
   lastCrawledAt?: Date | string;
   lastAnalyzedAt?: Date | string;
   audit: AuditMetadata;
@@ -1099,10 +1100,23 @@ export interface Page {
   url: string; // original canonical URL
   normalizedUrl: string; // standardized unique URL
   path: string; // relative path
+  /** Canonical persisted HTTP status; statusCode is retained as a compatibility alias. */
+  httpStatus?: number;
   statusCode?: number;
+  /** Derived from persisted HTTP/canonical/robots metadata; not a standalone database column. */
   indexability: "indexable" | "noindex" | "blocked_by_robots" | "non_200_status" | "canonical_mismatch" | "undetermined" | string;
   title?: string;
+  /** Canonical persisted description field; description is retained as a compatibility alias. */
+  metaDescription?: string;
   description?: string;
+  contentType?: string;
+  contentHash?: string;
+  wordCount?: number;
+  canonicalUrl?: string;
+  robotsDirectives?: string[];
+  inlinkCount?: number;
+  outlinkCount?: number;
+  lastCrawledAt?: Date | string;
   audit: AuditMetadata;
 }
 
