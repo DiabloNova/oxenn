@@ -77,6 +77,42 @@ function pageRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function keywordRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    organization_id: WORKSPACE_ID,
+    term: "Temperature sensor",
+    normalized_term: "temperature sensor",
+    language: "en",
+    intent: "commercial",
+    created_at: new Date("2026-11-20T09:00:00.000Z"),
+    updated_at: new Date("2026-11-20T10:00:00.000Z"),
+    created_by: USER_ID,
+    updated_by: USER_ID,
+    deleted_at: null,
+    version: 2,
+    ...overrides
+  };
+}
+
+function topicRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    organization_id: WORKSPACE_ID,
+    name: "Temperature measurement",
+    description: "Temperature sensing topics",
+    language: "en",
+    parent_topic_id: null,
+    created_at: new Date("2026-11-20T09:00:00.000Z"),
+    updated_at: new Date("2026-11-20T10:00:00.000Z"),
+    created_by: USER_ID,
+    updated_by: USER_ID,
+    deleted_at: null,
+    version: 3,
+    ...overrides
+  };
+}
+
 const audit = {
   createdAt: "2026-11-20T09:00:00.000Z",
   updatedAt: "2026-11-20T10:00:00.000Z",
@@ -173,6 +209,7 @@ describe("PageRepository canonical PostgreSQL contract", () => {
         path: "/about",
         statusCode: 200,
         indexability: "noindex",
+        robotsDirectives: ["noindex"],
         title: "About",
         description: "About the company",
         audit
@@ -191,6 +228,71 @@ describe("PageRepository canonical PostgreSQL contract", () => {
     expect(params[2]).toBe("33333333-3333-4333-8333-333333333333");
     expect(params[7]).toBe("About the company");
     expect(params[13]).toEqual(["noindex"]);
+  });
+
+  it("reads linked Keywords from PostgreSQL and maps canonical columns", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockResolvedValueOnce({ rows: [keywordRow()], rowCount: 1 });
+    const keywords = await inWorkspace(() =>
+      new PageRepository(client).getLinkedKeywords(
+        WORKSPACE_ID,
+        "44444444-4444-4444-8444-444444444444"
+      )
+    );
+    expect(keywords).toMatchObject([{
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      organizationId: WORKSPACE_ID,
+      name: "temperature sensor",
+      displayName: "Temperature sensor",
+      language: "en",
+      intent: "commercial",
+      audit: { version: 2, createdBy: USER_ID }
+    }]);
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("k.organization_id = pk.organization_id");
+    expect(sql).toContain("k.deleted_at IS NULL");
+    expect(params).toEqual(["44444444-4444-4444-8444-444444444444", WORKSPACE_ID]);
+  });
+
+  it("reads linked Topics from PostgreSQL and maps canonical columns", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockResolvedValueOnce({ rows: [topicRow()], rowCount: 1 });
+    const topics = await inWorkspace(() =>
+      new PageRepository(client).getLinkedTopics(
+        WORKSPACE_ID,
+        "44444444-4444-4444-8444-444444444444"
+      )
+    );
+    expect(topics).toMatchObject([{
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      organizationId: WORKSPACE_ID,
+      name: "Temperature measurement",
+      description: "Temperature sensing topics",
+      language: "en",
+      audit: { version: 3, createdBy: USER_ID }
+    }]);
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("t.organization_id = pt.organization_id");
+    expect(sql).toContain("t.deleted_at IS NULL");
+    expect(params).toEqual(["44444444-4444-4444-8444-444444444444", WORKSPACE_ID]);
+  });
+
+  it("does not invent noindex evidence when robotsDirectives are absent", async () => {
+    const { client, query } = createPostgresMock();
+    await expect(inWorkspace(() =>
+      new PageRepository(client).save({
+        id: "44444444-4444-4444-8444-444444444444",
+        organizationId: WORKSPACE_ID,
+        websiteId: "33333333-3333-4333-8333-333333333333",
+        url: "https://example.com/about",
+        normalizedUrl: "https://example.com/about",
+        path: "/about",
+        statusCode: 200,
+        indexability: "noindex",
+        audit
+      })
+    )).rejects.toThrow("without explicit robotsDirectives");
+    expect(query).not.toHaveBeenCalled();
   });
 
   it("rejects saving a Page when its Website is not owned by the active Workspace", async () => {
