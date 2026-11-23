@@ -2098,6 +2098,30 @@ function mapPageRow(row: Record<string, unknown>): Page {
   };
 }
 
+function mapKeywordRow(row: Record<string, unknown>): Keyword {
+  return {
+    id: String(row.id),
+    organizationId: String(row.organization_id),
+    name: String(row.normalized_term),
+    displayName: String(row.term),
+    language: typeof row.language === "string" ? row.language : "en",
+    intent: typeof row.intent === "string" ? row.intent : undefined,
+    audit: databaseAudit(row)
+  };
+}
+
+function mapTopicRow(row: Record<string, unknown>): Topic {
+  return {
+    id: String(row.id),
+    organizationId: String(row.organization_id),
+    name: String(row.name),
+    description: typeof row.description === "string" ? row.description : undefined,
+    language: typeof row.language === "string" ? row.language : "en",
+    parentTopicId: typeof row.parent_topic_id === "string" ? row.parent_topic_id : undefined,
+    audit: databaseAudit(row)
+  };
+}
+
 function validatePageIndexabilityInput(page: Page, httpStatus: number, canonicalUrl?: string | null): void {
   if (page.indexability === "blocked_by_robots") {
     throw new Error(
@@ -2118,10 +2142,9 @@ function validatePageIndexabilityInput(page: Page, httpStatus: number, canonical
   }
   if (
     page.indexability === "noindex" &&
-    page.robotsDirectives &&
-    !/(^|[\s,])(?:noindex|none)(?=$|[\s,])/i.test(page.robotsDirectives.join(" "))
+    !/(^|[\s,])(?:noindex|none)(?=$|[\s,])/i.test((page.robotsDirectives ?? []).join(" "))
   ) {
-    throw new Error("Cannot persist noindex when explicit robotsDirectives do not contain noindex or none.");
+    throw new Error("Cannot persist noindex without explicit robotsDirectives containing noindex or none.");
   }
 }
 
@@ -2253,8 +2276,7 @@ export class PageRepository implements IPageRepository {
     const httpStatus = page.httpStatus ?? page.statusCode ?? 200;
     const canonicalUrl = page.canonicalUrl ?? null;
     const metaDescription = page.metaDescription ?? page.description ?? null;
-    const robotsDirectives = page.robotsDirectives ??
-      (page.indexability === "noindex" ? ["noindex"] : []);
+    const robotsDirectives = page.robotsDirectives ?? [];
     validatePageIndexabilityInput(page, httpStatus, canonicalUrl);
 
     const result = await this.pg.query(
@@ -2314,15 +2336,13 @@ export class PageRepository implements IPageRepository {
     return result.rows.length > 0;
   }
 
-  // Many-to-many association methods remain outside this repository/Project alignment.
+  // Keyword and Topic associations use PostgreSQL as their sole source of truth.
   public async linkKeyword(organizationId: string, pageId: string, keywordId: string): Promise<void> {
     enforceTenantContext(organizationId);
     await this.pg.query(
       "INSERT INTO pages_keywords (organization_id, page_id, keyword_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
       [organizationId, pageId, keywordId]
     );
-    const exists = db.pagesKeywords.some(link => link.pageId === pageId && link.keywordId === keywordId);
-    if (!exists) db.pagesKeywords.push({ organizationId, pageId, keywordId });
   }
 
   public async linkTopic(organizationId: string, pageId: string, topicId: string): Promise<void> {
@@ -2331,8 +2351,6 @@ export class PageRepository implements IPageRepository {
       "INSERT INTO pages_topics (organization_id, page_id, topic_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
       [organizationId, pageId, topicId]
     );
-    const exists = db.pagesTopics.some(link => link.pageId === pageId && link.topicId === topicId);
-    if (!exists) db.pagesTopics.push({ organizationId, pageId, topicId });
   }
 
   public async linkEntity(organizationId: string, pageId: string, entityId: string): Promise<void> {
@@ -2347,24 +2365,24 @@ export class PageRepository implements IPageRepository {
 
   public async getLinkedKeywords(organizationId: string, pageId: string): Promise<Keyword[]> {
     enforceTenantContext(organizationId);
-    await this.pg.query(
+    const result = await this.pg.query(
       "SELECT k.* FROM keywords k INNER JOIN pages_keywords pk ON k.id = pk.keyword_id " +
+      "AND k.organization_id = pk.organization_id " +
       "WHERE pk.page_id = $1 AND pk.organization_id = $2 AND k.deleted_at IS NULL;",
       [pageId, organizationId]
     );
-    const keywordIds = db.pagesKeywords.filter(link => link.pageId === pageId && link.organizationId === organizationId).map(link => link.keywordId);
-    return Array.from(db.keywords.values()).filter(k => keywordIds.includes(k.id) && k.organizationId === organizationId && !k.audit.deletedAt);
+    return result.rows.map((row) => mapKeywordRow(row));
   }
 
   public async getLinkedTopics(organizationId: string, pageId: string): Promise<Topic[]> {
     enforceTenantContext(organizationId);
-    await this.pg.query(
+    const result = await this.pg.query(
       "SELECT t.* FROM topics t INNER JOIN pages_topics pt ON t.id = pt.topic_id " +
+      "AND t.organization_id = pt.organization_id " +
       "WHERE pt.page_id = $1 AND pt.organization_id = $2 AND t.deleted_at IS NULL;",
       [pageId, organizationId]
     );
-    const topicIds = db.pagesTopics.filter(link => link.pageId === pageId && link.organizationId === organizationId).map(link => link.topicId);
-    return Array.from(db.topics.values()).filter(t => topicIds.includes(t.id) && t.organizationId === organizationId && !t.audit.deletedAt);
+    return result.rows.map((row) => mapTopicRow(row));
   }
 
   public async getLinkedEntities(organizationId: string, pageId: string): Promise<Entity[]> {
