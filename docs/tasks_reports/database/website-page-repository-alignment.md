@@ -17,8 +17,9 @@ The canonical pages table has no standalone indexability column. Values are deri
 ## Validation
 - Static comparison with canonical Drizzle schema and relevant callers: PASS.
 - Focused regression tests added in tests/unit/features/ai-intelligence/repositories.test.ts: NOT RUN locally.
-- The first Vercel preview build for commit 83df6e69 failed TypeScript TS2345 because the validation helper accepted string | undefined while the caller passed string | null. The helper signature is corrected in this follow-up commit; the replacement preview result is pending.
-- Lint and the full unit-test suite have not been run in this session; no local repository checkout/terminal or connected Super runner was available.
+- Initial Vercel preview builds for commit 83df6e69 exposed one TypeScript TS2345 mismatch (nullable canonicalUrl); the helper signature was corrected in commit 6c18cc1d.
+- Vercel Preview deployments for both oxenn and oxenn-7338 on commit 6c18cc1d reached READY. Both Next.js production builds completed and TypeScript checks passed.
+- Vitest, lint and the full unit-test suite have not been run separately in this session; no local repository checkout/terminal or connected Super runner was available.
 - No database, schema, migration, snapshot or journal modified. No branch or PR created.
 
 ## Remaining Stage 3 gate
