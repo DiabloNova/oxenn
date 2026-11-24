@@ -3,6 +3,7 @@ import {
   Brand,
   Entity,
   EntityRelationship,
+  BrandEntityAssociation,
   AIEngine,
   Prompt,
   AIObservation,
@@ -36,7 +37,7 @@ export type ValidationResult<T> = {
 };
 
 function isRecord(val: unknown): val is Record<string, unknown> {
-  return typeof val === "object" && val !== null;
+  return typeof val === "object" && val !== null && !Array.isArray(val);
 }
 
 export function parseAudit(data: unknown): AuditMetadata {
@@ -144,7 +145,7 @@ export const brandSchema = {
       return { success: false, errors: [{ field: "root", message: "Invalid data object" }] };
     }
 
-    const { id, organizationId, name, description, website, industry, country, audit } = data;
+    const { id, organizationId, name, description, website, industry, country, aliases, targetMarkets, properties, audit } = data;
 
     if (typeof id !== "string" || !id.trim()) {
       errors.push({ field: "id", message: "ID is required" });
@@ -159,6 +160,16 @@ export const brandSchema = {
       errors.push({ field: "website", message: "Website must be a valid URL starting with http:// or https://" });
     }
 
+    if (aliases !== undefined && (!Array.isArray(aliases) || aliases.some(value => typeof value !== "string"))) {
+      errors.push({ field: "aliases", message: "aliases must be an array of strings" });
+    }
+    if (targetMarkets !== undefined && (!Array.isArray(targetMarkets) || targetMarkets.some(value => typeof value !== "string"))) {
+      errors.push({ field: "targetMarkets", message: "targetMarkets must be an array of strings" });
+    }
+    if (properties !== undefined && !isRecord(properties)) {
+      errors.push({ field: "properties", message: "properties must be an object" });
+    }
+
     if (errors.length > 0) return { success: false, errors };
 
     return {
@@ -171,6 +182,9 @@ export const brandSchema = {
         website: website as string,
         industry: typeof industry === "string" ? industry : undefined,
         country: typeof country === "string" ? country : undefined,
+        aliases: Array.isArray(aliases) ? aliases as string[] : [],
+        targetMarkets: Array.isArray(targetMarkets) ? targetMarkets as string[] : [],
+        properties: isRecord(properties) ? properties : {},
         audit: parseAudit(audit)
       }
     };
@@ -184,16 +198,13 @@ export const entitySchema = {
       return { success: false, errors: [{ field: "root", message: "Invalid data object" }] };
     }
 
-    const { id, organizationId, brandId, name, type, wikidataId, wikipediaUrl, confidence, audit } = data;
+    const { id, organizationId, name, type, wikidataId, wikipediaUrl, aliases, description, provenance, authorityScore, completenessScore, status, confidence, audit, properties } = data;
 
     if (typeof id !== "string" || !id.trim()) {
       errors.push({ field: "id", message: "ID is required" });
     }
     if (typeof organizationId !== "string" || !organizationId.trim()) {
       errors.push({ field: "organizationId", message: "organizationId is required" });
-    }
-    if (typeof brandId !== "string" || !brandId.trim()) {
-      errors.push({ field: "brandId", message: "brandId is required" });
     }
     if (typeof name !== "string" || !name.trim()) {
       errors.push({ field: "name", message: "Name is required" });
@@ -209,6 +220,27 @@ export const entitySchema = {
     if (wikipediaUrl !== undefined && typeof wikipediaUrl !== "string") {
       errors.push({ field: "wikipediaUrl", message: "wikipediaUrl must be a string" });
     }
+    if (aliases !== undefined && (!Array.isArray(aliases) || aliases.some(value => typeof value !== "string"))) {
+      errors.push({ field: "aliases", message: "aliases must be an array of strings" });
+    }
+    if (description !== undefined && typeof description !== "string") {
+      errors.push({ field: "description", message: "description must be a string" });
+    }
+    if (provenance !== undefined && !isRecord(provenance)) {
+      errors.push({ field: "provenance", message: "provenance must be an object" });
+    }
+    if (authorityScore !== undefined && (typeof authorityScore !== "number" || !Number.isFinite(authorityScore) || authorityScore < 0 || authorityScore > 100)) {
+      errors.push({ field: "authorityScore", message: "authorityScore must be between 0 and 100" });
+    }
+    if (completenessScore !== undefined && (typeof completenessScore !== "number" || !Number.isFinite(completenessScore) || completenessScore < 0 || completenessScore > 100)) {
+      errors.push({ field: "completenessScore", message: "completenessScore must be between 0 and 100" });
+    }
+    if (status !== undefined && typeof status !== "string") {
+      errors.push({ field: "status", message: "status must be a string" });
+    }
+    if (properties !== undefined && !isRecord(properties)) {
+      errors.push({ field: "properties", message: "properties must be an object" });
+    }
 
     if (errors.length > 0) return { success: false, errors };
 
@@ -217,12 +249,18 @@ export const entitySchema = {
       data: {
         id: id as string,
         organizationId: organizationId as string,
-        brandId: brandId as string,
         name: name as string,
         type: type as string,
         wikidataId: wikidataId as string | undefined,
         wikipediaUrl: wikipediaUrl as string | undefined,
+        aliases: Array.isArray(aliases) ? aliases as string[] : undefined,
+        description: typeof description === "string" ? description : undefined,
+        provenance: isRecord(provenance) ? provenance : undefined,
+        authorityScore: typeof authorityScore === "number" ? authorityScore : undefined,
+        completenessScore: typeof completenessScore === "number" ? completenessScore : undefined,
+        status: typeof status === "string" ? status : undefined,
         confidence: parseConfidence(confidence),
+        properties: isRecord(properties) ? properties : {},
         audit: parseAudit(audit)
       }
     };
@@ -236,8 +274,11 @@ export const entityRelationshipSchema = {
       return { success: false, errors: [{ field: "root", message: "Invalid data object" }] };
     }
 
-    const { organizationId, sourceEntityId, targetEntityId, relationshipType, confidence, audit } = data;
+    const { id, organizationId, sourceEntityId, targetEntityId, relationshipType, weight, confidence, direction, provenance, metadata, properties, audit } = data;
 
+    if (typeof id !== "string" || !id.trim()) {
+      errors.push({ field: "id", message: "id is required" });
+    }
     if (typeof organizationId !== "string" || !organizationId.trim()) {
       errors.push({ field: "organizationId", message: "organizationId is required" });
     }
@@ -253,22 +294,74 @@ export const entityRelationshipSchema = {
       errors.push({ field: "relationshipType", message: `Relationship type must be one of: ${validRelations.join(", ")}` });
     }
 
+    if (typeof weight !== "number" || !Number.isFinite(weight) || weight < 0) {
+      errors.push({ field: "weight", message: "weight must be a finite non-negative number" });
+    }
+    if (properties !== undefined && !isRecord(properties)) {
+      errors.push({ field: "properties", message: "properties must be an object" });
+    }
     if (errors.length > 0) return { success: false, errors };
 
     return {
       success: true,
       data: {
+        id: id as string,
         organizationId: organizationId as string,
         sourceEntityId: sourceEntityId as string,
         targetEntityId: targetEntityId as string,
         relationshipType: relationshipType as RelationshipType,
+        weight: weight as number,
         confidence: parseConfidence(confidence),
+        direction: typeof direction === "string" ? direction : "directed",
+        provenance: isRecord(provenance) ? provenance : undefined,
+        metadata: isRecord(metadata) ? metadata : undefined,
+        properties: isRecord(properties) ? properties : {},
         audit: parseAudit(audit)
       }
     };
   }
 };
 
+
+export const brandEntityAssociationSchema = {
+  safeParse(data: unknown): ValidationResult<BrandEntityAssociation> {
+    const errors: ValidationError[] = [];
+    if (!isRecord(data)) {
+      return { success: false, errors: [{ field: "root", message: "Invalid data object" }] };
+    }
+
+    const { id, organizationId, brandId, entityId, relationshipType, weight, properties, audit } = data;
+    for (const [field, value] of Object.entries({ id, organizationId, brandId, entityId })) {
+      if (typeof value !== "string" || !value.trim()) {
+        errors.push({ field, message: field + " is required" });
+      }
+    }
+    const validRelations: RelationshipType[] = ["owns", "creates", "competes_with", "related_to", "mentioned_with"];
+    if (typeof relationshipType !== "string" || !validRelations.includes(relationshipType as RelationshipType)) {
+      errors.push({ field: "relationshipType", message: "Unsupported relationship type" });
+    }
+    if (typeof weight !== "number" || !Number.isFinite(weight) || weight < 0) {
+      errors.push({ field: "weight", message: "weight must be a finite non-negative number" });
+    }
+    if (properties !== undefined && !isRecord(properties)) {
+      errors.push({ field: "properties", message: "properties must be an object" });
+    }
+    if (errors.length > 0) return { success: false, errors };
+    return {
+      success: true,
+      data: {
+        id: id as string,
+        organizationId: organizationId as string,
+        brandId: brandId as string,
+        entityId: entityId as string,
+        relationshipType: relationshipType as RelationshipType,
+        weight: weight as number,
+        properties: isRecord(properties) ? properties : {},
+        audit: parseAudit(audit)
+      }
+    };
+  }
+};
 export const aiEngineSchema = {
   safeParse(data: unknown): ValidationResult<AIEngine> {
     const errors: ValidationError[] = [];

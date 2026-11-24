@@ -12,7 +12,7 @@ vi.mock("@/features/admin/infrastructure/persistence/postgres", () => ({
 
 import { TenantContextManager } from "@/core/database/tenant-context";
 import type { PostgresClient } from "@/features/admin/infrastructure/persistence/postgres";
-import { db, PageRepository, WebsiteRepository } from "@/features/ai-intelligence/repositories";
+import { db, PageRepository, WebsiteRepository, EntityRepository, BrandRepository, BrandEntityAssociationRepository } from "@/features/ai-intelligence/repositories";
 
 const WORKSPACE_ID = "11111111-1111-4111-8111-111111111111";
 const USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -404,5 +404,286 @@ describe("PageRepository canonical PostgreSQL contract", () => {
     expect(result.data).toHaveLength(1);
     expect(result.data[0].id).toBe("44444444-4444-4444-8444-444444444444");
     expect(query).toHaveBeenCalledTimes(2);
+  });
+});
+
+const entityRow = (overrides: Record<string, unknown> = {}) => ({
+  id: "99999999-9999-4999-8999-999999999999",
+  organization_id: WORKSPACE_ID,
+  name: "Acme Product",
+  entity_type: "Product",
+  description: "A canonical entity",
+  properties: {
+    wikidataId: "Q12345",
+    wikipediaUrl: "https://en.wikipedia.org/wiki/Acme_Product",
+    aliases: ["Acme", "Acme product"],
+    confidence: { score: 0.91, rating: "high" },
+    provenance: { source: "unit-test" },
+    authorityScore: 80,
+    completenessScore: 90,
+    status: "active"
+  },
+  created_at: new Date("2026-11-20T09:00:00.000Z"),
+  updated_at: new Date("2026-11-20T10:00:00.000Z"),
+  created_by: USER_ID,
+  updated_by: USER_ID,
+  deleted_at: null,
+  version: 2,
+  ...overrides
+});
+
+const brandRow = (overrides: Record<string, unknown> = {}) => ({
+  id: "88888888-8888-4888-8888-888888888888",
+  organization_id: WORKSPACE_ID,
+  name: "Acme",
+  canonical_domain: "acme.example",
+  aliases: ["Acme Inc"],
+  industry: null,
+  target_markets: ["global"],
+  properties: { website: "https://acme.example", description: "Acme description", country: "Global" },
+  created_at: new Date("2026-11-20T09:00:00.000Z"),
+  updated_at: new Date("2026-11-20T10:00:00.000Z"),
+  created_by: USER_ID,
+  updated_by: USER_ID,
+  deleted_at: null,
+  version: 1,
+  ...overrides
+});
+
+const brandEntityAssociationRow = (overrides: Record<string, unknown> = {}) => ({
+  id: "77777777-7777-4777-8777-777777777777",
+  organization_id: WORKSPACE_ID,
+  brand_id: "88888888-8888-4888-8888-888888888888",
+  entity_id: "99999999-9999-4999-8999-999999999999",
+  relationship_type: "owns",
+  weight: 1,
+  properties: { source: "manual" },
+  created_at: new Date("2026-11-20T09:00:00.000Z"),
+  updated_at: new Date("2026-11-20T10:00:00.000Z"),
+  created_by: USER_ID,
+  updated_by: USER_ID,
+  deleted_at: null,
+  version: 1,
+  ...overrides
+});
+
+describe("EntityRepository canonical Workspace PostgreSQL contract", () => {
+  it("maps canonical Entity columns and Entity metadata stored in properties", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockResolvedValueOnce({ rows: [entityRow()], rowCount: 1 });
+
+    const entity = await inWorkspace(() =>
+      new EntityRepository(client).findById(WORKSPACE_ID, "99999999-9999-4999-8999-999999999999")
+    );
+
+    expect(entity).toMatchObject({
+      id: "99999999-9999-4999-8999-999999999999",
+      organizationId: WORKSPACE_ID,
+      name: "Acme Product",
+      type: "Product",
+      wikidataId: "Q12345",
+      aliases: ["Acme", "Acme product"],
+      confidence: { score: 0.91, rating: "high" },
+      audit: { version: 2, createdBy: USER_ID }
+    });
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("organization_id = $2 AND deleted_at IS NULL"),
+      ["99999999-9999-4999-8999-999999999999", WORKSPACE_ID]
+    );
+  });
+
+  it("writes only canonical Entity columns and persists extended metadata in properties", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockResolvedValueOnce({ rows: [entityRow()], rowCount: 1 });
+    await inWorkspace(() =>
+      new EntityRepository(client).save({
+        id: "99999999-9999-4999-8999-999999999999",
+        organizationId: WORKSPACE_ID,
+        name: "Acme Product",
+        type: "Product",
+        description: "A canonical entity",
+        wikidataId: "Q12345",
+        confidence: { score: 0.91, rating: "high" },
+        aliases: ["Acme"],
+        audit
+      })
+    );
+
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("entity_type");
+    expect(sql).toContain("properties");
+    expect(sql).not.toContain("brand_id");
+    expect(sql).not.toContain("wikidata_id");
+    expect(JSON.parse(String(params[5]))).toMatchObject({
+      wikidataId: "Q12345",
+      aliases: ["Acme"],
+      confidence: { score: 0.91, rating: "high" }
+    });
+  });
+
+  it("persists relationship identity, weight, and metadata using the active partial unique index", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockResolvedValueOnce({
+      rows: [{
+        id: "66666666-6666-4666-8666-666666666666",
+        organization_id: WORKSPACE_ID,
+        source_entity_id: "99999999-9999-4999-8999-999999999999",
+        target_entity_id: "55555555-5555-4555-8555-555555555555",
+        relationship_type: "related_to",
+        weight: 2.5,
+        properties: {
+          confidence: { score: 0.9, rating: "high" },
+          direction: "directed",
+          provenance: { source: "curated" },
+          metadata: { note: "manual" }
+        },
+        created_at: new Date("2026-11-20T09:00:00.000Z"),
+        updated_at: new Date("2026-11-20T10:00:00.000Z"),
+        created_by: USER_ID,
+        updated_by: USER_ID,
+        deleted_at: null,
+        version: 1
+      }],
+      rowCount: 1
+    });
+    const relationship = await inWorkspace(() =>
+      new EntityRepository(client).saveRelationship({
+        id: "66666666-6666-4666-8666-666666666666",
+        organizationId: WORKSPACE_ID,
+        sourceEntityId: "99999999-9999-4999-8999-999999999999",
+        targetEntityId: "55555555-5555-4555-8555-555555555555",
+        relationshipType: "related_to",
+        weight: 2.5,
+        confidence: { score: 0.9, rating: "high" },
+        direction: "directed",
+        provenance: { source: "curated" },
+        metadata: { note: "manual" },
+        audit
+      })
+    );
+
+    expect(relationship).toMatchObject({
+      id: "66666666-6666-4666-8666-666666666666",
+      weight: 2.5,
+      confidence: { score: 0.9, rating: "high" },
+      direction: "directed",
+      provenance: { source: "curated" },
+      metadata: { note: "manual" }
+    });
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("properties");
+    expect(sql).toContain("ON CONFLICT (organization_id, source_entity_id, target_entity_id, relationship_type) WHERE deleted_at IS NULL");
+    expect(JSON.parse(String(params[6]))).toMatchObject({
+      confidence: { score: 0.9, rating: "high" },
+      direction: "directed",
+      provenance: { source: "curated" },
+      metadata: { note: "manual" }
+    });
+  });
+
+  it("resolves Brand-linked entities through the new association table instead of entities.brand_id", async () => {
+    const { client, query } = createPostgresMock();
+    query
+      .mockResolvedValueOnce({ rows: [{ total_count: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [entityRow()], rowCount: 1 });
+
+    const result = await inWorkspace(() =>
+      new EntityRepository(client).findByBrandId(
+        WORKSPACE_ID,
+        "88888888-8888-4888-8888-888888888888",
+        { limit: 10, offset: 0 }
+      )
+    );
+
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("99999999-9999-4999-8999-999999999999");
+    expect(query.mock.calls[0][0]).toContain("brand_entity_associations");
+    expect(query.mock.calls[0][0]).not.toContain("e.brand_id");
+  });
+
+  it("fails closed on PostgreSQL errors rather than falling back to the process-local Map", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockRejectedValueOnce(new Error("database unavailable"));
+    await expect(inWorkspace(() =>
+      new EntityRepository(client).findById(WORKSPACE_ID, "99999999-9999-4999-8999-999999999999")
+    )).rejects.toThrow("database unavailable");
+  });
+});
+
+describe("BrandRepository canonical Workspace PostgreSQL contract", () => {
+  it("maps Website and other legacy Domain fields from canonical columns plus properties", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockResolvedValueOnce({ rows: [brandRow()], rowCount: 1 });
+
+    const brand = await inWorkspace(() =>
+      new BrandRepository(client).findById(WORKSPACE_ID, "88888888-8888-4888-8888-888888888888")
+    );
+
+    expect(brand).toMatchObject({
+      organizationId: WORKSPACE_ID,
+      name: "Acme",
+      website: "https://acme.example",
+      description: "Acme description",
+      industry: undefined,
+      country: "Global",
+      aliases: ["Acme Inc"],
+      targetMarkets: ["global"]
+    });
+  });
+});
+
+describe("BrandEntityAssociationRepository canonical Workspace PostgreSQL contract", () => {
+  it("upserts only active Organization/Brand/Entity links against the matching partial unique index", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockResolvedValueOnce({ rows: [brandEntityAssociationRow()], rowCount: 1 });
+
+    const association = await inWorkspace(() =>
+      new BrandEntityAssociationRepository(client).save({
+        id: "77777777-7777-4777-8777-777777777777",
+        organizationId: WORKSPACE_ID,
+        brandId: "88888888-8888-4888-8888-888888888888",
+        entityId: "99999999-9999-4999-8999-999999999999",
+        relationshipType: "owns",
+        weight: 1,
+        properties: { source: "manual" },
+        audit
+      })
+    );
+
+    expect(association).toMatchObject({
+      organizationId: WORKSPACE_ID,
+      brandId: "88888888-8888-4888-8888-888888888888",
+      entityId: "99999999-9999-4999-8999-999999999999",
+      relationshipType: "owns",
+      weight: 1
+    });
+    const [sql] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("ON CONFLICT (organization_id, brand_id, entity_id, relationship_type) WHERE deleted_at IS NULL");
+    expect(sql).toContain("RETURNING *");
+  });
+});
+
+describe("PageRepository Entity junction contract", () => {
+  it("returns persisted Page-to-Entity links from PostgreSQL rather than the process-local Map", async () => {
+    const { client, query } = createPostgresMock();
+    query.mockResolvedValueOnce({ rows: [entityRow()], rowCount: 1 });
+
+    const entities = await inWorkspace(() =>
+      new PageRepository(client).getLinkedEntities(
+        WORKSPACE_ID,
+        "44444444-4444-4444-8444-444444444444"
+      )
+    );
+
+    expect(entities).toMatchObject([{
+      id: "99999999-9999-4999-8999-999999999999",
+      organizationId: WORKSPACE_ID,
+      name: "Acme Product",
+      type: "Product",
+      confidence: { score: 0.91, rating: "high" }
+    }]);
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("e.organization_id = pe.organization_id");
+    expect(params).toEqual(["44444444-4444-4444-8444-444444444444", WORKSPACE_ID]);
   });
 });

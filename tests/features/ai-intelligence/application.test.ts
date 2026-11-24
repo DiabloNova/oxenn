@@ -1,14 +1,25 @@
 import {
   ApplicationCommandHandler,
   ApplicationQueryHandler,
+  InMemoryBrandRepository,
+  InMemoryEntityRepository,
+  InMemoryBrandEntityAssociationRepository,
   db
 } from "../../../src/features/ai-intelligence";
 
 export async function testApplication() {
   console.log("▶ Running Application (CQRS) Layer Tests...");
 
-  const commandHandler = new ApplicationCommandHandler();
-  const queryHandler = new ApplicationQueryHandler();
+  const commandHandler = new ApplicationCommandHandler(
+    new InMemoryBrandRepository(),
+    new InMemoryEntityRepository(),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    new InMemoryBrandEntityAssociationRepository()
+  );
+  const queryHandler = new ApplicationQueryHandler(new InMemoryBrandRepository(), new InMemoryEntityRepository());
 
   const tenantId = "org-enterprise-01";
   const actorId = "user-test-01";
@@ -23,6 +34,28 @@ export async function testApplication() {
 
   if (brandDTO.name !== "CQRS SaaS Brand") {
     throw new Error("CreateBrandCommand output mismatch");
+  }
+
+  // 1.1 Entity discovery is Organization-owned and linked to a Brand explicitly.
+  const entityDTO = await commandHandler.handleDiscoverEntity({
+    organizationId: tenantId,
+    brandId: brandDTO.id,
+    relationshipType: "owns",
+    name: "CQRS Product",
+    type: "Product",
+    confidenceScore: 0.9,
+    actorId
+  });
+  if (entityDTO.organizationId !== tenantId || entityDTO.name !== "CQRS Product") {
+    throw new Error("DiscoverEntityCommand did not return an Organization-owned Entity.");
+  }
+
+  const entityGraph = await queryHandler.handleGetEntityGraph({
+    organizationId: tenantId,
+    brandId: brandDTO.id
+  });
+  if (!entityGraph.nodes.some(entity => entity.id === entityDTO.id)) {
+    throw new Error("Brand graph did not resolve the explicit Brand–Entity association.");
   }
 
   // 2. Command execution: Register Prompt

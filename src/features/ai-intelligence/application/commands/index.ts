@@ -12,7 +12,8 @@ export interface CreateBrandCommand {
 
 export interface DiscoverEntityCommand {
   organizationId: string;
-  brandId: string;
+  brandId?: string;
+  relationshipType?: RelationshipType;
   name: string;
   type: string;
   wikidataId?: string;

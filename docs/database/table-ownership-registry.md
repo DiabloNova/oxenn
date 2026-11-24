@@ -25,10 +25,11 @@ status distinguishes current schema contracts from legacy records and unresolved
 
 ## Inventory coverage
 
-- Workspace schema: 71 tables, declared by database/schema/index.ts and its canonical modular schema sources. The user_profiles declaration lives in database/schema/user-profile.ts, references users from database/schema/users.ts, and is re-exported by database/schema/index.ts. Both Drizzle configurations and application consumers use the canonical barrel.
-- Current Workspace ownership inventory: 56 ORGANIZATION_SCOPED, 6 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
+- Workspace schema: 72 tables, declared by database/schema/index.ts and its canonical modular schema sources. The user_profiles declaration lives in database/schema/user-profile.ts, references users from database/schema/users.ts, and is re-exported by database/schema/index.ts. Both Drizzle configurations and application consumers use the canonical barrel.
+- Current Workspace ownership inventory: 57 ORGANIZATION_SCOPED, 6 USER_OWNED, 3 PLATFORM_OWNED, 4 WORKSPACE_GLOBAL, 1 GLOBAL_SHARED, and 1 UNRESOLVED.
 - Platform Admin schema: 7 tables in database/platform-admin/schema/index.ts, backed by its own database, configuration, migration directory, and migration history.
 - The Platform Admin Drizzle migration ledger is infrastructure metadata, not an application table, and is not included in the seven-table application inventory.
+- `brand_entity_associations` is an Organization-scoped Workspace junction introduced by migration `0017_entity_brand_associations`; its composite foreign keys bind each Brand and Entity to the same Organization.
 - database/schema/_legacy/ is quarantined and is not an authoritative schema source.
 
 The Workspace migration journal records SQL migration execution order, while Drizzle snapshots represent generated schema states. A custom SQL-only migration does not necessarily have a same-index snapshot. In particular, 0005_force_rls.sql is the custom RLS migration between snapshots 0004 and 0006; 0006_snapshot.json correctly links to 0004_snapshot.json through prevId. This is an intentional snapshot-index gap, not a missing migration or a reason to manufacture an empty snapshot.

@@ -6,7 +6,7 @@
  */
 
 import { TenantContextManager } from "../../../src/core/database/tenant-context";
-import { EntityRepository } from "../../../src/features/ai-intelligence/repositories";
+import { InMemoryEntityRepository } from "../../../src/features/ai-intelligence/repositories";
 import {
   EntityService,
   calculateEntityAuthority,
@@ -35,7 +35,7 @@ export async function runKnowledgeGraphTests() {
   const tenantA = "tenant-alpha-graph-uuid";
   const tenantB = "tenant-beta-graph-uuid";
 
-  const entityRepo = new EntityRepository();
+  const entityRepo = new InMemoryEntityRepository();
   const entityService = new EntityService(entityRepo);
 
   try {
@@ -51,7 +51,6 @@ export async function runKnowledgeGraphTests() {
       // Create Entity 1 with extended properties
       const ent1 = await entityService.createEntity(
         tenantA,
-        "brand-acme-01",
         "Optimus AI Corp",
         "Brand",
         "Q889922",
@@ -66,7 +65,7 @@ export async function runKnowledgeGraphTests() {
         "active"
       );
 
-      assert.ok(ent1.id.startsWith("entity-"));
+      assert.match(ent1.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       assert.strictEqual(ent1.name, "Optimus AI Corp");
       assert.strictEqual(ent1.type, "Brand");
       assert.deepStrictEqual(ent1.aliases, ["Optimus", "OAIC"]);
@@ -80,7 +79,6 @@ export async function runKnowledgeGraphTests() {
       // Create Entity 2 (target node)
       const ent2 = await entityService.createEntity(
         tenantA,
-        "brand-acme-01",
         "Gemini Model",
         "Product",
         "Q999111",
@@ -132,6 +130,7 @@ export async function runKnowledgeGraphTests() {
       assert.strictEqual(rel.sourceEntityId, entity1Id);
       assert.strictEqual(rel.targetEntityId, entity2Id);
       assert.strictEqual(rel.relationshipType, "related_to");
+      assert.strictEqual(rel.weight, 12.5);
       assert.strictEqual(rel.direction, "directed");
       assert.deepStrictEqual(rel.provenance, { provenance_source: "manual-graph-curation" });
       assert.deepStrictEqual(rel.metadata, { weight: 12.5 });
@@ -153,7 +152,6 @@ export async function runKnowledgeGraphTests() {
     const mockEntity: Entity = {
       id: "ent-test-calc",
       organizationId: tenantA,
-      brandId: "brand-01",
       name: "Acme SaaS",
       type: "Brand",
       wikidataId: "Q1111",
@@ -203,7 +201,6 @@ export async function runKnowledgeGraphTests() {
       // Build a chain: Ent1 -> Ent2 -> Ent3
       const ent3 = await entityService.createEntity(
         tenantA,
-        "brand-acme-01",
         "Chain Node 3",
         "Concept",
         "",
@@ -255,7 +252,6 @@ export async function runKnowledgeGraphTests() {
         await TenantContextManager.runWithTenantContext(tenantB, "usr-test-2", "ctx-graph-test-b", async () => {
           const entB = await entityService.createEntity(
             tenantB,
-            "brand-acme-b",
             "Tenant B Entity",
             "Brand",
             "",

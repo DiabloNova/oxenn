@@ -61,6 +61,9 @@ export interface Brand {
   website: string;
   industry?: string;
   country?: string;
+  aliases?: string[];
+  targetMarkets?: string[];
+  properties?: Record<string, unknown>;
   audit: AuditMetadata;
 }
 
@@ -71,18 +74,19 @@ export interface Brand {
 export interface Entity {
   id: string;
   organizationId: string; // strict multi-tenant partition key
-  brandId: string;
   name: string;
-  type: string; // e.g., "Brand", "Product", "Competitor", "Person", "Organization"
+  type: string; // Maps to the persisted entities.entity_type column.
   wikidataId?: string;
   wikipediaUrl?: string;
-  confidence: ConfidenceVO; // Rich Value Object
+  confidence: ConfidenceVO;
   aliases?: string[];
   description?: string;
   provenance?: Record<string, unknown>;
   authorityScore?: number;
   completenessScore?: number;
   status?: string;
+  /** Additional semantic metadata persisted in entities.properties. */
+  properties?: Record<string, unknown>;
   audit: AuditMetadata;
 }
 
@@ -93,14 +97,34 @@ export type RelationshipType = "owns" | "creates" | "competes_with" | "related_t
  * Defines direct semantic connections within the client's Knowledge Graph.
  */
 export interface EntityRelationship {
+  id: string;
   organizationId: string; // strict multi-tenant partition key
   sourceEntityId: string;
   targetEntityId: string;
   relationshipType: RelationshipType;
-  confidence: ConfidenceVO; // Rich Value Object
+  /** Persisted graph edge weight; independent of extraction confidence. */
+  weight: number;
+  confidence: ConfidenceVO;
   direction?: "directed" | "undirected" | string;
   provenance?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  /** Additional relationship metadata persisted in entity_relationships.properties. */
+  properties?: Record<string, unknown>;
+  audit: AuditMetadata;
+}
+
+/**
+ * Explicit tenant-scoped link between a Brand aggregate and a reusable Entity.
+ * The Entity itself is not owned by a single Brand.
+ */
+export interface BrandEntityAssociation {
+  id: string;
+  organizationId: string;
+  brandId: string;
+  entityId: string;
+  relationshipType: RelationshipType;
+  weight: number;
+  properties?: Record<string, unknown>;
   audit: AuditMetadata;
 }
 

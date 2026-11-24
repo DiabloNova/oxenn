@@ -316,8 +316,9 @@ export const brands = pgTable("brands", {
   name: text("name").notNull(),
   canonicalDomain: text("canonical_domain").notNull(),
   aliases: text("aliases").array().notNull().default(sql`'{}'::text[]`),
-  industry: text("industry").notNull(),
+  industry: text("industry"),
   targetMarkets: text("target_markets").array().notNull().default(sql`'{}'::text[]`),
+  properties: jsonb("properties").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
   createdBy: text("created_by").notNull().default("system"),
@@ -327,6 +328,7 @@ export const brands = pgTable("brands", {
 }, (table) => [
   index("idx_brands_organization").on(table.organizationId),
   index("idx_brands_domain").on(table.canonicalDomain),
+  uniqueIndex("idx_brands_id_organization_id_fk").on(table.id, table.organizationId),
   ...tenantPolicy("organization_id")
 ]);
 
@@ -353,10 +355,11 @@ export const entities = pgTable("entities", {
 export const entityRelationships = pgTable("entity_relationships", {
   id: uuid("id").primaryKey().default(defaultUuid),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  sourceEntityId: uuid("source_entity_id").notNull().references(() => entities.id, { onDelete: "cascade" }),
-  targetEntityId: uuid("target_entity_id").notNull().references(() => entities.id, { onDelete: "cascade" }),
+  sourceEntityId: uuid("source_entity_id").notNull(),
+  targetEntityId: uuid("target_entity_id").notNull(),
   relationshipType: text("relationship_type").notNull(),
   weight: doublePrecision("weight").notNull().default(1.0),
+  properties: jsonb("properties").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
   createdBy: text("created_by").notNull().default("system"),
@@ -367,6 +370,55 @@ export const entityRelationships = pgTable("entity_relationships", {
   index("idx_entity_relationships_org").on(table.organizationId),
   index("idx_entity_relationships_source").on(table.sourceEntityId),
   index("idx_entity_relationships_target").on(table.targetEntityId),
+  index("idx_entity_relationships_source_org").on(table.sourceEntityId, table.organizationId),
+  index("idx_entity_relationships_target_org").on(table.targetEntityId, table.organizationId),
+  uniqueIndex("idx_entity_relationships_active_unique").on(
+    table.organizationId, table.sourceEntityId, table.targetEntityId, table.relationshipType
+  ).where(sql`deleted_at IS NULL`),
+  foreignKey({
+    name: "entity_relationships_source_entity_id_org_id_fkey",
+    columns: [table.sourceEntityId, table.organizationId],
+    foreignColumns: [entities.id, entities.organizationId]
+  }).onDelete("cascade"),
+  foreignKey({
+    name: "entity_relationships_target_entity_id_org_id_fkey",
+    columns: [table.targetEntityId, table.organizationId],
+    foreignColumns: [entities.id, entities.organizationId]
+  }).onDelete("cascade"),
+  ...tenantPolicy("organization_id")
+]);
+
+export const brandEntityAssociations = pgTable("brand_entity_associations", {
+  id: uuid("id").primaryKey().default(defaultUuid),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  brandId: uuid("brand_id").notNull(),
+  entityId: uuid("entity_id").notNull(),
+  relationshipType: text("relationship_type").notNull(),
+  weight: doublePrecision("weight").notNull().default(1.0),
+  properties: jsonb("properties").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
+  createdBy: text("created_by").notNull().default("system"),
+  updatedBy: text("updated_by").notNull().default("system"),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  version: integer("version").notNull().default(1),
+}, (table) => [
+  index("idx_brand_entity_associations_org").on(table.organizationId),
+  index("idx_brand_entity_associations_brand_org").on(table.brandId, table.organizationId),
+  index("idx_brand_entity_associations_entity_org").on(table.entityId, table.organizationId),
+  uniqueIndex("idx_brand_entity_associations_active_unique").on(
+    table.organizationId, table.brandId, table.entityId, table.relationshipType
+  ).where(sql`deleted_at IS NULL`),
+  foreignKey({
+    name: "brand_entity_associations_brand_id_org_id_fkey",
+    columns: [table.brandId, table.organizationId],
+    foreignColumns: [brands.id, brands.organizationId]
+  }).onDelete("cascade"),
+  foreignKey({
+    name: "brand_entity_associations_entity_id_org_id_fkey",
+    columns: [table.entityId, table.organizationId],
+    foreignColumns: [entities.id, entities.organizationId]
+  }).onDelete("cascade"),
   ...tenantPolicy("organization_id")
 ]);
 

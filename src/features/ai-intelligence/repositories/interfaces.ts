@@ -9,6 +9,7 @@ import {
   Brand,
   Entity,
   EntityRelationship,
+  BrandEntityAssociation,
   AIEngine,
   Prompt,
   AIObservation,
@@ -71,9 +72,18 @@ export interface IBrandRepository {
   deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean>;
 }
 
+export interface IBrandEntityAssociationRepository {
+  findById(organizationId: string, id: string): Promise<BrandEntityAssociation | null>;
+  findByBrandId(organizationId: string, brandId: string): Promise<BrandEntityAssociation[]>;
+  findByEntityId(organizationId: string, entityId: string): Promise<BrandEntityAssociation[]>;
+  save(association: BrandEntityAssociation): Promise<BrandEntityAssociation>;
+  deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean>;
+}
+
 export interface IEntityRepository {
   findById(organizationId: string, id: string): Promise<Entity | null>;
   findByName(organizationId: string, name: string): Promise<Entity | null>;
+  findByOrganizationId(organizationId: string, params?: QueryParams): Promise<PaginatedResult<Entity>>;
   findByBrandId(organizationId: string, brandId: string, params?: QueryParams): Promise<PaginatedResult<Entity>>;
   save(entity: Entity): Promise<Entity>;
   deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean>;

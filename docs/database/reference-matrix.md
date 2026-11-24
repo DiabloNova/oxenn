@@ -445,6 +445,53 @@
 
 ---
 
+## Table: `brand_entity_associations`
+
+- **Ownership Scope:** ORGANIZATION_SCOPED
+- **RLS Policies Declared:** 4 policy objects
+- **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
+- **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
+- **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
+- **Status:** `WIRED`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/application/handlers/index.ts`
+
+### Columns
+
+| Name | Type | Not Null | Primary Key | Default |
+|---|---|---|---|---|
+| `brand_id` | `uuid` | ✅ | ❌ | NULL |
+| `created_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
+| `created_by` | `text` | ✅ | ❌ | `'system'` |
+| `deleted_at` | `timestamp with time zone` | ❌ | ❌ | NULL |
+| `entity_id` | `uuid` | ✅ | ❌ | NULL |
+| `id` | `uuid` | ✅ | ✅ | `gen_random_uuid()` |
+| `organization_id` | `uuid` | ✅ | ❌ | NULL |
+| `properties` | `jsonb` | ✅ | ❌ | `'{}'::jsonb` |
+| `relationship_type` | `text` | ✅ | ❌ | NULL |
+| `updated_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
+| `updated_by` | `text` | ✅ | ❌ | `'system'` |
+| `version` | `integer` | ✅ | ❌ | `1` |
+| `weight` | `double precision` | ✅ | ❌ | `1` |
+
+### Indexes
+
+| Name | Columns | Method | Unique | Predicate |
+|---|---|---|---|---|
+| `idx_brand_entity_associations_active_unique` | `organization_id, brand_id, entity_id, relationship_type` | `btree` | ✅ | `deleted_at IS NULL` |
+| `idx_brand_entity_associations_brand_org` | `brand_id, organization_id` | `btree` | ❌ | — |
+| `idx_brand_entity_associations_entity_org` | `entity_id, organization_id` | `btree` | ❌ | — |
+| `idx_brand_entity_associations_org` | `organization_id` | `btree` | ❌ | — |
+
+### Foreign Keys
+
+| Name | Columns | Foreign Table | Foreign Columns | On Delete |
+|---|---|---|---|---|
+| `brand_entity_associations_brand_id_org_id_fkey` | `brand_id, organization_id` | `brands` | `id, organization_id` | cascade |
+| `brand_entity_associations_entity_id_org_id_fkey` | `entity_id, organization_id` | `entities` | `id, organization_id` | cascade |
+| `brand_entity_associations_organization_id_organizations_id_fk` | `organization_id` | `organizations` | `id` | cascade |
+
+---
+
 ## Table: `brand_mentions`
 
 - **Ownership Scope:** ORGANIZATION_SCOPED
@@ -497,8 +544,8 @@
 - **Tenant RLS Policy Coverage:** Complete (SELECT, INSERT, UPDATE, DELETE)
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
-- **Status:** `ORPHAN-TABLE` (LEGACY-CANDIDATE)
-- **Consumers:** -
+- **Status:** `WIRED`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/application/handlers/index.ts`
 
 ### Columns
 
@@ -510,9 +557,10 @@
 | `created_by` | `text` | ✅ | ❌ | `'system'` |
 | `deleted_at` | `timestamp with time zone` | ❌ | ❌ | NULL |
 | `id` | `uuid` | ✅ | ✅ | `gen_random_uuid()` |
-| `industry` | `text` | ✅ | ❌ | NULL |
+| `industry` | `text` | ❌ | ❌ | NULL |
 | `name` | `text` | ✅ | ❌ | NULL |
 | `organization_id` | `uuid` | ✅ | ❌ | NULL |
+| `properties` | `jsonb` | ✅ | ❌ | `'{}'::jsonb` |
 | `target_markets` | `text[]` | ✅ | ❌ | `'{}'::text[]` |
 | `updated_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
 | `updated_by` | `text` | ✅ | ❌ | `'system'` |
@@ -523,6 +571,7 @@
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
 | `idx_brands_domain` | `canonical_domain` | `btree` | ❌ | — |
+| `idx_brands_id_organization_id_fk` | `id, organization_id` | `btree` | ✅ | — |
 | `idx_brands_organization` | `organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
@@ -533,6 +582,7 @@
 
 ---
 
+---
 ## Table: `citation_occurrences`
 
 - **Ownership Scope:** ORGANIZATION_SCOPED
@@ -1268,7 +1318,7 @@
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/entity-service.ts`
 
 ### Columns
 
@@ -1279,6 +1329,7 @@
 | `deleted_at` | `timestamp with time zone` | ❌ | ❌ | NULL |
 | `id` | `uuid` | ✅ | ✅ | `gen_random_uuid()` |
 | `organization_id` | `uuid` | ✅ | ❌ | NULL |
+| `properties` | `jsonb` | ✅ | ❌ | `'{}'::jsonb` |
 | `relationship_type` | `text` | ✅ | ❌ | NULL |
 | `source_entity_id` | `uuid` | ✅ | ❌ | NULL |
 | `target_entity_id` | `uuid` | ✅ | ❌ | NULL |
@@ -1291,20 +1342,24 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_entity_relationships_active_unique` | `organization_id, source_entity_id, target_entity_id, relationship_type` | `btree` | ✅ | `deleted_at IS NULL` |
 | `idx_entity_relationships_org` | `organization_id` | `btree` | ❌ | — |
 | `idx_entity_relationships_source` | `source_entity_id` | `btree` | ❌ | — |
+| `idx_entity_relationships_source_org` | `source_entity_id, organization_id` | `btree` | ❌ | — |
 | `idx_entity_relationships_target` | `target_entity_id` | `btree` | ❌ | — |
+| `idx_entity_relationships_target_org` | `target_entity_id, organization_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
 | `entity_relationships_organization_id_organizations_id_fk` | `organization_id` | `organizations` | `id` | cascade |
-| `entity_relationships_source_entity_id_entities_id_fk` | `source_entity_id` | `entities` | `id` | cascade |
-| `entity_relationships_target_entity_id_entities_id_fk` | `target_entity_id` | `entities` | `id` | cascade |
+| `entity_relationships_source_entity_id_org_id_fkey` | `source_entity_id, organization_id` | `entities` | `id, organization_id` | cascade |
+| `entity_relationships_target_entity_id_org_id_fkey` | `target_entity_id, organization_id` | `entities` | `id, organization_id` | cascade |
 
 ---
 
+---
 ## Table: `faq_opportunities`
 
 - **Ownership Scope:** ORGANIZATION_SCOPED

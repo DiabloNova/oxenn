@@ -11,6 +11,7 @@ import {
   Brand,
   Entity,
   EntityRelationship,
+  BrandEntityAssociation,
   AIEngine,
   Prompt,
   AIObservation,
@@ -52,6 +53,7 @@ import {
   IOrganizationRepository,
   IBrandRepository,
   IEntityRepository,
+  IBrandEntityAssociationRepository,
   IAIEngineRepository,
   IPromptRepository,
   IObservationRepository,
@@ -73,6 +75,110 @@ import {
   IBrandIntelligenceRepository,
   IAeoContentIntelligenceRepository
 } from "./interfaces";
+
+function parseJsonRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === "string") {
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  }
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function mapAuditRow(row: Record<string, unknown>): AuditMetadata {
+  return {
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+    createdBy: row.created_by as string,
+    updatedBy: row.updated_by as string,
+    deletedAt: (row.deleted_at as string) || undefined,
+    version: Number(row.version ?? 1)
+  };
+}
+
+function mapEntityRow(row: Record<string, unknown>): Entity {
+  const properties = parseJsonRecord(row.properties);
+  const confidenceRaw = parseJsonRecord(properties.confidence);
+  const confidenceScore = typeof confidenceRaw.score === "number" ? confidenceRaw.score : 0.5;
+  const confidenceRating = confidenceRaw.rating === "high" || confidenceRaw.rating === "medium" || confidenceRaw.rating === "low"
+    ? confidenceRaw.rating
+    : confidenceScore >= 0.8 ? "high" : confidenceScore >= 0.5 ? "medium" : "low";
+
+  return {
+    id: row.id as string,
+    organizationId: row.organization_id as string,
+    name: row.name as string,
+    type: row.entity_type as string,
+    wikidataId: typeof properties.wikidataId === "string" ? properties.wikidataId : undefined,
+    wikipediaUrl: typeof properties.wikipediaUrl === "string" ? properties.wikipediaUrl : undefined,
+    aliases: Array.isArray(properties.aliases) ? properties.aliases as string[] : undefined,
+    description: (row.description as string) || undefined,
+    provenance: parseJsonRecord(properties.provenance),
+    authorityScore: typeof properties.authorityScore === "number" ? properties.authorityScore : undefined,
+    completenessScore: typeof properties.completenessScore === "number" ? properties.completenessScore : undefined,
+    status: typeof properties.status === "string" ? properties.status : undefined,
+    confidence: { score: confidenceScore, rating: confidenceRating },
+    properties,
+    audit: mapAuditRow(row)
+  };
+}
+
+function mapEntityRelationshipRow(row: Record<string, unknown>): EntityRelationship {
+  const properties = parseJsonRecord(row.properties);
+  const confidenceRaw = parseJsonRecord(properties.confidence);
+  const confidenceScore = typeof confidenceRaw.score === "number" ? confidenceRaw.score : 0.5;
+  const confidenceRating = confidenceRaw.rating === "high" || confidenceRaw.rating === "medium" || confidenceRaw.rating === "low"
+    ? confidenceRaw.rating
+    : confidenceScore >= 0.8 ? "high" : confidenceScore >= 0.5 ? "medium" : "low";
+
+  return {
+    id: row.id as string,
+    organizationId: row.organization_id as string,
+    sourceEntityId: row.source_entity_id as string,
+    targetEntityId: row.target_entity_id as string,
+    relationshipType: row.relationship_type as RelationshipType,
+    weight: Number(row.weight ?? 1),
+    confidence: { score: confidenceScore, rating: confidenceRating },
+    direction: typeof properties.direction === "string" ? properties.direction : "directed",
+    provenance: parseJsonRecord(properties.provenance),
+    metadata: parseJsonRecord(properties.metadata),
+    properties,
+    audit: mapAuditRow(row)
+  };
+}
+
+function mapBrandEntityAssociationRow(row: Record<string, unknown>): BrandEntityAssociation {
+  return {
+    id: row.id as string,
+    organizationId: row.organization_id as string,
+    brandId: row.brand_id as string,
+    entityId: row.entity_id as string,
+    relationshipType: row.relationship_type as RelationshipType,
+    weight: Number(row.weight ?? 1),
+    properties: parseJsonRecord(row.properties),
+    audit: mapAuditRow(row)
+  };
+}
+
+function mapBrandRow(row: Record<string, unknown>): Brand {
+  const properties = parseJsonRecord(row.properties);
+  return {
+    id: row.id as string,
+    organizationId: row.organization_id as string,
+    name: row.name as string,
+    website: typeof properties.website === "string" ? properties.website : "https://" + String(row.canonical_domain),
+    description: typeof properties.description === "string" ? properties.description : undefined,
+    country: typeof properties.country === "string" ? properties.country : undefined,
+    industry: typeof row.industry === "string" ? row.industry : undefined,
+    aliases: Array.isArray(row.aliases) ? row.aliases as string[] : [],
+    targetMarkets: Array.isArray(row.target_markets) ? row.target_markets as string[] : [],
+    properties,
+    audit: mapAuditRow(row)
+  };
+}
 
 function createMockAudit(createdBy = "system"): AuditMetadata {
   return {
@@ -101,6 +207,7 @@ class InMemoryDatabase {
   public brands: Map<string, Brand> = new Map();
   public entities: Map<string, Entity> = new Map();
   public relationships: EntityRelationship[] = [];
+  public brandEntityAssociations: BrandEntityAssociation[] = [];
   public engines: Map<string, AIEngine> = new Map();
   public prompts: Map<string, Prompt> = new Map();
   public observations: Map<string, AIObservation> = new Map();
@@ -252,7 +359,6 @@ class InMemoryDatabase {
     this.entities.set(entityBrandId, {
       id: entityBrandId,
       organizationId: orgId,
-      brandId: brandId,
       name: "Acme SaaS",
       type: "Brand",
       wikidataId: "Q111999222",
@@ -264,7 +370,6 @@ class InMemoryDatabase {
     this.entities.set(entityCompId, {
       id: entityCompId,
       organizationId: orgId,
-      brandId: brandId,
       name: "CompetitorX",
       type: "Brand",
       wikidataId: "Q222000333",
@@ -273,12 +378,38 @@ class InMemoryDatabase {
       audit: createMockAudit()
     });
 
+    // Seed explicit Brand ↔ Entity associations; entities remain reusable within the Organization.
+    this.brandEntityAssociations.push(
+      {
+        id: "brand-entity-acme-owned",
+        organizationId: orgId,
+        brandId,
+        entityId: entityBrandId,
+        relationshipType: "owns",
+        weight: 1,
+        properties: {},
+        audit: createMockAudit()
+      },
+      {
+        id: "brand-entity-acme-competitor",
+        organizationId: orgId,
+        brandId,
+        entityId: entityCompId,
+        relationshipType: "competes_with",
+        weight: 1,
+        properties: {},
+        audit: createMockAudit()
+      }
+    );
+
     // Seed relationship
     this.relationships.push({
+      id: "relationship-acme-competes-with",
       organizationId: orgId,
       sourceEntityId: entityBrandId,
       targetEntityId: entityCompId,
       relationshipType: "competes_with",
+      weight: 0.92,
       confidence: { score: 0.92, rating: "high" },
       audit: createMockAudit()
     });
@@ -536,19 +667,110 @@ export class OrganizationRepository implements IOrganizationRepository {
 }
 
 export class BrandRepository implements IBrandRepository {
+  private pg: PostgresClient;
+
+  constructor(pg?: PostgresClient) {
+    this.pg = pg || PostgresClient.getInstance();
+  }
+
+  public async findById(organizationId: string, id: string): Promise<Brand | null> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "SELECT * FROM brands WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;",
+      [id, organizationId]
+    );
+    return result.rowCount && result.rowCount > 0 ? mapBrandRow(result.rows[0]) : null;
+  }
+
+  public async findByOrganizationId(organizationId: string, params?: QueryParams): Promise<PaginatedResult<Brand>> {
+    enforceTenantContext(organizationId);
+    const includeDeleted = params?.includeDeleted === true;
+    const predicate = includeDeleted ? "organization_id = $1" : "organization_id = $1 AND deleted_at IS NULL";
+    const count = await this.pg.query("SELECT COUNT(*)::int AS total_count FROM brands WHERE " + predicate + ";", [organizationId]);
+    const limit = Math.max(1, Math.min(params?.limit ?? 100, 500));
+    const offset = Math.max(0, params?.offset ?? 0);
+    const rows = await this.pg.query(
+      "SELECT * FROM brands WHERE " + predicate + " ORDER BY created_at DESC, id ASC LIMIT $2 OFFSET $3;",
+      [organizationId, limit, offset]
+    );
+    return {
+      data: rows.rows.map(mapBrandRow),
+      totalCount: Number(count.rows[0]?.total_count ?? 0),
+      limit,
+      offset
+    };
+  }
+
+  public async save(brand: Brand): Promise<Brand> {
+    enforceTenantContext(brand.organizationId);
+    let canonicalDomain: string;
+    try {
+      const websiteUrl = new URL(brand.website);
+      if (websiteUrl.protocol !== "http:" && websiteUrl.protocol !== "https:") {
+        throw new Error("Unsupported website protocol");
+      }
+      canonicalDomain = websiteUrl.hostname.toLowerCase().replace(/^www\./, "");
+      if (!canonicalDomain) throw new Error("Missing host");
+    } catch {
+      throw new Error("Brand website must be a valid absolute HTTP(S) URL before persistence.");
+    }
+    const properties = { ...(brand.properties || {}) };
+    properties.website = brand.website;
+    if (brand.description !== undefined) properties.description = brand.description;
+    if (brand.country !== undefined) properties.country = brand.country;
+    const result = await this.pg.query(
+      `INSERT INTO brands (
+        id, organization_id, name, canonical_domain, aliases, industry, target_markets, properties,
+        created_at, updated_at, created_by, updated_by, version
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        canonical_domain = EXCLUDED.canonical_domain,
+        aliases = EXCLUDED.aliases,
+        industry = EXCLUDED.industry,
+        target_markets = EXCLUDED.target_markets,
+        properties = EXCLUDED.properties,
+        updated_at = EXCLUDED.updated_at,
+        updated_by = EXCLUDED.updated_by,
+        version = EXCLUDED.version
+      WHERE brands.organization_id = EXCLUDED.organization_id
+        AND brands.deleted_at IS NULL
+      RETURNING *;`,
+      [
+        brand.id, brand.organizationId, brand.name, canonicalDomain,
+        brand.aliases || [], brand.industry ?? null, brand.targetMarkets || [],
+        JSON.stringify(properties), brand.audit.createdAt, brand.audit.updatedAt,
+        brand.audit.createdBy, brand.audit.updatedBy, brand.audit.version
+      ]
+    );
+    if (!result.rowCount || result.rowCount === 0) {
+      throw new Error("Brand persistence rejected: ID is already owned by another Organization or is soft-deleted.");
+    }
+    return mapBrandRow(result.rows[0]);
+  }
+
+  public async deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "UPDATE brands SET deleted_at = NOW(), updated_at = NOW(), updated_by = $1, version = version + 1 WHERE id = $2 AND organization_id = $3 AND deleted_at IS NULL RETURNING id;",
+      [deletedBy, id, organizationId]
+    );
+    return Boolean(result.rowCount && result.rowCount > 0);
+  }
+}
+
+/** Explicit process-local adapter for deterministic tests and demos only. */
+export class InMemoryBrandRepository implements IBrandRepository {
   public async findById(organizationId: string, id: string): Promise<Brand | null> {
     enforceTenantContext(organizationId);
     const brand = db.brands.get(id);
-    if (!brand || brand.organizationId !== organizationId || brand.audit.deletedAt) {
-      return null;
-    }
-    return brand;
+    return !brand || brand.organizationId !== organizationId || brand.audit.deletedAt ? null : brand;
   }
 
   public async findByOrganizationId(organizationId: string, params?: QueryParams): Promise<PaginatedResult<Brand>> {
     enforceTenantContext(organizationId);
     const list = Array.from(db.brands.values()).filter(
-      b => b.organizationId === organizationId && (params?.includeDeleted || !b.audit.deletedAt)
+      brand => brand.organizationId === organizationId && (params?.includeDeleted || !brand.audit.deletedAt)
     );
     return paginateArray(list, params);
   }
@@ -557,7 +779,7 @@ export class BrandRepository implements IBrandRepository {
     enforceTenantContext(brand.organizationId);
     const existing = db.brands.get(brand.id);
     if (existing && existing.organizationId !== brand.organizationId) {
-      throw new Error("Tenant Isolation Exception: Cannot modify or change tenant ownership for existing Brand.");
+      throw new Error("Tenant Isolation Exception: Cannot change Brand ownership.");
     }
     db.brands.set(brand.id, brand);
     return brand;
@@ -2387,13 +2609,12 @@ export class PageRepository implements IPageRepository {
 
   public async getLinkedEntities(organizationId: string, pageId: string): Promise<Entity[]> {
     enforceTenantContext(organizationId);
-    await this.pg.query(
-      "SELECT e.* FROM entities e INNER JOIN pages_entities pe ON e.id = pe.entity_id " +
-      "WHERE pe.page_id = $1 AND pe.organization_id = $2 AND e.deleted_at IS NULL;",
+    const result = await this.pg.query(
+      "SELECT e.* FROM entities e INNER JOIN pages_entities pe ON e.id = pe.entity_id AND e.organization_id = pe.organization_id " +
+      "WHERE pe.page_id = $1 AND pe.organization_id = $2 AND e.deleted_at IS NULL ORDER BY e.name ASC, e.id ASC;",
       [pageId, organizationId]
     );
-    const entityIds = db.pagesEntities.filter(link => link.pageId === pageId && link.organizationId === organizationId).map(link => link.entityId);
-    return Array.from(db.entities.values()).filter(e => entityIds.includes(e.id) && e.organizationId === organizationId && !e.audit.deletedAt);
+    return result.rows.map(mapEntityRow);
   }
 }
 export class KeywordRepository implements IKeywordRepository {
@@ -2578,15 +2799,14 @@ export class TopicRepository implements ITopicRepository {
 
   public async getLinkedEntities(organizationId: string, topicId: string): Promise<Entity[]> {
     enforceTenantContext(organizationId);
-    const sql = `
-      SELECT e.* FROM entities e
-      INNER JOIN topics_entities te ON e.id = te.entity_id
-      WHERE te.topic_id = $1 AND te.organization_id = $2 AND e.deleted_at IS NULL;
-    `;
-    await this.pg.query(sql, [topicId, organizationId]);
-
-    const entityIds = db.topicsEntities.filter(link => link.topicId === topicId && link.organizationId === organizationId).map(link => link.entityId);
-    return Array.from(db.entities.values()).filter(e => entityIds.includes(e.id) && e.organizationId === organizationId && !e.audit.deletedAt);
+    const result = await this.pg.query(
+      `SELECT e.* FROM entities e
+       INNER JOIN topics_entities te ON e.id = te.entity_id AND e.organization_id = te.organization_id
+       WHERE te.topic_id = $1 AND te.organization_id = $2 AND e.deleted_at IS NULL
+       ORDER BY e.name ASC, e.id ASC;`,
+      [topicId, organizationId]
+    );
+    return result.rows.map(mapEntityRow);
   }
 }
 
@@ -3193,307 +3413,373 @@ export class EntityRepository implements IEntityRepository {
     this.pg = pg || PostgresClient.getInstance();
   }
 
-  private mapRowToEntity(row: Record<string, unknown>): Entity {
-    return {
-      id: row.id as string,
-      organizationId: row.organization_id as string,
-      brandId: row.brand_id as string,
-      name: row.name as string,
-      type: row.type as string,
-      wikidataId: (row.wikidata_id as string) || undefined,
-      wikipediaUrl: (row.wikipedia_url as string) || undefined,
-      aliases: (row.aliases as string[]) || undefined,
-      description: (row.description as string) || undefined,
-      provenance: typeof row.provenance === "string" ? JSON.parse(row.provenance) : ((row.provenance as Entity["provenance"]) || undefined),
-      authorityScore: row.authority_score !== null && row.authority_score !== undefined ? Number(row.authority_score) : undefined,
-      completenessScore: row.completeness_score !== null && row.completeness_score !== undefined ? Number(row.completeness_score) : undefined,
-      status: (row.status as Entity["status"]) || undefined,
-      confidence: {
-        score: Number(row.confidence_score),
-        rating: row.confidence_rating as "high" | "medium" | "low"
-      },
-      audit: {
-        createdAt: row.created_at as string,
-        updatedAt: row.updated_at as string,
-        createdBy: row.created_by as string,
-        updatedBy: row.updated_by as string,
-        deletedAt: (row.deleted_at as string) || undefined,
-        version: row.version as number
-      }
-    };
-  }
-
-  private mapRowToRelationship(row: Record<string, unknown>): EntityRelationship {
-    return {
-      organizationId: row.organization_id as string,
-      sourceEntityId: row.source_entity_id as string,
-      targetEntityId: row.target_entity_id as string,
-      relationshipType: row.relationship_type as RelationshipType,
-      direction: (row.direction as EntityRelationship["direction"]) || undefined,
-      provenance: typeof row.provenance === "string" ? JSON.parse(row.provenance) : ((row.provenance as EntityRelationship["provenance"]) || undefined),
-      metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : ((row.metadata as Record<string, unknown>) || undefined),
-      confidence: {
-        score: Number(row.confidence_score),
-        rating: row.confidence_rating as "high" | "medium" | "low"
-      },
-      audit: {
-        createdAt: row.created_at as string,
-        updatedAt: row.updated_at as string,
-        createdBy: row.created_by as string,
-        updatedBy: row.updated_by as string,
-        deletedAt: (row.deleted_at as string) || undefined,
-        version: row.version as number
-      }
-    };
-  }
-
   public async findById(organizationId: string, id: string): Promise<Entity | null> {
     enforceTenantContext(organizationId);
-    try {
-      const sql = `SELECT * FROM entities WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;`;
-      const res = await this.pg.query(sql, [id, organizationId]);
-      if (res.rowCount && res.rowCount > 0) {
-        return this.mapRowToEntity(res.rows[0]);
-      }
-    } catch (err) {
-      console.warn("[EntityRepository.findById] falling back to memory store.", err);
-    }
-
-    const entity = db.entities.get(id);
-    if (!entity || entity.organizationId !== organizationId || entity.audit.deletedAt) {
-      return null;
-    }
-    return entity;
+    const result = await this.pg.query(
+      "SELECT * FROM entities WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;",
+      [id, organizationId]
+    );
+    return result.rowCount && result.rowCount > 0 ? mapEntityRow(result.rows[0]) : null;
   }
 
   public async findByName(organizationId: string, name: string): Promise<Entity | null> {
     enforceTenantContext(organizationId);
-    try {
-      const sql = `SELECT * FROM entities WHERE LOWER(name) = LOWER($1) AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;`;
-      const res = await this.pg.query(sql, [name.trim(), organizationId]);
-      if (res.rowCount && res.rowCount > 0) {
-        return this.mapRowToEntity(res.rows[0]);
-      }
-    } catch (err) {
-      console.warn("[EntityRepository.findByName] falling back to memory store.", err);
-    }
+    const result = await this.pg.query(
+      "SELECT * FROM entities WHERE LOWER(name) = LOWER($1) AND organization_id = $2 AND deleted_at IS NULL ORDER BY created_at DESC, id ASC LIMIT 1;",
+      [name.trim(), organizationId]
+    );
+    return result.rowCount && result.rowCount > 0 ? mapEntityRow(result.rows[0]) : null;
+  }
 
-    for (const entity of db.entities.values()) {
-      if (
-        entity.name.toLowerCase().trim() === name.trim().toLowerCase() &&
-        entity.organizationId === organizationId &&
-        !entity.audit.deletedAt
-      ) {
-        return entity;
-      }
-    }
-    return null;
+  public async findByOrganizationId(organizationId: string, params?: QueryParams): Promise<PaginatedResult<Entity>> {
+    enforceTenantContext(organizationId);
+    const includeDeleted = params?.includeDeleted === true;
+    const predicate = includeDeleted ? "organization_id = $1" : "organization_id = $1 AND deleted_at IS NULL";
+    const count = await this.pg.query("SELECT COUNT(*)::int AS total_count FROM entities WHERE " + predicate + ";", [organizationId]);
+    const limit = Math.max(1, Math.min(params?.limit ?? 100, 500));
+    const offset = Math.max(0, params?.offset ?? 0);
+    const rows = await this.pg.query(
+      "SELECT * FROM entities WHERE " + predicate + " ORDER BY created_at DESC, id ASC LIMIT $2 OFFSET $3;",
+      [organizationId, limit, offset]
+    );
+    return { data: rows.rows.map(mapEntityRow), totalCount: Number(count.rows[0]?.total_count ?? 0), limit, offset };
   }
 
   public async findByBrandId(organizationId: string, brandId: string, params?: QueryParams): Promise<PaginatedResult<Entity>> {
     enforceTenantContext(organizationId);
-    try {
-      const sql = `SELECT * FROM entities WHERE brand_id = $1 AND organization_id = $2 AND deleted_at IS NULL ORDER BY created_at DESC;`;
-      const res = await this.pg.query(sql, [brandId, organizationId]);
-      if (res.rowCount && res.rowCount > 0) {
-        const mapped = res.rows.map(row => this.mapRowToEntity(row));
-        return paginateArray(mapped, params);
-      }
-    } catch (err) {
-      console.warn("[EntityRepository.findByBrandId] falling back to memory store.", err);
-    }
-
-    const list = Array.from(db.entities.values()).filter(
-      e => e.organizationId === organizationId && e.brandId === brandId && (params?.includeDeleted || !e.audit.deletedAt)
+    const includeDeleted = params?.includeDeleted === true;
+    const entityPredicate = includeDeleted ? "" : " AND e.deleted_at IS NULL";
+    const associationPredicate = " AND bea.deleted_at IS NULL";
+    const countSql =
+      "SELECT COUNT(DISTINCT e.id)::int AS total_count FROM entities e " +
+      "INNER JOIN brand_entity_associations bea ON bea.entity_id = e.id AND bea.organization_id = e.organization_id " +
+      "WHERE bea.brand_id = $1 AND bea.organization_id = $2" + associationPredicate + entityPredicate + ";";
+    const count = await this.pg.query(countSql, [brandId, organizationId]);
+    const limit = Math.max(1, Math.min(params?.limit ?? 100, 500));
+    const offset = Math.max(0, params?.offset ?? 0);
+    const rows = await this.pg.query(
+      "SELECT DISTINCT e.* FROM entities e " +
+      "INNER JOIN brand_entity_associations bea ON bea.entity_id = e.id AND bea.organization_id = e.organization_id " +
+      "WHERE bea.brand_id = $1 AND bea.organization_id = $2" + associationPredicate + entityPredicate +
+      " ORDER BY e.created_at DESC, e.id ASC LIMIT $3 OFFSET $4;",
+      [brandId, organizationId, limit, offset]
     );
-    return paginateArray(list, params);
+    return { data: rows.rows.map(mapEntityRow), totalCount: Number(count.rows[0]?.total_count ?? 0), limit, offset };
   }
 
   public async save(entity: Entity): Promise<Entity> {
     enforceTenantContext(entity.organizationId);
-    try {
-      const sql = `
-        INSERT INTO entities (
-          id, organization_id, brand_id, name, type, wikidata_id, wikipedia_url,
-          aliases, description, provenance, authority_score, completeness_score, status,
-          confidence_score, confidence_rating, created_at, updated_at, created_by, updated_by, version
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-        ON CONFLICT (id) DO UPDATE SET
-          name = EXCLUDED.name,
-          type = EXCLUDED.type,
-          wikidata_id = EXCLUDED.wikidata_id,
-          wikipedia_url = EXCLUDED.wikipedia_url,
-          aliases = EXCLUDED.aliases,
-          description = EXCLUDED.description,
-          provenance = EXCLUDED.provenance,
-          authority_score = EXCLUDED.authority_score,
-          completeness_score = EXCLUDED.completeness_score,
-          status = EXCLUDED.status,
-          confidence_score = EXCLUDED.confidence_score,
-          confidence_rating = EXCLUDED.confidence_rating,
-          updated_at = EXCLUDED.updated_at,
-          updated_by = EXCLUDED.updated_by,
-          version = EXCLUDED.version;
-      `;
-      await this.pg.query(sql, [
-        entity.id,
-        entity.organizationId,
-        entity.brandId,
-        entity.name,
-        entity.type,
-        entity.wikidataId || null,
-        entity.wikipediaUrl || null,
-        entity.aliases || null,
-        entity.description || null,
-        entity.provenance ? JSON.stringify(entity.provenance) : null,
-        entity.authorityScore !== undefined ? entity.authorityScore : 0.0,
-        entity.completenessScore !== undefined ? entity.completenessScore : 0.0,
-        entity.status || "active",
-        entity.confidence.score,
-        entity.confidence.rating,
-        entity.audit.createdAt,
-        entity.audit.updatedAt,
-        entity.audit.createdBy,
-        entity.audit.updatedBy,
-        entity.audit.version
-      ]);
-    } catch (err) {
-      console.warn("[EntityRepository.save] falling back to memory store.", err);
+    const properties: Record<string, unknown> = { ...(entity.properties || {}) };
+    const projected: Record<string, unknown> = {
+      wikidataId: entity.wikidataId,
+      wikipediaUrl: entity.wikipediaUrl,
+      aliases: entity.aliases,
+      provenance: entity.provenance,
+      authorityScore: entity.authorityScore,
+      completenessScore: entity.completenessScore,
+      status: entity.status,
+      confidence: entity.confidence
+    };
+    for (const [key, value] of Object.entries(projected)) {
+      if (value === undefined) delete properties[key];
+      else properties[key] = value;
     }
 
-    const existing = db.entities.get(entity.id);
-    if (existing && existing.organizationId !== entity.organizationId) {
-      throw new Error("Tenant Isolation Exception: Cannot modify or change tenant ownership for existing Entity.");
+    const result = await this.pg.query(
+      `INSERT INTO entities (
+        id, organization_id, name, entity_type, description, properties,
+        created_at, updated_at, created_by, updated_by, version
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        entity_type = EXCLUDED.entity_type,
+        description = EXCLUDED.description,
+        properties = EXCLUDED.properties,
+        updated_at = EXCLUDED.updated_at,
+        updated_by = EXCLUDED.updated_by,
+        version = EXCLUDED.version
+      WHERE entities.organization_id = EXCLUDED.organization_id
+      RETURNING *;`,
+      [
+        entity.id, entity.organizationId, entity.name, entity.type, entity.description ?? null,
+        JSON.stringify(properties), entity.audit.createdAt, entity.audit.updatedAt,
+        entity.audit.createdBy, entity.audit.updatedBy, entity.audit.version
+      ]
+    );
+    if (!result.rowCount || result.rowCount === 0) {
+      throw new Error("Entity persistence rejected: ID is already owned by another Organization.");
     }
+    return mapEntityRow(result.rows[0]);
+  }
+
+  public async deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "UPDATE entities SET deleted_at = NOW(), updated_by = $1, updated_at = NOW(), version = version + 1 WHERE id = $2 AND organization_id = $3 AND deleted_at IS NULL RETURNING id;",
+      [deletedBy, id, organizationId]
+    );
+    return Boolean(result.rowCount && result.rowCount > 0);
+  }
+
+  public async getRelationships(organizationId: string): Promise<EntityRelationship[]> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "SELECT * FROM entity_relationships WHERE organization_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC, id ASC;",
+      [organizationId]
+    );
+    return result.rows.map(mapEntityRelationshipRow);
+  }
+
+  public async saveRelationship(relationship: EntityRelationship): Promise<EntityRelationship> {
+    enforceTenantContext(relationship.organizationId);
+    const properties: Record<string, unknown> = { ...(relationship.properties || {}) };
+    properties.confidence = relationship.confidence;
+    properties.direction = relationship.direction || "directed";
+    if (relationship.provenance !== undefined) properties.provenance = relationship.provenance;
+    if (relationship.metadata !== undefined) properties.metadata = relationship.metadata;
+
+    const result = await this.pg.query(
+      `INSERT INTO entity_relationships (
+        id, organization_id, source_entity_id, target_entity_id, relationship_type, weight, properties,
+        created_at, updated_at, created_by, updated_by, version
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT (organization_id, source_entity_id, target_entity_id, relationship_type) WHERE deleted_at IS NULL
+      DO UPDATE SET
+        weight = EXCLUDED.weight,
+        properties = EXCLUDED.properties,
+        updated_at = EXCLUDED.updated_at,
+        updated_by = EXCLUDED.updated_by,
+        version = entity_relationships.version + 1
+      RETURNING *;`,
+      [
+        relationship.id, relationship.organizationId, relationship.sourceEntityId, relationship.targetEntityId,
+        relationship.relationshipType, relationship.weight, JSON.stringify(properties),
+        relationship.audit.createdAt, relationship.audit.updatedAt,
+        relationship.audit.createdBy, relationship.audit.updatedBy, relationship.audit.version
+      ]
+    );
+    if (!result.rowCount || result.rowCount === 0) throw new Error("Entity relationship persistence returned no row.");
+    return mapEntityRelationshipRow(result.rows[0]);
+  }
+
+  public async deleteRelationship(organizationId: string, sourceId: string, targetId: string, type: RelationshipType): Promise<boolean> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "UPDATE entity_relationships SET deleted_at = NOW(), updated_at = NOW(), version = version + 1 WHERE organization_id = $1 AND source_entity_id = $2 AND target_entity_id = $3 AND relationship_type = $4 AND deleted_at IS NULL RETURNING id;",
+      [organizationId, sourceId, targetId, type]
+    );
+    return Boolean(result.rowCount && result.rowCount > 0);
+  }
+}
+
+/** Explicit process-local adapter for tests and deterministic demo fixtures only. */
+export class InMemoryEntityRepository implements IEntityRepository {
+  public async findById(organizationId: string, id: string): Promise<Entity | null> {
+    enforceTenantContext(organizationId);
+    const entity = db.entities.get(id);
+    return !entity || entity.organizationId !== organizationId || entity.audit.deletedAt ? null : entity;
+  }
+
+  public async findByName(organizationId: string, name: string): Promise<Entity | null> {
+    enforceTenantContext(organizationId);
+    for (const entity of db.entities.values()) {
+      if (entity.organizationId === organizationId && !entity.audit.deletedAt && entity.name.trim().toLowerCase() === name.trim().toLowerCase()) return entity;
+    }
+    return null;
+  }
+
+  public async findByOrganizationId(organizationId: string, params?: QueryParams): Promise<PaginatedResult<Entity>> {
+    enforceTenantContext(organizationId);
+    return paginateArray(Array.from(db.entities.values()).filter(entity =>
+      entity.organizationId === organizationId && (params?.includeDeleted || !entity.audit.deletedAt)
+    ), params);
+  }
+
+  public async findByBrandId(organizationId: string, brandId: string, params?: QueryParams): Promise<PaginatedResult<Entity>> {
+    enforceTenantContext(organizationId);
+    const linkedIds = new Set(db.brandEntityAssociations.filter(link =>
+      link.organizationId === organizationId && link.brandId === brandId && !link.audit.deletedAt
+    ).map(link => link.entityId));
+    return paginateArray(Array.from(db.entities.values()).filter(entity =>
+      linkedIds.has(entity.id) && entity.organizationId === organizationId && (params?.includeDeleted || !entity.audit.deletedAt)
+    ), params);
+  }
+
+  public async save(entity: Entity): Promise<Entity> {
+    enforceTenantContext(entity.organizationId);
+    const existing = db.entities.get(entity.id);
+    if (existing && existing.organizationId !== entity.organizationId) throw new Error("Tenant Isolation Exception: Cannot change Entity ownership.");
     db.entities.set(entity.id, entity);
     return entity;
   }
 
   public async deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean> {
     enforceTenantContext(organizationId);
-    try {
-      const sql = `UPDATE entities SET deleted_at = NOW(), updated_by = $1, updated_at = NOW() WHERE id = $2 AND organization_id = $3;`;
-      const res = await this.pg.query(sql, [deletedBy, id, organizationId]);
-      if (res.rowCount && res.rowCount > 0) {
-        const item = db.entities.get(id);
-        if (item) {
-          item.audit.deletedAt = new Date().toISOString();
-          item.audit.updatedBy = deletedBy;
-          item.audit.updatedAt = new Date().toISOString();
-        }
-        return true;
-      }
-    } catch (err) {
-      console.warn("[EntityRepository.deleteSoft] falling back to memory store.", err);
-    }
-
     const entity = db.entities.get(id);
-    if (!entity || entity.organizationId !== organizationId) return false;
+    if (!entity || entity.organizationId !== organizationId || entity.audit.deletedAt) return false;
     entity.audit.deletedAt = new Date().toISOString();
-    entity.audit.updatedBy = deletedBy;
     entity.audit.updatedAt = new Date().toISOString();
+    entity.audit.updatedBy = deletedBy;
     return true;
   }
 
   public async getRelationships(organizationId: string): Promise<EntityRelationship[]> {
     enforceTenantContext(organizationId);
-    try {
-      const sql = `SELECT * FROM entity_relationships WHERE organization_id = $1 AND deleted_at IS NULL;`;
-      const res = await this.pg.query(sql, [organizationId]);
-      if (res.rowCount && res.rowCount > 0) {
-        return res.rows.map(row => this.mapRowToRelationship(row));
-      }
-    } catch (err) {
-      console.warn("[EntityRepository.getRelationships] falling back to memory store.", err);
-    }
-
-    return db.relationships.filter(
-      r => r.organizationId === organizationId && !r.audit.deletedAt
-    );
+    return db.relationships.filter(rel => rel.organizationId === organizationId && !rel.audit.deletedAt);
   }
 
   public async saveRelationship(relationship: EntityRelationship): Promise<EntityRelationship> {
     enforceTenantContext(relationship.organizationId);
-    try {
-      const sql = `
-        INSERT INTO entity_relationships (
-          organization_id, source_entity_id, target_entity_id, relationship_type,
-          direction, provenance, metadata, confidence_score, confidence_rating,
-          created_at, updated_at, created_by, updated_by, version
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-        ON CONFLICT (source_entity_id, target_entity_id, relationship_type) DO UPDATE SET
-          direction = EXCLUDED.direction,
-          provenance = EXCLUDED.provenance,
-          metadata = EXCLUDED.metadata,
-          confidence_score = EXCLUDED.confidence_score,
-          confidence_rating = EXCLUDED.confidence_rating,
-          updated_at = EXCLUDED.updated_at,
-          updated_by = EXCLUDED.updated_by,
-          version = EXCLUDED.version;
-      `;
-      await this.pg.query(sql, [
-        relationship.organizationId,
-        relationship.sourceEntityId,
-        relationship.targetEntityId,
-        relationship.relationshipType,
-        relationship.direction || "directed",
-        relationship.provenance ? JSON.stringify(relationship.provenance) : null,
-        relationship.metadata ? JSON.stringify(relationship.metadata) : null,
-        relationship.confidence.score,
-        relationship.confidence.rating,
-        relationship.audit.createdAt,
-        relationship.audit.updatedAt,
-        relationship.audit.createdBy,
-        relationship.audit.updatedBy,
-        relationship.audit.version
-      ]);
-    } catch (err) {
-      console.warn("[EntityRepository.saveRelationship] falling back to memory store.", err);
+    const source = db.entities.get(relationship.sourceEntityId);
+    const target = db.entities.get(relationship.targetEntityId);
+    if (!source || source.organizationId !== relationship.organizationId ||
+        !target || target.organizationId !== relationship.organizationId) {
+      throw new Error("Entity relationship requires both endpoints to belong to the same Organization.");
     }
-
-    const existing = db.relationships.find(
-      r => r.sourceEntityId === relationship.sourceEntityId &&
-           r.targetEntityId === relationship.targetEntityId &&
-           r.relationshipType === relationship.relationshipType
+    const idOwner = db.relationships.find(rel => rel.id === relationship.id && rel.organizationId !== relationship.organizationId);
+    if (idOwner) throw new Error("Tenant Isolation Exception: Cannot change EntityRelationship ownership.");
+    const existing = db.relationships.find(rel =>
+      rel.organizationId === relationship.organizationId &&
+      rel.sourceEntityId === relationship.sourceEntityId &&
+      rel.targetEntityId === relationship.targetEntityId &&
+      rel.relationshipType === relationship.relationshipType &&
+      !rel.audit.deletedAt
     );
-    if (existing && existing.organizationId !== relationship.organizationId) {
-      throw new Error("Tenant Isolation Exception: Cannot modify or change tenant ownership for existing Relationship.");
+    if (existing) {
+      Object.assign(existing, relationship, { id: existing.id, audit: { ...relationship.audit, createdAt: existing.audit.createdAt } });
+      return existing;
     }
-    db.relationships = db.relationships.filter(
-      r => !(r.sourceEntityId === relationship.sourceEntityId &&
-             r.targetEntityId === relationship.targetEntityId &&
-             r.relationshipType === relationship.relationshipType)
-    );
     db.relationships.push(relationship);
     return relationship;
   }
 
   public async deleteRelationship(organizationId: string, sourceId: string, targetId: string, type: RelationshipType): Promise<boolean> {
     enforceTenantContext(organizationId);
-    try {
-      const sql = `DELETE FROM entity_relationships WHERE organization_id = $1 AND source_entity_id = $2 AND target_entity_id = $3 AND relationship_type = $4;`;
-      const res = await this.pg.query(sql, [organizationId, sourceId, targetId, type]);
-      if (res.rowCount && res.rowCount > 0) {
-        db.relationships = db.relationships.filter(
-          r => !(r.organizationId === organizationId &&
-                 r.sourceEntityId === sourceId &&
-                 r.targetEntityId === targetId &&
-                 r.relationshipType === type)
-        );
-        return true;
-      }
-    } catch (err) {
-      console.warn("[EntityRepository.deleteRelationship] falling back to memory store.", err);
-    }
+    const item = db.relationships.find(rel => rel.organizationId === organizationId && rel.sourceEntityId === sourceId && rel.targetEntityId === targetId && rel.relationshipType === type && !rel.audit.deletedAt);
+    if (!item) return false;
+    item.audit.deletedAt = new Date().toISOString();
+    return true;
+  }
+}
 
-    const origLength = db.relationships.length;
-    db.relationships = db.relationships.filter(
-      r => !(r.organizationId === organizationId &&
-             r.sourceEntityId === sourceId &&
-             r.targetEntityId === targetId &&
-             r.relationshipType === type)
+export class BrandEntityAssociationRepository implements IBrandEntityAssociationRepository {
+  private pg: PostgresClient;
+
+  constructor(pg?: PostgresClient) {
+    this.pg = pg || PostgresClient.getInstance();
+  }
+
+  public async findById(organizationId: string, id: string): Promise<BrandEntityAssociation | null> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "SELECT * FROM brand_entity_associations WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL LIMIT 1;",
+      [id, organizationId]
     );
-    return db.relationships.length < origLength;
+    return result.rowCount && result.rowCount > 0 ? mapBrandEntityAssociationRow(result.rows[0]) : null;
+  }
+
+  public async findByBrandId(organizationId: string, brandId: string): Promise<BrandEntityAssociation[]> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "SELECT * FROM brand_entity_associations WHERE organization_id = $1 AND brand_id = $2 AND deleted_at IS NULL ORDER BY created_at DESC, id ASC;",
+      [organizationId, brandId]
+    );
+    return result.rows.map(mapBrandEntityAssociationRow);
+  }
+
+  public async findByEntityId(organizationId: string, entityId: string): Promise<BrandEntityAssociation[]> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "SELECT * FROM brand_entity_associations WHERE organization_id = $1 AND entity_id = $2 AND deleted_at IS NULL ORDER BY created_at DESC, id ASC;",
+      [organizationId, entityId]
+    );
+    return result.rows.map(mapBrandEntityAssociationRow);
+  }
+
+  public async save(association: BrandEntityAssociation): Promise<BrandEntityAssociation> {
+    enforceTenantContext(association.organizationId);
+    const result = await this.pg.query(
+      `INSERT INTO brand_entity_associations (
+        id, organization_id, brand_id, entity_id, relationship_type, weight, properties,
+        created_at, updated_at, created_by, updated_by, version
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT (organization_id, brand_id, entity_id, relationship_type) WHERE deleted_at IS NULL
+      DO UPDATE SET
+        weight = EXCLUDED.weight,
+        properties = EXCLUDED.properties,
+        updated_at = EXCLUDED.updated_at,
+        updated_by = EXCLUDED.updated_by,
+        version = brand_entity_associations.version + 1
+      RETURNING *;`,
+      [
+        association.id, association.organizationId, association.brandId, association.entityId,
+        association.relationshipType, association.weight, JSON.stringify(association.properties || {}),
+        association.audit.createdAt, association.audit.updatedAt,
+        association.audit.createdBy, association.audit.updatedBy, association.audit.version
+      ]
+    );
+    if (!result.rowCount || result.rowCount === 0) throw new Error("Brand–Entity association persistence returned no row.");
+    return mapBrandEntityAssociationRow(result.rows[0]);
+  }
+
+  public async deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean> {
+    enforceTenantContext(organizationId);
+    const result = await this.pg.query(
+      "UPDATE brand_entity_associations SET deleted_at = NOW(), updated_at = NOW(), updated_by = $1, version = version + 1 WHERE id = $2 AND organization_id = $3 AND deleted_at IS NULL RETURNING id;",
+      [deletedBy, id, organizationId]
+    );
+    return Boolean(result.rowCount && result.rowCount > 0);
+  }
+}
+
+export class InMemoryBrandEntityAssociationRepository implements IBrandEntityAssociationRepository {
+  public async findById(organizationId: string, id: string): Promise<BrandEntityAssociation | null> {
+    enforceTenantContext(organizationId);
+    return db.brandEntityAssociations.find(item => item.id === id && item.organizationId === organizationId && !item.audit.deletedAt) || null;
+  }
+
+  public async findByBrandId(organizationId: string, brandId: string): Promise<BrandEntityAssociation[]> {
+    enforceTenantContext(organizationId);
+    return db.brandEntityAssociations.filter(item => item.organizationId === organizationId && item.brandId === brandId && !item.audit.deletedAt);
+  }
+
+  public async findByEntityId(organizationId: string, entityId: string): Promise<BrandEntityAssociation[]> {
+    enforceTenantContext(organizationId);
+    return db.brandEntityAssociations.filter(item => item.organizationId === organizationId && item.entityId === entityId && !item.audit.deletedAt);
+  }
+
+  public async save(association: BrandEntityAssociation): Promise<BrandEntityAssociation> {
+    enforceTenantContext(association.organizationId);
+    const idOwner = db.brandEntityAssociations.find(item => item.id === association.id && item.organizationId !== association.organizationId);
+    if (idOwner) throw new Error("Tenant Isolation Exception: Cannot change BrandEntityAssociation ownership.");
+    const brand = db.brands.get(association.brandId);
+    const entity = db.entities.get(association.entityId);
+    if (!brand || brand.organizationId !== association.organizationId || !entity || entity.organizationId !== association.organizationId) {
+      throw new Error("Brand–Entity association requires both records to belong to the same Organization.");
+    }
+    const existing = db.brandEntityAssociations.find(item =>
+      item.organizationId === association.organizationId &&
+      item.brandId === association.brandId &&
+      item.entityId === association.entityId &&
+      item.relationshipType === association.relationshipType &&
+      !item.audit.deletedAt
+    );
+    if (existing) {
+      Object.assign(existing, association, { id: existing.id, audit: { ...association.audit, createdAt: existing.audit.createdAt } });
+      return existing;
+    }
+    db.brandEntityAssociations.push(association);
+    return association;
+  }
+
+  public async deleteSoft(organizationId: string, id: string, deletedBy: string): Promise<boolean> {
+    enforceTenantContext(organizationId);
+    const item = db.brandEntityAssociations.find(item => item.id === id && item.organizationId === organizationId && !item.audit.deletedAt);
+    if (!item) return false;
+    item.audit.deletedAt = new Date().toISOString();
+    item.audit.updatedAt = new Date().toISOString();
+    item.audit.updatedBy = deletedBy;
+    return true;
   }
 }
 

@@ -1,3 +1,4 @@
+import type { IEntityRepository } from "../repositories/interfaces";
 import {
   AeoAnalysis,
   FaqOpportunity,
@@ -24,7 +25,6 @@ import {
   AeoContentIntelligenceRepository,
   PageRepository,
   BrandRepository,
-  EntityRepository,
   AIVisibilityAuditRepository,
   CitationIntelligenceRepository,
   CompetitorRepository
@@ -34,7 +34,6 @@ export class AeoContentIntelligenceService {
   private repo: AeoContentIntelligenceRepository;
   private pageRepo: PageRepository;
   private brandRepo: BrandRepository;
-  private entityRepo: EntityRepository;
   private auditRepo: AIVisibilityAuditRepository;
   private citationRepo: CitationIntelligenceRepository;
   private competitorRepo: CompetitorRepository;
@@ -43,7 +42,7 @@ export class AeoContentIntelligenceService {
     repo?: AeoContentIntelligenceRepository,
     pageRepo?: PageRepository,
     brandRepo?: BrandRepository,
-    entityRepo?: EntityRepository,
+    _entityRepo?: IEntityRepository,
     auditRepo?: AIVisibilityAuditRepository,
     citationRepo?: CitationIntelligenceRepository,
     competitorRepo?: CompetitorRepository
@@ -51,7 +50,6 @@ export class AeoContentIntelligenceService {
     this.repo = repo || new AeoContentIntelligenceRepository();
     this.pageRepo = pageRepo || new PageRepository();
     this.brandRepo = brandRepo || new BrandRepository();
-    this.entityRepo = entityRepo || new EntityRepository();
     this.auditRepo = auditRepo || new AIVisibilityAuditRepository();
     this.citationRepo = citationRepo || new CitationIntelligenceRepository();
     this.competitorRepo = competitorRepo || new CompetitorRepository();
@@ -87,7 +85,8 @@ export class AeoContentIntelligenceService {
     const answerability = this.evaluateAnswerability(pageText, brandName);
 
     // 3. Perform Entity Coverage Evaluation
-    const entityCoverage = await this.evaluateEntityCoverage(organizationId, pageText, brandName);
+    const pageEntities = await this.pageRepo.getLinkedEntities(organizationId, page.id);
+    const entityCoverage = await this.evaluateEntityCoverage(pageEntities, pageText);
 
     // 4. Perform Semantic Coverage Evaluation
     const semanticCoverage = this.evaluateSemanticCoverage(pageText);
@@ -220,29 +219,21 @@ export class AeoContentIntelligenceService {
    * Evaluate Entity Coverage
    */
   private async evaluateEntityCoverage(
-    organizationId: string,
-    text: string,
-    brandName: string
+    tenantEntities: Entity[],
+    text: string
   ): Promise<EntityCoverageItem[]> {
     const lowerText = text.toLowerCase();
     const coverageItems: EntityCoverageItem[] = [];
 
-    // Retrieve active entities in tenant database (e.g. from KG or entity tables)
-    const entitiesRes = await this.entityRepo.findByBrandId(organizationId, "brand-test-001");
-    const tenantEntities = entitiesRes.data.length > 0 ? entitiesRes.data : [
-      { id: "entity-brand", name: brandName, type: "Brand" },
-      { id: "entity-product", name: "سئو معنایی", type: "Product" }
-    ];
-
     for (const ent of tenantEntities) {
-      const entNameLower = ent.name.toLowerCase();
-      const occurrences = (lowerText.match(new RegExp(entNameLower, "g")) || []).length;
+      const entNameLower = ent.name.trim().toLowerCase();
+      if (!entNameLower) continue;
+      const occurrences = lowerText.split(entNameLower).length - 1;
 
       let status: EntityCoverageStatus = "not_covered";
       let evidence = "";
 
       if (occurrences > 0) {
-        // Distinguish simple mention vs description/attribute coverage
         const hasPropertiesDescribed = ["ارائه‌دهنده", "خدمات ما شامل", "با آدرس اینترنتی"].some(p => lowerText.includes(p));
 
         if (occurrences === 1 && !hasPropertiesDescribed) {
@@ -256,7 +247,6 @@ export class AeoContentIntelligenceService {
           evidence = `موجودیت '${ent.name}' چندین بار تکرار شده اما پوشش توصیفی محدودی دارد.`;
         }
       } else {
-        status = "not_covered";
         evidence = `موجودیت '${ent.name}' اصلاً در محتوای صفحه یافت نشد.`;
       }
 
