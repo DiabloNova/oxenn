@@ -173,7 +173,6 @@ export async function runKnowledgeGraphTests() {
     const miniEntity: Entity = {
       id: "ent-test-calc-mini",
       organizationId: tenantA,
-      brandId: "brand-01",
       name: "Acme Mini",
       type: "Brand",
       confidence: { score: 0.80, rating: "high" },

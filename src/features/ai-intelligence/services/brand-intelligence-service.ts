@@ -7,6 +7,7 @@ import {
   AuditMetadata,
   PromptExecution
 } from "../domain/types";
+import type { IBrandRepository } from "../repositories/interfaces";
 import {
   BrandIntelligenceRepository,
   BrandRepository,
@@ -26,13 +27,13 @@ export interface AIBrandAuthorityMetrics {
 
 export class BrandIntelligenceService {
   private repo: BrandIntelligenceRepository;
-  private brandRepo: BrandRepository;
+  private brandRepo: IBrandRepository;
   private compRepo: CompetitorRepository;
   private citationRepo: CitationIntelligenceRepository;
 
   constructor(
     repo?: BrandIntelligenceRepository,
-    brandRepo?: BrandRepository,
+    brandRepo?: IBrandRepository,
     compRepo?: CompetitorRepository,
     citationRepo?: CitationIntelligenceRepository
   ) {

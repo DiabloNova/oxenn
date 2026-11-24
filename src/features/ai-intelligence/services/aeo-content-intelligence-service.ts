@@ -1,4 +1,4 @@
-import type { IEntityRepository } from "../repositories/interfaces";
+import type { IEntityRepository, IBrandRepository } from "../repositories/interfaces";
 import {
   AeoAnalysis,
   FaqOpportunity,
@@ -33,7 +33,7 @@ import {
 export class AeoContentIntelligenceService {
   private repo: AeoContentIntelligenceRepository;
   private pageRepo: PageRepository;
-  private brandRepo: BrandRepository;
+  private brandRepo: IBrandRepository;
   private auditRepo: AIVisibilityAuditRepository;
   private citationRepo: CitationIntelligenceRepository;
   private competitorRepo: CompetitorRepository;
@@ -41,7 +41,7 @@ export class AeoContentIntelligenceService {
   constructor(
     repo?: AeoContentIntelligenceRepository,
     pageRepo?: PageRepository,
-    brandRepo?: BrandRepository,
+    brandRepo?: IBrandRepository,
     _entityRepo?: IEntityRepository,
     auditRepo?: AIVisibilityAuditRepository,
     citationRepo?: CitationIntelligenceRepository,
