@@ -47,7 +47,7 @@ describe("Empty State Validation for Actions", () => {
 
   it("returns an empty Brand list without provisioning fabricated customer data", async () => {
     vi.spyOn(TenantContextManager, "runWithTenantContext").mockImplementation(
-      (async (_tenantId, _userId, _requestId, callback) => callback()) as never
+      (async (...args: Parameters<typeof TenantContextManager.runWithTenantContext>) => args[3]()) as typeof TenantContextManager.runWithTenantContext
     );
     const findBrands = vi.spyOn(BrandRepository.prototype, "findByOrganizationId").mockResolvedValue({
       data: [],
