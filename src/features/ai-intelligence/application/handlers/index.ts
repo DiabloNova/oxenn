@@ -26,6 +26,7 @@ import {
 import { DTOHandlers } from "../mappers";
 import {
   IBrandRepository,
+  IBrandEntityAssociationRepository,
   IEntityRepository,
   IPromptRepository,
   IObservationRepository,
@@ -34,6 +35,7 @@ import {
 } from "../../repositories/interfaces";
 import {
   BrandRepository,
+  BrandEntityAssociationRepository,
   EntityRepository,
   PromptRepository,
   ObservationRepository,
@@ -47,11 +49,13 @@ import {
   ObservationService
 } from "../../services";
 import { DomainEventFactory, eventBus } from "../../domain/events";
-import { Brand, VisibilityScore, Recommendation } from "../../domain/types";
+import { Brand, Entity, VisibilityScore, Recommendation } from "../../domain/types";
+import { TenantContextManager, TenantContextViolationException } from "@/core/database/tenant-context";
 
 export class ApplicationCommandHandler {
   private brandRepo: IBrandRepository;
   private entityRepo: IEntityRepository;
+  private brandEntityAssociationRepo: IBrandEntityAssociationRepository;
   private promptRepo: IPromptRepository;
   private obsRepo: IObservationRepository;
   private visRepo: IVisibilityScoreRepository;
@@ -68,10 +72,12 @@ export class ApplicationCommandHandler {
     promptRepo?: IPromptRepository,
     obsRepo?: IObservationRepository,
     visRepo?: IVisibilityScoreRepository,
-    recRepo?: IRecommendationRepository
+    recRepo?: IRecommendationRepository,
+    brandEntityAssociationRepo?: IBrandEntityAssociationRepository
   ) {
     this.brandRepo = brandRepo || new BrandRepository();
     this.entityRepo = entityRepo || new EntityRepository();
+    this.brandEntityAssociationRepo = brandEntityAssociationRepo || new BrandEntityAssociationRepository();
     this.promptRepo = promptRepo || new PromptRepository();
     this.obsRepo = obsRepo || new ObservationRepository();
     this.visRepo = visRepo || new VisibilityScoreRepository();
@@ -88,7 +94,7 @@ export class ApplicationCommandHandler {
    */
   public async handleCreateBrand(command: CreateBrandCommand): Promise<BrandDTO> {
     const brand: Brand = {
-      id: `brand-${Math.random().toString(36).substr(2, 9)}`,
+      id: crypto.randomUUID(),
       organizationId: command.organizationId,
       name: command.name,
       description: command.description,
@@ -130,25 +136,83 @@ export class ApplicationCommandHandler {
    * Handle: DiscoverEntityCommand
    */
   public async handleDiscoverEntity(command: DiscoverEntityCommand): Promise<EntityDTO> {
-    const entity = await this.entityService.createEntity(
-      command.organizationId,
-      command.brandId,
-      command.name,
-      command.type,
-      command.wikidataId,
-      command.wikipediaUrl,
-      command.confidenceScore,
-      command.actorId
-    );
+    // Keep Entity creation and its optional Brand association in one PostgreSQL
+    // transaction. Reuse an existing tenant/system transaction when present.
+    const persistEntityAndBrandLink = async () => {
+      if (command.brandId) {
+        const brand = await this.brandRepo.findById(command.organizationId, command.brandId);
+        if (!brand) {
+          throw new Error("Cannot associate a discovered Entity with a Brand outside this Organization.");
+        }
+      }
 
-    // Event Dispatching (EDA)
+      const entity = await this.entityService.createEntity(
+        command.organizationId,
+        command.name,
+        command.type,
+        command.wikidataId,
+        command.wikipediaUrl,
+        command.confidenceScore,
+        command.actorId
+      );
+
+      if (command.brandId) {
+        const now = new Date().toISOString();
+        await this.brandEntityAssociationRepo.save({
+          id: crypto.randomUUID(),
+          organizationId: command.organizationId,
+          brandId: command.brandId,
+          entityId: entity.id,
+          relationshipType: command.relationshipType || "related_to",
+          weight: 1,
+          properties: {},
+          audit: {
+            createdAt: now,
+            updatedAt: now,
+            createdBy: command.actorId,
+            updatedBy: command.actorId,
+            version: 1
+          }
+        });
+      }
+
+      return entity;
+    };
+
+    const context = TenantContextManager.getContext();
+    let entity: Entity;
+
+    if (context?.executionMode === "system") {
+      if (!context.dbClient) {
+        throw new TenantContextViolationException(
+          "DiscoverEntity requires an active transaction in System Context."
+        );
+      }
+      entity = await persistEntityAndBrandLink();
+    } else {
+      if (context && (!context.dbClient || context.tenantId !== command.organizationId)) {
+        throw new TenantContextViolationException(
+          "DiscoverEntity requires an active transaction for the target Organization."
+        );
+      }
+
+      entity = await TenantContextManager.runWithTenantContext(
+        command.organizationId,
+        command.actorId,
+        "ai-intelligence:discover-entity",
+        persistEntityAndBrandLink
+      );
+    }
+
+    // Publish only after this handler-owned transaction has committed. When called
+    // inside a caller-owned transaction, the existing event behavior is preserved.
     const entityDiscoveredEvent = DomainEventFactory.create(
       "aibi.entity.discovered",
       entity.id,
       command.organizationId,
       {
         entityId: entity.id,
-        brandId: entity.brandId,
+        brandId: command.brandId,
         name: entity.name,
         type: entity.type,
         wikidataId: entity.wikidataId,
@@ -381,11 +445,14 @@ export class ApplicationQueryHandler {
    */
   public async handleGetEntityGraph(query: GetEntityGraphQuery) {
     const entities = await this.entityService.getEntitiesByBrand(query.organizationId, query.brandId);
-    const relationships = await this.entityService.getRelationships(query.organizationId);
+    const entityIds = new Set(entities.map(entity => entity.id));
+    const relationships = (await this.entityService.getRelationships(query.organizationId)).filter(
+      relationship => entityIds.has(relationship.sourceEntityId) && entityIds.has(relationship.targetEntityId)
+    );
 
     return {
-      nodes: entities.map(e => DTOHandlers.entityToDTO(e)),
-      edges: relationships.map(r => DTOHandlers.relationshipToDTO(r))
+      nodes: entities.map(entity => DTOHandlers.entityToDTO(entity)),
+      edges: relationships.map(relationship => DTOHandlers.relationshipToDTO(relationship))
     };
   }
 

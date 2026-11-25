@@ -55,7 +55,8 @@ export interface CreateBrandRequest {
 }
 
 export interface DiscoverEntityRequest {
-  brandId: string;
+  brandId?: string;
+  relationshipType?: "owns" | "creates" | "competes_with" | "related_to" | "mentioned_with";
   name: string;
   type: string;
   wikidataId?: string;

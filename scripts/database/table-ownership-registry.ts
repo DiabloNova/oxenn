@@ -89,7 +89,7 @@ function unresolved(
   return { scope: "UNRESOLVED", status, rationale, evidence };
 }
 
-/** The 71 Workspace tables in the canonical Drizzle schema and modular exports. */
+/** The 72 Workspace tables in the canonical Drizzle schema and modular exports. */
 const workspaceOwnership = {
   admin_users: workspaceGlobal(
     "Legacy Workspace-database administrator records are consumed by the existing Workspace admin Postgres adapter. They are not Platform Admin identities: the isolated Platform Admin authentication boundary explicitly does not read this table.",
@@ -126,6 +126,7 @@ const workspaceOwnership = {
     "authRateLimits",
   ),
   brand_associations: organizationScoped("organization_id"),
+  brand_entity_associations: organizationScoped("organization_id"),
   brand_mentions: organizationScoped("organization_id"),
   brands: organizationScoped("organization_id"),
   citation_occurrences: organizationScoped("organization_id"),

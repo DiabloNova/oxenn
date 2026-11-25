@@ -99,12 +99,13 @@ export function projectNeighborhoodForVisualization(
       }
     })),
     edges: edges.map(e => ({
-      id: `${e.sourceEntityId}-${e.targetEntityId}-${e.relationshipType}`,
+      id: e.id,
       source: e.sourceEntityId,
       target: e.targetEntityId,
       relationshipType: e.relationshipType,
       direction: e.direction || "directed",
       metadata: {
+        weight: e.weight,
         confidenceScore: e.confidence?.score ?? 0.0,
         confidenceRating: e.confidence?.rating ?? "low",
         provenance: e.provenance,
@@ -173,7 +174,6 @@ export class EntityService {
    */
   public async createEntity(
     organizationId: string,
-    brandId: string,
     name: string,
     type: string,
     wikidataId?: string,
@@ -189,9 +189,8 @@ export class EntityService {
   ): Promise<Entity> {
     const scoreVal = Math.min(Math.max(confidenceScore, 0), 1);
     const entity: Entity = {
-      id: `entity-${Math.random().toString(36).substr(2, 9)}`,
+      id: crypto.randomUUID(),
       organizationId,
-      brandId,
       name,
       type,
       wikidataId,
@@ -251,10 +250,15 @@ export class EntityService {
 
     const scoreVal = Math.min(Math.max(confidenceScore, 0), 1);
     const relationship: EntityRelationship = {
+      id: crypto.randomUUID(),
       organizationId,
       sourceEntityId,
       targetEntityId,
       relationshipType,
+      // Edge weight is a graph property, not a proxy for extraction confidence.
+      weight: typeof metadata?.weight === "number" && Number.isFinite(metadata.weight) && metadata.weight >= 0
+        ? metadata.weight
+        : 1,
       confidence: {
         score: scoreVal,
         rating: scoreVal >= 0.8 ? "high" : scoreVal >= 0.5 ? "medium" : "low"

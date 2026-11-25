@@ -48,11 +48,13 @@ export const DTOHandlers = {
   entityToDTO(domain: Entity): EntityDTO {
     return {
       id: domain.id,
-      brandId: domain.brandId,
+      organizationId: domain.organizationId,
       name: domain.name,
       type: domain.type,
+      description: domain.description,
       wikidataId: domain.wikidataId,
       wikipediaUrl: domain.wikipediaUrl,
+      aliases: domain.aliases,
       confidenceScore: domain.confidence.score,
       confidenceRating: domain.confidence.rating
     };
@@ -60,10 +62,11 @@ export const DTOHandlers = {
 
   relationshipToDTO(domain: EntityRelationship): EntityRelationshipDTO {
     return {
+      id: domain.id,
       sourceEntityId: domain.sourceEntityId,
       targetEntityId: domain.targetEntityId,
       relationshipType: domain.relationshipType,
-      confidenceScore: domain.confidence.score
+      weight: domain.weight
     };
   },
 

@@ -1,5 +1,5 @@
 import { BrandIntelligenceService } from "../../../src/features/ai-intelligence/services/brand-intelligence-service";
-import { BrandRepository, CompetitorRepository, BrandIntelligenceRepository } from "../../../src/features/ai-intelligence/repositories";
+import { InMemoryBrandRepository, CompetitorRepository, BrandIntelligenceRepository } from "../../../src/features/ai-intelligence/repositories";
 import { Brand, Competitor, PromptExecution } from "../../../src/features/ai-intelligence/domain/types";
 import { TenantContextManager } from "../../../src/core/database/tenant-context";
 import * as assert from "assert";
@@ -12,7 +12,7 @@ export async function runBrandIntelligenceTests() {
   const tenantA = "tenant-alpha-uuid";
   const tenantB = "tenant-beta-uuid";
 
-  const brandRepo = new BrandRepository();
+  const brandRepo = new InMemoryBrandRepository();
   const compRepo = new CompetitorRepository();
   const repo = new BrandIntelligenceRepository();
   const service = new BrandIntelligenceService(repo, brandRepo, compRepo);

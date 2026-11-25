@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthorizationError, authorizeApiRequest } from "@/services/auth/authorization";
@@ -79,6 +80,7 @@ export interface CompetitiveAnalysisResponse {
     score: unknown;
     historical?: unknown;
   };
+  radarUnavailableReason?: "brand_not_configured";
 }
 
 export async function POST(req: NextRequest) {
@@ -331,16 +333,14 @@ export async function POST(req: NextRequest) {
 
         // Integrate with CompetitiveRadarService for Task 6.3
         let radarData: CompetitiveAnalysisResponse["radar"] | undefined = undefined;
+        let radarUnavailableReason: CompetitiveAnalysisResponse["radarUnavailableReason"];
         try {
           const brandRepo = new BrandRepository();
-          const brandsRes = await brandRepo.findByOrganizationId(tenantId);
-          let brandId = brandsRes.data[0]?.id;
-          if (!brandId) {
-            brandId = "brand-acme-01";
-          }
-
           const compRepo = new CompetitorRepository();
           const competitorIds: string[] = [];
+
+          // Competitor records are independent of Brand onboarding. Keep this
+          // discovery behavior, but use the UUID contract of the PostgreSQL table.
           for (const compUrl of safeCompetitorUrls) {
             try {
               const hostname = new URL(compUrl).hostname.replace("www.", "");
@@ -348,7 +348,7 @@ export async function POST(req: NextRequest) {
               if (competitor) {
                 competitorIds.push(competitor.id);
               } else {
-                const id = `comp-${Math.random().toString(36).substr(2, 9)}`;
+                const id = randomUUID();
                 const name = hostname.split(".")[0];
                 const displayName = name.charAt(0).toUpperCase() + name.slice(1);
                 const newComp = await compRepo.save({
@@ -370,34 +370,43 @@ export async function POST(req: NextRequest) {
                 competitorIds.push(newComp.id);
               }
             } catch {
-              // ignore invalid URLs
+              // Invalid competitor URLs or individual discovery failures do not
+              // prevent the independent high-level comparison response.
             }
           }
 
-          const radarService = new CompetitiveRadarService(
-            compRepo,
-            new CompetitiveSeoFindingRepository(),
-            new VisibilityScoreRepository(),
-            new CitationIntelligenceRepository(),
-            new PromptIntelligenceRepository(),
-            new BrandIntelligenceRepository(),
-            new HistoricalMetricRepository(),
-            brandRepo
-          );
+          const brandsRes = await brandRepo.findByOrganizationId(tenantId);
+          const brand = brandsRes.data[0];
+          if (!brand) {
+            // Brand-specific radar dimensions require a real persisted Brand.
+            // Avoid placeholder IDs and all dependent PostgreSQL lookups.
+            radarUnavailableReason = "brand_not_configured";
+          } else {
+            const radarService = new CompetitiveRadarService(
+              compRepo,
+              new CompetitiveSeoFindingRepository(),
+              new VisibilityScoreRepository(),
+              new CitationIntelligenceRepository(),
+              new PromptIntelligenceRepository(),
+              new BrandIntelligenceRepository(),
+              new HistoricalMetricRepository(),
+              brandRepo
+            );
+            const brandId = brand.id;
+            const snapshot = await radarService.generateRadarSnapshot(tenantId, brandId, competitorIds);
+            const benchmarks = await radarService.benchmark(tenantId, brandId, competitorIds);
+            const radarInsights = await radarService.generateInsights(tenantId, brandId, competitorIds);
+            const radarScore = await radarService.getCompetitiveScore(tenantId, brandId, competitorIds);
+            const historical = await radarService.compareHistorical(tenantId, brandId, competitorIds, competitorIds);
 
-          const snapshot = await radarService.generateRadarSnapshot(tenantId, brandId, competitorIds);
-          const benchmarks = await radarService.benchmark(tenantId, brandId, competitorIds);
-          const radarInsights = await radarService.generateInsights(tenantId, brandId, competitorIds);
-          const radarScore = await radarService.getCompetitiveScore(tenantId, brandId, competitorIds);
-          const historical = await radarService.compareHistorical(tenantId, brandId, competitorIds, competitorIds);
-
-          radarData = {
-            snapshot,
-            benchmarks: benchmarks.benchmarks,
-            insights: radarInsights,
-            score: radarScore,
-            historical
-          };
+            radarData = {
+              snapshot,
+              benchmarks: benchmarks.benchmarks,
+              insights: radarInsights,
+              score: radarScore,
+              historical
+            };
+          }
         } catch (radarErr) {
           console.warn("[Competitive API] Radar calculation skipped or failed.", radarErr);
         }
@@ -419,7 +428,8 @@ export async function POST(req: NextRequest) {
               "بکارگیری اسکیماهای تخصصی محصولات و سؤالات متداول"
             ]
           },
-          radar: radarData
+          radar: radarData,
+          radarUnavailableReason
         };
 
         // 4. Save to Database for audit trail/historical comparison

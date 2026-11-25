@@ -2,8 +2,7 @@ import { AeoContentIntelligenceService } from "../../../src/features/ai-intellig
 import {
   AeoContentIntelligenceRepository,
   PageRepository,
-  BrandRepository,
-  EntityRepository,
+  InMemoryBrandRepository,
   CompetitorRepository
 } from "../../../src/features/ai-intelligence/repositories";
 import { Page, Brand, Competitor, Entity } from "../../../src/features/ai-intelligence/domain/types";
@@ -19,16 +18,26 @@ export async function runAeoContentIntelligenceTests() {
   const tenantB = "tenant-beta-uuid";
 
   const repo = new AeoContentIntelligenceRepository();
-  const pageRepo = new PageRepository();
-  const brandRepo = new BrandRepository();
-  const entityRepo = new EntityRepository();
+  const pages = new Map<string, Page>();
+  const pageEntities = new Map<string, Entity[]>();
+  const pageRepo = {
+    findById: async (organizationId: string, pageId: string) => {
+      const page = pages.get(pageId);
+      return page && page.organizationId === organizationId ? page : null;
+    },
+    getLinkedEntities: async (organizationId: string, pageId: string) => {
+      const page = pages.get(pageId);
+      return page && page.organizationId === organizationId ? pageEntities.get(pageId) || [] : [];
+    }
+  } as unknown as PageRepository;
+  const brandRepo = new InMemoryBrandRepository();
   const compRepo = new CompetitorRepository();
 
   const service = new AeoContentIntelligenceService(
     repo,
     pageRepo,
     brandRepo,
-    entityRepo,
+    undefined,
     undefined,
     undefined,
     compRepo
@@ -66,9 +75,8 @@ export async function runAeoContentIntelligenceTests() {
   };
 
   const testEntity: Entity = {
-    id: "entity-aeo-brand",
+    id: crypto.randomUUID(),
     organizationId: tenantA,
-    brandId: "brand-aeo-777",
     name: "Rasha Gostar",
     type: "Brand",
     confidence: { score: 0.95, rating: "high" },
@@ -82,7 +90,7 @@ export async function runAeoContentIntelligenceTests() {
   };
 
   const testPage: Page = {
-    id: "page-aeo-777",
+    id: crypto.randomUUID(),
     organizationId: tenantA,
     websiteId: crypto.randomUUID(),
     url: "https://secure-site.com/aeo-guide",
@@ -106,8 +114,8 @@ export async function runAeoContentIntelligenceTests() {
     await TenantContextManager.runWithTenantContext(tenantA, "usr-test-1", "ctx-setup", async () => {
       await brandRepo.save(testBrand);
       await compRepo.save(testCompetitor);
-      await entityRepo.save(testEntity);
-      await pageRepo.save(testPage);
+      pages.set(testPage.id, testPage);
+      pageEntities.set(testPage.id, [testEntity]);
     });
 
     // 1. Answerability Analysis

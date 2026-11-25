@@ -112,7 +112,7 @@ describe("Canonical table ownership registry", () => {
       missingRegistryEntries: [],
       staleRegistryEntries: [],
     });
-    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(71);
+    expect(Object.keys(WORKSPACE_TABLE_OWNERSHIP)).toHaveLength(schemaNames.length);
   });
 
   it("accounts for every table in the separate Platform Admin Drizzle schema", () => {

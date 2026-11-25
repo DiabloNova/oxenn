@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { TenantSecurityGuard, SensitiveDataProtector, SecurityActor } from "../../../src/features/ai-intelligence/security";
 import {
-  BrandRepository,
-  EntityRepository,
+  InMemoryBrandRepository,
+  InMemoryEntityRepository,
   PromptRepository,
   ObservationRepository
 } from "../../../src/features/ai-intelligence/repositories";
@@ -69,8 +69,8 @@ export async function testSecurity() {
 
   // 4. Persistence Layer Tenant Isolation & Ownership Guards
   console.log("  * Testing Persistence Tenant Isolation Guards...");
-  const brandRepo = new BrandRepository();
-  const entityRepo = new EntityRepository();
+  const brandRepo = new InMemoryBrandRepository();
+  const entityRepo = new InMemoryEntityRepository();
   const promptRepo = new PromptRepository();
   const observationRepo = new ObservationRepository();
 
@@ -118,7 +118,6 @@ export async function testSecurity() {
   const entityA = {
     id: "test-entity-a",
     organizationId: "org-tenant-a-11",
-    brandId: "test-brand-tenant-a",
     name: "Entity A",
     type: "Brand" as const,
     confidence: { score: 0.9, rating: "high" as const },

@@ -10,9 +10,11 @@ vi.mock("../../src/services/auth/authorization", () => ({
 }));
 
 import { getBrandIntelligenceOverviewAction } from "../../src/app/actions/brand-intelligence";
+import { getBrandsAction } from "../../src/app/actions/ai-visibility-audit";
 import { getCitationsDashboardDataAction } from "../../src/app/actions/citation-intelligence";
 
 import { BrandRepository, CitationIntelligenceRepository } from "../../src/features/ai-intelligence/repositories";
+import { TenantContextManager } from "../../src/core/database/tenant-context";
 
 // Set fake DB URL to bypass pg initialization failing
 process.env.DATABASE_URL = "postgres://dummy:dummy@localhost:5432/dummy";
@@ -42,4 +44,24 @@ describe("Empty State Validation for Actions", () => {
         // Using a mapped type interface to assert the error string presence since the explicit union return type '{ success: false; error: string }' does not expose .error when discriminated by .success === false strictly in this context
         expect((result as unknown as { error: string }).error).toContain("ServiceUnavailable");
     });
+
+  it("returns an empty Brand list without provisioning fabricated customer data", async () => {
+    vi.spyOn(TenantContextManager, "runWithTenantContext").mockImplementation(
+      (async (...args: Parameters<typeof TenantContextManager.runWithTenantContext>) => args[3]()) as typeof TenantContextManager.runWithTenantContext
+    );
+    const findBrands = vi.spyOn(BrandRepository.prototype, "findByOrganizationId").mockResolvedValue({
+      data: [],
+      totalCount: 0,
+      limit: 100,
+      offset: 0
+    });
+    const saveBrand = vi.spyOn(BrandRepository.prototype, "save");
+
+    const result = await getBrandsAction();
+
+    expect(result).toMatchObject({ success: true, result: [] });
+    expect(findBrands).toHaveBeenCalledWith("tenant-1");
+    expect(saveBrand).not.toHaveBeenCalled();
+  });
+
 });

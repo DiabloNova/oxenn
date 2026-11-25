@@ -11,6 +11,7 @@ export const TENANT_SCOPED_TABLES = Object.freeze([
   "api_keys",
   "audit_prompts",
   "brand_associations",
+  "brand_entity_associations",
   "brand_mentions",
   "brands",
   "citation_occurrences",

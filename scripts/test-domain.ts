@@ -220,7 +220,6 @@ runTest("E2E Process, Autonomous Recovery & Recommendations", async () => {
   // Register semantic entities first
   await entityService.createEntity(
     tenantId,
-    brandId,
     "Acme Corp Entity",
     "Company",
     "Q111999222",

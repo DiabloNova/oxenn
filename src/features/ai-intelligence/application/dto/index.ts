@@ -23,20 +23,23 @@ export interface BrandDTO {
 
 export interface EntityDTO {
   id: string;
-  brandId: string;
+  organizationId: string;
   name: string;
   type: string;
+  description?: string;
   wikidataId?: string;
   wikipediaUrl?: string;
+  aliases?: string[];
   confidenceScore: number;
   confidenceRating: string;
 }
 
 export interface EntityRelationshipDTO {
+  id: string;
   sourceEntityId: string;
   targetEntityId: string;
   relationshipType: string;
-  confidenceScore: number;
+  weight: number;
 }
 
 export interface PromptDTO {
