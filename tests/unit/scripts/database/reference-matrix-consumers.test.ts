@@ -30,6 +30,21 @@ describe("database reference matrix consumer detection", () => {
     expect(findTableReferences(root, "competitors", null)).toEqual(["src/repository.ts"]);
   });
 
+  it("resolves SQL assembled from concatenated literals and local bindings", () => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "oxenn-matrix-"));
+    writeSource(
+      "src/page-repository.ts",
+      [
+        "export async function load(db: any) {",
+        "  const ownershipJoin = \"FROM pages p \" + \"INNER JOIN websites w ON w.id = p.website_id\";",
+        "  const statement = \"SELECT p.* \" + ownershipJoin + \" WHERE p.id = $1\";",
+        "  return db.query(statement);",
+        "}"
+      ].join("\n")
+    );
+    expect(findTableReferences(root, "pages", null)).toEqual(["src/page-repository.ts"]);
+  });
+
   it("ignores payload properties, unrelated table variables, comments, and SQL literals", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "oxenn-matrix-"));
     writeSource("src/studio.ts", "const request = { targetKeywords: [\"seo\"], competitors: [\"sample\"], tableName: \"competitors\" };\nconst message = \"The competitors field is required\";\n// SELECT * FROM competitors\nexport async function notAQuery(db: any, competitors: string) { return db.insert(competitors); }\nexport async function queryContainingMentionsOnly(db: any) { return db.query(\"SELECT 'FROM competitors' AS note /* FROM competitors */ -- FROM competitors\\n\"); }\nvoid request; void message;");

@@ -453,7 +453,7 @@
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/application/handlers/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -545,7 +545,7 @@
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/application/handlers/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -582,7 +582,6 @@
 
 ---
 
----
 ## Table: `citation_occurrences`
 
 - **Ownership Scope:** ORGANIZATION_SCOPED
@@ -1318,7 +1317,7 @@
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/features/ai-intelligence/services/entity-service.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
 
 ### Columns
 
@@ -1359,7 +1358,6 @@
 
 ---
 
----
 ## Table: `faq_opportunities`
 
 - **Ownership Scope:** ORGANIZATION_SCOPED
@@ -3012,6 +3010,6 @@
 
 
 ## Summary
-- Total Tables: 71
-- WIRED Tables: 60
-- ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 11
+- Total Tables: 72
+- WIRED Tables: 62
+- ORPHAN-TABLE (LEGACY-CANDIDATE) Tables: 10

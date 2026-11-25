@@ -122,6 +122,11 @@ export function findTableReferences(rootDir: string, tableName: string, exportNa
           return sqlTextAtUse(binding, context, next);
         }
       }
+      if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+        const left = sqlTextAtUse(expression.left, context, seen);
+        const right = sqlTextAtUse(expression.right, context, seen);
+        return left !== undefined && right !== undefined ? left + right : undefined;
+      }
       if (ts.isCallExpression(expression)) {
         for (const argument of expression.arguments) {
           const found = sqlTextAtUse(argument, context, seen);

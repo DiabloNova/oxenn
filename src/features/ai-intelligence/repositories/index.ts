@@ -2581,8 +2581,6 @@ export class PageRepository implements IPageRepository {
       "INSERT INTO pages_entities (organization_id, page_id, entity_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
       [organizationId, pageId, entityId]
     );
-    const exists = db.pagesEntities.some(link => link.pageId === pageId && link.entityId === entityId);
-    if (!exists) db.pagesEntities.push({ organizationId, pageId, entityId });
   }
 
   public async getLinkedKeywords(organizationId: string, pageId: string): Promise<Keyword[]> {

@@ -664,6 +664,23 @@ describe("BrandEntityAssociationRepository canonical Workspace PostgreSQL contra
 });
 
 describe("PageRepository Entity junction contract", () => {
+  it("writes Page-to-Entity links only to PostgreSQL", async () => {
+    const { client, query } = createPostgresMock();
+    const previousLinks = [...db.pagesEntities];
+    const pageId = "44444444-4444-4444-8444-444444444444";
+    const entityId = "99999999-9999-4999-8999-999999999999";
+
+    await inWorkspace(() =>
+      new PageRepository(client).linkEntity(WORKSPACE_ID, pageId, entityId)
+    );
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO pages_entities"),
+      [WORKSPACE_ID, pageId, entityId]
+    );
+    expect(db.pagesEntities).toEqual(previousLinks);
+  });
+
   it("returns persisted Page-to-Entity links from PostgreSQL rather than the process-local Map", async () => {
     const { client, query } = createPostgresMock();
     query.mockResolvedValueOnce({ rows: [entityRow()], rowCount: 1 });
