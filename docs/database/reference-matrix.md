@@ -1274,7 +1274,7 @@
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
-- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`
+- **Consumers:** `src/features/ai-intelligence/repositories/index.ts`, `src/services/knowledge-graph/graph-store.ts`
 
 ### Columns
 
@@ -1615,10 +1615,15 @@
 
 | Name | Type | Not Null | Primary Key | Default |
 |---|---|---|---|---|
+| `canonical_entity_id` | `uuid` | ❌ | ❌ | NULL |
 | `created_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
 | `id` | `uuid` | ✅ | ✅ | `gen_random_uuid()` |
 | `name` | `text` | ✅ | ❌ | NULL |
 | `properties` | `jsonb` | ✅ | ❌ | `'{}'::jsonb` |
+| `resolution_method` | `text` | ❌ | ❌ | NULL |
+| `resolution_status` | `text` | ✅ | ❌ | `'unresolved'` |
+| `resolved_at` | `timestamp with time zone` | ❌ | ❌ | NULL |
+| `source_chunk_ids` | `jsonb` | ✅ | ❌ | `'[]'::jsonb` |
 | `tenant_id` | `uuid` | ✅ | ❌ | NULL |
 | `type` | `text` | ✅ | ❌ | NULL |
 | `updated_at` | `timestamp with time zone` | ✅ | ❌ | `NOW()` |
@@ -1627,13 +1632,25 @@
 
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
+| `idx_kg_entities_canonical_entity` | `tenant_id, canonical_entity_id` | `btree` | ❌ | — |
+| `idx_kg_entities_id_tenant_id_fk` | `id, tenant_id` | `btree` | ✅ | — |
 | `idx_kg_entities_name` | `name` | `btree` | ❌ | — |
 | `idx_kg_entities_tenant` | `tenant_id` | `btree` | ❌ | — |
+
+### Check Constraints
+
+| Name | Expression |
+|---|---|
+| `kg_entities_matched_method_check` | `"resolution_status" <> 'matched' OR "resolution_method" IS NOT NULL` |
+| `kg_entities_resolution_consistency_check` | `("resolution_status" = 'matched') = ("canonical_entity_id" IS NOT NULL)` |
+| `kg_entities_resolution_status_check` | `"resolution_status" IN ('matched', 'unresolved', 'ambiguous')` |
+| `kg_entities_source_chunk_ids_array_check` | `jsonb_typeof("source_chunk_ids") = 'array'` |
 
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
+| `kg_entities_canonical_entity_id_tenant_id_fkey` | `canonical_entity_id, tenant_id` | `entities` | `id, organization_id` | no action |
 | `kg_entities_tenant_id_organizations_id_fk` | `tenant_id` | `organizations` | `id` | cascade |
 
 ---
@@ -1666,15 +1683,17 @@
 | Name | Columns | Method | Unique | Predicate |
 |---|---|---|---|---|
 | `idx_kg_relationships_source` | `source_entity_id` | `btree` | ❌ | — |
+| `idx_kg_relationships_source_tenant` | `source_entity_id, tenant_id` | `btree` | ❌ | — |
 | `idx_kg_relationships_target` | `target_entity_id` | `btree` | ❌ | — |
+| `idx_kg_relationships_target_tenant` | `target_entity_id, tenant_id` | `btree` | ❌ | — |
 | `idx_kg_relationships_tenant` | `tenant_id` | `btree` | ❌ | — |
 
 ### Foreign Keys
 
 | Name | Columns | Foreign Table | Foreign Columns | On Delete |
 |---|---|---|---|---|
-| `kg_relationships_source_entity_id_kg_entities_id_fk` | `source_entity_id` | `kg_entities` | `id` | cascade |
-| `kg_relationships_target_entity_id_kg_entities_id_fk` | `target_entity_id` | `kg_entities` | `id` | cascade |
+| `kg_relationships_source_entity_id_tenant_id_fkey` | `source_entity_id, tenant_id` | `kg_entities` | `id, tenant_id` | cascade |
+| `kg_relationships_target_entity_id_tenant_id_fkey` | `target_entity_id, tenant_id` | `kg_entities` | `id, tenant_id` | cascade |
 | `kg_relationships_tenant_id_organizations_id_fk` | `tenant_id` | `organizations` | `id` | cascade |
 
 ---

@@ -123,11 +123,11 @@ export const DOCS_INDEX: DocMeta[] = [
   },
   {
     slug: "AI_PIPELINE_ARCHITECTURE",
-    titleEn: "AI processing Pipeline Architecture",
-    titleFa: "AI processing Pipeline Architecture",
+    titleEn: "AI Processing Pipeline Architecture",
+    titleFa: "AI Processing Pipeline Architecture",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# AI processing Pipeline Architecture  This document describes the design and abstract contracts created to coordinate multi-model scraping, sanitization, and metric calculation.  ---  ## 1. Pipeline Stages  Ingesting and evaluating Generative engine search results operates in six decoupled abstract stages:  \`\`\`   [Stage 1: IAIEngineAdapter]             │ Dispatches queries to ChatGPT / Claude / Gemini / Perplexity             ▼   [Stage 2: IPromptExecutionPipeline]             │ Schedules cron `
+    snippet: `# AI Processing Pipeline Architecture  This document describes the processing boundaries for extraction, canonical resolution, and evidence promotion.  ## 1. Pipeline stages  1. **Extraction:** configured model providers extract candidate entities and relationships from source text. 2. **Evidence persistence:** \`kg_entities\` and \`kg_relationships\` retain extracted observations and source-chunk provenance under the active tenant. 3. **Canonical resolution:** trimmed, case-insensitive exact-name p`
   },
   {
     slug: "AI_PROMPT_INTELLIGENCE_ARCHITECTURE",
@@ -247,7 +247,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "Semantic Knowledge Graph Architecture Design",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# Semantic Knowledge Graph Architecture Design  This document details the abstract contracts and models designed to map, claimed, and travers brand concept networks inside external AI platforms.  ---  ## 1. Graph Model Definitions  - **GraphNode**: Mapped concept representing brands, competitors, key executives, or products. Anchored by a unique name and optional Wikidata \`wikidataId\`. - **GraphEdge**: Mapped semantic relationship containing predicates like \`owns\`, \`creates\`, \`competes_with\`, \`r`
+    snippet: `# Semantic Knowledge Graph Architecture Design  This document defines the authoritative domain graph and the extracted evidence graph. They are related through an explicit, tenant-scoped resolution contract; they are not interchangeable stores.  ## 1. Source of truth and graph boundaries  - **Canonical domain graph — \`entities\` and \`entity_relationships\`:** the authoritative identity and relationship model owned by an Organization. Domain services and user-facing graph queries read this model. -`
   },
   {
     slug: "OPERATION_SCOPE_MAPPING",
