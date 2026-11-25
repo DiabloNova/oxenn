@@ -13,6 +13,7 @@ const expectedOrganizationScopedTables = [
   "api_keys",
   "audit_prompts",
   "brand_associations",
+  "brand_entity_associations",
   "brand_mentions",
   "brands",
   "citation_occurrences",
@@ -82,9 +83,9 @@ function assertExactOrganizationScopedInventory(
 }
 
 describe("Tenant Scoped Tables Schema Alignment Test Suite", () => {
-  it("matches an independent 56-table organization ownership inventory and generated runtime list", () => {
-    expect(expectedOrganizationScopedTables).toHaveLength(56);
-    expect(new Set(expectedOrganizationScopedTables).size).toBe(56);
+  it("matches an independent 57-table organization ownership inventory and generated runtime list", () => {
+    expect(expectedOrganizationScopedTables).toHaveLength(57);
+    expect(new Set(expectedOrganizationScopedTables).size).toBe(57);
     assertExactOrganizationScopedInventory(WORKSPACE_TABLE_OWNERSHIP, TENANT_SCOPED_TABLES);
   });
 
