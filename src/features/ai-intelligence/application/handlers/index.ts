@@ -49,7 +49,8 @@ import {
   ObservationService
 } from "../../services";
 import { DomainEventFactory, eventBus } from "../../domain/events";
-import { Brand, VisibilityScore, Recommendation } from "../../domain/types";
+import { Brand, Entity, VisibilityScore, Recommendation } from "../../domain/types";
+import { TenantContextManager, TenantContextViolationException } from "@/core/database/tenant-context";
 
 export class ApplicationCommandHandler {
   private brandRepo: IBrandRepository;
@@ -135,44 +136,76 @@ export class ApplicationCommandHandler {
    * Handle: DiscoverEntityCommand
    */
   public async handleDiscoverEntity(command: DiscoverEntityCommand): Promise<EntityDTO> {
-    if (command.brandId) {
-      const brand = await this.brandRepo.findById(command.organizationId, command.brandId);
-      if (!brand) {
-        throw new Error("Cannot associate a discovered Entity with a Brand outside this Organization.");
-      }
-    }
-
-    const entity = await this.entityService.createEntity(
-      command.organizationId,
-      command.name,
-      command.type,
-      command.wikidataId,
-      command.wikipediaUrl,
-      command.confidenceScore,
-      command.actorId
-    );
-
-    if (command.brandId) {
-      const now = new Date().toISOString();
-      await this.brandEntityAssociationRepo.save({
-        id: crypto.randomUUID(),
-        organizationId: command.organizationId,
-        brandId: command.brandId,
-        entityId: entity.id,
-        relationshipType: command.relationshipType || "related_to",
-        weight: 1,
-        properties: {},
-        audit: {
-          createdAt: now,
-          updatedAt: now,
-          createdBy: command.actorId,
-          updatedBy: command.actorId,
-          version: 1
+    // Keep Entity creation and its optional Brand association in one PostgreSQL
+    // transaction. Reuse an existing tenant/system transaction when present.
+    const persistEntityAndBrandLink = async () => {
+      if (command.brandId) {
+        const brand = await this.brandRepo.findById(command.organizationId, command.brandId);
+        if (!brand) {
+          throw new Error("Cannot associate a discovered Entity with a Brand outside this Organization.");
         }
-      });
+      }
+
+      const entity = await this.entityService.createEntity(
+        command.organizationId,
+        command.name,
+        command.type,
+        command.wikidataId,
+        command.wikipediaUrl,
+        command.confidenceScore,
+        command.actorId
+      );
+
+      if (command.brandId) {
+        const now = new Date().toISOString();
+        await this.brandEntityAssociationRepo.save({
+          id: crypto.randomUUID(),
+          organizationId: command.organizationId,
+          brandId: command.brandId,
+          entityId: entity.id,
+          relationshipType: command.relationshipType || "related_to",
+          weight: 1,
+          properties: {},
+          audit: {
+            createdAt: now,
+            updatedAt: now,
+            createdBy: command.actorId,
+            updatedBy: command.actorId,
+            version: 1
+          }
+        });
+      }
+
+      return entity;
+    };
+
+    const context = TenantContextManager.getContext();
+    let entity: Entity;
+
+    if (context?.executionMode === "system") {
+      if (!context.dbClient) {
+        throw new TenantContextViolationException(
+          "DiscoverEntity requires an active transaction in System Context."
+        );
+      }
+      entity = await persistEntityAndBrandLink();
+    } else {
+      if (context && (!context.dbClient || context.tenantId !== command.organizationId)) {
+        throw new TenantContextViolationException(
+          "DiscoverEntity requires an active transaction for the target Organization."
+        );
+      }
+
+      entity = await TenantContextManager.runWithTenantContext(
+        command.organizationId,
+        command.actorId,
+        "ai-intelligence:discover-entity",
+        persistEntityAndBrandLink
+      );
     }
 
-    // Event Dispatching (EDA)
+    // Publish only after this handler-owned transaction has committed. When called
+    // inside a caller-owned transaction, the existing event behavior is preserved.
     const entityDiscoveredEvent = DomainEventFactory.create(
       "aibi.entity.discovered",
       entity.id,
