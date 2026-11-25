@@ -65,7 +65,11 @@ export async function extractGraphEntities(text: string): Promise<ExtractedGraph
     return result.object as ExtractedGraph;
   }
 
-  // Robust deterministic mock extraction fallback for testing/offline environments
+  // Deterministic extraction is a test/development fixture only, never production output.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Graph extraction provider unavailable: a configured Gemini model is required in production.');
+  }
+
   const normalizedText = text.toLowerCase();
 
   // Custom mock response based on text content to support test verification

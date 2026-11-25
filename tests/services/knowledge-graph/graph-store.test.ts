@@ -34,18 +34,26 @@ const originalConnect = Pool.prototype.connect;
   if (normalizedSql.includes("pg_advisory_xact_lock")) return { rowCount: 1, rows: [] };
 
   // 1. Intercept SELECT from kg_entities
-  if (normalizedSql.includes("select") && normalizedSql.includes("kg_entities") && normalizedSql.includes("lower(name) = lower")) {
+  if (normalizedSql.includes("select") && normalizedSql.includes("kg_entities") && normalizedSql.includes("lower(btrim(name)) = lower(btrim($1))")) {
     const activeTenantId = TenantContextManager.getRequiredTenantId();
     const nameParam = params[0] as string;
-    // Strict RLS isolation check: Must match activeTenantId and case-insensitive name
+    const tenantParam = params[1] as string;
+    const typeParam = params[2] as string;
+    // Identity lookup is explicitly scoped to the current tenant and exact extracted type.
     const found = mockEntitiesStore.find(
-      e => e.tenant_id === activeTenantId && e.name.toLowerCase() === nameParam.toLowerCase()
+      e => e.tenant_id === activeTenantId && tenantParam === activeTenantId &&
+           e.name.trim().toLowerCase() === nameParam.trim().toLowerCase() && e.type === typeParam
     );
 
     return {
       rowCount: found ? 1 : 0,
       rows: found ? [found] : [],
     };
+  }
+
+  // Canonical Entity resolution is intentionally isolated from the KG observation store.
+  if (normalizedSql.includes("select") && normalizedSql.includes("from entities") && normalizedSql.includes("organization_id")) {
+    return { rowCount: 0, rows: [] };
   }
 
   // 2. Intercept INSERT into kg_entities
@@ -78,20 +86,22 @@ const originalConnect = Pool.prototype.connect;
   // 3. Intercept UPDATE kg_entities
   if (normalizedSql.includes("update") && normalizedSql.includes("kg_entities")) {
     const activeTenantId = TenantContextManager.getRequiredTenantId();
-    const [propertiesJson, id] = params as any[];
-    const entity = mockEntitiesStore.find(e => e.id === id && e.tenant_id === activeTenantId);
-
-    if (!entity) {
-      throw new Error(`Entity not found or tenant context violation for ID ${id}`);
+    if (normalizedSql.includes("set canonical_entity_id")) {
+      const [canonicalEntityId, resolutionStatus, sourceChunkId, id, tenantId] = params as any[];
+      const entity = mockEntitiesStore.find(e => e.id === id && e.tenant_id === activeTenantId && tenantId === activeTenantId);
+      if (!entity) throw new Error(`Entity not found or tenant context violation for ID ${id}`);
+      entity.canonical_entity_id = canonicalEntityId;
+      entity.resolution_status = resolutionStatus;
+      entity.source_chunk_ids = [...new Set([...(entity.source_chunk_ids || []), sourceChunkId])];
+      return { rowCount: 1, rows: [entity] };
     }
 
+    const [propertiesJson, id, tenantId] = params as any[];
+    const entity = mockEntitiesStore.find(e => e.id === id && e.tenant_id === activeTenantId && tenantId === activeTenantId);
+    if (!entity) throw new Error(`Entity not found or tenant context violation for ID ${id}`);
     entity.properties = typeof propertiesJson === "string" ? JSON.parse(propertiesJson) : propertiesJson;
     entity.updated_at = new Date().toISOString();
-
-    return {
-      rowCount: 1,
-      rows: [entity],
-    };
+    return { rowCount: 1, rows: [entity] };
   }
 
   // 4. Intercept SELECT from kg_relationships

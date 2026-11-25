@@ -77,9 +77,16 @@ export class GraphStoreService {
       // Find existing entity case-insensitively
       const selectSql = `
         SELECT id, properties FROM kg_entities
-        WHERE LOWER(name) = LOWER($1) LIMIT 1;
+        WHERE tenant_id = $2
+          AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))
+          AND type = $3
+        ORDER BY created_at ASC
+        LIMIT 2;
       `;
-      const res = await this.pg.query(selectSql, [ent.name]);
+      const res = await this.pg.query(selectSql, [ent.name, tenantId, ent.type]);
+      if ((res.rowCount ?? res.rows.length) > 1) {
+        throw new Error(`Ambiguous extracted KG identity within tenant ${tenantId}: ${ent.name} (${ent.type}).`);
+      }
 
       let entityId: string;
       const properties = ent.properties || {};
@@ -101,10 +108,10 @@ export class GraphStoreService {
         const updateSql = `
           UPDATE kg_entities
           SET properties = $1, updated_at = NOW()
-          WHERE id = $2
+          WHERE id = $2 AND tenant_id = $3
           RETURNING id;
         `;
-        await this.pg.query(updateSql, [JSON.stringify(mergedProperties), entityId]);
+        await this.pg.query(updateSql, [JSON.stringify(mergedProperties), entityId, tenantId]);
       } else {
         // Entity does not exist: Create new UUID and insert
         entityId = crypto.randomUUID();
@@ -123,6 +130,40 @@ export class GraphStoreService {
         ];
         await this.pg.query(insertSql, params);
       }
+
+      // Resolve extracted observations to canonical domain Entities without creating or
+      // mutating canonical records. Only one exact normalized-name + exact-type match qualifies.
+      const canonicalResult = await this.pg.query(
+        `SELECT id FROM entities
+         WHERE organization_id = $1
+           AND deleted_at IS NULL
+           AND LOWER(BTRIM(name)) = LOWER(BTRIM($2))
+           AND entity_type = $3
+         ORDER BY created_at ASC
+         LIMIT 2;`,
+        [tenantId, ent.name, ent.type]
+      );
+      const canonicalCount = canonicalResult.rowCount ?? canonicalResult.rows.length;
+      const canonicalEntityId = canonicalCount === 1 ? canonicalResult.rows[0].id : null;
+      const resolutionStatus = canonicalCount === 1 ? 'matched' : canonicalCount > 1 ? 'ambiguous' : 'unresolved';
+
+      await this.pg.query(
+        `UPDATE kg_entities AS kg
+         SET canonical_entity_id = $1,
+             resolution_status = $2,
+             resolution_method = CASE WHEN $2 = 'matched' THEN 'exact_name_type' ELSE NULL END,
+             resolved_at = CASE WHEN $2 = 'matched' THEN NOW() ELSE NULL END,
+             source_chunk_ids = (
+               SELECT COALESCE(jsonb_agg(DISTINCT source_id), '[]'::jsonb)
+               FROM jsonb_array_elements_text(
+                 (CASE WHEN jsonb_typeof(kg.source_chunk_ids) = 'array'
+                   THEN kg.source_chunk_ids ELSE '[]'::jsonb END) || jsonb_build_array($3::text)
+               ) AS source(source_id)
+             ),
+             updated_at = NOW()
+         WHERE kg.id = $4 AND kg.tenant_id = $5;`,
+        [canonicalEntityId, resolutionStatus, sourceChunkId, entityId, tenantId]
+      );
 
       entityIds[normName] = entityId;
     }

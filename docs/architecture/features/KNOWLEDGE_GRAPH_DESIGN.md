@@ -1,37 +1,38 @@
 # Semantic Knowledge Graph Architecture Design
 
-This document details the abstract contracts and models designed to map, claimed, and travers brand concept networks inside external AI platforms.
+This document defines the authoritative domain graph and the extracted evidence graph. They are related through an explicit, tenant-scoped resolution contract; they are not interchangeable stores.
 
----
+## 1. Source of truth and graph boundaries
 
-## 1. Graph Model Definitions
+- **Canonical domain graph — `entities` and `entity_relationships`:** the authoritative identity and relationship model owned by an Organization. Domain services and user-facing graph queries read this model.
+- **Extraction/evidence graph — `kg_entities` and `kg_relationships`:** observations extracted from documents and chunks. These rows preserve extracted names, types, properties, and provenance. They do not become canonical identities merely because an LLM extracted them.
+- **Mapping — `kg_entities.canonical_entity_id`:** nullable reference to the canonical `entities.id`, protected by the composite `(canonical_entity_id, tenant_id) -> (entities.id, organization_id)` foreign key. `resolution_status` is `matched`, `unresolved`, or `ambiguous`.
 
-- **GraphNode**: Mapped concept representing brands, competitors, key executives, or products. Anchored by a unique name and optional Wikidata `wikidataId`.
-- **GraphEdge**: Mapped semantic relationship containing predicates like `owns`, `creates`, `competes_with`, `related_to`, or `mentioned_with`, paired with confidence weights.
+## 2. Canonical resolution contract
 
----
+Stage 1 uses only conservative local matching:
 
-## 2. Relational vs. Graph Database Strategy
+1. Match normalized (trimmed, case-insensitive) name and exact entity type.
+2. Restrict candidates to the same Organization and active canonical Entities (`deleted_at IS NULL`).
+3. Link only when exactly one candidate exists. Zero candidates remain `unresolved`; multiple candidates remain `ambiguous`.
+4. Record `resolution_method = exact_name_type`, `resolved_at`, and deduplicated `source_chunk_ids` for a match/evidence trail.
+5. Never create a canonical Entity automatically, fuzzy-match, use an LLM-generated ID as identity, or overwrite canonical properties from extraction output.
 
-To handle high-volume transactional updates alongside complex graph queries:
+Future external resolution (including Wikidata) is a separate, explicit workflow and must not bypass this contract.
 
-1. **Transactional Metadata (Relational PostgreSQL)**:
-   - Stored in PostgreSQL `entities` and `entity_relationships` tables for strict foreign key integrity, ACID transactions, and tenant Row-Level Security.
-2. **Analytical Traversals (Graph Neo4j / AWS Neptune)**:
-   - Syncs entity states to Neo4j.
-   - Leverages cypher queries through the abstract `IGraphQueryInterface` to find competitive paths, map citation circles, and compute semantic overlaps.
+## 3. Relationship promotion
 
-```typescript
-// Future Neo4j Query Implementation Example:
-export class Neo4jGraphQuery implements IGraphQueryInterface {
-  public async findCompetitivePaths(organizationId: string, brandId: string): Promise<EntityGraph> {
-    const result = await this.neo4jSession.run(
-      `MATCH (b:Brand {id: $brandId, organizationId: $orgId})-[r:competes_with*1..2]-(c:Brand)
-       RETURN b, r, c`,
-      { brandId, orgId: organizationId }
-    );
-    // Parse cypher records into GraphNode & GraphEdge entities
-  }
-}
-```
-This dual-database approach ensures absolute transaction reliability alongside rapid Graph queries!
+`kg_relationships` remain extracted evidence edges. They are not copied automatically into `entity_relationships`. A future promotion workflow must validate both canonical endpoint mappings, evidence, confidence, and authorization before creating a canonical domain relationship.
+
+## 4. Tenant integrity
+
+Every KG relationship carries `tenant_id`; both endpoints are enforced by composite foreign keys:
+
+- `(source_entity_id, tenant_id) -> kg_entities(id, tenant_id)`
+- `(target_entity_id, tenant_id) -> kg_entities(id, tenant_id)`
+
+The migration preflights existing rows and fails without rewriting data if either endpoint is missing or belongs to another tenant. RLS remains an additional access boundary, not a substitute for relational integrity.
+
+## 5. Production provider behavior
+
+Mock LLM and deterministic extraction fixtures are restricted to tests and non-production development. Production requires `GOOGLE_AI_API_KEY` and a usable Gemini model; missing provider configuration fails closed. Knowledge Graph query responses return an empty graph when no canonical Entity exists and never synthesize demo nodes.
