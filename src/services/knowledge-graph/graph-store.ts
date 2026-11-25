@@ -138,7 +138,7 @@ export class GraphStoreService {
          WHERE organization_id = $1
            AND deleted_at IS NULL
            AND LOWER(BTRIM(name)) = LOWER(BTRIM($2))
-           AND entity_type = $3
+           AND LOWER(BTRIM(entity_type)) = LOWER(BTRIM($3))
          ORDER BY created_at ASC
          LIMIT 2;`,
         [tenantId, ent.name, ent.type]

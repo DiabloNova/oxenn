@@ -6382,13 +6382,13 @@
           "name": "idx_kg_entities_canonical_entity",
           "columns": [
             {
-              "expression": "canonical_entity_id",
+              "expression": "tenant_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "tenant_id",
+              "expression": "canonical_entity_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6426,7 +6426,7 @@
             "id",
             "organization_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

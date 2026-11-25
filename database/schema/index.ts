@@ -1203,12 +1203,12 @@ export const kgEntities = pgTable("kg_entities", {
   index("idx_kg_entities_tenant").on(table.tenantId),
   index("idx_kg_entities_name").on(table.name),
   uniqueIndex("idx_kg_entities_id_tenant_id_fk").on(table.id, table.tenantId),
-  index("idx_kg_entities_canonical_entity").on(table.canonicalEntityId, table.tenantId),
+  index("idx_kg_entities_canonical_entity").on(table.tenantId, table.canonicalEntityId),
   foreignKey({
     name: "kg_entities_canonical_entity_id_tenant_id_fkey",
     columns: [table.canonicalEntityId, table.tenantId],
     foreignColumns: [entities.id, entities.organizationId]
-  }).onDelete("cascade"),
+  }).onDelete("no action"),
   check("kg_entities_resolution_status_check", sql`resolution_status IN ('matched', 'unresolved', 'ambiguous')`),
   check("kg_entities_resolution_consistency_check", sql`(resolution_status = 'matched') = (canonical_entity_id IS NOT NULL)`),
   check("kg_entities_matched_method_check", sql`resolution_status <> 'matched' OR resolution_method IS NOT NULL`),

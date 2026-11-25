@@ -11,11 +11,13 @@ import { PostgresClient } from "../../../src/features/admin/infrastructure/persi
 // Simulated SQL persistence state
 const mockEntitiesStore: any[] = [];
 const mockRelationshipsStore: any[] = [];
+const mockCanonicalEntities: any[] = [];
 
 // Clean up store between test runs
 function resetStores() {
   mockEntitiesStore.length = 0;
   mockRelationshipsStore.length = 0;
+  mockCanonicalEntities.length = 0;
 }
 
 // Global SQL query interception mock for Graph Store tests
@@ -51,9 +53,15 @@ const originalConnect = Pool.prototype.connect;
     };
   }
 
-  // Canonical Entity resolution is intentionally isolated from the KG observation store.
+  // Canonical resolution is tenant-scoped and compares normalized names and types.
   if (normalizedSql.includes("select") && normalizedSql.includes("from entities") && normalizedSql.includes("organization_id")) {
-    return { rowCount: 0, rows: [] };
+    const [organizationId, nameParam, typeParam] = params as string[];
+    const matches = mockCanonicalEntities.filter(
+      entity => entity.organization_id === organizationId && entity.deleted_at == null &&
+        entity.name.trim().toLowerCase() === nameParam.trim().toLowerCase() &&
+        entity.entity_type.trim().toLowerCase() === typeParam.trim().toLowerCase()
+    ).slice(0, 2);
+    return { rowCount: matches.length, rows: matches };
   }
 
   // 2. Intercept INSERT into kg_entities
@@ -207,6 +215,12 @@ export async function testGraphStore() {
 
   const tenantA = "org-apple-tenant-01";
   const tenantB = "org-samsung-tenant-02";
+  mockCanonicalEntities.push(
+    { id: "canonical-optimus", organization_id: tenantA, name: "Optimus AI", entity_type: "Brand", properties: { owner: "manual" } },
+    { id: "canonical-gemini", organization_id: tenantA, name: "Gemini", entity_type: "Product", properties: { owner: "manual" } },
+    { id: "canonical-ambiguous-1", organization_id: tenantA, name: "Ambiguous Concept", entity_type: "Concept" },
+    { id: "canonical-ambiguous-2", organization_id: tenantA, name: "Ambiguous Concept", entity_type: "concept" }
+  );
 
   // Graph extracted payload from a document chunk
   const initialGraph = {
@@ -239,6 +253,19 @@ export async function testGraphStore() {
       throw new Error("Graph Store Test Failed: Entity count mismatch in memory storage.");
     }
 
+    const optimus = entities.find(entity => entity.name === "Optimus AI");
+    const gemini = entities.find(entity => entity.name === "Gemini");
+    if (optimus?.canonical_entity_id !== "canonical-optimus" || optimus.resolution_status !== "matched" ||
+        gemini?.canonical_entity_id !== "canonical-gemini" || gemini.resolution_status !== "matched") {
+      throw new Error("Graph Store Test Failed: Case-insensitive exact name/type resolution did not match canonical Entities.");
+    }
+    if (!Array.isArray(optimus.source_chunk_ids) || !optimus.source_chunk_ids.includes(chunkId)) {
+      throw new Error("Graph Store Test Failed: KG entity source-chunk provenance was not persisted.");
+    }
+    if (mockCanonicalEntities[0].properties.owner !== "manual") {
+      throw new Error("Graph Store Test Failed: Extraction mutated canonical Entity properties.");
+    }
+
     const relationship = mockRelationshipsStore.find(r => r.tenant_id === tenantA);
     if (!relationship || !Array.isArray(relationship.properties.source_chunk_ids) || !relationship.properties.source_chunk_ids.includes(chunkId) || relationship.properties.source_chunk_ids.includes("forged-source") || relationship.properties.source_chunk_ids.includes("forged-array-source") || relationship.properties.source_provenance_incomplete === true) {
       throw new Error("Graph Store Test Failed: Traceability source chunk ID was not registered properly.");
@@ -259,7 +286,19 @@ export async function testGraphStore() {
     }
   });
 
-  // 2. Test Deduplication & Properties Merging
+  // 2. Multiple canonical candidates must remain ambiguous; no candidate is guessed.
+  await TenantContextManager.runWithTenantContext(tenantA, "user-01", "req-ambiguous", async () => {
+    await storeService.upsertEntitiesAndRelationships({
+      entities: [{ name: "Ambiguous Concept", type: "concept", properties: {} }],
+      relationships: [],
+    }, "chunk-ambiguous");
+    const ambiguous = mockEntitiesStore.find(entity => entity.tenant_id === tenantA && entity.name === "Ambiguous Concept");
+    if (!ambiguous || ambiguous.canonical_entity_id !== null || ambiguous.resolution_status !== "ambiguous") {
+      throw new Error("Graph Store Test Failed: Multiple canonical matches were not marked ambiguous.");
+    }
+  });
+
+  // 3. Test Deduplication & Properties Merging
   console.log("  * Testing Entity Deduplication & Properties Merging...");
   await TenantContextManager.runWithTenantContext(tenantA, "user-01", "req-02", async () => {
     const updatedGraph = {
@@ -273,8 +312,8 @@ export async function testGraphStore() {
 
     // Ensure that no new entities were created in the database (total count should still be 2)
     const entities = mockEntitiesStore.filter(e => e.tenant_id === tenantA);
-    if (entities.length !== 2) {
-      throw new Error(`Deduplication Failed: Expected 2 total entities for Tenant A, found ${entities.length}. Duplicate entity created!`);
+    if (entities.length !== 3) {
+      throw new Error(`Deduplication Failed: Expected 3 total entities for Tenant A, found ${entities.length}. Duplicate entity created!`);
     }
 
     // Verify merged properties
@@ -291,9 +330,9 @@ export async function testGraphStore() {
     // Let's verify that a case-insensitive lookup for "Optimus AI" under Tenant B context returns nothing
     const selectSql = `
       SELECT id, properties FROM kg_entities
-      WHERE LOWER(name) = LOWER($1) LIMIT 1;
+      WHERE tenant_id = $2 AND LOWER(BTRIM(name)) = LOWER(BTRIM($1)) AND type = $3 LIMIT 2;
     `;
-    const res = await PostgresClient.getInstance().query(selectSql, ["Optimus AI"]);
+    const res = await PostgresClient.getInstance().query(selectSql, ["Optimus AI", tenantB, "brand"]);
     if (res.rowCount && res.rowCount > 0) {
       throw new Error("Security Violation: Tenant B read Tenant A's entities! Cross-tenant leakage detected.");
     }
@@ -307,6 +346,10 @@ export async function testGraphStore() {
     };
 
     await storeService.upsertEntitiesAndRelationships(tenantBGraph, "chunk-samsung-001");
+    const samsung = mockEntitiesStore.find(entity => entity.tenant_id === tenantB && entity.name === "Samsung Corp");
+    if (!samsung || samsung.canonical_entity_id !== null || samsung.resolution_status !== "unresolved") {
+      throw new Error("Graph Store Test Failed: Missing canonical match was not left unresolved.");
+    }
 
     const tenantAEntities = mockEntitiesStore.filter(e => e.tenant_id === tenantA);
     const tenantBEntities = mockEntitiesStore.filter(e => e.tenant_id === tenantB);

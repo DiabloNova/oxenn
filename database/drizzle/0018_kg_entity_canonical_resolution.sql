@@ -12,11 +12,11 @@ CREATE UNIQUE INDEX "idx_kg_entities_id_tenant_id_fk"
   ON "kg_entities" USING btree ("id", "tenant_id");
 --> statement-breakpoint
 CREATE INDEX "idx_kg_entities_canonical_entity"
-  ON "kg_entities" USING btree ("canonical_entity_id", "tenant_id");
+  ON "kg_entities" USING btree ("tenant_id", "canonical_entity_id");
 --> statement-breakpoint
 ALTER TABLE "kg_entities" ADD CONSTRAINT "kg_entities_canonical_entity_id_tenant_id_fkey"
   FOREIGN KEY ("canonical_entity_id", "tenant_id")
-  REFERENCES "public"."entities" ("id", "organization_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+  REFERENCES "public"."entities" ("id", "organization_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 --> statement-breakpoint
 ALTER TABLE "kg_entities" ADD CONSTRAINT "kg_entities_resolution_status_check"
   CHECK ("resolution_status" IN ('matched', 'unresolved', 'ambiguous'));
@@ -41,7 +41,7 @@ WITH exact_matches AS (
   LEFT JOIN entities AS entity
     ON entity.organization_id = kg.tenant_id
    AND LOWER(BTRIM(entity.name)) = LOWER(BTRIM(kg.name))
-   AND entity.entity_type = kg.type
+   AND LOWER(BTRIM(entity.entity_type)) = LOWER(BTRIM(kg.type))
    AND entity.deleted_at IS NULL
   GROUP BY kg.id
 )
