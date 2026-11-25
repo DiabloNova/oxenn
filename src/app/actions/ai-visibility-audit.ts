@@ -6,7 +6,6 @@ import { requireSession } from "@/services/auth/session";
 import { requireWorkspaceMembership } from "@/services/auth/authorization";
 import { AIVisibilityAuditEngine } from "@/features/ai-intelligence/services/ai-visibility-audit-engine";
 import { AIVisibilityAuditRepository, BrandRepository, db } from "@/features/ai-intelligence/repositories";
-import { Brand } from "@/features/ai-intelligence/domain/types";
 
 const runAuditSchema = z.object({
   brandId: z.string().uuid("شناسه برند معتبر نیست"),
@@ -147,29 +146,8 @@ export async function getBrandsAction() {
         const brandRepo = new BrandRepository();
         const paginated = await brandRepo.findByOrganizationId(tenantId);
 
-        // If there are no brands configured in the tenant context, let's provision a default one to make onboarding seamless
-        if (paginated.data.length === 0) {
-          const brandId = `brand-${Math.random().toString(36).substring(2, 11)}`;
-          const defaultBrand: Brand = {
-            id: brandId,
-            organizationId: tenantId,
-            name: "Rasha Gostar",
-            description: "پیشرو در فناوری‌های هوش مصنوعی و بهینه‌سازی رویت‌پذیری برند",
-            website: "https://secure-site.com",
-            industry: "Technology",
-            country: "Iran",
-            audit: {
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              createdBy: "system",
-              updatedBy: "system",
-              version: 1
-            }
-          };
-          await brandRepo.save(defaultBrand);
-          return [defaultBrand];
-        }
-
+        // A workspace without a configured Brand is a valid empty state. Do not
+        // invent customer identity or website data during a read operation.
         return paginated.data;
       }
     );
