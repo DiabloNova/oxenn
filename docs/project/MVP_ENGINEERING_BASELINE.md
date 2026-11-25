@@ -64,7 +64,7 @@ The following static inventory is tied to repository snapshot commit `81546254e8
 | Additional modular schema declarations | 4 |
 | Effective schema table declarations | 72 |
 | Latest Drizzle snapshot tables | 72 |
-| Ordered migration journal entries | 18 |
+| Ordered migration journal entries | 20 |
 | Unique migration-created tables | 72 |
 | Policy-bearing tables in latest snapshot | 57 |
 | Generated runtime tenant-table entries | 57 |
