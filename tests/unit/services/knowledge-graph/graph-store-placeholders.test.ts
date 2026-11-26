@@ -205,7 +205,7 @@ describe("GraphStoreService relationship-only placeholders", () => {
 
     const normalizedLookup = harness.calls.find(({ sql, params }) =>
       /SELECT id, type, properties, name FROM kg_entities/i.test(sql) &&
-      /LOWER\\(BTRIM\\(name\\)\\)/i.test(sql) &&
+      /LOWER\(BTRIM\(name\)\)/i.test(sql) &&
       params[0] === "Apple"
     );
     const updateOfExactMatch = harness.calls.some(({ sql, params }) =>
@@ -218,8 +218,8 @@ describe("GraphStoreService relationship-only placeholders", () => {
 
     expect(normalizedLookup).toBeDefined();
     expect(normalizedLookup?.sql).toContain("tenant_id = $2");
-    expect(normalizedLookup?.sql).not.toMatch(/AND type = \\$3/i);
-    expect(normalizedLookup?.sql).not.toMatch(/LIMIT\\s+2/i);
+    expect(normalizedLookup?.sql).not.toMatch(/AND type = \$3/i);
+    expect(normalizedLookup?.sql).not.toMatch(/LIMIT\s+2/i);
     expect(normalizedLookup?.params).toEqual(["Apple", "tenant-a"]);
     expect(result.entityIds.apple).toBe("tenant-a:apple");
     expect(result.ambiguousEntityNames).toEqual([]);
