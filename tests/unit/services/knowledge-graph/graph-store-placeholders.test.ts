@@ -14,6 +14,7 @@ type KgEntityRow = {
   id: string;
   type: string;
   properties: Record<string, unknown>;
+  tenant_id: string;
 };
 
 type QueryCall = {
@@ -33,9 +34,8 @@ function createHarness(existingEntities: KgEntityRow[] = []) {
       const type = params[2] == null ? null : String(params[2]);
       const rows = existingEntities.filter((entity) =>
         tenantId === "tenant-a" &&
-        entity.id.startsWith("tenant-a:") &&
-        entity.id.length > 0 &&
-        (entity as KgEntityRow & { name?: string; tenant_id?: string }).name?.trim().toLowerCase() === name &&
+        entity.tenant_id === tenantId &&
+        (entity as KgEntityRow & { name?: string }).name?.trim().toLowerCase() === name &&
         (isPlaceholderLookup || entity.type === type)
       ).slice(0, 2);
       return { rowCount: rows.length, rows };
@@ -72,7 +72,7 @@ function existingEntity(
   type: string,
   properties: Record<string, unknown> = {},
 ): KgEntityRow & { name: string } {
-  return { id, name, type, properties };
+  return { id, name, type, properties, tenant_id: id.split(":")[0] };
 }
 
 describe("GraphStoreService relationship-only placeholders", () => {
