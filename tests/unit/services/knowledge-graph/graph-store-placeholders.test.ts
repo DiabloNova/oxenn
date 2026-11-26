@@ -90,7 +90,9 @@ describe("GraphStoreService relationship-only placeholders", () => {
     }, "chunk-placeholder");
 
     const placeholderLookup = harness.calls.find(({ sql, params }) =>
-      /SELECT id, type, properties FROM kg_entities/i.test(sql) && params[0] === " OPTIMUS "
+      /LOWER\\(BTRIM\\(name\\)\\)/i.test(sql) &&
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) &&
+      params[0] === " OPTIMUS "
     );
     const canonicalLookup = harness.calls.find(({ sql, params }) =>
       /FROM entities/i.test(sql) && params[1] === " OPTIMUS "
@@ -145,17 +147,45 @@ describe("GraphStoreService relationship-only placeholders", () => {
       existingEntity("tenant-a:optimus-2", "optimus", "organization"),
     ]);
 
-    await expect(harness.store.upsertEntitiesAndRelationships({
+    const result = await harness.store.upsertEntitiesAndRelationships({
       entities: [],
       relationships: [{
-        sourceEntityName: "Optimus",
+        sourceEntityName: "OPTIMUS",
         targetEntityName: "Target",
         relationshipType: "related_to",
       }],
-    }, "chunk-ambiguous")).rejects.toThrow(/Ambiguous extracted KG identity/);
+    }, "chunk-ambiguous");
 
-    expect(harness.calls.some(({ sql }) => /INSERT INTO kg_entities/i.test(sql))).toBe(false);
+    expect(result.ambiguousEntityNames).toEqual(["optimus"]);
+    expect(result.entityIds.optimus).toBeUndefined();
+    expect(harness.calls.some(({ sql, params }) =>
+      /INSERT INTO kg_entities/i.test(sql) && params[2] === "OPTIMUS"
+    )).toBe(false);
     expect(harness.calls.some(({ sql }) => /INSERT INTO kg_relationships/i.test(sql))).toBe(false);
+  });
+
+  it("prefers one exact spelling when legacy whitespace variants normalize to the same identity", async () => {
+    const harness = createHarness([
+      existingEntity("tenant-a:apple", "Apple", "brand"),
+      existingEntity("tenant-a:apple-space", "Apple ", "brand"),
+    ]);
+
+    const result = await harness.store.upsertEntitiesAndRelationships({
+      entities: [{ name: "Apple", type: "brand", properties: { source: "new" } }],
+      relationships: [],
+    }, "chunk-whitespace-legacy");
+
+    const exactLookup = harness.calls.find(({ sql }) =>
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /AND name = \\$1/i.test(sql)
+    );
+    const normalizedLookup = harness.calls.find(({ sql }) =>
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /LOWER\\(BTRIM\\(name\\)\\)/i.test(sql)
+    );
+
+    expect(exactLookup).toBeDefined();
+    expect(normalizedLookup).toBeUndefined();
+    expect(result.entityIds.apple).toBe("tenant-a:apple");
+    expect(result.ambiguousEntityNames).toEqual([]);
   });
 
   it("keeps an explicitly extracted concept type exact instead of treating it as a placeholder", async () => {
@@ -179,15 +209,17 @@ describe("GraphStoreService relationship-only placeholders", () => {
   it("rejects conflicting explicit types with the same normalized name before persistence", async () => {
     const harness = createHarness();
 
-    await expect(harness.store.upsertEntitiesAndRelationships({
+    const result = await harness.store.upsertEntitiesAndRelationships({
       entities: [
         { name: "Optimus", type: "brand", properties: {} },
         { name: " optimus ", type: "organization", properties: {} },
       ],
       relationships: [],
-    }, "chunk-conflicting-types")).rejects.toThrow(/Conflicting extracted KG entity types/);
+    }, "chunk-conflicting-types");
 
-    expect(harness.calls.some(({ sql }) => /SELECT id, type, properties FROM kg_entities/i.test(sql))).toBe(false);
+    expect(result.ambiguousEntityNames).toEqual(["optimus"]);
+    expect(result.entityIds.optimus).toBeUndefined();
+    expect(harness.calls.some(({ sql }) => /SELECT id, type, properties, name FROM kg_entities/i.test(sql))).toBe(false);
     expect(harness.calls.some(({ sql }) => /INSERT INTO kg_entities/i.test(sql))).toBe(false);
     expect(harness.calls.some(({ sql }) => /INSERT INTO kg_relationships/i.test(sql))).toBe(false);
   });
