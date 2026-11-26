@@ -188,36 +188,44 @@ describe("GraphStoreService relationship-only placeholders", () => {
     expect(harness.calls.some(({ sql }) => /INSERT INTO kg_relationships/i.test(sql))).toBe(false);
   });
 
-  it("prefers one exact spelling among normalized legacy duplicates of the same type", async () => {
+  it("prefers one exact spelling for a relationship-only placeholder when legacy variants share a type", async () => {
     const harness = createHarness([
       existingEntity("tenant-a:apple", "Apple", "brand"),
       existingEntity("tenant-a:apple-space", "Apple ", "brand"),
     ]);
 
     const result = await harness.store.upsertEntitiesAndRelationships({
-      entities: [{ name: "Apple", type: "brand", properties: { source: "new" } }],
-      relationships: [],
+      entities: [],
+      relationships: [{
+        sourceEntityName: "Apple",
+        targetEntityName: "New Concept",
+        relationshipType: "related_to",
+      }],
     }, "chunk-whitespace-legacy");
 
     const normalizedLookup = harness.calls.find(({ sql, params }) =>
       /SELECT id, type, properties, name FROM kg_entities/i.test(sql) &&
-      /LOWER\(BTRIM\(name\)\)/i.test(sql) &&
+      /LOWER\\(BTRIM\\(name\\)\\)/i.test(sql) &&
       params[0] === "Apple"
     );
-    const update = harness.calls.find(({ sql, params }) =>
+    const updateOfExactMatch = harness.calls.some(({ sql, params }) =>
       /UPDATE kg_entities/i.test(sql) && params[1] === "tenant-a:apple"
     );
     const updateOfWhitespaceVariant = harness.calls.some(({ sql, params }) =>
       /UPDATE kg_entities/i.test(sql) && params[1] === "tenant-a:apple-space"
     );
+    const relationshipInsert = harness.calls.find(({ sql }) => /INSERT INTO kg_relationships/i.test(sql));
 
     expect(normalizedLookup).toBeDefined();
-    expect(normalizedLookup?.sql).not.toMatch(/LIMIT\s+2/i);
-    expect(normalizedLookup?.params).toEqual(["Apple", "tenant-a", "brand"]);
+    expect(normalizedLookup?.sql).toContain("tenant_id = $2");
+    expect(normalizedLookup?.sql).not.toMatch(/AND type = \\$3/i);
+    expect(normalizedLookup?.sql).not.toMatch(/LIMIT\\s+2/i);
+    expect(normalizedLookup?.params).toEqual(["Apple", "tenant-a"]);
     expect(result.entityIds.apple).toBe("tenant-a:apple");
     expect(result.ambiguousEntityNames).toEqual([]);
-    expect(update).toBeDefined();
+    expect(updateOfExactMatch).toBe(true);
     expect(updateOfWhitespaceVariant).toBe(false);
+    expect(relationshipInsert?.params[2]).toBe("tenant-a:apple");
   });
 
   it("keeps an explicitly extracted concept type exact instead of treating it as a placeholder", async () => {
