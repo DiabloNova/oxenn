@@ -22,7 +22,7 @@ export class GraphStoreService {
   public async upsertEntitiesAndRelationships(
     extractedGraph: ExtractedGraph,
     sourceChunkId: string
-  ): Promise<{ entityIds: Record<string, string>; relationshipIds: string[] }> {
+  ): Promise<{ entityIds: Record<string, string>; relationshipIds: string[]; ambiguousEntityNames: string[] }> {
     // 1. Resolve active tenant isolation boundary
     const tenantId = TenantContextManager.getRequiredTenantId();
 
@@ -34,6 +34,8 @@ export class GraphStoreService {
 
     const entityIds: Record<string, string> = {};
     const relationshipIds: string[] = [];
+    const ambiguousEntityNames = new Set<string>();
+    const conflictingExplicitNames = new Set<string>();
 
     // Ensure entities array is valid
     const entities = extractedGraph.entities || [];
@@ -52,11 +54,17 @@ export class GraphStoreService {
       if (!ent.name) continue;
 
       const normalizedName = normalize(ent.name);
+      if (conflictingExplicitNames.has(normalizedName)) continue;
+
       const existing = entitiesToUpsertMap.get(normalizedName);
       if (existing && existing.entity.type !== ent.type) {
-        throw new Error(
-          `Conflicting extracted KG entity types within tenant ${tenantId}: ${ent.name} (${existing.entity.type} vs ${ent.type}).`
+        entitiesToUpsertMap.delete(normalizedName);
+        conflictingExplicitNames.add(normalizedName);
+        ambiguousEntityNames.add(normalizedName);
+        console.warn(
+          `[GraphStoreService] Skipping conflicting extracted KG identity for tenant ${tenantId}: ${ent.name}.`
         );
+        continue;
       }
 
       entitiesToUpsertMap.set(normalizedName, {
@@ -70,7 +78,7 @@ export class GraphStoreService {
       const srcNorm = normalize(rel.sourceEntityName);
       const tgtNorm = normalize(rel.targetEntityName);
 
-      if (!entitiesToUpsertMap.has(srcNorm)) {
+      if (!entitiesToUpsertMap.has(srcNorm) && !conflictingExplicitNames.has(srcNorm)) {
         entitiesToUpsertMap.set(srcNorm, {
           entity: {
             name: rel.sourceEntityName,
@@ -81,7 +89,7 @@ export class GraphStoreService {
         });
       }
 
-      if (!entitiesToUpsertMap.has(tgtNorm)) {
+      if (!entitiesToUpsertMap.has(tgtNorm) && !conflictingExplicitNames.has(tgtNorm)) {
         entitiesToUpsertMap.set(tgtNorm, {
           entity: {
             name: rel.targetEntityName,
@@ -100,34 +108,42 @@ export class GraphStoreService {
       // Explicit entities match by normalized name + exact type. Placeholders match by
       // normalized name only, always within the active tenant; their fallback type must
       // not split evidence already stored under a more specific type.
-      const selectSql = relationshipOnlyPlaceholder
-        ? `
-          SELECT id, type, properties FROM kg_entities
-          WHERE tenant_id = $2
-            AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))
-          ORDER BY created_at ASC
-          LIMIT 2;
-        `
-        : `
-          SELECT id, type, properties FROM kg_entities
-          WHERE tenant_id = $2
-            AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))
-            AND type = $3
-          ORDER BY created_at ASC
-          LIMIT 2;
-        `;
-      const selectParams = relationshipOnlyPlaceholder
+      // Prefer one byte-for-byte name match when legacy rows contain normalized
+      // duplicates (for example, "Apple" and "Apple "). If no exact spelling exists,
+      // fall back to the normalized identity. Both queries remain tenant-scoped.
+      const typePredicate = relationshipOnlyPlaceholder ? "" : " AND type = $3";
+      const identityParams = relationshipOnlyPlaceholder
         ? [ent.name, tenantId]
         : [ent.name, tenantId, ent.type];
-      const res = await this.pg.query(selectSql, selectParams);
-      const existingCount = res.rowCount ?? res.rows.length;
-      if (existingCount > 1) {
-        const identityDescription = relationshipOnlyPlaceholder
-          ? `${ent.name} (relationship-only placeholder)`
-          : `${ent.name} (${ent.type})`;
-        throw new Error(
-          `Ambiguous extracted KG identity within tenant ${tenantId}: ${identityDescription}.`
+      const exactMatch = await this.pg.query(
+        `SELECT id, type, properties, name FROM kg_entities
+         WHERE tenant_id = $2 AND name = $1${typePredicate}
+         ORDER BY created_at ASC
+         LIMIT 2;`,
+        identityParams
+      );
+
+      let res = exactMatch;
+      let existingCount = exactMatch.rowCount ?? exactMatch.rows.length;
+      if (existingCount === 0) {
+        const normalizedMatch = await this.pg.query(
+          `SELECT id, type, properties, name FROM kg_entities
+           WHERE tenant_id = $2
+             AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))${typePredicate}
+           ORDER BY created_at ASC
+           LIMIT 2;`,
+          identityParams
         );
+        res = normalizedMatch;
+        existingCount = normalizedMatch.rowCount ?? normalizedMatch.rows.length;
+      }
+
+      if (existingCount > 1) {
+        ambiguousEntityNames.add(normName);
+        console.warn(
+          `[GraphStoreService] Skipping ambiguous KG identity within tenant ${tenantId}: ${ent.name}.`
+        );
+        continue;
       }
 
       let entityId: string;
@@ -312,6 +328,6 @@ export class GraphStoreService {
       relationshipIds.push(relationshipId);
     }
 
-    return { entityIds, relationshipIds };
+    return { entityIds, relationshipIds, ambiguousEntityNames: [...ambiguousEntityNames] };
   }
 }
