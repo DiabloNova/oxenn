@@ -108,35 +108,30 @@ export class GraphStoreService {
       // Explicit entities match by normalized name + exact type. Placeholders match by
       // normalized name only, always within the active tenant; their fallback type must
       // not split evidence already stored under a more specific type.
-      // Prefer one byte-for-byte name match when legacy rows contain normalized
-      // duplicates (for example, "Apple" and "Apple "). If no exact spelling exists,
-      // fall back to the normalized identity. Both queries remain tenant-scoped.
+      // Always inspect every normalized candidate before preferring an exact spelling:
+      // case variants with different persisted types are ambiguous, even if one row is
+      // an exact match. An exact spelling only breaks legacy duplicates when all
+      // normalized candidates share the same type (for example, "Apple" and "Apple ").
       const typePredicate = relationshipOnlyPlaceholder ? "" : " AND type = $3";
       const identityParams = relationshipOnlyPlaceholder
         ? [ent.name, tenantId]
         : [ent.name, tenantId, ent.type];
-      const exactMatch = await this.pg.query(
+      const normalizedMatch = await this.pg.query(
         `SELECT id, type, properties, name FROM kg_entities
-         WHERE tenant_id = $2 AND name = $1${typePredicate}
-         ORDER BY created_at ASC
-         LIMIT 2;`,
+         WHERE tenant_id = $2
+           AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))${typePredicate}
+         ORDER BY created_at ASC;`,
         identityParams
       );
 
-      let res = exactMatch;
-      let existingCount = exactMatch.rowCount ?? exactMatch.rows.length;
-      if (existingCount === 0) {
-        const normalizedMatch = await this.pg.query(
-          `SELECT id, type, properties, name FROM kg_entities
-           WHERE tenant_id = $2
-             AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))${typePredicate}
-           ORDER BY created_at ASC
-           LIMIT 2;`,
-          identityParams
-        );
-        res = normalizedMatch;
-        existingCount = normalizedMatch.rowCount ?? normalizedMatch.rows.length;
-      }
+      const candidates = normalizedMatch.rows;
+      const exactMatches = candidates.filter((candidate) => candidate.name === ent.name);
+      const allCandidatesShareType = new Set(candidates.map((candidate) => candidate.type)).size <= 1;
+      const resolvedCandidates = candidates.length === 1 ||
+        (exactMatches.length === 1 && allCandidatesShareType)
+        ? (candidates.length === 1 ? candidates : exactMatches)
+        : candidates;
+      const existingCount = resolvedCandidates.length;
 
       if (existingCount > 1) {
         ambiguousEntityNames.add(normName);
@@ -152,7 +147,7 @@ export class GraphStoreService {
 
       if (existingCount === 1) {
         // Entity exists: preserve its persisted type and merge only explicit properties.
-        const row = res.rows[0];
+        const row = resolvedCandidates[0];
         entityId = row.id;
         entityTypeForResolution = row.type || ent.type;
 
