@@ -42,59 +42,103 @@ export class GraphStoreService {
     // Helper to normalize names
     const normalize = (name: string) => name.trim().toLowerCase();
 
-    // First, map all provided entities in the graph to ensure we can resolve them
-    const entitiesToUpsertMap = new Map<string, ExtractedEntity>();
+    // Track whether a node came from an explicit extraction or only from a relationship.
+    // A relationship-only name is a placeholder, not an assertion that its type is "concept".
+    const entitiesToUpsertMap = new Map<
+      string,
+      { entity: ExtractedEntity; relationshipOnlyPlaceholder: boolean }
+    >();
     for (const ent of entities) {
-      if (ent.name) {
-        entitiesToUpsertMap.set(normalize(ent.name), ent);
+      if (!ent.name) continue;
+
+      const normalizedName = normalize(ent.name);
+      const existing = entitiesToUpsertMap.get(normalizedName);
+      if (existing && existing.entity.type !== ent.type) {
+        throw new Error(
+          `Conflicting extracted KG entity types within tenant ${tenantId}: ${ent.name} (${existing.entity.type} vs ${ent.type}).`
+        );
       }
+
+      entitiesToUpsertMap.set(normalizedName, {
+        entity: ent,
+        relationshipOnlyPlaceholder: false,
+      });
     }
 
-    // Identify any entities mentioned in relationships that aren't explicitly listed
+    // Identify any entities mentioned in relationships that aren't explicitly listed.
     for (const rel of relationships) {
       const srcNorm = normalize(rel.sourceEntityName);
       const tgtNorm = normalize(rel.targetEntityName);
 
       if (!entitiesToUpsertMap.has(srcNorm)) {
         entitiesToUpsertMap.set(srcNorm, {
-          name: rel.sourceEntityName,
-          type: 'concept', // Default fallback type
-          properties: {},
+          entity: {
+            name: rel.sourceEntityName,
+            type: 'concept',
+            properties: {},
+          },
+          relationshipOnlyPlaceholder: true,
         });
       }
 
       if (!entitiesToUpsertMap.has(tgtNorm)) {
         entitiesToUpsertMap.set(tgtNorm, {
-          name: rel.targetEntityName,
-          type: 'concept', // Default fallback type
-          properties: {},
+          entity: {
+            name: rel.targetEntityName,
+            type: 'concept',
+            properties: {},
+          },
+          relationshipOnlyPlaceholder: true,
         });
       }
     }
 
     // 2. Upsert Entities
-    for (const [normName, ent] of entitiesToUpsertMap.entries()) {
-      // Find existing entity case-insensitively
-      const selectSql = `
-        SELECT id, properties FROM kg_entities
-        WHERE tenant_id = $2
-          AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))
-          AND type = $3
-        ORDER BY created_at ASC
-        LIMIT 2;
-      `;
-      const res = await this.pg.query(selectSql, [ent.name, tenantId, ent.type]);
-      if ((res.rowCount ?? res.rows.length) > 1) {
-        throw new Error(`Ambiguous extracted KG identity within tenant ${tenantId}: ${ent.name} (${ent.type}).`);
+    for (const [normName, upsert] of entitiesToUpsertMap.entries()) {
+      const { entity: ent, relationshipOnlyPlaceholder } = upsert;
+
+      // Explicit entities match by normalized name + exact type. Placeholders match by
+      // normalized name only, always within the active tenant; their fallback type must
+      // not split evidence already stored under a more specific type.
+      const selectSql = relationshipOnlyPlaceholder
+        ? `
+          SELECT id, type, properties FROM kg_entities
+          WHERE tenant_id = $2
+            AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))
+          ORDER BY created_at ASC
+          LIMIT 2;
+        `
+        : `
+          SELECT id, type, properties FROM kg_entities
+          WHERE tenant_id = $2
+            AND LOWER(BTRIM(name)) = LOWER(BTRIM($1))
+            AND type = $3
+          ORDER BY created_at ASC
+          LIMIT 2;
+        `;
+      const selectParams = relationshipOnlyPlaceholder
+        ? [ent.name, tenantId]
+        : [ent.name, tenantId, ent.type];
+      const res = await this.pg.query(selectSql, selectParams);
+      const existingCount = res.rowCount ?? res.rows.length;
+      if (existingCount > 1) {
+        const identityDescription = relationshipOnlyPlaceholder
+          ? `${ent.name} (relationship-only placeholder)`
+          : `${ent.name} (${ent.type})`;
+        throw new Error(
+          `Ambiguous extracted KG identity within tenant ${tenantId}: ${identityDescription}.`
+        );
       }
 
       let entityId: string;
+      let entityTypeForResolution = ent.type;
       const properties = ent.properties || {};
 
-      if (res.rowCount && res.rowCount > 0) {
-        // Entity exists: Merge properties and update
+      if (existingCount === 1) {
+        // Entity exists: preserve its persisted type and merge only explicit properties.
         const row = res.rows[0];
         entityId = row.id;
+        entityTypeForResolution = row.type || ent.type;
 
         const existingProperties = typeof row.properties === 'string'
           ? JSON.parse(row.properties)
@@ -113,7 +157,7 @@ export class GraphStoreService {
         `;
         await this.pg.query(updateSql, [JSON.stringify(mergedProperties), entityId, tenantId]);
       } else {
-        // Entity does not exist: Create new UUID and insert
+        // Entity does not exist: create a new observation using the explicit or fallback type.
         entityId = crypto.randomUUID();
 
         const insertSql = `
@@ -141,7 +185,7 @@ export class GraphStoreService {
            AND LOWER(BTRIM(entity_type)) = LOWER(BTRIM($3))
          ORDER BY created_at ASC
          LIMIT 2;`,
-        [tenantId, ent.name, ent.type]
+        [tenantId, ent.name, entityTypeForResolution]
       );
       const canonicalCount = canonicalResult.rowCount ?? canonicalResult.rows.length;
       const canonicalEntityId = canonicalCount === 1 ? canonicalResult.rows[0].id : null;
