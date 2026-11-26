@@ -111,6 +111,9 @@ describe("GraphStoreService relationship-only placeholders", () => {
     expect(insertedEntityNames).not.toContain(" OPTIMUS ");
     expect(canonicalLookup?.params).toEqual(["tenant-a", " OPTIMUS ", "brand"]);
 
+    const relationshipInsert = harness.calls.find(({ sql }) => /INSERT INTO kg_relationships/i.test(sql));
+    expect(relationshipInsert?.params[2]).toBe("tenant-a:optimus");
+
     const placeholderUpdate = harness.calls.find(({ sql, params }) =>
       /UPDATE kg_entities/i.test(sql) && params[1] === "tenant-a:optimus"
     );
