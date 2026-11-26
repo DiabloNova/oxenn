@@ -31,17 +31,17 @@ function createHarness(existingEntities: KgEntityRow[] = []) {
     if (/SELECT id, type, properties, name FROM kg_entities/i.test(sql)) {
       const name = String(params[0]);
       const tenantId = String(params[1]);
-      const exactNameLookup = /AND name = \$1/i.test(sql);
+      const normalizedNameLookup = /LOWER\(BTRIM\(name\)\)/i.test(sql);
       const typeScopedLookup = /AND type = \$3/i.test(sql);
       const rows = existingEntities.filter((entity) => {
-        const nameMatches = exactNameLookup
-          ? entity.name === name
-          : entity.name.trim().toLowerCase() === name.trim().toLowerCase();
+        const nameMatches = normalizedNameLookup
+          ? entity.name.trim().toLowerCase() === name.trim().toLowerCase()
+          : entity.name === name;
         return tenantId === "tenant-a" &&
           entity.tenant_id === tenantId &&
           nameMatches &&
           (!typeScopedLookup || entity.type === String(params[2]));
-      }).slice(0, 2);
+      });
       return { rowCount: rows.length, rows };
     }
 
@@ -150,32 +150,45 @@ describe("GraphStoreService relationship-only placeholders", () => {
     expect(result.entityIds.optimus).not.toBe("tenant-b:optimus");
   });
 
-  it("fails closed for an ambiguous placeholder without aborting unrelated ingestion", async () => {
+  it("fails closed when an exact-case placeholder matches a cross-type case variant", async () => {
     const harness = createHarness([
       existingEntity("tenant-a:optimus-1", "Optimus", "brand"),
-      existingEntity("tenant-a:optimus-2", "optimus ", "organization"),
+      existingEntity("tenant-a:optimus-2", "optimus", "organization"),
     ]);
 
     const result = await harness.store.upsertEntitiesAndRelationships({
       entities: [{ name: "Independent", type: "brand", properties: {} }],
       relationships: [{
-        sourceEntityName: "OPTIMUS",
+        sourceEntityName: "Optimus",
         targetEntityName: "Independent",
         relationshipType: "related_to",
       }],
-    }, "chunk-ambiguous");
+    }, "chunk-ambiguous-case-variant");
 
+    const placeholderLookup = harness.calls.find(({ sql, params }) =>
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) &&
+      /LOWER\(BTRIM\(name\)\)/i.test(sql) &&
+      params[0] === "Optimus"
+    );
+
+    expect(placeholderLookup?.sql).toContain("tenant_id = $2");
+    expect(placeholderLookup?.sql).not.toMatch(/LIMIT\s+2/i);
+    expect(placeholderLookup?.params).toEqual(["Optimus", "tenant-a"]);
     expect(result.ambiguousEntityNames).toEqual(["optimus"]);
     expect(result.entityIds.optimus).toBeUndefined();
     expect(result.entityIds.independent).toBeDefined();
     expect(result.relationshipIds).toEqual([]);
     expect(harness.calls.some(({ sql, params }) =>
-      /INSERT INTO kg_entities/i.test(sql) && params[2] === "OPTIMUS"
+      /UPDATE kg_entities/i.test(sql) &&
+      ["tenant-a:optimus-1", "tenant-a:optimus-2"].includes(String(params[1]))
+    )).toBe(false);
+    expect(harness.calls.some(({ sql, params }) =>
+      /INSERT INTO kg_entities/i.test(sql) && params[2] === "Optimus"
     )).toBe(false);
     expect(harness.calls.some(({ sql }) => /INSERT INTO kg_relationships/i.test(sql))).toBe(false);
   });
 
-  it("prefers one exact spelling when legacy whitespace variants normalize to the same identity", async () => {
+  it("prefers one exact spelling among normalized legacy duplicates of the same type", async () => {
     const harness = createHarness([
       existingEntity("tenant-a:apple", "Apple", "brand"),
       existingEntity("tenant-a:apple-space", "Apple ", "brand"),
@@ -186,17 +199,25 @@ describe("GraphStoreService relationship-only placeholders", () => {
       relationships: [],
     }, "chunk-whitespace-legacy");
 
-    const exactLookup = harness.calls.find(({ sql }) =>
-      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /AND name = \$1/i.test(sql)
+    const normalizedLookup = harness.calls.find(({ sql, params }) =>
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) &&
+      /LOWER\(BTRIM\(name\)\)/i.test(sql) &&
+      params[0] === "Apple"
     );
-    const normalizedLookup = harness.calls.find(({ sql }) =>
-      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /LOWER\(BTRIM\(name\)\)/i.test(sql)
+    const update = harness.calls.find(({ sql, params }) =>
+      /UPDATE kg_entities/i.test(sql) && params[1] === "tenant-a:apple"
+    );
+    const updateOfWhitespaceVariant = harness.calls.some(({ sql, params }) =>
+      /UPDATE kg_entities/i.test(sql) && params[1] === "tenant-a:apple-space"
     );
 
-    expect(exactLookup).toBeDefined();
-    expect(normalizedLookup).toBeUndefined();
+    expect(normalizedLookup).toBeDefined();
+    expect(normalizedLookup?.sql).not.toMatch(/LIMIT\s+2/i);
+    expect(normalizedLookup?.params).toEqual(["Apple", "tenant-a", "brand"]);
     expect(result.entityIds.apple).toBe("tenant-a:apple");
     expect(result.ambiguousEntityNames).toEqual([]);
+    expect(update).toBeDefined();
+    expect(updateOfWhitespaceVariant).toBe(false);
   });
 
   it("keeps an explicitly extracted concept type exact instead of treating it as a placeholder", async () => {
