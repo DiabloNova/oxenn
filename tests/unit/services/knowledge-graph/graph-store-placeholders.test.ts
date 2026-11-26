@@ -12,6 +12,7 @@ vi.mock("@/core/database/tenant-context", () => ({
 
 type KgEntityRow = {
   id: string;
+  name: string;
   type: string;
   properties: Record<string, unknown>;
   tenant_id: string;
@@ -27,17 +28,20 @@ function createHarness(existingEntities: KgEntityRow[] = []) {
   const query = vi.fn(async (sql: string, params: unknown[] = []) => {
     calls.push({ sql, params });
 
-    if (/SELECT id, type, properties FROM kg_entities/i.test(sql)) {
-      const name = String(params[0]).trim().toLowerCase();
+    if (/SELECT id, type, properties, name FROM kg_entities/i.test(sql)) {
+      const name = String(params[0]);
       const tenantId = String(params[1]);
-      const isPlaceholderLookup = !/AND type = \$3/i.test(sql);
-      const type = params[2] == null ? null : String(params[2]);
-      const rows = existingEntities.filter((entity) =>
-        tenantId === "tenant-a" &&
-        entity.tenant_id === tenantId &&
-        (entity as KgEntityRow & { name?: string }).name?.trim().toLowerCase() === name &&
-        (isPlaceholderLookup || entity.type === type)
-      ).slice(0, 2);
+      const exactNameLookup = /AND name = \$1/i.test(sql);
+      const typeScopedLookup = /AND type = \$3/i.test(sql);
+      const rows = existingEntities.filter((entity) => {
+        const nameMatches = exactNameLookup
+          ? entity.name === name
+          : entity.name.trim().toLowerCase() === name.trim().toLowerCase();
+        return tenantId === "tenant-a" &&
+          entity.tenant_id === tenantId &&
+          nameMatches &&
+          (!typeScopedLookup || entity.type === String(params[2]));
+      }).slice(0, 2);
       return { rowCount: rows.length, rows };
     }
 
@@ -71,7 +75,7 @@ function existingEntity(
   name: string,
   type: string,
   properties: Record<string, unknown> = {},
-): KgEntityRow & { name: string } {
+): KgEntityRow {
   return { id, name, type, properties, tenant_id: id.split(":")[0] };
 }
 
@@ -90,8 +94,8 @@ describe("GraphStoreService relationship-only placeholders", () => {
     }, "chunk-placeholder");
 
     const placeholderLookup = harness.calls.find(({ sql, params }) =>
-      /LOWER\\(BTRIM\\(name\\)\\)/i.test(sql) &&
       /SELECT id, type, properties, name FROM kg_entities/i.test(sql) &&
+      /LOWER\(BTRIM\(name\)\)/i.test(sql) &&
       params[0] === " OPTIMUS "
     );
     const canonicalLookup = harness.calls.find(({ sql, params }) =>
@@ -128,36 +132,40 @@ describe("GraphStoreService relationship-only placeholders", () => {
       }],
     }, "chunk-tenant-isolation");
 
-    const lookup = harness.calls.find(({ sql, params }) =>
-      /SELECT id, type, properties FROM kg_entities/i.test(sql) && params[0] === "Optimus"
+    const normalizedLookup = harness.calls.find(({ sql, params }) =>
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) &&
+      /LOWER\(BTRIM\(name\)\)/i.test(sql) &&
+      params[0] === "Optimus"
     );
     const insertedNames = harness.calls
       .filter(({ sql }) => /INSERT INTO kg_entities/i.test(sql))
       .map(({ params }) => params[2]);
 
-    expect(lookup?.sql).toContain("tenant_id = $2");
-    expect(lookup?.params).toEqual(["Optimus", "tenant-a"]);
+    expect(normalizedLookup?.sql).toContain("tenant_id = $2");
+    expect(normalizedLookup?.params).toEqual(["Optimus", "tenant-a"]);
     expect(insertedNames).toContain("Optimus");
     expect(result.entityIds.optimus).not.toBe("tenant-b:optimus");
   });
 
-  it("fails closed when a placeholder name has multiple same-tenant candidates", async () => {
+  it("fails closed for an ambiguous placeholder without aborting unrelated ingestion", async () => {
     const harness = createHarness([
       existingEntity("tenant-a:optimus-1", "Optimus", "brand"),
-      existingEntity("tenant-a:optimus-2", "optimus", "organization"),
+      existingEntity("tenant-a:optimus-2", "optimus ", "organization"),
     ]);
 
     const result = await harness.store.upsertEntitiesAndRelationships({
-      entities: [],
+      entities: [{ name: "Independent", type: "brand", properties: {} }],
       relationships: [{
         sourceEntityName: "OPTIMUS",
-        targetEntityName: "Target",
+        targetEntityName: "Independent",
         relationshipType: "related_to",
       }],
     }, "chunk-ambiguous");
 
     expect(result.ambiguousEntityNames).toEqual(["optimus"]);
     expect(result.entityIds.optimus).toBeUndefined();
+    expect(result.entityIds.independent).toBeDefined();
+    expect(result.relationshipIds).toEqual([]);
     expect(harness.calls.some(({ sql, params }) =>
       /INSERT INTO kg_entities/i.test(sql) && params[2] === "OPTIMUS"
     )).toBe(false);
@@ -176,10 +184,10 @@ describe("GraphStoreService relationship-only placeholders", () => {
     }, "chunk-whitespace-legacy");
 
     const exactLookup = harness.calls.find(({ sql }) =>
-      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /AND name = \\$1/i.test(sql)
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /AND name = \$1/i.test(sql)
     );
     const normalizedLookup = harness.calls.find(({ sql }) =>
-      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /LOWER\\(BTRIM\\(name\\)\\)/i.test(sql)
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /LOWER\(BTRIM\(name\)\)/i.test(sql)
     );
 
     expect(exactLookup).toBeDefined();
@@ -198,7 +206,9 @@ describe("GraphStoreService relationship-only placeholders", () => {
       relationships: [],
     }, "chunk-explicit-concept");
 
-    const lookup = harness.calls.find(({ sql }) => /SELECT id, type, properties FROM kg_entities/i.test(sql));
+    const lookup = harness.calls.find(({ sql }) =>
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) && /AND type = \$3/i.test(sql)
+    );
     expect(lookup?.sql).toContain("AND type = $3");
     expect(lookup?.params).toEqual(["Optimus", "tenant-a", "concept"]);
     const insert = harness.calls.find(({ sql }) => /INSERT INTO kg_entities/i.test(sql));
@@ -206,7 +216,7 @@ describe("GraphStoreService relationship-only placeholders", () => {
     expect(insert?.params[3]).toBe("concept");
   });
 
-  it("rejects conflicting explicit types with the same normalized name before persistence", async () => {
+  it("reports conflicting explicit types and skips that identity before persistence", async () => {
     const harness = createHarness();
 
     const result = await harness.store.upsertEntitiesAndRelationships({
