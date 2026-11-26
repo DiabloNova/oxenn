@@ -104,6 +104,12 @@ describe("GraphStoreService relationship-only placeholders", () => {
     expect(result.entityIds.optimus).toBe("tenant-a:optimus");
     expect(insertedEntityNames).not.toContain(" OPTIMUS ");
     expect(canonicalLookup?.params).toEqual(["tenant-a", " OPTIMUS ", "brand"]);
+
+    const placeholderUpdate = harness.calls.find(({ sql, params }) =>
+      /UPDATE kg_entities/i.test(sql) && params[1] === "tenant-a:optimus"
+    );
+    expect(JSON.parse(String(placeholderUpdate?.params[0]))).toEqual({ source: "curated" });
+    expect(placeholderUpdate?.sql).not.toMatch(/SET[^]*\btype\s*=/i);
   });
 
   it("does not reuse another tenant's same-name entity", async () => {
