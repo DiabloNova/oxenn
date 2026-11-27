@@ -25,7 +25,7 @@ describe('KG relationship tenant integrity migration contract', () => {
   });
 
   it('does not silently rewrite or delete existing relationships', () => {
-    expect(migration).not.toMatch(/DELETE\\s+FROM\\s+kg_relationships/i);
-    expect(migration).not.toMatch(/UPDATE\\s+kg_relationships/i);
+    expect(migration).not.toMatch(/DELETE\s+FROM\s+kg_relationships/i);
+    expect(migration).not.toMatch(/UPDATE\s+kg_relationships/i);
   });
 });
