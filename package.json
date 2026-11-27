@@ -25,6 +25,7 @@
     "docs:matrix": "pnpm exec tsx scripts/database/build-reference-matrix.ts",
     "docs": "pnpm run docs:matrix",
     "db:verify-rls-migrations": "pnpm exec tsx scripts/database/verify-rls-migrations.ts",
+    "db:kg-integrity": "pnpm exec tsx scripts/database/kg-migration-integrity.ts",
     "audit:gate": "node scripts/audit-gate.mjs",
     "test:audit-gate": "node --test scripts/audit-gate.test.mjs",
     "platform-admin:migrate": "pnpm exec tsx scripts/platform-admin/migrate.ts",
