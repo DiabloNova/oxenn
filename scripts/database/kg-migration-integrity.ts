@@ -395,6 +395,7 @@ const MIGRATOR_IDENTITY_SQL = [
   "  current_user AS role_name,",
   "  current_setting('transaction_read_only') AS transaction_read_only,",
   "  current_setting('default_transaction_read_only') AS default_transaction_read_only,",
+  "  current_setting('row_security') AS row_security,",
   "  role_record.rolcanlogin AS can_login,",
   "  role_record.rolsuper AS is_superuser,",
   "  role_record.rolcreatedb AS can_create_database,",
@@ -561,6 +562,7 @@ export function assertMigratorIdentity(row: Record<string, unknown>): void {
     asString(row.role_name) !== MIGRATOR_ROLE ||
     asString(row.transaction_read_only) !== "on" ||
     asString(row.default_transaction_read_only) !== "off" ||
+    asString(row.row_security) !== "on" ||
     !asBoolean(row.can_login) ||
     asBoolean(row.is_superuser) ||
     asBoolean(row.can_create_database) ||
