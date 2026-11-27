@@ -296,6 +296,7 @@ const MIGRATOR_IDENTITY_SQL = [
   "  current_database() AS database_name,",
   "  current_user AS role_name,",
   "  current_setting('transaction_read_only') AS transaction_read_only,",
+  "  current_setting('default_transaction_read_only') AS default_transaction_read_only,",
   "  role_record.rolcanlogin AS can_login,",
   "  role_record.rolsuper AS is_superuser,",
   "  role_record.rolcreatedb AS can_create_database,",
@@ -458,7 +459,8 @@ export function assertMigratorIdentity(row: Record<string, unknown>): void {
   if (
     asString(row.database_name) !== WORKSPACE_DATABASE ||
     asString(row.role_name) !== MIGRATOR_ROLE ||
-    asString(row.transaction_read_only) !== "off" ||
+    asString(row.transaction_read_only) !== "on" ||
+    asString(row.default_transaction_read_only) !== "off" ||
     !asBoolean(row.can_login) ||
     asBoolean(row.is_superuser) ||
     asBoolean(row.can_create_database) ||
@@ -511,28 +513,39 @@ async function verifyAuditorColumnGrants(
     "has_column_privilege(current_user, '" + entry[0] + "', '" + entry[1] + "', 'SELECT') AS select_" + index,
   );
   const tableNames = ["public.entities", "public.kg_entities", "public.kg_relationships"];
-  const dmlChecks = tableNames.flatMap((table, tableIndex) => [
+  const tableChecks = tableNames.flatMap((table, tableIndex) => [
+    "has_table_privilege(current_user, '" + table + "', 'SELECT') AS table_select_" + tableIndex,
     "has_table_privilege(current_user, '" + table + "', 'INSERT') AS insert_" + tableIndex,
     "has_table_privilege(current_user, '" + table + "', 'UPDATE') AS update_" + tableIndex,
     "has_table_privilege(current_user, '" + table + "', 'DELETE') AS delete_" + tableIndex,
     "has_table_privilege(current_user, '" + table + "', 'TRUNCATE') AS truncate_" + tableIndex,
+    "has_table_privilege(current_user, '" + table + "', 'REFERENCES') AS references_" + tableIndex,
+    "has_table_privilege(current_user, '" + table + "', 'TRIGGER') AS trigger_" + tableIndex,
     "has_any_column_privilege(current_user, '" + table + "', 'INSERT') AS column_insert_" + tableIndex,
     "has_any_column_privilege(current_user, '" + table + "', 'UPDATE') AS column_update_" + tableIndex,
+    "has_any_column_privilege(current_user, '" + table + "', 'REFERENCES') AS column_references_" + tableIndex,
   ]);
-  const result = await client.query("SELECT\n" + [...selectChecks, ...dmlChecks].join(",\n"));
+  const result = await client.query("SELECT\n" + [...selectChecks, ...tableChecks].join(",\n"));
   const row = firstRow(result, "auditor column privileges");
 
   for (let index = 0; index < required.length; index += 1) {
     if (!asBoolean(row["select_" + index])) {
-      throw new Error("Auditor is missing a required column-level SELECT grant; required columns are limited to identifiers, tenant keys, names, types, and resolution metadata.");
+      throw new Error("Auditor is missing a required column-level SELECT grant.");
+    }
+  }
+
+  for (let index = 0; index < tableNames.length; index += 1) {
+    if (asBoolean(row["table_select_" + index])) {
+      throw new Error("Auditor has table-wide SELECT privileges; only the explicitly required column grants are permitted.");
     }
   }
 
   for (const [key, value] of Object.entries(row)) {
     if ((key.startsWith("insert_") || key.startsWith("update_") || key.startsWith("delete_") ||
-      key.startsWith("truncate_") || key.startsWith("column_insert_") || key.startsWith("column_update_")) &&
-      asBoolean(value)) {
-      throw new Error("Auditor has a write privilege on a Knowledge Graph table; all DML privileges must be absent.");
+      key.startsWith("truncate_") || key.startsWith("references_") || key.startsWith("trigger_") ||
+      key.startsWith("column_insert_") || key.startsWith("column_update_") ||
+      key.startsWith("column_references_")) && asBoolean(value)) {
+      throw new Error("Auditor has a write or schema-changing privilege on a Knowledge Graph table.");
     }
   }
 }
@@ -855,14 +868,16 @@ export async function backfillOneTenant(
     transactionOpen = true;
     const context = firstRow(
       await client.query(
-        "SELECT set_config('app.current_tenant_id', $1, true) AS tenant_id, current_setting('transaction_read_only') AS transaction_read_only",
+        "SELECT set_config('app.current_tenant_id', $1, true) AS tenant_id, current_setting('app.current_tenant_id', true) AS active_tenant_id, current_setting('transaction_read_only') AS transaction_read_only, current_user AS role_name",
         [tenantId],
       ),
       "tenant transaction context",
     );
     if (
       asString(context.tenant_id) !== tenantId ||
-      asString(context.transaction_read_only) !== "off"
+      asString(context.transaction_read_only) !== "off" ||
+      asString(context.active_tenant_id) !== tenantId ||
+      asString(context.role_name) !== MIGRATOR_ROLE
     ) {
       throw new Error("Backfill could not establish the exact writable tenant transaction context.");
     }
@@ -874,6 +889,9 @@ export async function backfillOneTenant(
       firstRow(await client.query(TENANT_BEFORE_COUNTS_SQL, [tenantId]), "tenant pre-backfill counts"),
       "tenant pre-backfill",
     );
+    if (before.invalidStatus !== 0) {
+      throw new Error("Tenant contains unsupported canonical resolution statuses; no rows were changed.");
+    }
 
     const plannedRow = firstRow(
       await client.query(TENANT_BACKFILL_SQL, [tenantId]),
