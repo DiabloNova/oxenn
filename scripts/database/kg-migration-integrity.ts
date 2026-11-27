@@ -868,7 +868,7 @@ async function auditWorkspaceWithClient(client: DatabaseClient): Promise<AuditRe
 
   const schema = await inspectSchema(client);
   if (!schema.rlsReady) {
-    throw new Error("RLS must be both enabled and forced on entities, kg_entities, and kg_relationships before a global KG audit is accepted.");
+    throw new Error("RLS must be both enabled and forced on entities, entity_relationships, kg_entities, and kg_relationships before a global KG audit is accepted.");
   }
   await verifyAuditorColumnGrants(client, schema.columns, schema.resolutionAvailable);
 
