@@ -132,9 +132,12 @@ function fakeClient(options?: {
 
 describe("KG migration integrity connection contracts", () => {
   it("builds the sequence privilege inventory as valid newline-separated SQL", () => {
-    expect(SEQUENCE_PRIVILEGE_INVENTORY_SQL).toMatch(/^SELECT\\n/);
-    expect(SEQUENCE_PRIVILEGE_INVENTORY_SQL).toContain("\\nFROM pg_class AS relation\\n");
-    expect(SEQUENCE_PRIVILEGE_INVENTORY_SQL).not.toContain("\\\\n");
+    const sqlLines = SEQUENCE_PRIVILEGE_INVENTORY_SQL.split(String.fromCharCode(10));
+
+    expect(sqlLines[0]).toBe("SELECT COUNT(*)::text AS sequence_privilege_count");
+    expect(sqlLines).toContain("FROM pg_class AS relation");
+    expect(sqlLines).toContain("JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace");
+    expect(SEQUENCE_PRIVILEGE_INVENTORY_SQL).not.toContain(String.fromCharCode(92) + "n");
   });
   it("accepts only the dedicated direct Workspace auditor and migrator URLs", () => {
     const auditor = parseWorkspaceDatabaseUrl(
