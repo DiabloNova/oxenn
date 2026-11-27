@@ -146,7 +146,7 @@ jobs:
           const expectedHostRaw = (expectedHostValue || "").trim().toLowerCase();
           const expectedHost = expectedHostRaw.endsWith(".")
             ? expectedHostRaw.slice(0, -1)
-            : expectedHost;
+            : expectedHostRaw;
           if (!expectedHost || expectedHost.includes("-pooler.")) {
             console.error("The selected protected environment must pin its direct Workspace Neon endpoint host.");
             process.exit(1);
