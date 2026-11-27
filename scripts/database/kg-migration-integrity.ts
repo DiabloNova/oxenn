@@ -398,7 +398,7 @@ const AUDITOR_IDENTITY_SQL = [
   "  EXISTS (",
   "    SELECT 1 FROM pg_database AS database_record",
   "    WHERE database_record.datdba = role_record.oid",
-  "  ) AS owns_database,
+  "  ) AS owns_database,",
   "  ARRAY(",
   "    SELECT member_role.rolname::text",
   "    FROM pg_roles AS member_role",
