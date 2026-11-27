@@ -128,6 +128,84 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify Workspace URLs match the selected protected environment endpoint
+        shell: bash
+        env:
+          DATABASE_TARGET: ${{ inputs.database_target }}
+          OPERATION: ${{ inputs.operation }}
+          REHEARSAL_EXPECTED_HOST: ${{ vars.OXENN_WORKSPACE_REHEARSAL_ENDPOINT_HOST }}
+          PRODUCTION_EXPECTED_HOST: ${{ vars.OXENN_WORKSPACE_PRODUCTION_ENDPOINT_HOST }}
+          WORKSPACE_AUDIT_URL: ${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+          WORKSPACE_MIGRATION_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+        run: |
+          node <<'NODE'
+          const target = process.env.DATABASE_TARGET;
+          const expectedHost = (
+            target === "production"
+              ? process.env.PRODUCTION_EXPECTED_HOST
+              : process.env.REHEARSAL_EXPECTED_HOST
+          ).trim().toLowerCase().replace(/\\.$/, "");
+
+          if (!expectedHost || expectedHost.includes("-pooler.")) {
+            console.error("The selected protected environment must pin its direct Workspace Neon endpoint host.");
+            process.exit(1);
+          }
+
+          const specs = [
+            { label: "Workspace auditor", env: "WORKSPACE_AUDIT_URL", role: "oxenn_workspace_auditor" },
+          ];
+          if (process.env.OPERATION === "apply") {
+            specs.push({
+              label: "Workspace migrator",
+              env: "WORKSPACE_MIGRATION_URL",
+              role: "oxenn_workspace_migrator",
+            });
+          }
+
+          const errors = [];
+          for (const spec of specs) {
+            const raw = process.env[spec.env];
+            if (!raw) {
+              errors.push(`${spec.label}: required environment-scoped URL is missing`);
+              continue;
+            }
+            try {
+              const url = new URL(raw);
+              const database = decodeURIComponent(url.pathname.replace(/^\\/+/, ""));
+              const role = decodeURIComponent(url.username);
+              const allowed = new Set(["sslmode", "channel_binding"]);
+              const seen = new Set();
+
+              for (const [name] of url.searchParams.entries()) {
+                const key = name.toLowerCase();
+                if (seen.has(key) || !allowed.has(key)) {
+                  errors.push(`${spec.label}: duplicate or unsupported connection parameter`);
+                }
+                seen.add(key);
+              }
+
+              if (!["postgres:", "postgresql:"].includes(url.protocol) ||
+                  database !== "oxenn_workspace" ||
+                  role !== spec.role ||
+                  !url.password ||
+                  url.hostname.toLowerCase().replace(/\\.$/, "") !== expectedHost ||
+                  url.hostname.toLowerCase().includes("-pooler.") ||
+                  !["require", "verify-ca", "verify-full"].includes((url.searchParams.get("sslmode") || "").toLowerCase()) ||
+                  url.hash) {
+                errors.push(`${spec.label}: URL does not match the selected protected environment's exact Workspace endpoint, role, database, and TLS contract`);
+              }
+            } catch {
+              errors.push(`${spec.label}: malformed PostgreSQL URL`);
+            }
+          }
+
+          if (errors.length) {
+            for (const error of errors) console.error(error);
+            process.exit(1);
+          }
+          console.log("Workspace URLs match the selected protected environment's pinned endpoint.");
+          NODE
+
       - name: Run read-only canonical Backfill dry-run
         if: ${{ inputs.operation == 'dry-run' }}
         env:
