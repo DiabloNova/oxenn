@@ -144,6 +144,7 @@ jobs:
       - name: Record verified Backfill result
         if: success()
         env:
+          OPERATION: ${{ inputs.operation }}
           DATABASE_TARGET: ${{ inputs.database_target }}
           RUN_REF: ${{ github.ref }}
           RUN_SHA: ${{ github.sha }}
@@ -151,10 +152,15 @@ jobs:
           {
             echo "## Workspace Knowledge Graph Backfill"
             echo
+            printf -- '- Operation: %s\n' "$OPERATION"
             printf -- '- Target environment: %s\n' "$DATABASE_TARGET"
             printf -- '- Dispatch ref: %s\n' "$RUN_REF"
             printf -- '- Checked-out revision: %s\n' "$RUN_SHA"
-            echo "- Backfill: completed with per-tenant row-count reconciliation and a final global audit"
+            if [[ "$OPERATION" == "dry-run" ]]; then
+              echo "- Backfill: read-only classification completed; no database writes were performed"
+            else
+              echo "- Backfill: completed with per-tenant row-count reconciliation and a final global audit"
+            fi
             echo "- Scope: oxenn_workspace only; Platform Admin was not accessed"
           } >> "$GITHUB_STEP_SUMMARY"
 
