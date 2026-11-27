@@ -483,73 +483,107 @@ export function assertMigratorIdentity(row: Record<string, unknown>): void {
 
 async function verifyAuditorColumnGrants(
   client: DatabaseClient,
+  columns: Map<string, Set<string>>,
   resolutionAvailable: boolean,
 ): Promise<void> {
-  const required = [
-    ["public.entities", "id"],
-    ["public.entities", "organization_id"],
-    ["public.entities", "name"],
-    ["public.entities", "entity_type"],
-    ["public.entities", "deleted_at"],
-    ["public.kg_entities", "id"],
-    ["public.kg_entities", "tenant_id"],
-    ["public.kg_entities", "name"],
-    ["public.kg_entities", "type"],
-    ["public.kg_relationships", "id"],
-    ["public.kg_relationships", "tenant_id"],
-    ["public.kg_relationships", "source_entity_id"],
-    ["public.kg_relationships", "target_entity_id"],
-  ];
-  if (resolutionAvailable) {
-    required.push(
-      ["public.kg_entities", "canonical_entity_id"],
-      ["public.kg_entities", "resolution_status"],
-      ["public.kg_entities", "resolution_method"],
-      ["public.kg_entities", "resolved_at"],
-    );
-  }
+  const allowedColumns: Record<string, Set<string>> = {
+    entities: new Set(["id", "organization_id", "name", "entity_type", "deleted_at"]),
+    kg_entities: new Set([
+      "id", "tenant_id", "name", "type",
+      ...(resolutionAvailable ? ["canonical_entity_id", "resolution_status", "resolution_method", "resolved_at"] : []),
+    ]),
+    kg_relationships: new Set(["id", "tenant_id", "source_entity_id", "target_entity_id"]),
+  };
 
-  const selectChecks = required.map((entry, index) =>
-    "has_column_privilege(current_user, '" + entry[0] + "', '" + entry[1] + "', 'SELECT') AS select_" + index,
+  const columnResult = await client.query(
+    [
+      "SELECT relation.relname AS table_name, attribute.attname AS column_name,",
+      "       has_column_privilege(current_user, relation.oid, attribute.attname, 'SELECT') AS can_select",
+      "FROM pg_class AS relation",
+      "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
+      "JOIN pg_attribute AS attribute ON attribute.attrelid = relation.oid",
+      "WHERE namespace.nspname = 'public'",
+      "  AND relation.relname = ANY($1::text[])",
+      "  AND attribute.attnum > 0",
+      "  AND NOT attribute.attisdropped",
+    ].join("\n"),
+    [["entities", "kg_entities", "kg_relationships"]],
   );
-  const tableNames = ["public.entities", "public.kg_entities", "public.kg_relationships"];
-  const tableChecks = tableNames.flatMap((table, tableIndex) => [
-    "has_table_privilege(current_user, '" + table + "', 'SELECT') AS table_select_" + tableIndex,
-    "has_table_privilege(current_user, '" + table + "', 'INSERT') AS insert_" + tableIndex,
-    "has_table_privilege(current_user, '" + table + "', 'UPDATE') AS update_" + tableIndex,
-    "has_table_privilege(current_user, '" + table + "', 'DELETE') AS delete_" + tableIndex,
-    "has_table_privilege(current_user, '" + table + "', 'TRUNCATE') AS truncate_" + tableIndex,
-    "has_table_privilege(current_user, '" + table + "', 'REFERENCES') AS references_" + tableIndex,
-    "has_table_privilege(current_user, '" + table + "', 'TRIGGER') AS trigger_" + tableIndex,
-    "has_any_column_privilege(current_user, '" + table + "', 'INSERT') AS column_insert_" + tableIndex,
-    "has_any_column_privilege(current_user, '" + table + "', 'UPDATE') AS column_update_" + tableIndex,
-    "has_any_column_privilege(current_user, '" + table + "', 'REFERENCES') AS column_references_" + tableIndex,
-  ]);
-  const result = await client.query("SELECT\n" + [...selectChecks, ...tableChecks].join(",\n"));
-  const row = firstRow(result, "auditor column privileges");
 
-  for (let index = 0; index < required.length; index += 1) {
-    if (!asBoolean(row["select_" + index])) {
-      throw new Error("Auditor is missing a required column-level SELECT grant.");
+  const checked = new Set<string>();
+  for (const row of columnResult.rows) {
+    const table = asString(row.table_name);
+    const column = asString(row.column_name);
+    const key = table + "." + column;
+    const mayRead = allowedColumns[table]?.has(column) === true;
+    if (asBoolean(row.can_select) !== mayRead) {
+      throw new Error(
+        mayRead
+          ? "Auditor is missing an explicitly required column-level SELECT grant."
+          : "Auditor can read an unapproved Knowledge Graph table column; remove that grant before running the audit.",
+      );
+    }
+    checked.add(key);
+  }
+
+  for (const [table, requiredColumns] of Object.entries(allowedColumns)) {
+    for (const column of requiredColumns) {
+      if (!checked.has(table + "." + column) || !columns.get(table)?.has(column)) {
+        throw new Error("Auditor privilege verification did not find a required column.");
+      }
     }
   }
 
-  for (let index = 0; index < tableNames.length; index += 1) {
-    if (asBoolean(row["table_select_" + index])) {
-      throw new Error("Auditor has table-wide SELECT privileges; only the explicitly required column grants are permitted.");
-    }
+  const writePrivilegeResult = await client.query(
+    [
+      "SELECT COUNT(*)::text AS unexpected_write_grants",
+      "FROM pg_class AS relation",
+      "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
+      "WHERE namespace.nspname = 'public'",
+      "  AND relation.relkind IN ('r', 'p', 'v', 'm')",
+      "  AND (",
+      "    has_table_privilege(current_user, relation.oid, 'INSERT')",
+      "    OR has_table_privilege(current_user, relation.oid, 'UPDATE')",
+      "    OR has_table_privilege(current_user, relation.oid, 'DELETE')",
+      "    OR has_table_privilege(current_user, relation.oid, 'TRUNCATE')",
+      "    OR has_table_privilege(current_user, relation.oid, 'REFERENCES')",
+      "    OR has_table_privilege(current_user, relation.oid, 'TRIGGER')",
+      "    OR has_any_column_privilege(current_user, relation.oid, 'INSERT')",
+      "    OR has_any_column_privilege(current_user, relation.oid, 'UPDATE')",
+      "    OR has_any_column_privilege(current_user, relation.oid, 'REFERENCES')",
+      "  )",
+    ].join("\n"),
+  );
+  const writeGrants = asNumber(
+    firstRow(writePrivilegeResult, "auditor write privilege inventory").unexpected_write_grants,
+    "auditor write privilege inventory",
+  );
+  if (writeGrants !== 0) {
+    throw new Error("Auditor has a write or schema-changing privilege on a public database relation.");
   }
 
-  for (const [key, value] of Object.entries(row)) {
-    if ((key.startsWith("insert_") || key.startsWith("update_") || key.startsWith("delete_") ||
-      key.startsWith("truncate_") || key.startsWith("references_") || key.startsWith("trigger_") ||
-      key.startsWith("column_insert_") || key.startsWith("column_update_") ||
-      key.startsWith("column_references_")) && asBoolean(value)) {
-      throw new Error("Auditor has a write or schema-changing privilege on a Knowledge Graph table.");
-    }
+  const unrelatedReadResult = await client.query(
+    [
+      "SELECT COUNT(*)::text AS unrelated_read_grants",
+      "FROM pg_class AS relation",
+      "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
+      "WHERE namespace.nspname = 'public'",
+      "  AND relation.relkind IN ('r', 'p', 'v', 'm')",
+      "  AND relation.relname NOT IN ('entities', 'kg_entities', 'kg_relationships')",
+      "  AND (",
+      "    has_table_privilege(current_user, relation.oid, 'SELECT')",
+      "    OR has_any_column_privilege(current_user, relation.oid, 'SELECT')",
+      "  )",
+    ].join("\n"),
+  );
+  const unrelatedReadGrants = asNumber(
+    firstRow(unrelatedReadResult, "auditor unrelated read privilege inventory").unrelated_read_grants,
+    "auditor unrelated read privilege inventory",
+  );
+  if (unrelatedReadGrants !== 0) {
+    throw new Error("Auditor has read access to public database relations outside the three approved Knowledge Graph tables.");
   }
 }
-
 async function inspectSchema(client: DatabaseClient): Promise<{
   columns: Map<string, Set<string>>;
   rlsReady: boolean;
@@ -666,7 +700,7 @@ async function auditWorkspaceWithClient(client: DatabaseClient): Promise<AuditRe
   if (!schema.rlsReady) {
     throw new Error("RLS must be both enabled and forced on entities, kg_entities, and kg_relationships before a global KG audit is accepted.");
   }
-  await verifyAuditorColumnGrants(client, schema.resolutionAvailable);
+  await verifyAuditorColumnGrants(client, schema.columns, schema.resolutionAvailable);
 
   const tenantResult = await client.query(TENANT_IDS_SQL);
   const tenantIds = tenantResult.rows.map((row) => asString(row.tenant_id));
@@ -1082,19 +1116,26 @@ function parseArgs(argv: string[]): { command: "audit" | "backfill"; apply: bool
     throw new Error("Usage: pnpm db:kg-integrity [audit|backfill] [--apply --confirm-database oxenn_workspace].");
   }
 
-  const allowed = new Set(["--apply", "--confirm-database"]);
-  for (const argument of argv.slice(1)) {
-    if (!allowed.has(argument) && !argv.slice(1).some((item, index) => item === "--confirm-database" && index + 1 === argv.slice(1).indexOf(argument))) {
-      throw new Error("Unsupported KG integrity command-line option.");
+  let apply = false;
+  let confirmDatabase: string | undefined;
+  for (let index = 1; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument === "--apply" && !apply) {
+      apply = true;
+      continue;
     }
+    if (argument === "--confirm-database" && confirmDatabase === undefined) {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("--confirm-database requires an exact database name.");
+      }
+      confirmDatabase = value;
+      index += 1;
+      continue;
+    }
+    throw new Error("Unsupported or duplicated KG integrity command-line option.");
   }
 
-  const apply = argv.includes("--apply");
-  const confirmIndex = argv.indexOf("--confirm-database");
-  const confirmDatabase = confirmIndex >= 0 ? argv[confirmIndex + 1] : undefined;
-  if (confirmIndex >= 0 && (!confirmDatabase || confirmDatabase.startsWith("--"))) {
-    throw new Error("--confirm-database requires an exact database name.");
-  }
   if (command === "audit" && (apply || confirmDatabase)) {
     throw new Error("The audit command is read-only and does not accept write-confirmation options.");
   }
@@ -1104,9 +1145,11 @@ function parseArgs(argv: string[]): { command: "audit" | "backfill"; apply: bool
   if (confirmDatabase && confirmDatabase !== WORKSPACE_DATABASE) {
     throw new Error("The confirmation database must match exactly " + WORKSPACE_DATABASE + ".");
   }
+  if (command === "backfill" && !apply && confirmDatabase) {
+    throw new Error("--confirm-database is only valid together with --apply.");
+  }
   return { command, apply, confirmDatabase };
 }
-
 async function main(argv: string[]): Promise<void> {
   if (argv[0] === "--help" || argv[0] === "-h") {
     process.stdout.write(
