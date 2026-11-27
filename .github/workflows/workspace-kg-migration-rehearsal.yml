@@ -200,7 +200,7 @@ jobs:
             }
             try {
               const url = new URL(raw);
-              const database = decodeURIComponent(url.pathname.replace(/^\\/+/, ""));
+              const database = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
               const username = decodeURIComponent(url.username);
               const allowedParameters = new Set(["sslmode", "channel_binding"]);
               const seen = new Set();
