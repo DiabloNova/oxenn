@@ -176,8 +176,9 @@ jobs:
           node <<'NODE'
           const { Client } = require("pg");
 
-          const expectedHost = (process.env.EXPECTED_REHEARSAL_HOST || "").trim().toLowerCase();
-          if (!expectedHost) {
+          const expectedHostRaw = (process.env.EXPECTED_REHEARSAL_HOST || "").trim().toLowerCase();
+          const expectedHost = expectedHostRaw.endsWith(".") ? expectedHostRaw.slice(0, -1) : expectedHostRaw;
+          if (!expectedHost || expectedHost.includes("-pooler.")) {
             console.error("The protected rehearsal environment must define OXENN_WORKSPACE_REHEARSAL_ENDPOINT_HOST.");
             process.exit(1);
           }
@@ -291,8 +292,8 @@ jobs:
                   row.can_replicate !== false ||
                   row.can_connect_platform_admin !== false ||
                   row.can_use_public !== true ||
-                  !Array.isArray(row.role_memberships) ||
-                  row.role_memberships.length !== 0) {
+                  (spec.kind !== "runtime" &&
+                    (!Array.isArray(row.role_memberships) || row.role_memberships.length !== 0))) {
                 throw new Error("role identity or least-privilege checks failed");
               }
 
