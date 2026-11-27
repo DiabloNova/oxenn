@@ -379,8 +379,10 @@ function defaultClientFactory(connectionString: string, applicationName: string)
 
 function safeError(error: unknown, connectionString?: string): Error {
   const raw = error instanceof Error ? error.message : String(error);
-  const sanitized = sanitizeErrorMessage(raw, connectionString);
-  return new Error(sanitized);
+  const withoutDetails = raw.split(/\\b(?:DETAIL|CONTEXT|SQL query):/i, 1)[0] ?? raw;
+  const sanitized = sanitizeErrorMessage(withoutDetails, connectionString)
+    .replace(/\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b/gi, "[redacted-id]");
+  return new Error(sanitized, { cause: error });
 }
 
 function asString(value: unknown): string {
