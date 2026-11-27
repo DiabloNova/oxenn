@@ -166,11 +166,13 @@ jobs:
           const errors = [];
           let canonicalHost = null;
           const target = process.env.DATABASE_TARGET;
-          const expectedHost = (
-            target === "production"
-              ? process.env.PRODUCTION_EXPECTED_HOST
-              : process.env.REHEARSAL_EXPECTED_HOST
-          ).trim().toLowerCase().replace(/\\.$/, "");
+          const expectedHostValue = target === "production"
+            ? process.env.PRODUCTION_EXPECTED_HOST
+            : process.env.REHEARSAL_EXPECTED_HOST;
+          const expectedHostRaw = (expectedHostValue || "").trim().toLowerCase();
+          const expectedHost = expectedHostRaw.endsWith(".")
+            ? expectedHostRaw.slice(0, -1)
+            : expectedHost;
           if (!expectedHost || expectedHost.includes("-pooler.")) {
             errors.push("the selected protected environment must pin its direct Neon endpoint host");
           }
@@ -203,7 +205,11 @@ jobs:
                 errors.push(`${spec.label}: this connection requires a direct, unpooled Neon endpoint`);
               }
 
-              const normalizedHost = url.hostname.replace("-pooler.", ".").replace(/\\.$/, "").toLowerCase();
+              const hostWithCase = url.hostname.toLowerCase();
+              const hostWithoutTrailingDot = hostWithCase.endsWith(".")
+                ? hostWithCase.slice(0, -1)
+                : hostWithCase;
+              const normalizedHost = hostWithoutTrailingDot.replace("-pooler.", ".");
               if (canonicalHost === null) canonicalHost = normalizedHost;
               if (normalizedHost !== canonicalHost) {
                 errors.push(`${spec.label}: endpoint does not belong to the same Neon project/region host as the other URLs`);
