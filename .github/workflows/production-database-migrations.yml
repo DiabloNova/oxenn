@@ -108,6 +108,9 @@ jobs:
         shell: bash
         env:
           MIGRATION_SCOPE: ${{ inputs.migration_scope }}
+          DATABASE_TARGET: ${{ inputs.database_target }}
+          REHEARSAL_EXPECTED_HOST: ${{ vars.OXENN_WORKSPACE_REHEARSAL_ENDPOINT_HOST }}
+          PRODUCTION_EXPECTED_HOST: ${{ vars.OXENN_WORKSPACE_PRODUCTION_ENDPOINT_HOST }}
           WORKSPACE_RUNTIME_URL: ${{ secrets.OXENN_WORKSPACE_RUNTIME_DATABASE_URL }}
           WORKSPACE_MIGRATION_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
           PLATFORM_ADMIN_RUNTIME_DIRECT_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_RUNTIME_DIRECT_DATABASE_URL }}
@@ -162,6 +165,15 @@ jobs:
           const parsed = new Map();
           const errors = [];
           let canonicalHost = null;
+          const target = process.env.DATABASE_TARGET;
+          const expectedHost = (
+            target === "production"
+              ? process.env.PRODUCTION_EXPECTED_HOST
+              : process.env.REHEARSAL_EXPECTED_HOST
+          ).trim().toLowerCase().replace(/\\.$/, "");
+          if (!expectedHost || expectedHost.includes("-pooler.")) {
+            errors.push("the selected protected environment must pin its direct Neon endpoint host");
+          }
 
           for (const spec of specs) {
             const raw = process.env[spec.env];
@@ -191,7 +203,7 @@ jobs:
                 errors.push(`${spec.label}: this connection requires a direct, unpooled Neon endpoint`);
               }
 
-              const normalizedHost = url.hostname.replace("-pooler.", ".");
+              const normalizedHost = url.hostname.replace("-pooler.", ".").replace(/\\.$/, "").toLowerCase();
               if (canonicalHost === null) canonicalHost = normalizedHost;
               if (normalizedHost !== canonicalHost) {
                 errors.push(`${spec.label}: endpoint does not belong to the same Neon project/region host as the other URLs`);
@@ -201,6 +213,10 @@ jobs:
             } catch {
               errors.push(`${spec.label}: URL is malformed`);
             }
+          }
+
+          if (canonicalHost && expectedHost && canonicalHost !== expectedHost) {
+            errors.push("connection URLs do not match the selected environment's pinned Neon endpoint host");
           }
 
           if (errors.length) {
@@ -287,7 +303,7 @@ jobs:
             for (const spec of specs) {
               await verifyConnection(parsed.get(spec.env));
             }
-            console.log("Verified four Neon connections, exact database/role identities, direct migration endpoints, TLS, least-privilege grants, migration default privileges, and Workspace pgvector.");
+            console.log(`Verified ${specs.length} Neon connections, exact database/role identities, the protected environment endpoint, TLS, least-privilege grants, migration default privileges, and Workspace pgvector.`);
           })().catch((error) => {
             console.error(error.message);
             process.exit(1);
