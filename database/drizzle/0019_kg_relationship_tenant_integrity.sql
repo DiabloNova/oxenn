@@ -1,60 +1,9 @@
 -- Stage 2: enforce tenant ownership for both KG relationship endpoints.
 -- Preflight is read-only and intentionally fails closed; no existing relationship is rewritten or deleted.
 
-DO $$
-DECLARE
-  source_mismatch_count bigint;
-  source_sample_ids text;
-  target_mismatch_count bigint;
-  target_sample_ids text;
-BEGIN
-  SELECT COUNT(*) INTO source_mismatch_count
-  FROM kg_relationships AS relationship
-  LEFT JOIN kg_entities AS source_entity
-    ON source_entity.id = relationship.source_entity_id
-  WHERE source_entity.id IS NULL
-     OR source_entity.tenant_id <> relationship.tenant_id;
+-- Global diagnostics are performed by the dedicated read-only KG auditor before migration.
+-- The validated composite foreign keys below are the authoritative fail-closed integrity check.
 
-  IF source_mismatch_count > 0 THEN
-    SELECT string_agg(sample.id::text, ', ' ORDER BY sample.id) INTO source_sample_ids
-    FROM (
-      SELECT relationship.id
-      FROM kg_relationships AS relationship
-      LEFT JOIN kg_entities AS source_entity
-        ON source_entity.id = relationship.source_entity_id
-      WHERE source_entity.id IS NULL
-         OR source_entity.tenant_id <> relationship.tenant_id
-      ORDER BY relationship.id
-      LIMIT 10
-    ) AS sample;
-    RAISE EXCEPTION '0019 preflight failed: % kg_relationships row(s) have a missing or cross-tenant source endpoint. Sample relationship IDs: %',
-      source_mismatch_count, COALESCE(source_sample_ids, 'unavailable');
-  END IF;
-
-  SELECT COUNT(*) INTO target_mismatch_count
-  FROM kg_relationships AS relationship
-  LEFT JOIN kg_entities AS target_entity
-    ON target_entity.id = relationship.target_entity_id
-  WHERE target_entity.id IS NULL
-     OR target_entity.tenant_id <> relationship.tenant_id;
-
-  IF target_mismatch_count > 0 THEN
-    SELECT string_agg(sample.id::text, ', ' ORDER BY sample.id) INTO target_sample_ids
-    FROM (
-      SELECT relationship.id
-      FROM kg_relationships AS relationship
-      LEFT JOIN kg_entities AS target_entity
-        ON target_entity.id = relationship.target_entity_id
-      WHERE target_entity.id IS NULL
-         OR target_entity.tenant_id <> relationship.tenant_id
-      ORDER BY relationship.id
-      LIMIT 10
-    ) AS sample;
-    RAISE EXCEPTION '0019 preflight failed: % kg_relationships row(s) have a missing or cross-tenant target endpoint. Sample relationship IDs: %',
-      target_mismatch_count, COALESCE(target_sample_ids, 'unavailable');
-  END IF;
-END
-$$;
 --> statement-breakpoint
 
 ALTER TABLE "kg_relationships"
