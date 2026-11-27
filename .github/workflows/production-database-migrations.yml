@@ -328,6 +328,12 @@ jobs:
           PLATFORM_ADMIN_MIGRATION_DATABASE_URL: ${{ secrets.OXENN_PLATFORM_ADMIN_MIGRATION_DATABASE_URL }}
         run: pnpm exec drizzle-kit check --config=drizzle.platform-admin.config.ts
 
+      - name: Audit Workspace Knowledge Graph before migrations
+        if: ${{ inputs.migration_scope == 'workspace' || inputs.migration_scope == 'both' }}
+        env:
+          OXENN_WORKSPACE_AUDIT_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+        run: pnpm db:kg-integrity audit
+
       - name: Apply Workspace migrations
         if: ${{ inputs.migration_scope == 'workspace' || inputs.migration_scope == 'both' }}
         env:
