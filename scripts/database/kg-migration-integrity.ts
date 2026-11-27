@@ -750,7 +750,7 @@ async function inspectSchema(client: DatabaseClient): Promise<{
       "  AND relation.relname = ANY($1::text[])",
       "  AND relation.relkind IN ('r', 'p')",
     ].join("\n"),
-    [["entities", "kg_entities", "kg_relationships"]],
+    [["entities", "entity_relationships", "kg_entities", "kg_relationships"]],
   );
 
   const columnResult = await client.query(
@@ -764,7 +764,7 @@ async function inspectSchema(client: DatabaseClient): Promise<{
       "  AND attribute.attnum > 0",
       "  AND NOT attribute.attisdropped",
     ].join("\n"),
-    [["entities", "kg_entities", "kg_relationships"]],
+    [["entities", "entity_relationships", "kg_entities", "kg_relationships"]],
   );
 
   const columns = new Map<string, Set<string>>();
