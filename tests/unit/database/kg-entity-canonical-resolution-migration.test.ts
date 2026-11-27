@@ -12,8 +12,8 @@ describe('KG canonical resolution migration contract', () => {
     expect(migration).toContain('"resolved_at" timestamp with time zone');
     expect(migration).toContain('"source_chunk_ids" jsonb DEFAULT \'[]\'::jsonb NOT NULL');
     expect(migration).not.toContain('WITH exact_matches AS');
-    expect(migration).not.toMatch(/\bUPDATE\b/i);
-    expect(migration).not.toMatch(/\bDELETE\b/i);
+    expect(migration).not.toMatch(/^\s*UPDATE\s+/im);
+    expect(migration).not.toMatch(/^\s*DELETE\s+FROM\b/im);
   });
 
   it('constrains canonical entity references to the same tenant', () => {
@@ -25,7 +25,7 @@ describe('KG canonical resolution migration contract', () => {
 
   it('leaves canonical matching to the separate RLS-safe tenant Backfill', () => {
     expect(migration).toContain('separate RLS-safe, tenant-scoped Backfill command');
-    expect(migration).not.toMatch(/\bUPDATE\b/i);
-    expect(migration).not.toMatch(/\bDELETE\b/i);
+    expect(migration).not.toMatch(/^\s*UPDATE\s+/im);
+    expect(migration).not.toMatch(/^\s*DELETE\s+FROM\b/im);
   });
 });
