@@ -24,14 +24,62 @@ const RESOLUTION_COLUMNS = [
 const RESOLUTION_SCHEMA_COLUMNS = [...RESOLUTION_COLUMNS, "source_chunk_ids"] as const;
 
 const REQUIRED_CONSTRAINTS = [
-  ["kg_entities", "kg_entities_canonical_entity_id_tenant_id_fkey"],
-  ["kg_entities", "kg_entities_resolution_status_check"],
-  ["kg_entities", "kg_entities_resolution_consistency_check"],
-  ["kg_entities", "kg_entities_matched_method_check"],
-  ["kg_entities", "kg_entities_source_chunk_ids_array_check"],
-  ["kg_relationships", "kg_relationships_source_entity_id_tenant_id_fkey"],
-  ["kg_relationships", "kg_relationships_target_entity_id_tenant_id_fkey"],
+  {
+    table: "kg_entities",
+    name: "kg_entities_canonical_entity_id_tenant_id_fkey",
+    type: "f",
+    columns: ["canonical_entity_id", "tenant_id"],
+    referencedTable: "entities",
+    referencedColumns: ["id", "organization_id"],
+  },
+  { table: "kg_entities", name: "kg_entities_resolution_status_check", type: "c" },
+  { table: "kg_entities", name: "kg_entities_resolution_consistency_check", type: "c" },
+  { table: "kg_entities", name: "kg_entities_matched_method_check", type: "c" },
+  { table: "kg_entities", name: "kg_entities_source_chunk_ids_array_check", type: "c" },
+  {
+    table: "kg_relationships",
+    name: "kg_relationships_source_entity_id_tenant_id_fkey",
+    type: "f",
+    columns: ["source_entity_id", "tenant_id"],
+    referencedTable: "kg_entities",
+    referencedColumns: ["id", "tenant_id"],
+  },
+  {
+    table: "kg_relationships",
+    name: "kg_relationships_target_entity_id_tenant_id_fkey",
+    type: "f",
+    columns: ["target_entity_id", "tenant_id"],
+    referencedTable: "kg_entities",
+    referencedColumns: ["id", "tenant_id"],
+  },
 ] as const;
+
+export interface ConstraintMetadata {
+  table_name: string;
+  constraint_name: string;
+  is_validated: boolean;
+  constraint_type: string;
+  columns: string[];
+  referenced_table: string | null;
+  referenced_columns: string[];
+}
+
+export function areRequiredConstraintsReady(rows: readonly ConstraintMetadata[]): boolean {
+  return REQUIRED_CONSTRAINTS.every((expected) => {
+    const actual = rows.find((row) =>
+      row.table_name === expected.table && row.constraint_name === expected.name,
+    );
+    if (!actual || !asBoolean(actual.is_validated) || actual.constraint_type !== expected.type) {
+      return false;
+    }
+    if (expected.type === "f") {
+      return actual.columns.join(",") === expected.columns?.join(",") &&
+        actual.referenced_table === expected.referencedTable &&
+        actual.referenced_columns.join(",") === expected.referencedColumns?.join(",");
+    }
+    return true;
+  });
+}
 
 export interface QueryResult {
   rows: Array<Record<string, unknown>>;
@@ -676,10 +724,26 @@ async function inspectSchema(client: DatabaseClient): Promise<{
   const constraintResult = await client.query(
     [
       "SELECT relation.relname AS table_name, constraint_record.conname AS constraint_name,",
-      "       constraint_record.convalidated AS is_validated, constraint_record.contype AS constraint_type",
+      "       constraint_record.convalidated AS is_validated, constraint_record.contype AS constraint_type,",
+      "       ARRAY(",
+      "         SELECT attribute.attname::text",
+      "         FROM unnest(constraint_record.conkey) WITH ORDINALITY AS key(attnum, ordinal)",
+      "         JOIN pg_attribute AS attribute",
+      "           ON attribute.attrelid = relation.oid AND attribute.attnum = key.attnum",
+      "         ORDER BY key.ordinal",
+      "       ) AS columns,",
+      "       referenced_relation.relname AS referenced_table,",
+      "       ARRAY(",
+      "         SELECT attribute.attname::text",
+      "         FROM unnest(constraint_record.confkey) WITH ORDINALITY AS key(attnum, ordinal)",
+      "         JOIN pg_attribute AS attribute",
+      "           ON attribute.attrelid = referenced_relation.oid AND attribute.attnum = key.attnum",
+      "         ORDER BY key.ordinal",
+      "       ) AS referenced_columns",
       "FROM pg_constraint AS constraint_record",
       "JOIN pg_class AS relation ON relation.oid = constraint_record.conrelid",
       "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
+      "LEFT JOIN pg_class AS referenced_relation ON referenced_relation.oid = constraint_record.confrelid",
       "WHERE namespace.nspname = 'public'",
       "  AND (",
       "    (relation.relname = 'kg_entities' AND constraint_record.conname = ANY($1::text[]))",
@@ -687,17 +751,14 @@ async function inspectSchema(client: DatabaseClient): Promise<{
       "  )",
     ].join("\n"),
     [
-      REQUIRED_CONSTRAINTS.filter((entry) => entry[0] === "kg_entities").map((entry) => entry[1]),
-      REQUIRED_CONSTRAINTS.filter((entry) => entry[0] === "kg_relationships").map((entry) => entry[1]),
+      REQUIRED_CONSTRAINTS.filter((entry) => entry.table === "kg_entities").map((entry) => entry.name),
+      REQUIRED_CONSTRAINTS.filter((entry) => entry.table === "kg_relationships").map((entry) => entry.name),
     ],
   );
 
-  const validatedConstraints = new Set(
-    constraintResult.rows
-      .filter((row) => asBoolean(row.is_validated))
-      .map((row) => asString(row.constraint_name)),
+  const compositeConstraintsReady = areRequiredConstraintsReady(
+    constraintResult.rows as unknown as ConstraintMetadata[],
   );
-  const compositeConstraintsReady = REQUIRED_CONSTRAINTS.every(([, name]) => validatedConstraints.has(name));
 
   return { columns, rlsReady, resolutionAvailable, compositeConstraintsReady };
 }
