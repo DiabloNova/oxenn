@@ -184,6 +184,7 @@ describe("canonical schema constraint verification", () => {
       is_validated: true,
       constraint_type: "f",
       columns: ["source_entity_id", "organization_id"],
+      referenced_schema: "public",
       referenced_table: "entities",
       referenced_columns: ["id", "organization_id"],
     },
@@ -193,6 +194,7 @@ describe("canonical schema constraint verification", () => {
       is_validated: true,
       constraint_type: "f",
       columns: ["target_entity_id", "organization_id"],
+      referenced_schema: "public",
       referenced_table: "entities",
       referenced_columns: ["id", "organization_id"],
     },
@@ -202,6 +204,7 @@ describe("canonical schema constraint verification", () => {
       is_validated: true,
       constraint_type: "f",
       columns: ["canonical_entity_id", "tenant_id"],
+      referenced_schema: "public",
       referenced_table: "entities",
       referenced_columns: ["id", "organization_id"],
     },
@@ -225,6 +228,7 @@ describe("canonical schema constraint verification", () => {
       is_validated: true,
       constraint_type: "f",
       columns: ["source_entity_id", "tenant_id"],
+      referenced_schema: "public",
       referenced_table: "kg_entities",
       referenced_columns: ["id", "tenant_id"],
     },
@@ -234,6 +238,7 @@ describe("canonical schema constraint verification", () => {
       is_validated: true,
       constraint_type: "f",
       columns: ["target_entity_id", "tenant_id"],
+      referenced_schema: "public",
       referenced_table: "kg_entities",
       referenced_columns: ["id", "tenant_id"],
     },
@@ -259,6 +264,13 @@ describe("canonical schema constraint verification", () => {
       validatedConstraints.map((row) =>
         row.constraint_name === "kg_relationships_target_entity_id_tenant_id_fkey"
           ? { ...row, is_validated: false }
+          : row,
+      ),
+    )).toBe(false);
+    expect(areRequiredConstraintsReady(
+      validatedConstraints.map((row) =>
+        row.constraint_name === "kg_entities_canonical_entity_id_tenant_id_fkey"
+          ? { ...row, referenced_schema: "unsafe_schema" }
           : row,
       ),
     )).toBe(false);
