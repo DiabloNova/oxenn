@@ -18,7 +18,7 @@ The Workspace database requires two independent credentials:
 
 | Role | RLS behavior | Required permissions | Purpose |
 | --- | --- | --- | --- |
-| `oxenn_workspace_auditor` | `BYPASSRLS` | Column-level `SELECT` only on approved columns in `entities`, `kg_entities`, and `kg_relationships` | Read-only global integrity audit |
+| `oxenn_workspace_auditor` | `BYPASSRLS` | Column-level `SELECT` only on approved columns in `entities`, `entity_relationships`, `kg_entities`, and `kg_relationships` | Read-only global integrity audit |
 | `oxenn_workspace_migrator` | No `BYPASSRLS` | Existing migration privileges, including tenant-scoped `SELECT` and `UPDATE` on the graph tables | Controlled tenant-by-tenant Backfill |
 
 Never grant `BYPASSRLS` to `oxenn_workspace_migrator`, `app_runtime`, or another runtime role. The auditor is a separate login and must not be a member of another PostgreSQL role. It must not be a table owner, database owner, superuser, role administrator, or database creator.
@@ -26,14 +26,15 @@ Never grant `BYPASSRLS` to `oxenn_workspace_migrator`, `app_runtime`, or another
 The auditor must have no table-wide `SELECT` privilege. Grant only the following columns:
 
 - `public.entities`: `id`, `organization_id`, `name`, `entity_type`, `deleted_at`.
+- `public.entity_relationships`: `id`, `organization_id`, `source_entity_id`, `target_entity_id`, `relationship_type`, `deleted_at`.
 - `public.kg_entities`: `id`, `tenant_id`, `name`, `type`. After migration 0018, additionally grant `canonical_entity_id`, `resolution_status`, `resolution_method`, and `resolved_at`.
 - `public.kg_relationships`: `id`, `tenant_id`, `source_entity_id`, `target_entity_id`.
 
-Do not grant access to `properties`, `source_chunk_ids`, document content, credentials, or unrelated tables. The verification script fails closed if any additional public-table column is readable or if the auditor has a write privilege.
+Do not grant access to `properties`, `source_chunk_ids`, document content, credentials, or unrelated tables. The verification script fails closed if any additional application-table column is readable, if the auditor has any write privilege, or if it can execute an application `SECURITY DEFINER` function.
 
 ## Provisioning the auditor
 
-Provision the role separately on the intended `oxenn_workspace` database using the approved database-owner procedure. Do not put a password in SQL, source control, a migration, a workflow file, shell history, or chat. Set the credential through the approved Neon/secret-management interface and store the resulting connection URL only in the GitHub Environment secret `OXENN_WORKSPACE_AUDIT_DATABASE_URL`.
+Provision the role separately on the intended `oxenn_workspace` database using the approved database-owner procedure. Do not put a password in SQL, source control, a migration, a workflow file, shell history, or chat. Set the credential through the approved Neon/secret-management interface and store the resulting connection URL only in the GitHub Environment secret `OXENN_WORKSPACE_AUDIT_DATABASE_URL`. Configure a distinct environment-scoped URL in both `database-migration-rehearsal` and `production-database-migrations`; never reuse the Production connection string in the rehearsal environment.
 
 For a database where the role does not exist, the database owner can use the following as a provisioning checklist. It deliberately omits a password; set the login credential only through the approved Neon/secret-management interface. Do not run this as part of application migrations:
 
@@ -54,6 +55,9 @@ GRANT USAGE ON SCHEMA public TO oxenn_workspace_auditor;
 GRANT SELECT (id, organization_id, name, entity_type, deleted_at)
   ON TABLE public.entities TO oxenn_workspace_auditor;
 
+GRANT SELECT (id, organization_id, source_entity_id, target_entity_id, relationship_type, deleted_at)
+  ON TABLE public.entity_relationships TO oxenn_workspace_auditor;
+
 GRANT SELECT (id, tenant_id, name, type)
   ON TABLE public.kg_entities TO oxenn_workspace_auditor;
 
@@ -68,7 +72,7 @@ GRANT SELECT (canonical_entity_id, resolution_status, resolution_method, resolve
   ON TABLE public.kg_entities TO oxenn_workspace_auditor;
 ```
 
-The migration workflow performs the global audit before it runs Workspace migrations. Migration 0018 cannot grant access to columns that do not yet exist. Therefore, after a successful 0018/0019 migration, the database owner must apply the four-column grant above and verify the auditor's grants before running the separate Backfill workflow. The Backfill workflow is deliberately separate from schema migration so a partially provisioned auditor cannot leave schema changes applied while silently skipping data.
+The migration workflow performs the global audit of both EntityRelationships (migration 0017) and Knowledge Graph relationships (migration 0019) before it runs Workspace migrations. Migration 0018 cannot grant access to columns that do not yet exist. Therefore, after a successful 0018/0019 migration, the database owner must apply the four-column grant above and verify the auditor's grants before running the separate Backfill workflow. The Backfill workflow is deliberately separate from schema migration so a partially provisioned auditor cannot leave schema changes applied while silently skipping data.
 
 The repository provides a separate manual workflow named **Workspace KG Canonical Backfill**. It accepts only the `main` ref, requires `confirm_backfill=true`, and requires an additional `confirm_production=true` when `database_target=production`. It connects only to `oxenn_workspace`; it never touches Platform Admin. Do not dispatch it until migrations 0018 and 0019 are applied, the auditor's new-column grant is in place, and the migration rehearsal has passed.
 
@@ -78,7 +82,7 @@ The auditor URL and migrator URL must target the same direct PostgreSQL host, po
 
 ## Migration ordering
 
-1. Run the global `audit` before Workspace migrations. This checks RLS, source/target endpoint integrity, role boundaries, and all currently available canonical-resolution metadata. Before migration 0018, canonical-resolution columns are reported as unavailable; that is expected.
+1. Run the global `audit` before Workspace migrations. This checks the existing `entity_relationships` integrity targeted by migration 0017, the KG source/target endpoint integrity targeted by migration 0019, RLS, and role boundaries. Before migration 0018, canonical-resolution columns are reported as unavailable; that is expected.
 2. Keep migration 0018 schema-only. It adds canonical-resolution columns, indexes, foreign keys, and checks. It must not execute a global canonical-entity `UPDATE`.
 3. Let migration 0019 install the tenant-composite endpoint foreign keys. PostgreSQL validates existing rows when adding these constraints and aborts the migration on a missing or cross-tenant endpoint. Do not rely on an RLS-filtered `DO` block to count global rows.
 4. After migrations 0018 and 0019 have been applied, run `backfill` without `--apply` and inspect the aggregate dry-run.
@@ -111,7 +115,7 @@ The command verifies:
 - Exact database and PostgreSQL role identity for both connections.
 - Auditor `BYPASSRLS`, forced read-only transaction/session configuration, no role memberships, no table ownership, no write privileges, and exact column grants.
 - Migrator has no `BYPASSRLS`, no elevated role flags, and the tenant-scoped graph read/update privileges needed by the Backfill.
-- RLS is both enabled and forced on `entities`, `kg_entities`, and `kg_relationships`.
+- RLS is both enabled and forced on `entities`, `entity_relationships`, `kg_entities`, and `kg_relationships`.
 - Migration 0018 resolution columns and checks, plus migration 0019 validated tenant-composite constraints, before any Backfill write.
 - Per-tenant serializable transaction context, lock ordering, row-count reconciliation, rollback on failure, and a final global audit.
 
