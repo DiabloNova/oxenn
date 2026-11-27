@@ -37,10 +37,10 @@ jobs:
       - name: Require main and explicit target confirmation
         shell: bash
         env:
-          REQUESTED_REF: \${{ github.ref }}
-          DATABASE_TARGET: \${{ inputs.database_target }}
-          CONFIRM_BACKFILL: \${{ inputs.confirm_backfill }}
-          CONFIRM_PRODUCTION: \${{ inputs.confirm_production }}
+          REQUESTED_REF: ${{ github.ref }}
+          DATABASE_TARGET: ${{ inputs.database_target }}
+          CONFIRM_BACKFILL: ${{ inputs.confirm_backfill }}
+          CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
         run: |
           set -euo pipefail
 
@@ -76,12 +76,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
-      name: \${{ inputs.database_target == 'production' && 'production-database-migrations' || 'database-migration-rehearsal' }}
+      name: ${{ inputs.database_target == 'production' && 'production-database-migrations' || 'database-migration-rehearsal' }}
     steps:
       - name: Check out the approved main revision
         uses: actions/checkout@v4
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Enable pnpm
@@ -99,21 +99,21 @@ jobs:
 
       - name: Run global read-only Knowledge Graph audit
         env:
-          OXENN_WORKSPACE_AUDIT_DATABASE_URL: \${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+          OXENN_WORKSPACE_AUDIT_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
         run: pnpm db:kg-integrity audit
 
       - name: Apply idempotent tenant-scoped canonical Backfill
         env:
-          OXENN_WORKSPACE_AUDIT_DATABASE_URL: \${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
-          OXENN_WORKSPACE_MIGRATION_DATABASE_URL: \${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+          OXENN_WORKSPACE_AUDIT_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+          OXENN_WORKSPACE_MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
         run: pnpm db:kg-integrity backfill --apply --confirm-database oxenn_workspace
 
       - name: Record verified Backfill result
         if: success()
         env:
-          DATABASE_TARGET: \${{ inputs.database_target }}
-          RUN_REF: \${{ github.ref }}
-          RUN_SHA: \${{ github.sha }}
+          DATABASE_TARGET: ${{ inputs.database_target }}
+          RUN_REF: ${{ github.ref }}
+          RUN_SHA: ${{ github.sha }}
         run: |
           {
             echo "## Workspace Knowledge Graph Backfill"
