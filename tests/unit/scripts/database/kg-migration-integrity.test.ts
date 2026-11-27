@@ -137,6 +137,8 @@ describe("KG migration integrity connection contracts", () => {
     expect(sqlLines[0]).toBe("SELECT COUNT(*)::text AS sequence_privilege_count");
     expect(sqlLines).toContain("FROM pg_class AS relation");
     expect(sqlLines).toContain("JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace");
+    expect(sqlLines).toContain("  AND relation.relkind = 'S'");
+    expect(sqlLines.filter((line) => line.includes("has_sequence_privilege"))).toHaveLength(3);
     expect(SEQUENCE_PRIVILEGE_INVENTORY_SQL).not.toContain(String.fromCharCode(92) + "n");
   });
   it("accepts only the dedicated direct Workspace auditor and migrator URLs", () => {
