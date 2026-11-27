@@ -76,9 +76,9 @@ export interface ConstraintMetadata {
   constraint_name: string;
   is_validated: boolean;
   constraint_type: string;
-  columns: string[];
+  columns: readonly string[];
   referenced_table: string | null;
-  referenced_columns: string[];
+  referenced_columns: readonly string[];
 }
 
 export function areRequiredConstraintsReady(rows: readonly ConstraintMetadata[]): boolean {
