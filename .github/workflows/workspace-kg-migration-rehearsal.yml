@@ -146,7 +146,7 @@ jobs:
           fi
 
           git merge --no-edit --no-ff --no-commit "$fetched_sha"
-          git diff --check
+          git diff --cached --check
 
           test -f database/drizzle/0018_kg_entity_canonical_resolution.sql
           test -f database/drizzle/0019_kg_relationship_tenant_integrity.sql
@@ -200,7 +200,7 @@ jobs:
             }
             try {
               const url = new URL(raw);
-              const database = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+              const database = decodeURIComponent(url.pathname.replace(/^\\/+/, ""));
               const username = decodeURIComponent(url.username);
               const allowedParameters = new Set(["sslmode", "channel_binding"]);
               const seen = new Set();
