@@ -1,5 +1,5 @@
--- Stage 1: distinguish extracted KG observations from canonical domain Entities.
--- Canonical entities remain authoritative; this migration only records exact, unique matches.
+-- Stage 1: add canonical-resolution schema for the controlled tenant-scoped Backfill.
+-- Canonical entities remain authoritative; only a unique same-tenant normalized name/type match may resolve.
 
 ALTER TABLE "kg_entities"
   ADD COLUMN "canonical_entity_id" uuid,
