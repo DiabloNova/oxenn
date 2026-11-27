@@ -701,7 +701,7 @@ async function verifyAuditorColumnGrants(
       "  AND namespace.nspname NOT LIKE 'pg_toast%'",
       "  AND namespace.nspname NOT LIKE 'pg_temp_%'",
       "  AND relation.relkind IN ('r', 'p', 'v', 'm', 'f')",
-      "  AND NOT (namespace.nspname = 'public' AND relation.relname IN ('entities', 'kg_entities', 'kg_relationships'))",
+      "  AND NOT (namespace.nspname = 'public' AND relation.relname IN ('entities', 'entity_relationships', 'kg_entities', 'kg_relationships'))",
       "  AND (",
       "    has_table_privilege(current_user, relation.oid, 'SELECT')",
       "    OR has_any_column_privilege(current_user, relation.oid, 'SELECT')",
@@ -713,7 +713,7 @@ async function verifyAuditorColumnGrants(
     "auditor unrelated read privilege inventory",
   );
   if (unrelatedReadGrants !== 0) {
-    throw new Error("Auditor has read access to public database relations outside the three approved Knowledge Graph tables.");
+    throw new Error("Auditor has read access to application relations outside the four explicitly approved Workspace graph tables.");
   }
 
   const executableDefiners = asNumber(
