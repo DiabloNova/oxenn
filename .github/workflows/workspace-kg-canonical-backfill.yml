@@ -11,6 +11,11 @@ on:
         options:
           - rehearsal
           - production
+      confirm_preflight_reviewed:
+        description: "Confirm that a separate read-only Backfill dry-run was reviewed and the auditor's post-0018 column grants were verified."
+        type: boolean
+        required: true
+        default: false
       confirm_backfill:
         description: "Confirm that the tenant-scoped canonical entity Backfill should write to oxenn_workspace."
         type: boolean
@@ -39,6 +44,7 @@ jobs:
         env:
           REQUESTED_REF: ${{ github.ref }}
           DATABASE_TARGET: ${{ inputs.database_target }}
+          CONFIRM_PREFLIGHT_REVIEWED: ${{ inputs.confirm_preflight_reviewed }}
           CONFIRM_BACKFILL: ${{ inputs.confirm_backfill }}
           CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
         run: |
@@ -46,6 +52,11 @@ jobs:
 
           if [[ "$REQUESTED_REF" != "refs/heads/main" ]]; then
             echo "::error::Workspace KG Backfill may only be dispatched from main."
+            exit 1
+          fi
+
+          if [[ "$CONFIRM_PREFLIGHT_REVIEWED" != "true" ]]; then
+            echo "::error::A separately reviewed read-only Backfill dry-run is required before applying changes."
             exit 1
           fi
 
@@ -96,11 +107,6 @@ jobs:
 
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Run global read-only Knowledge Graph audit
-        env:
-          OXENN_WORKSPACE_AUDIT_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
-        run: pnpm db:kg-integrity audit
 
       - name: Apply idempotent tenant-scoped canonical Backfill
         env:
