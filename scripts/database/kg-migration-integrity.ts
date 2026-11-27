@@ -689,7 +689,33 @@ async function verifyAuditorColumnGrants(
     "auditor write privilege inventory",
   );
   if (writeGrants !== 0) {
-    throw new Error("Auditor has a write or schema-changing privilege on a public database relation.");
+    throw new Error("Auditor has a write or schema-changing privilege on an application database relation.");
+  }
+
+  const sequencePrivileges = asNumber(
+    firstRow(
+      await client.query(
+        [
+          "SELECT COUNT(*)::text AS sequence_privilege_count",
+          "FROM pg_class AS relation",
+          "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
+          "WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema')",
+          "  AND namespace.nspname NOT LIKE 'pg_toast%'",
+          "  AND namespace.nspname NOT LIKE 'pg_temp_%'",
+          "  AND relation.relkind = 'S'",
+          "  AND (",
+          "    has_sequence_privilege(current_user, relation.oid, 'USAGE')",
+          "    OR has_sequence_privilege(current_user, relation.oid, 'SELECT')",
+          "    OR has_sequence_privilege(current_user, relation.oid, 'UPDATE')",
+          "  )",
+        ].join("\\n"),
+      ),
+      "auditor sequence privilege inventory",
+    ).sequence_privilege_count,
+    "auditor sequence privilege inventory",
+  );
+  if (sequencePrivileges !== 0) {
+    throw new Error("Auditor has sequence access; revoke all sequence privileges before running the global audit.");
   }
 
   const unrelatedReadResult = await client.query(
