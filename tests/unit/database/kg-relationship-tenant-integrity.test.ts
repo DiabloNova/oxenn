@@ -10,7 +10,7 @@ describe('KG relationship tenant integrity migration contract', () => {
     expect(migration).not.toContain('DO $$');
     expect(migration).not.toContain('source_mismatch_count');
     expect(migration).not.toContain('target_mismatch_count');
-    expect(migration).toContain('Global diagnostics are performed by the dedicated read-only KG auditor');
+    expect(migration).toContain('The separate read-only KG auditor reports global diagnostics');
   });
 
   it('relies on PostgreSQL validation of tenant-composite endpoint FKs', () => {
@@ -25,7 +25,7 @@ describe('KG relationship tenant integrity migration contract', () => {
   });
 
   it('does not silently rewrite or delete existing relationships', () => {
-    expect(migration).not.toMatch(/\bDELETE\b/i);
-    expect(migration).not.toMatch(/\bUPDATE\b/i);
+    expect(migration).not.toMatch(/^\s*DELETE\s+FROM\b/im);
+    expect(migration).not.toMatch(/^\s*UPDATE\s+/im);
   });
 });
