@@ -10,6 +10,7 @@ export const GRAPH_WRITE_LOCK_KEY = "oxenn:tenant-graph-write";
 
 const BASE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
   entities: ["id", "organization_id", "name", "entity_type", "deleted_at"],
+  entity_relationships: ["id", "organization_id", "source_entity_id", "target_entity_id", "relationship_type", "deleted_at"],
   kg_entities: ["id", "tenant_id", "name", "type"],
   kg_relationships: ["id", "tenant_id", "source_entity_id", "target_entity_id"],
 };
@@ -24,6 +25,22 @@ const RESOLUTION_COLUMNS = [
 const RESOLUTION_SCHEMA_COLUMNS = [...RESOLUTION_COLUMNS, "source_chunk_ids"] as const;
 
 const REQUIRED_CONSTRAINTS = [
+  {
+    table: "entity_relationships",
+    name: "entity_relationships_source_entity_id_org_id_fkey",
+    type: "f",
+    columns: ["source_entity_id", "organization_id"],
+    referencedTable: "entities",
+    referencedColumns: ["id", "organization_id"],
+  },
+  {
+    table: "entity_relationships",
+    name: "entity_relationships_target_entity_id_org_id_fkey",
+    type: "f",
+    columns: ["target_entity_id", "organization_id"],
+    referencedTable: "entities",
+    referencedColumns: ["id", "organization_id"],
+  },
   {
     table: "kg_entities",
     name: "kg_entities_canonical_entity_id_tenant_id_fkey",
@@ -126,6 +143,12 @@ export interface IntegrityReport {
   tenantCount: number;
   entityCount: number;
   relationshipCount: number;
+  entityRelationshipCount: number;
+  missingEntityRelationshipSourceCount: number;
+  crossTenantEntityRelationshipSourceCount: number;
+  missingEntityRelationshipTargetCount: number;
+  crossTenantEntityRelationshipTargetCount: number;
+  duplicateActiveEntityRelationshipGroups: number;
   missingSourceEndpointCount: number;
   crossTenantSourceEndpointCount: number;
   missingTargetEndpointCount: number;
@@ -185,6 +208,31 @@ const RELATIONSHIP_AUDIT_SQL = [
   "LEFT JOIN public.kg_entities AS source_entity",
   "  ON source_entity.id = relationship.source_entity_id",
   "LEFT JOIN public.kg_entities AS target_entity",
+  "  ON target_entity.id = relationship.target_entity_id",
+].join("\n");
+
+const ENTITY_RELATIONSHIP_AUDIT_SQL = [
+  "WITH duplicate_groups AS (",
+  "  SELECT COUNT(*)::bigint AS duplicate_active_group_count",
+  "  FROM (",
+  "    SELECT organization_id, source_entity_id, target_entity_id, relationship_type",
+  "    FROM public.entity_relationships",
+  "    WHERE deleted_at IS NULL",
+  "    GROUP BY organization_id, source_entity_id, target_entity_id, relationship_type",
+  "    HAVING COUNT(*) > 1",
+  "  ) AS duplicates",
+  ")",
+  "SELECT",
+  "  COUNT(*)::text AS relationship_count,",
+  "  COUNT(*) FILTER (WHERE source_entity.id IS NULL)::text AS missing_source_count,",
+  "  COUNT(*) FILTER (WHERE source_entity.id IS NOT NULL AND source_entity.organization_id <> relationship.organization_id)::text AS cross_tenant_source_count,",
+  "  COUNT(*) FILTER (WHERE target_entity.id IS NULL)::text AS missing_target_count,",
+  "  COUNT(*) FILTER (WHERE target_entity.id IS NOT NULL AND target_entity.organization_id <> relationship.organization_id)::text AS cross_tenant_target_count,",
+  "  (SELECT duplicate_active_group_count::text FROM duplicate_groups) AS duplicate_active_group_count",
+  "FROM public.entity_relationships AS relationship",
+  "LEFT JOIN public.entities AS source_entity",
+  "  ON source_entity.id = relationship.source_entity_id",
+  "LEFT JOIN public.entities AS target_entity",
   "  ON target_entity.id = relationship.target_entity_id",
 ].join("\n");
 
@@ -327,9 +375,9 @@ const AUDITOR_IDENTITY_SQL = [
   "    SELECT 1 FROM pg_class AS relation",
   "    JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
   "    WHERE namespace.nspname = 'public'",
-  "      AND relation.relname IN ('entities', 'kg_entities', 'kg_relationships')",
+  "      AND relation.relname IN ('entities', 'entity_relationships', 'kg_entities', 'kg_relationships')",
   "      AND relation.relowner = role_record.oid",
-  "  ) AS owns_graph_table,",
+  "  ) AS owns_protected_table,",
   "  ARRAY(",
   "    SELECT member_role.rolname::text",
   "    FROM pg_roles AS member_role",
@@ -494,7 +542,7 @@ export function assertAuditorIdentity(row: Record<string, unknown>): void {
     asBoolean(row.can_create_in_database) ||
     asBoolean(row.can_connect_platform_admin) ||
     asBoolean(row.can_create_in_public) ||
-    asBoolean(row.owns_graph_table)
+    asBoolean(row.owns_protected_table)
   ) {
     throw new Error(
       "Auditor identity failed its read-only least-privilege contract; expected the dedicated BYPASSRLS auditor role in a read-only transaction.",
@@ -543,6 +591,9 @@ async function verifyAuditorColumnGrants(
       "id", "tenant_id", "name", "type",
       ...(resolutionAvailable ? ["canonical_entity_id", "resolution_status", "resolution_method", "resolved_at"] : []),
     ]),
+    entity_relationships: new Set([
+      "id", "organization_id", "source_entity_id", "target_entity_id", "relationship_type", "deleted_at",
+    ]),
     kg_relationships: new Set(["id", "tenant_id", "source_entity_id", "target_entity_id"]),
   };
 
@@ -558,7 +609,7 @@ async function verifyAuditorColumnGrants(
       "  AND attribute.attnum > 0",
       "  AND NOT attribute.attisdropped",
     ].join("\n"),
-    [["entities", "kg_entities", "kg_relationships"]],
+    [["entities", "entity_relationships", "kg_entities", "kg_relationships"]],
   );
 
   const checked = new Set<string>();
@@ -717,7 +768,7 @@ async function inspectSchema(client: DatabaseClient): Promise<{
   );
 
   const columns = new Map<string, Set<string>>();
-  for (const table of ["entities", "kg_entities", "kg_relationships"]) columns.set(table, new Set());
+  for (const table of ["entities", "entity_relationships", "kg_entities", "kg_relationships"]) columns.set(table, new Set());
   for (const row of columnResult.rows) {
     const table = asString(row.table_name);
     const column = asString(row.column_name);
@@ -741,7 +792,7 @@ async function inspectSchema(client: DatabaseClient): Promise<{
       asBoolean(row.rls_enabled) && asBoolean(row.rls_forced),
     );
   }
-  const rlsReady = ["entities", "kg_entities", "kg_relationships"].every((table) => rlsByTable.get(table) === true);
+  const rlsReady = ["entities", "entity_relationships", "kg_entities", "kg_relationships"].every((table) => rlsByTable.get(table) === true);
   const resolutionColumnCount = RESOLUTION_SCHEMA_COLUMNS.filter(
     (column) => columns.get("kg_entities")?.has(column) === true,
   ).length;
@@ -775,11 +826,13 @@ async function inspectSchema(client: DatabaseClient): Promise<{
       "LEFT JOIN pg_class AS referenced_relation ON referenced_relation.oid = constraint_record.confrelid",
       "WHERE namespace.nspname = 'public'",
       "  AND (",
-      "    (relation.relname = 'kg_entities' AND constraint_record.conname = ANY($1::text[]))",
-      "    OR (relation.relname = 'kg_relationships' AND constraint_record.conname = ANY($2::text[]))",
+      "    (relation.relname = 'entity_relationships' AND constraint_record.conname = ANY($1::text[]))",
+      "    OR (relation.relname = 'kg_entities' AND constraint_record.conname = ANY($2::text[]))",
+      "    OR (relation.relname = 'kg_relationships' AND constraint_record.conname = ANY($3::text[]))",
       "  )",
     ].join("\n"),
     [
+      REQUIRED_CONSTRAINTS.filter((entry) => entry.table === "entity_relationships").map((entry) => entry.name),
       REQUIRED_CONSTRAINTS.filter((entry) => entry.table === "kg_entities").map((entry) => entry.name),
       REQUIRED_CONSTRAINTS.filter((entry) => entry.table === "kg_relationships").map((entry) => entry.name),
     ],
@@ -825,7 +878,36 @@ async function auditWorkspaceWithClient(client: DatabaseClient): Promise<AuditRe
     throw new Error("Auditor returned a malformed tenant identifier; refusing to continue.");
   }
 
-  const relationship = firstRow(await client.query(RELATIONSHIP_AUDIT_SQL), "relationship integrity audit");
+  const entityRelationship = firstRow(
+    await client.query(ENTITY_RELATIONSHIP_AUDIT_SQL),
+    "canonical entity relationship integrity audit",
+  );
+  const entityRelationshipCount = asNumber(
+    entityRelationship.relationship_count,
+    "entity_relationships",
+  );
+  const missingEntityRelationshipSource = asNumber(
+    entityRelationship.missing_source_count,
+    "missing EntityRelationship source endpoints",
+  );
+  const crossTenantEntityRelationshipSource = asNumber(
+    entityRelationship.cross_tenant_source_count,
+    "cross-tenant EntityRelationship source endpoints",
+  );
+  const missingEntityRelationshipTarget = asNumber(
+    entityRelationship.missing_target_count,
+    "missing EntityRelationship target endpoints",
+  );
+  const crossTenantEntityRelationshipTarget = asNumber(
+    entityRelationship.cross_tenant_target_count,
+    "cross-tenant EntityRelationship target endpoints",
+  );
+  const duplicateActiveEntityRelationshipGroups = asNumber(
+    entityRelationship.duplicate_active_group_count,
+    "duplicate active EntityRelationship groups",
+  );
+
+  const relationship = firstRow(await client.query(RELATIONSHIP_AUDIT_SQL), "KG relationship integrity audit");
   const entityCount = asNumber(
     (await client.query("SELECT COUNT(*)::text AS entity_count FROM public.kg_entities")).rows[0]?.entity_count,
     "kg_entities",
@@ -858,6 +940,13 @@ async function auditWorkspaceWithClient(client: DatabaseClient): Promise<AuditRe
   }
 
   const blockingIssues: string[] = [];
+  if (
+    missingEntityRelationshipSource + crossTenantEntityRelationshipSource +
+    missingEntityRelationshipTarget + crossTenantEntityRelationshipTarget +
+    duplicateActiveEntityRelationshipGroups > 0
+  ) {
+    blockingIssues.push("Entity relationships contain missing/cross-tenant endpoints or duplicate active relationships.");
+  }
   if (missingSource + crossTenantSource + missingTarget + crossTenantTarget > 0) {
     blockingIssues.push("Knowledge Graph relationship endpoints contain missing or cross-tenant references.");
   }
@@ -875,6 +964,12 @@ async function auditWorkspaceWithClient(client: DatabaseClient): Promise<AuditRe
       tenantCount: tenantIds.length,
       entityCount,
       relationshipCount,
+      entityRelationshipCount,
+      missingEntityRelationshipSourceCount: missingEntityRelationshipSource,
+      crossTenantEntityRelationshipSourceCount: crossTenantEntityRelationshipSource,
+      missingEntityRelationshipTargetCount: missingEntityRelationshipTarget,
+      crossTenantEntityRelationshipTargetCount: crossTenantEntityRelationshipTarget,
+      duplicateActiveEntityRelationshipGroups,
       missingSourceEndpointCount: missingSource,
       crossTenantSourceEndpointCount: crossTenantSource,
       missingTargetEndpointCount: missingTarget,
@@ -1196,7 +1291,13 @@ function formatReport(report: IntegrityReport): string {
     "Tenants containing graph rows: " + report.tenantCount,
     "KG entities: " + report.entityCount,
     "KG relationships: " + report.relationshipCount,
-    "Missing source endpoints: " + report.missingSourceEndpointCount,
+    "Canonical EntityRelationships: " + report.entityRelationshipCount,
+    "Missing EntityRelationship source endpoints: " + report.missingEntityRelationshipSourceCount,
+    "Cross-tenant EntityRelationship source endpoints: " + report.crossTenantEntityRelationshipSourceCount,
+    "Missing EntityRelationship target endpoints: " + report.missingEntityRelationshipTargetCount,
+    "Cross-tenant EntityRelationship target endpoints: " + report.crossTenantEntityRelationshipTargetCount,
+    "Duplicate active EntityRelationship groups: " + report.duplicateActiveEntityRelationshipGroups,
+    "Missing KG relationship source endpoints: " + report.missingSourceEndpointCount,
     "Cross-tenant source endpoints: " + report.crossTenantSourceEndpointCount,
     "Missing target endpoints: " + report.missingTargetEndpointCount,
     "Cross-tenant target endpoints: " + report.crossTenantTargetEndpointCount,
