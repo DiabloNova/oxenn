@@ -31,28 +31,5 @@ ALTER TABLE "kg_entities" ADD CONSTRAINT "kg_entities_source_chunk_ids_array_che
   CHECK (jsonb_typeof("source_chunk_ids") = 'array');
 --> statement-breakpoint
 
--- Backfill only when exactly one active canonical Entity matches normalized name + exact type
--- within the same Organization. Zero matches remain unresolved; multiple matches remain ambiguous.
-WITH exact_matches AS (
-  SELECT kg.id,
-         COUNT(entity.id) AS match_count,
-         MIN(entity.id::text)::uuid AS canonical_entity_id
-  FROM kg_entities AS kg
-  LEFT JOIN entities AS entity
-    ON entity.organization_id = kg.tenant_id
-   AND LOWER(BTRIM(entity.name)) = LOWER(BTRIM(kg.name))
-   AND LOWER(BTRIM(entity.entity_type)) = LOWER(BTRIM(kg.type))
-   AND entity.deleted_at IS NULL
-  GROUP BY kg.id
-)
-UPDATE kg_entities AS kg
-SET canonical_entity_id = CASE WHEN matches.match_count = 1 THEN matches.canonical_entity_id ELSE NULL END,
-    resolution_status = CASE
-      WHEN matches.match_count = 1 THEN 'matched'
-      WHEN matches.match_count > 1 THEN 'ambiguous'
-      ELSE 'unresolved'
-    END,
-    resolution_method = CASE WHEN matches.match_count = 1 THEN 'exact_name_type' ELSE NULL END,
-    resolved_at = CASE WHEN matches.match_count = 1 THEN NOW() ELSE NULL END
-FROM exact_matches AS matches
-WHERE kg.id = matches.id;
+-- Data resolution is intentionally performed by the separate RLS-safe, tenant-scoped Backfill command
+-- after migrations 0018 and 0019 have been validated.
