@@ -1,7 +1,6 @@
 -- Stage 2: enforce tenant ownership for both KG relationship endpoints.
--- Preflight is read-only and intentionally fails closed; no existing relationship is rewritten or deleted.
-
--- Global diagnostics are performed by the dedicated read-only KG auditor before migration.
+-- The separate read-only KG auditor reports global diagnostics; these composite foreign keys are authoritative.
+-- No existing relationship is rewritten or deleted.
 -- The validated composite foreign keys below are the authoritative fail-closed integrity check.
 
 --> statement-breakpoint
