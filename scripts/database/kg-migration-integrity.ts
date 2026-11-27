@@ -1042,17 +1042,23 @@ async function validateMigratorConnection(
       [
         "SELECT",
         "  has_table_privilege(current_user, 'public.kg_entities', 'SELECT') AS can_select_kg_entities,",
-        "  has_table_privilege(current_user, 'public.kg_entities', 'UPDATE') AS can_update_kg_entities,",
-        "  has_table_privilege(current_user, 'public.entities', 'SELECT') AS can_select_entities",
+        "  has_table_privilege(current_user, 'public.entities', 'SELECT') AS can_select_entities,",
+        "  has_column_privilege(current_user, 'public.kg_entities', 'canonical_entity_id', 'UPDATE') AS can_update_canonical_entity_id,",
+        "  has_column_privilege(current_user, 'public.kg_entities', 'resolution_status', 'UPDATE') AS can_update_resolution_status,",
+        "  has_column_privilege(current_user, 'public.kg_entities', 'resolution_method', 'UPDATE') AS can_update_resolution_method,",
+        "  has_column_privilege(current_user, 'public.kg_entities', 'resolved_at', 'UPDATE') AS can_update_resolved_at",
       ].join("\n"),
     );
     const privileges = firstRow(privilegeResult, "Workspace migrator table privileges");
     if (
       !asBoolean(privileges.can_select_kg_entities) ||
-      !asBoolean(privileges.can_update_kg_entities) ||
-      !asBoolean(privileges.can_select_entities)
+      !asBoolean(privileges.can_select_entities) ||
+      !asBoolean(privileges.can_update_canonical_entity_id) ||
+      !asBoolean(privileges.can_update_resolution_status) ||
+      !asBoolean(privileges.can_update_resolution_method) ||
+      !asBoolean(privileges.can_update_resolved_at)
     ) {
-      throw new Error("Workspace migrator is missing the SELECT/UPDATE privileges required for the controlled tenant-scoped backfill.");
+      throw new Error("Workspace migrator is missing the exact SELECT/UPDATE column privileges required for the controlled tenant-scoped Backfill.");
     }
   } finally {
     await client.query("ROLLBACK");
