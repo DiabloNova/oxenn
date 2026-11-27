@@ -199,11 +199,11 @@ const TENANT_GRAPH_ADVISORY_UNLOCK_SQL =
 
 const RELATIONSHIP_AUDIT_SQL = [
   "SELECT",
-  "  COUNT(*)::text AS relationship_count,",
-  "  COUNT(*) FILTER (WHERE source_entity.id IS NULL)::text AS missing_source_count,",
-  "  COUNT(*) FILTER (WHERE source_entity.id IS NOT NULL AND source_entity.tenant_id <> relationship.tenant_id)::text AS cross_tenant_source_count,",
-  "  COUNT(*) FILTER (WHERE target_entity.id IS NULL)::text AS missing_target_count,",
-  "  COUNT(*) FILTER (WHERE target_entity.id IS NOT NULL AND target_entity.tenant_id <> relationship.tenant_id)::text AS cross_tenant_target_count",
+  "  COUNT(relationship.id)::text AS relationship_count,",
+  "  COUNT(relationship.id) FILTER (WHERE source_entity.id IS NULL)::text AS missing_source_count,",
+  "  COUNT(relationship.id) FILTER (WHERE source_entity.id IS NOT NULL AND source_entity.tenant_id <> relationship.tenant_id)::text AS cross_tenant_source_count,",
+  "  COUNT(relationship.id) FILTER (WHERE target_entity.id IS NULL)::text AS missing_target_count,",
+  "  COUNT(relationship.id) FILTER (WHERE target_entity.id IS NOT NULL AND target_entity.tenant_id <> relationship.tenant_id)::text AS cross_tenant_target_count",
   "FROM public.kg_relationships AS relationship",
   "LEFT JOIN public.kg_entities AS source_entity",
   "  ON source_entity.id = relationship.source_entity_id",
@@ -223,11 +223,11 @@ const ENTITY_RELATIONSHIP_AUDIT_SQL = [
   "  ) AS duplicates",
   ")",
   "SELECT",
-  "  COUNT(*)::text AS relationship_count,",
-  "  COUNT(*) FILTER (WHERE source_entity.id IS NULL)::text AS missing_source_count,",
-  "  COUNT(*) FILTER (WHERE source_entity.id IS NOT NULL AND source_entity.organization_id <> relationship.organization_id)::text AS cross_tenant_source_count,",
-  "  COUNT(*) FILTER (WHERE target_entity.id IS NULL)::text AS missing_target_count,",
-  "  COUNT(*) FILTER (WHERE target_entity.id IS NOT NULL AND target_entity.organization_id <> relationship.organization_id)::text AS cross_tenant_target_count,",
+  "  COUNT(relationship.id)::text AS relationship_count,",
+  "  COUNT(relationship.id) FILTER (WHERE source_entity.id IS NULL)::text AS missing_source_count,",
+  "  COUNT(relationship.id) FILTER (WHERE source_entity.id IS NOT NULL AND source_entity.organization_id <> relationship.organization_id)::text AS cross_tenant_source_count,",
+  "  COUNT(relationship.id) FILTER (WHERE target_entity.id IS NULL)::text AS missing_target_count,",
+  "  COUNT(relationship.id) FILTER (WHERE target_entity.id IS NOT NULL AND target_entity.organization_id <> relationship.organization_id)::text AS cross_tenant_target_count,",
   "  (SELECT duplicate_active_group_count::text FROM duplicate_groups) AS duplicate_active_group_count",
   "FROM public.entity_relationships AS relationship",
   "LEFT JOIN public.entities AS source_entity",
@@ -287,11 +287,11 @@ const TENANT_IDS_SQL = [
 
 const TENANT_BEFORE_COUNTS_SQL = [
   "SELECT",
-  "  COUNT(*)::text AS total_count,",
-  "  COUNT(*) FILTER (WHERE resolution_status = 'matched')::text AS matched_count,",
-  "  COUNT(*) FILTER (WHERE resolution_status = 'unresolved')::text AS unresolved_count,",
-  "  COUNT(*) FILTER (WHERE resolution_status = 'ambiguous')::text AS ambiguous_count,",
-  "  COUNT(*) FILTER (WHERE resolution_status NOT IN ('matched', 'unresolved', 'ambiguous'))::text AS invalid_status_count",
+  "  COUNT(id)::text AS total_count,",
+  "  COUNT(id) FILTER (WHERE resolution_status = 'matched')::text AS matched_count,",
+  "  COUNT(id) FILTER (WHERE resolution_status = 'unresolved')::text AS unresolved_count,",
+  "  COUNT(id) FILTER (WHERE resolution_status = 'ambiguous')::text AS ambiguous_count,",
+  "  COUNT(id) FILTER (WHERE resolution_status NOT IN ('matched', 'unresolved', 'ambiguous'))::text AS invalid_status_count",
   "FROM public.kg_entities",
   "WHERE tenant_id = $1::uuid",
 ].join("\n");
@@ -909,7 +909,7 @@ async function auditWorkspaceWithClient(client: DatabaseClient): Promise<AuditRe
 
   const relationship = firstRow(await client.query(RELATIONSHIP_AUDIT_SQL), "KG relationship integrity audit");
   const entityCount = asNumber(
-    (await client.query("SELECT COUNT(*)::text AS entity_count FROM public.kg_entities")).rows[0]?.entity_count,
+    (await client.query("SELECT COUNT(id)::text AS entity_count FROM public.kg_entities")).rows[0]?.entity_count,
     "kg_entities",
   );
   const relationshipCount = asNumber(relationship.relationship_count, "kg_relationships");
@@ -940,6 +940,9 @@ async function auditWorkspaceWithClient(client: DatabaseClient): Promise<AuditRe
   }
 
   const blockingIssues: string[] = [];
+  if (!schema.rlsReady) {
+    blockingIssues.push("RLS is not both enabled and forced on every required Workspace graph table.");
+  }
   if (
     missingEntityRelationshipSource + crossTenantEntityRelationshipSource +
     missingEntityRelationshipTarget + crossTenantEntityRelationshipTarget +
