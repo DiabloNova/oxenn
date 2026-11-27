@@ -1,0 +1,259 @@
+name: Workspace KG Canonical Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      database_target:
+        description: "Choose the isolated rehearsal or production Workspace database environment."
+        type: choice
+        required: true
+        default: rehearsal
+        options:
+          - rehearsal
+          - production
+      operation:
+        description: "Run a read-only dry-run first; use apply only after reviewing the dry-run result."
+        type: choice
+        required: true
+        default: dry-run
+        options:
+          - dry-run
+          - apply
+      confirm_preflight_reviewed:
+        description: "For apply only: confirm that a separate read-only Backfill dry-run was reviewed and the auditor's post-0018 column grants were verified."
+        type: boolean
+        required: true
+        default: false
+      confirm_backfill:
+        description: "Confirm that the tenant-scoped canonical entity Backfill should write to oxenn_workspace."
+        type: boolean
+        required: true
+        default: false
+      confirm_production:
+        description: "Additional confirmation required when the selected environment is production."
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oxenn-workspace-kg-canonical-backfill
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Validate explicit Backfill request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main and explicit target confirmation
+        shell: bash
+        env:
+          REQUESTED_REF: ${{ github.ref }}
+          DATABASE_TARGET: ${{ inputs.database_target }}
+          OPERATION: ${{ inputs.operation }}
+          CONFIRM_PREFLIGHT_REVIEWED: ${{ inputs.confirm_preflight_reviewed }}
+          CONFIRM_BACKFILL: ${{ inputs.confirm_backfill }}
+          CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$REQUESTED_REF" != "refs/heads/main" ]]; then
+            echo "::error::Workspace KG Backfill may only be dispatched from main."
+            exit 1
+          fi
+
+          case "$DATABASE_TARGET" in
+            rehearsal|production) ;;
+            *)
+              echo "::error::Unsupported database target."
+              exit 1
+              ;;
+          esac
+
+          case "$OPERATION" in
+            dry-run)
+              if [[ "$CONFIRM_BACKFILL" == "true" || "$CONFIRM_PRODUCTION" == "true" ]]; then
+                echo "::error::Dry-run is read-only; do not set write-confirmation inputs."
+                exit 1
+              fi
+              ;;
+            apply)
+              if [[ "$CONFIRM_PREFLIGHT_REVIEWED" != "true" ]]; then
+                echo "::error::A separately reviewed read-only Backfill dry-run is required before applying changes."
+                exit 1
+              fi
+              if [[ "$CONFIRM_BACKFILL" != "true" ]]; then
+                echo "::error::Set confirm_backfill to true to authorize the tenant-scoped Workspace KG Backfill."
+                exit 1
+              fi
+              if [[ "$DATABASE_TARGET" == "production" && "$CONFIRM_PRODUCTION" != "true" ]]; then
+                echo "::error::Set confirm_production to true for a production Backfill."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Unsupported operation."
+              exit 1
+              ;;
+          esac
+
+          echo "Explicit Backfill request validated for $DATABASE_TARGET."
+
+  backfill:
+    name: Audit and apply tenant-scoped Workspace KG Backfill
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ inputs.database_target == 'production' && 'production-database-migrations' || 'database-migration-rehearsal' }}
+    steps:
+      - name: Check out the approved main revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Workspace URLs match the selected protected environment endpoint
+        shell: bash
+        env:
+          DATABASE_TARGET: ${{ inputs.database_target }}
+          OPERATION: ${{ inputs.operation }}
+          REHEARSAL_EXPECTED_HOST: ${{ vars.OXENN_WORKSPACE_REHEARSAL_ENDPOINT_HOST }}
+          PRODUCTION_EXPECTED_HOST: ${{ vars.OXENN_WORKSPACE_PRODUCTION_ENDPOINT_HOST }}
+          WORKSPACE_AUDIT_URL: ${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+          WORKSPACE_MIGRATION_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+        run: |
+          node <<'NODE'
+          const target = process.env.DATABASE_TARGET;
+          const expectedHostValue = target === "production"
+            ? process.env.PRODUCTION_EXPECTED_HOST
+            : process.env.REHEARSAL_EXPECTED_HOST;
+          const expectedHostRaw = (expectedHostValue || "").trim().toLowerCase();
+          const expectedHost = expectedHostRaw.endsWith(".")
+            ? expectedHostRaw.slice(0, -1)
+            : expectedHostRaw;
+          if (!expectedHost || expectedHost.includes("-pooler.")) {
+            console.error("The selected protected environment must pin its direct Workspace Neon endpoint host.");
+            process.exit(1);
+          }
+
+          const specs = [
+            { label: "Workspace auditor", env: "WORKSPACE_AUDIT_URL", role: "oxenn_workspace_auditor" },
+          ];
+          if (process.env.OPERATION === "apply") {
+            specs.push({
+              label: "Workspace migrator",
+              env: "WORKSPACE_MIGRATION_URL",
+              role: "oxenn_workspace_migrator",
+            });
+          }
+
+          const errors = [];
+          for (const spec of specs) {
+            const raw = process.env[spec.env];
+            if (!raw) {
+              errors.push(`${spec.label}: required environment-scoped URL is missing`);
+              continue;
+            }
+            try {
+              const url = new URL(raw);
+              const rawPath = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+              const database = decodeURIComponent(rawPath);
+              const role = decodeURIComponent(url.username);
+              const allowed = new Set(["sslmode", "channel_binding"]);
+              const seen = new Set();
+
+              for (const [name] of url.searchParams.entries()) {
+                const key = name.toLowerCase();
+                if (seen.has(key) || !allowed.has(key)) {
+                  errors.push(`${spec.label}: duplicate or unsupported connection parameter`);
+                }
+                seen.add(key);
+              }
+
+              if (!["postgres:", "postgresql:"].includes(url.protocol) ||
+                  database !== "oxenn_workspace" ||
+                  role !== spec.role ||
+                  !url.password ||
+                  (url.hostname.toLowerCase().endsWith(".") ? url.hostname.toLowerCase().slice(0, -1) : url.hostname.toLowerCase()) !== expectedHost ||
+                  url.hostname.toLowerCase().includes("-pooler.") ||
+                  !["require", "verify-ca", "verify-full"].includes((url.searchParams.get("sslmode") || "").toLowerCase()) ||
+                  url.hash) {
+                errors.push(`${spec.label}: URL does not match the selected protected environment's exact Workspace endpoint, role, database, and TLS contract`);
+              }
+            } catch {
+              errors.push(`${spec.label}: malformed PostgreSQL URL`);
+            }
+          }
+
+          if (errors.length) {
+            for (const error of errors) console.error(error);
+            process.exit(1);
+          }
+          console.log("Workspace URLs match the selected protected environment's pinned endpoint.");
+          NODE
+
+      - name: Run read-only canonical Backfill dry-run
+        if: ${{ inputs.operation == 'dry-run' }}
+        env:
+          OXENN_WORKSPACE_AUDIT_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+        run: pnpm db:kg-integrity backfill
+
+      - name: Apply idempotent tenant-scoped canonical Backfill
+        if: ${{ inputs.operation == 'apply' }}
+        env:
+          OXENN_WORKSPACE_AUDIT_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+          OXENN_WORKSPACE_MIGRATION_DATABASE_URL: ${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+        run: pnpm db:kg-integrity backfill --apply --confirm-database oxenn_workspace
+
+      - name: Record verified Backfill result
+        if: success()
+        env:
+          OPERATION: ${{ inputs.operation }}
+          DATABASE_TARGET: ${{ inputs.database_target }}
+          RUN_REF: ${{ github.ref }}
+          RUN_SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## Workspace Knowledge Graph Backfill"
+            echo
+            printf -- '- Operation: %s\n' "$OPERATION"
+            printf -- '- Target environment: %s\n' "$DATABASE_TARGET"
+            printf -- '- Dispatch ref: %s\n' "$RUN_REF"
+            printf -- '- Checked-out revision: %s\n' "$RUN_SHA"
+            if [[ "$OPERATION" == "dry-run" ]]; then
+              echo "- Backfill: read-only classification completed; no database writes were performed"
+            else
+              echo "- Backfill: completed with per-tenant row-count reconciliation and a final global audit"
+            fi
+            echo "- Scope: oxenn_workspace only; Platform Admin was not accessed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record failure warning
+        if: failure()
+        run: |
+          {
+            echo "## Workspace Knowledge Graph operation did not complete"
+            echo
+            if [[ "${{ inputs.operation }}" == "apply" ]]; then
+              echo "Inspect the failed step and reconcile already committed tenant transactions before retrying. The operation is idempotent, but a failed run must not be reported as complete."
+            else
+              echo "The read-only dry-run did not pass. No database rows were changed."
+            fi
+            echo "Do not bypass the auditor, alter migration history, or grant BYPASSRLS to the Workspace migrator."
+          } >> "$GITHUB_STEP_SUMMARY"

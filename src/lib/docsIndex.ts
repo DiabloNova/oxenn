@@ -410,6 +410,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Security Architecture Model  This document distinguishes the two authorization contexts in Oxenn and describes what the repository currently implements. A role name in one context does not grant a role or permission in the other context.  ## 1. Authorization boundaries  Oxenn has two distinct authorization models:  1. **Workspace authorization** governs customer/user access within an organization workspace. Its current role authority is \`organization_members.role\`. 2. **Platform Admin authoriz`
   },
   {
+    slug: "kg-migration-auditor-and-backfill",
+    titleEn: "Workspace Knowledge Graph Migration Auditor and Backfill",
+    titleFa: "Workspace Knowledge Graph Migration Auditor and Backfill",
+    category: "security",
+    categoryFa: "Security",
+    snippet: `# Workspace Knowledge Graph Migration Auditor and Backfill  ## Purpose  Workspace Knowledge Graph migrations must not use an unscoped \`UPDATE\` under forced Row Level Security (RLS). The ordinary Workspace migrator remains subject to tenant RLS. A separate, read-only auditor checks global integrity, while the Backfill uses the ordinary migrator one tenant at a time.  The tool is \`pnpm db:kg-integrity\`:  - \`pnpm db:kg-integrity audit\` performs a read-only global audit. - \`pnpm db:kg-integrity back`
+  },
+  {
     slug: "privileged-paths",
     titleEn: "Privileged Database Paths",
     titleFa: "Privileged Database Paths",

@@ -1609,7 +1609,7 @@
 - **Migration Coverage:** Complete (ENABLE + FORCE in checked-in journal)
 - **Runtime Enforcement Verification:** Not verified by static generation; see PostgreSQL isolation suite
 - **Status:** `WIRED`
-- **Consumers:** `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`
+- **Consumers:** `scripts/database/kg-migration-integrity.ts`, `src/app/api/v1/audit/aeo-insight/route.ts`, `src/services/knowledge-graph/graph-store.ts`, `tests/features/audit/aeo-insight.test.ts`, `tests/services/ingestion/document-ingestion.test.ts`, `tests/services/knowledge-graph/graph-store.test.ts`
 
 ### Columns
 
