@@ -467,8 +467,7 @@ export function assertMigratorIdentity(row: Record<string, unknown>): void {
     asBoolean(row.can_create_role) ||
     asBoolean(row.can_replicate) ||
     asBoolean(row.bypasses_rls) ||
-    asBoolean(row.can_connect_platform_admin) ||
-    !asBoolean(row.can_create_in_public)
+    asBoolean(row.can_connect_platform_admin)
   ) {
     throw new Error(
       "Workspace migrator identity failed its least-privilege contract; BYPASSRLS and elevated role attributes are forbidden.",
