@@ -32,7 +32,10 @@ function auditorIdentity(overrides: Record<string, unknown> = {}) {
     can_create_in_database: false,
     can_connect_platform_admin: false,
     can_create_in_public: false,
-    owns_graph_table: false,
+    inherits_roles: false,
+    owns_any_application_relation: false,
+    owns_application_schema: false,
+    owns_database: false,
     role_memberships: [],
     ...overrides,
   };
@@ -162,6 +165,10 @@ describe("KG migration integrity connection contracts", () => {
     expect(() => assertAuditorIdentity(auditorIdentity({ default_transaction_read_only: "off" }))).toThrow(/BYPASSRLS/);
     expect(() => assertAuditorIdentity(auditorIdentity({ can_create_role: true }))).toThrow(/BYPASSRLS/);
     expect(() => assertAuditorIdentity(auditorIdentity({ role_memberships: ["pg_read_all_data"] }))).toThrow(/inherit/);
+    expect(() => assertAuditorIdentity(auditorIdentity({ inherits_roles: true }))).toThrow(/BYPASSRLS/);
+    expect(() => assertAuditorIdentity(auditorIdentity({ owns_any_application_relation: true }))).toThrow(/BYPASSRLS/);
+    expect(() => assertAuditorIdentity(auditorIdentity({ owns_application_schema: true }))).toThrow(/BYPASSRLS/);
+    expect(() => assertAuditorIdentity(auditorIdentity({ owns_database: true }))).toThrow(/BYPASSRLS/);
   });
 
   it("requires the Backfill identity to remain under forced RLS and not bypass it", () => {
