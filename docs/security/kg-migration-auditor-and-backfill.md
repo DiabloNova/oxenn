@@ -74,7 +74,7 @@ GRANT SELECT (canonical_entity_id, resolution_status, resolution_method, resolve
 
 The migration workflow performs the global audit of both EntityRelationships (migration 0017) and Knowledge Graph relationships (migration 0019) before it runs Workspace migrations. Migration 0018 cannot grant access to columns that do not yet exist. Therefore, after a successful 0018/0019 migration, the database owner must apply the four-column grant above and verify the auditor's grants before running the separate Backfill workflow. The Backfill workflow is deliberately separate from schema migration so a partially provisioned auditor cannot leave schema changes applied while silently skipping data.
 
-The repository provides a separate manual workflow named **Workspace KG Canonical Backfill**. It accepts only the `main` ref, requires `confirm_backfill=true`, and requires an additional `confirm_production=true` when `database_target=production`. It connects only to `oxenn_workspace`; it never touches Platform Admin. Do not dispatch it until migrations 0018 and 0019 are applied, the auditor's new-column grant is in place, and the migration rehearsal has passed.
+The repository provides a separate manual workflow named **Workspace KG Canonical Backfill**. It accepts only the `main` ref, requires `confirm_backfill=true`, and requires an additional `confirm_production=true` when `database_target=production`. It connects only to `oxenn_workspace`; it never touches Platform Admin. Do not dispatch it until migrations 0017, 0018, and 0019 are applied, the auditor's new-column grant is in place, and the migration rehearsal has passed.
 
 This checklist is not a self-service grant script. If the role already exists, stop and inspect its role memberships, database grants, table grants, column grants, ownership, and role configuration before changing it. Do not assume that applying the GRANT statements removes older privileges.
 
@@ -83,10 +83,11 @@ The auditor URL and migrator URL must target the same direct PostgreSQL host, po
 ## Migration ordering
 
 1. Run the global `audit` before Workspace migrations. This checks the existing `entity_relationships` integrity targeted by migration 0017, the KG source/target endpoint integrity targeted by migration 0019, RLS, and role boundaries. Before migration 0018, canonical-resolution columns are reported as unavailable; that is expected.
-2. Keep migration 0018 schema-only. It adds canonical-resolution columns, indexes, foreign keys, and checks. It must not execute a global canonical-entity `UPDATE`.
-3. Let migration 0019 install the tenant-composite endpoint foreign keys. PostgreSQL validates existing rows when adding these constraints and aborts the migration on a missing or cross-tenant endpoint. Do not rely on an RLS-filtered `DO` block to count global rows.
-4. After migrations 0018 and 0019 have been applied, run `backfill` without `--apply` and inspect the aggregate dry-run.
-5. Apply only after the dry-run is clean and the operator explicitly confirms `--confirm-database oxenn_workspace`. The tool rechecks the schema, constraints, RLS state, auditor role, and migrator role before writing.
+2. Migration 0017's existing preflight checks EntityRelationship endpoint ownership and duplicate active relationships. The dedicated auditor runs the same global checks without tenant RLS filtering. The migration's composite foreign keys and partial unique index remain authoritative and PostgreSQL validates them before they can be accepted.
+3. Keep migration 0018 schema-only. It adds canonical-resolution columns, indexes, foreign keys, and checks. It must not execute a global canonical-entity `UPDATE`.
+4. Let migration 0019 install the tenant-composite KG endpoint foreign keys. PostgreSQL validates existing rows when adding these constraints and aborts the migration on a missing or cross-tenant endpoint. Do not rely on an RLS-filtered `DO` block to count global rows.
+5. After migrations 0017, 0018, and 0019 have been applied, run `backfill` without `--apply` and inspect the aggregate dry-run.
+6. Apply only after the dry-run is clean and the operator explicitly confirms `--confirm-database oxenn_workspace`. The tool rechecks the schema, constraints, RLS state, auditor role, and migrator role before writing.
 
 The repository's migration runner remains the only Workspace migration path. This Backfill is a separate, explicit data-maintenance command; it does not edit the Drizzle journal or execute schema migrations.
 
