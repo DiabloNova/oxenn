@@ -177,6 +177,24 @@ describe("KG migration integrity connection contracts", () => {
 describe("canonical schema constraint verification", () => {
   const validatedConstraints = [
     {
+      table_name: "entity_relationships",
+      constraint_name: "entity_relationships_source_entity_id_org_id_fkey",
+      is_validated: true,
+      constraint_type: "f",
+      columns: ["source_entity_id", "organization_id"],
+      referenced_table: "entities",
+      referenced_columns: ["id", "organization_id"],
+    },
+    {
+      table_name: "entity_relationships",
+      constraint_name: "entity_relationships_target_entity_id_org_id_fkey",
+      is_validated: true,
+      constraint_type: "f",
+      columns: ["target_entity_id", "organization_id"],
+      referenced_table: "entities",
+      referenced_columns: ["id", "organization_id"],
+    },
+    {
       table_name: "kg_entities",
       constraint_name: "kg_entities_canonical_entity_id_tenant_id_fkey",
       is_validated: true,
