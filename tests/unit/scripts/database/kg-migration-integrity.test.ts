@@ -219,6 +219,7 @@ describe("canonical schema constraint verification", () => {
       is_validated: true,
       constraint_type: "c",
       columns: [],
+      referenced_schema: null,
       referenced_table: null,
       referenced_columns: [],
     })),
