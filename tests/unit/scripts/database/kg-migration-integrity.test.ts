@@ -8,6 +8,7 @@ import {
   assertAuditorIdentity,
   assertMigratorIdentity,
   assertTenantCountReconciliation,
+  SEQUENCE_PRIVILEGE_INVENTORY_SQL,
   backfillOneTenant,
   classifyCandidateCount,
   parseWorkspaceDatabaseUrl,
@@ -130,6 +131,11 @@ function fakeClient(options?: {
 }
 
 describe("KG migration integrity connection contracts", () => {
+  it("builds the sequence privilege inventory as valid newline-separated SQL", () => {
+    expect(SEQUENCE_PRIVILEGE_INVENTORY_SQL).toMatch(/^SELECT\\n/);
+    expect(SEQUENCE_PRIVILEGE_INVENTORY_SQL).toContain("\\nFROM pg_class AS relation\\n");
+    expect(SEQUENCE_PRIVILEGE_INVENTORY_SQL).not.toContain("\\\\n");
+  });
   it("accepts only the dedicated direct Workspace auditor and migrator URLs", () => {
     const auditor = parseWorkspaceDatabaseUrl(
       "postgresql://oxenn_workspace_auditor:secret@ep-example.eu-central-1.aws.neon.tech:5432/oxenn_workspace?sslmode=require&channel_binding=require",
