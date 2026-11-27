@@ -140,12 +140,13 @@ jobs:
         run: |
           node <<'NODE'
           const target = process.env.DATABASE_TARGET;
-          const expectedHost = (
-            target === "production"
-              ? process.env.PRODUCTION_EXPECTED_HOST
-              : process.env.REHEARSAL_EXPECTED_HOST
-          ).trim().toLowerCase().replace(/\\.$/, "");
-
+          const expectedHostValue = target === "production"
+            ? process.env.PRODUCTION_EXPECTED_HOST
+            : process.env.REHEARSAL_EXPECTED_HOST;
+          const expectedHostRaw = (expectedHostValue || "").trim().toLowerCase();
+          const expectedHost = expectedHostRaw.endsWith(".")
+            ? expectedHostRaw.slice(0, -1)
+            : expectedHost;
           if (!expectedHost || expectedHost.includes("-pooler.")) {
             console.error("The selected protected environment must pin its direct Workspace Neon endpoint host.");
             process.exit(1);
@@ -171,7 +172,8 @@ jobs:
             }
             try {
               const url = new URL(raw);
-              const database = decodeURIComponent(url.pathname.replace(/^\\/+/, ""));
+              const rawPath = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+              const database = decodeURIComponent(rawPath);
               const role = decodeURIComponent(url.username);
               const allowed = new Set(["sslmode", "channel_binding"]);
               const seen = new Set();
@@ -188,7 +190,7 @@ jobs:
                   database !== "oxenn_workspace" ||
                   role !== spec.role ||
                   !url.password ||
-                  url.hostname.toLowerCase().replace(/\\.$/, "") !== expectedHost ||
+                  (url.hostname.toLowerCase().endsWith(".") ? url.hostname.toLowerCase().slice(0, -1) : url.hostname.toLowerCase()) !== expectedHost ||
                   url.hostname.toLowerCase().includes("-pooler.") ||
                   !["require", "verify-ca", "verify-full"].includes((url.searchParams.get("sslmode") || "").toLowerCase()) ||
                   url.hash) {
