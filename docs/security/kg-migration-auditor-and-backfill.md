@@ -93,6 +93,22 @@ The auditor URL and migrator URL must target the same direct PostgreSQL host, po
 
 The repository's migration runner remains the only Workspace migration path. This Backfill is a separate, explicit data-maintenance command; it does not edit the Drizzle journal or execute schema migrations.
 
+## Pre-merge rehearsal of PR #155
+
+Migration 0017 is already present on `main`. PR #155 currently contributes the pending migrations 0018 and 0019. The ordinary main-only migration workflow cannot rehearse those pending files while PR #155 remains unmerged, so use the separate **Workspace KG Migration Rehearsal** workflow after PR #156 has been reviewed and merged into `main`.
+
+The rehearsal workflow is deliberately separate from the Production migration workflow:
+
+1. Dispatch it from `main` with the exact reviewed head SHA of the still-open PR #155 and set `confirm_rehearsal=true`.
+2. It verifies that PR #156 is merged into the checked-out `main` revision, and that PR #155 is still open, non-draft, based on `main`, and has exactly the supplied head SHA.
+3. It fetches that exact PR #155 revision and merges it into the runner's temporary checkout with `--no-commit`. It never pushes, updates a Git branch, or merges PR #155.
+4. It uses only the protected `database-migration-rehearsal` environment, validates the three Workspace URLs against the environment's pinned endpoint host and dedicated roles, runs the global read-only integrity audit, and applies the combined Workspace migration chain to that rehearsal target.
+5. It does not run the Backfill. After a successful schema rehearsal, the database owner must grant the four canonical-resolution columns to the auditor on the rehearsal branch. Then dispatch **Workspace KG Canonical Backfill** from `main` with `operation=dry-run`, review the aggregate classifications, and retain the dry-run result for the PR #155 merge decision.
+
+Before dispatch, the `database-migration-rehearsal` GitHub Environment must be protected and populated with rehearsal-branch-only credentials for `OXENN_WORKSPACE_RUNTIME_DATABASE_URL`, `OXENN_WORKSPACE_MIGRATION_DATABASE_URL`, and `OXENN_WORKSPACE_AUDIT_DATABASE_URL`. It must also define the non-secret environment variable `OXENN_WORKSPACE_REHEARSAL_ENDPOINT_HOST` to the exact host of the isolated rehearsal branch's dedicated compute endpoint. The URL host check is an explicit fail-closed guard; do not point these secrets or this variable at Production. The rehearsal branch and its auditor role/credentials must be provisioned separately by the database owner. This PR does not create a Neon branch, provision roles, or change database credentials.
+
+The rehearsal workflow contains no Production target, Production environment, or Production credentials. A successful workflow run proves only that the exact PR #155 migrations applied to the isolated rehearsal database. It does not authorize Production migration or Backfill, and it does not by itself authorize merging PR #155 until the separate read-only Backfill dry-run has also been reviewed.
+
 ## Backfill transaction behavior
 
 The tool discovers tenant IDs through the auditor but never writes using that connection. It processes each tenant in its own `SERIALIZABLE` transaction using the ordinary `oxenn_workspace_migrator` role and `SET LOCAL app.current_tenant_id`.
