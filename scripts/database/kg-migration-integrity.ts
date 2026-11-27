@@ -21,6 +21,8 @@ const RESOLUTION_COLUMNS = [
   "resolved_at",
 ] as const;
 
+const RESOLUTION_SCHEMA_COLUMNS = [...RESOLUTION_COLUMNS, "source_chunk_ids"] as const;
+
 const REQUIRED_CONSTRAINTS = [
   ["kg_entities", "kg_entities_canonical_entity_id_tenant_id_fkey"],
   ["kg_entities", "kg_entities_resolution_status_check"],
@@ -643,7 +645,13 @@ async function inspectSchema(client: DatabaseClient): Promise<{
     );
   }
   const rlsReady = ["entities", "kg_entities", "kg_relationships"].every((table) => rlsByTable.get(table) === true);
-  const resolutionAvailable = RESOLUTION_COLUMNS.every((column) => columns.get("kg_entities")?.has(column) === true);
+  const resolutionColumnCount = RESOLUTION_SCHEMA_COLUMNS.filter(
+    (column) => columns.get("kg_entities")?.has(column) === true,
+  ).length;
+  if (resolutionColumnCount > 0 && resolutionColumnCount !== RESOLUTION_SCHEMA_COLUMNS.length) {
+    throw new Error("Canonical resolution schema is only partially present; refusing to treat a partial migration as ready.");
+  }
+  const resolutionAvailable = resolutionColumnCount === RESOLUTION_SCHEMA_COLUMNS.length;
 
   const constraintResult = await client.query(
     [
@@ -787,7 +795,7 @@ async function openAuditor(
 export async function auditWorkspaceKnowledgeGraph(options: IntegrityOptions = {}): Promise<AuditResult> {
   const env = options.env ?? process.env;
   const factory = options.clientFactory ?? defaultClientFactory;
-  const parsed = parseWorkspaceDatabaseUrl(env.OXENN_WORKSPACE_AUDIT_DATABASE_URL, AUDITOR_ROLE, AUDITOR_URL_ENV);
+  parseWorkspaceDatabaseUrl(env.OXENN_WORKSPACE_AUDIT_DATABASE_URL, AUDITOR_ROLE, AUDITOR_URL_ENV);
   const connectionString = env.OXENN_WORKSPACE_AUDIT_DATABASE_URL as string;
   const client = await openAuditor(connectionString, factory);
 
@@ -813,7 +821,6 @@ export async function auditWorkspaceKnowledgeGraph(options: IntegrityOptions = {
 
   if (failure) throw safeError(failure, connectionString);
   if (!result) throw new Error("KG integrity audit did not return a report.");
-  void parsed;
   return result;
 }
 
@@ -1051,6 +1058,8 @@ export async function backfillWorkspaceKnowledgeGraph(options: BackfillOptions):
   const finalAudit = await auditWorkspaceKnowledgeGraph(options);
   const final = finalAudit.report;
   if (
+    final.entityCount !== report.entityCount ||
+    final.relationshipCount !== report.relationshipCount ||
     final.blockingIssues.length > 0 ||
     final.resolution.invalidStatus !== 0 ||
     final.resolution.invalidMatched !== 0 ||
