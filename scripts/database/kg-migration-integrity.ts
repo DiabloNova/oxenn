@@ -1232,8 +1232,16 @@ export async function backfillWorkspaceKnowledgeGraph(options: BackfillOptions):
   if (!options.apply) return report;
 
   if (report.entityCount === 0 && report.relationshipCount === 0) {
-    options.log?.("No Knowledge Graph rows exist; Backfill is a verified no-op.");
-    return report;
+    const finalAudit = await auditWorkspaceKnowledgeGraph(options);
+    if (
+      finalAudit.report.entityCount !== report.entityCount ||
+      finalAudit.report.relationshipCount !== report.relationshipCount ||
+      finalAudit.report.blockingIssues.length > 0
+    ) {
+      throw new Error("The empty Knowledge Graph no-op did not pass its final global integrity audit.");
+    }
+    options.log?.("No Knowledge Graph rows exist; the final global audit confirmed a verified no-op.");
+    return finalAudit.report;
   }
 
   const connectionString = migratorUrl as string;
