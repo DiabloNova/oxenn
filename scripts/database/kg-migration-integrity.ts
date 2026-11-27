@@ -588,7 +588,9 @@ async function verifyAuditorColumnGrants(
       "SELECT COUNT(*)::text AS unexpected_write_grants",
       "FROM pg_class AS relation",
       "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
-      "WHERE namespace.nspname = 'public'",
+      "WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema')",
+      "  AND namespace.nspname NOT LIKE 'pg_toast%'",
+      "  AND namespace.nspname NOT LIKE 'pg_temp_%'",
       "  AND relation.relkind IN ('r', 'p', 'v', 'm')",
       "  AND (",
       "    has_table_privilege(current_user, relation.oid, 'INSERT')",
@@ -616,9 +618,11 @@ async function verifyAuditorColumnGrants(
       "SELECT COUNT(*)::text AS unrelated_read_grants",
       "FROM pg_class AS relation",
       "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
-      "WHERE namespace.nspname = 'public'",
+      "WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema')",
+      "  AND namespace.nspname NOT LIKE 'pg_toast%'",
+      "  AND namespace.nspname NOT LIKE 'pg_temp_%'",
       "  AND relation.relkind IN ('r', 'p', 'v', 'm')",
-      "  AND relation.relname NOT IN ('entities', 'kg_entities', 'kg_relationships')",
+      "  AND NOT (namespace.nspname = 'public' AND relation.relname IN ('entities', 'kg_entities', 'kg_relationships'))",
       "  AND (",
       "    has_table_privilege(current_user, relation.oid, 'SELECT')",
       "    OR has_any_column_privilege(current_user, relation.oid, 'SELECT')",
@@ -640,7 +644,10 @@ async function verifyAuditorColumnGrants(
           "SELECT COUNT(*)::text AS executable_security_definers",
           "FROM pg_proc AS routine",
           "JOIN pg_namespace AS namespace ON namespace.oid = routine.pronamespace",
-          "WHERE namespace.nspname = 'public'",
+          "WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema')",
+          "  AND namespace.nspname NOT LIKE 'pg_toast%'",
+          "  AND namespace.nspname NOT LIKE 'pg_temp_%'",
+          "  AND has_schema_privilege(current_user, namespace.oid, 'USAGE')",
           "  AND routine.prosecdef",
           "  AND has_function_privilege(current_user, routine.oid, 'EXECUTE')",
         ].join("\n"),
@@ -650,7 +657,27 @@ async function verifyAuditorColumnGrants(
     "auditor SECURITY DEFINER function inventory",
   );
   if (executableDefiners !== 0) {
-    throw new Error("Auditor can execute a public SECURITY DEFINER function; revoke that execution path before auditing.");
+    throw new Error("Auditor can execute a non-system SECURITY DEFINER function; revoke that execution path before auditing.");
+  }
+
+  const unrelatedSchemaUsage = asNumber(
+    firstRow(
+      await client.query(
+        [
+          "SELECT COUNT(*)::text AS unrelated_schema_usage",
+          "FROM pg_namespace AS namespace",
+          "WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema', 'public')",
+          "  AND namespace.nspname NOT LIKE 'pg_toast%'",
+          "  AND namespace.nspname NOT LIKE 'pg_temp_%'",
+          "  AND has_schema_privilege(current_user, namespace.oid, 'USAGE')",
+        ].join("\n"),
+      ),
+      "auditor schema privilege inventory",
+    ).unrelated_schema_usage,
+    "auditor schema privilege inventory",
+  );
+  if (unrelatedSchemaUsage !== 0) {
+    throw new Error("Auditor has USAGE on a non-system schema outside public; remove unrelated schema access.");
   }
 }
 async function inspectSchema(client: DatabaseClient): Promise<{
