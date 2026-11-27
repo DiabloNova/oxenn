@@ -228,6 +228,47 @@ describe("GraphStoreService relationship-only placeholders", () => {
     expect(relationshipInsert?.params[2]).toBe("tenant-a:apple");
   });
 
+  it("continues ingestion without guessing when legacy whitespace duplicates have no exact spelling match", async () => {
+    const harness = createHarness([
+      existingEntity("tenant-a:apple", "Apple", "brand"),
+      existingEntity("tenant-a:apple-space", "Apple ", "brand"),
+    ]);
+
+    const result = await harness.store.upsertEntitiesAndRelationships({
+      entities: [
+        { name: "Apple  ", type: "brand", properties: {} },
+        { name: "Independent", type: "brand", properties: {} },
+      ],
+      relationships: [{
+        sourceEntityName: "Apple  ",
+        targetEntityName: "Independent",
+        relationshipType: "related_to",
+      }],
+    }, "chunk-whitespace-ambiguous");
+
+    const duplicateLookup = harness.calls.find(({ sql, params }) =>
+      /SELECT id, type, properties, name FROM kg_entities/i.test(sql) &&
+      /LOWER\(BTRIM\(name\)\)/i.test(sql) &&
+      params[0] === "Apple  "
+    );
+    const insertedNames = harness.calls
+      .filter(({ sql }) => /INSERT INTO kg_entities/i.test(sql))
+      .map(({ params }) => params[2]);
+
+    expect(duplicateLookup).toBeDefined();
+    expect(duplicateLookup?.params).toEqual(["Apple  ", "tenant-a", "brand"]);
+    expect(result.ambiguousEntityNames).toContain("apple");
+    expect(result.entityIds.apple).toBeUndefined();
+    expect(result.entityIds.independent).toBeDefined();
+    expect(insertedNames).toContain("Independent");
+    expect(insertedNames).not.toContain("Apple  ");
+    expect(result.relationshipIds).toEqual([]);
+    expect(harness.calls.some(({ sql, params }) =>
+      /INSERT INTO kg_relationships/i.test(sql) &&
+      params[2] === "tenant-a:independent"
+    )).toBe(false);
+  });
+
   it("keeps an explicitly extracted concept type exact instead of treating it as a placeholder", async () => {
     const harness = createHarness([
       existingEntity("tenant-a:optimus-brand", "Optimus", "brand"),
