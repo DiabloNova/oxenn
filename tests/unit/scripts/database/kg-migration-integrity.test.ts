@@ -4,6 +4,7 @@ import {
   GRAPH_WRITE_LOCK_KEY,
   MIGRATOR_ROLE,
   WORKSPACE_DATABASE,
+  areRequiredConstraintsReady,
   assertAuditorIdentity,
   assertMigratorIdentity,
   assertTenantCountReconciliation,
@@ -170,6 +171,77 @@ describe("KG migration integrity connection contracts", () => {
     expect(() => assertMigratorIdentity(migratorIdentity({ bypasses_rls: true }))).toThrow(/BYPASSRLS/);
     expect(() => assertMigratorIdentity(migratorIdentity({ role_memberships: ["app_owner"] }))).toThrow(/inherit/);
     expect(() => assertMigratorIdentity(migratorIdentity({ can_create_database: true }))).toThrow(/BYPASSRLS/);
+  });
+});
+
+describe("canonical schema constraint verification", () => {
+  const validatedConstraints = [
+    {
+      table_name: "kg_entities",
+      constraint_name: "kg_entities_canonical_entity_id_tenant_id_fkey",
+      is_validated: true,
+      constraint_type: "f",
+      columns: ["canonical_entity_id", "tenant_id"],
+      referenced_table: "entities",
+      referenced_columns: ["id", "organization_id"],
+    },
+    ...[
+      "kg_entities_resolution_status_check",
+      "kg_entities_resolution_consistency_check",
+      "kg_entities_matched_method_check",
+      "kg_entities_source_chunk_ids_array_check",
+    ].map((constraint_name) => ({
+      table_name: "kg_entities",
+      constraint_name,
+      is_validated: true,
+      constraint_type: "c",
+      columns: [],
+      referenced_table: null,
+      referenced_columns: [],
+    })),
+    {
+      table_name: "kg_relationships",
+      constraint_name: "kg_relationships_source_entity_id_tenant_id_fkey",
+      is_validated: true,
+      constraint_type: "f",
+      columns: ["source_entity_id", "tenant_id"],
+      referenced_table: "kg_entities",
+      referenced_columns: ["id", "tenant_id"],
+    },
+    {
+      table_name: "kg_relationships",
+      constraint_name: "kg_relationships_target_entity_id_tenant_id_fkey",
+      is_validated: true,
+      constraint_type: "f",
+      columns: ["target_entity_id", "tenant_id"],
+      referenced_table: "kg_entities",
+      referenced_columns: ["id", "tenant_id"],
+    },
+  ] as const;
+
+  it("accepts only validated composite foreign keys with exact source and target columns", () => {
+    expect(areRequiredConstraintsReady(validatedConstraints)).toBe(true);
+    expect(areRequiredConstraintsReady(
+      validatedConstraints.map((row) =>
+        row.constraint_name === "kg_relationships_source_entity_id_tenant_id_fkey"
+          ? { ...row, columns: ["source_entity_id"] }
+          : row,
+      ),
+    )).toBe(false);
+    expect(areRequiredConstraintsReady(
+      validatedConstraints.map((row) =>
+        row.constraint_name === "kg_entities_canonical_entity_id_tenant_id_fkey"
+          ? { ...row, referenced_table: "kg_entities" }
+          : row,
+      ),
+    )).toBe(false);
+    expect(areRequiredConstraintsReady(
+      validatedConstraints.map((row) =>
+        row.constraint_name === "kg_relationships_target_entity_id_tenant_id_fkey"
+          ? { ...row, is_validated: false }
+          : row,
+      ),
+    )).toBe(false);
   });
 });
 
