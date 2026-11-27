@@ -362,6 +362,21 @@ const TENANT_BACKFILL_SQL = [
 
 const TENANT_AFTER_COUNTS_SQL = TENANT_BEFORE_COUNTS_SQL;
 
+export const SEQUENCE_PRIVILEGE_INVENTORY_SQL = [
+    "SELECT COUNT(*)::text AS sequence_privilege_count",
+    "FROM pg_class AS relation",
+    "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
+    "WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema')",
+    "  AND namespace.nspname NOT LIKE 'pg_toast%'",
+    "  AND namespace.nspname NOT LIKE 'pg_temp_%'",
+    "  AND relation.relkind = 'S'",
+    "  AND (",
+    "    has_sequence_privilege(current_user, relation.oid, 'USAGE')",
+    "    OR has_sequence_privilege(current_user, relation.oid, 'SELECT')",
+    "    OR has_sequence_privilege(current_user, relation.oid, 'UPDATE')",
+    "  )",
+  ].join("\n");
+
 const AUDITOR_IDENTITY_SQL = [
   "SELECT",
   "  current_database() AS database_name,",
@@ -695,20 +710,7 @@ async function verifyAuditorColumnGrants(
   const sequencePrivileges = asNumber(
     firstRow(
       await client.query(
-        [
-          "SELECT COUNT(*)::text AS sequence_privilege_count",
-          "FROM pg_class AS relation",
-          "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
-          "WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema')",
-          "  AND namespace.nspname NOT LIKE 'pg_toast%'",
-          "  AND namespace.nspname NOT LIKE 'pg_temp_%'",
-          "  AND relation.relkind = 'S'",
-          "  AND (",
-          "    has_sequence_privilege(current_user, relation.oid, 'USAGE')",
-          "    OR has_sequence_privilege(current_user, relation.oid, 'SELECT')",
-          "    OR has_sequence_privilege(current_user, relation.oid, 'UPDATE')",
-          "  )",
-        ].join("\\n"),
+        SEQUENCE_PRIVILEGE_INVENTORY_SQL
       ),
       "auditor sequence privilege inventory",
     ).sequence_privilege_count,
