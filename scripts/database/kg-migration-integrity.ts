@@ -584,6 +584,26 @@ async function verifyAuditorColumnGrants(
   if (unrelatedReadGrants !== 0) {
     throw new Error("Auditor has read access to public database relations outside the three approved Knowledge Graph tables.");
   }
+
+  const executableDefiners = asNumber(
+    firstRow(
+      await client.query(
+        [
+          "SELECT COUNT(*)::text AS executable_security_definers",
+          "FROM pg_proc AS routine",
+          "JOIN pg_namespace AS namespace ON namespace.oid = routine.pronamespace",
+          "WHERE namespace.nspname = 'public'",
+          "  AND routine.prosecdef",
+          "  AND has_function_privilege(current_user, routine.oid, 'EXECUTE')",
+        ].join("\n"),
+      ),
+      "auditor SECURITY DEFINER function inventory",
+    ).executable_security_definers,
+    "auditor SECURITY DEFINER function inventory",
+  );
+  if (executableDefiners !== 0) {
+    throw new Error("Auditor can execute a public SECURITY DEFINER function; revoke that execution path before auditing.");
+  }
 }
 async function inspectSchema(client: DatabaseClient): Promise<{
   columns: Map<string, Set<string>>;
@@ -778,11 +798,12 @@ async function auditWorkspaceWithClient(client: DatabaseClient): Promise<AuditRe
   };
 }
 
-async function openAuditor(
+async function openDatabaseClient(
   connectionString: string,
+  applicationName: string,
   factory: ClientFactory,
 ): Promise<DatabaseClient> {
-  const client = factory(connectionString, "oxenn-kg-migration-auditor");
+  const client = factory(connectionString, applicationName);
   try {
     await client.connect();
     return client;
@@ -797,7 +818,7 @@ export async function auditWorkspaceKnowledgeGraph(options: IntegrityOptions = {
   const factory = options.clientFactory ?? defaultClientFactory;
   parseWorkspaceDatabaseUrl(env.OXENN_WORKSPACE_AUDIT_DATABASE_URL, AUDITOR_ROLE, AUDITOR_URL_ENV);
   const connectionString = env.OXENN_WORKSPACE_AUDIT_DATABASE_URL as string;
-  const client = await openAuditor(connectionString, factory);
+  const client = await openDatabaseClient(connectionString, "oxenn-kg-migration-auditor", factory);
 
   let result: AuditResult | undefined;
   let failure: unknown;
@@ -1025,7 +1046,7 @@ export async function backfillWorkspaceKnowledgeGraph(options: BackfillOptions):
   }
 
   const connectionString = migratorUrl as string;
-  const client = await openAuditor(connectionString, factory);
+  const client = await openDatabaseClient(connectionString, "oxenn-kg-migration-auditor", factory);
   let failure: unknown;
   let processedTenants = 0;
 
