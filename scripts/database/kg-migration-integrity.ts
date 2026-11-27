@@ -30,6 +30,7 @@ const REQUIRED_CONSTRAINTS = [
     name: "entity_relationships_source_entity_id_org_id_fkey",
     type: "f",
     columns: ["source_entity_id", "organization_id"],
+    referencedSchema: "public",
     referencedTable: "entities",
     referencedColumns: ["id", "organization_id"],
   },
@@ -58,6 +59,7 @@ const REQUIRED_CONSTRAINTS = [
     name: "kg_relationships_source_entity_id_tenant_id_fkey",
     type: "f",
     columns: ["source_entity_id", "tenant_id"],
+    referencedSchema: "public",
     referencedTable: "kg_entities",
     referencedColumns: ["id", "tenant_id"],
   },
@@ -77,6 +79,7 @@ export interface ConstraintMetadata {
   is_validated: boolean;
   constraint_type: string;
   columns: readonly string[];
+  referenced_schema: string | null;
   referenced_table: string | null;
   referenced_columns: readonly string[];
 }
@@ -91,6 +94,7 @@ export function areRequiredConstraintsReady(rows: readonly ConstraintMetadata[])
     }
     if (expected.type === "f") {
       return actual.columns.join(",") === expected.columns?.join(",") &&
+        actual.referenced_schema === expected.referencedSchema &&
         actual.referenced_table === expected.referencedTable &&
         actual.referenced_columns.join(",") === expected.referencedColumns?.join(",");
     }
@@ -814,6 +818,7 @@ async function inspectSchema(client: DatabaseClient): Promise<{
       "           ON attribute.attrelid = relation.oid AND attribute.attnum = key.attnum",
       "         ORDER BY key.ordinal",
       "       ) AS columns,",
+      "       referenced_namespace.nspname AS referenced_schema,",
       "       referenced_relation.relname AS referenced_table,",
       "       ARRAY(",
       "         SELECT attribute.attname::text",
@@ -826,6 +831,7 @@ async function inspectSchema(client: DatabaseClient): Promise<{
       "JOIN pg_class AS relation ON relation.oid = constraint_record.conrelid",
       "JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
       "LEFT JOIN pg_class AS referenced_relation ON referenced_relation.oid = constraint_record.confrelid",
+      "LEFT JOIN pg_namespace AS referenced_namespace ON referenced_namespace.oid = referenced_relation.relnamespace",
       "WHERE namespace.nspname = 'public'",
       "  AND (",
       "    (relation.relname = 'entity_relationships' AND constraint_record.conname = ANY($1::text[]))",
