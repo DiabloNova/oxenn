@@ -255,7 +255,7 @@ const RESOLUTION_AUDIT_SQL = [
   "  LEFT JOIN public.entities AS entity",
   "    ON entity.organization_id = kg.tenant_id",
   "   AND LOWER(BTRIM(entity.name)) = LOWER(BTRIM(kg.name))",
-  "   AND LOWER(BTRIM(entity.entity_type)) = LOWER(BTRIM(kg.type))",
+  "   AND entity.entity_type = kg.type",
   "   AND entity.deleted_at IS NULL",
   "  GROUP BY kg.id, kg.resolution_status, kg.canonical_entity_id",
   ")",
@@ -313,7 +313,7 @@ const TENANT_BACKFILL_SQL = [
   "  LEFT JOIN public.entities AS entity",
   "    ON entity.organization_id = kg.tenant_id",
   "   AND LOWER(BTRIM(entity.name)) = LOWER(BTRIM(kg.name))",
-  "   AND LOWER(BTRIM(entity.entity_type)) = LOWER(BTRIM(kg.type))",
+  "   AND entity.entity_type = kg.type",
   "   AND entity.deleted_at IS NULL",
   "  WHERE kg.tenant_id = $1::uuid",
   "    AND kg.resolution_status <> 'matched'",
@@ -375,16 +375,30 @@ const AUDITOR_IDENTITY_SQL = [
   "  role_record.rolcreaterole AS can_create_role,",
   "  role_record.rolreplication AS can_replicate,",
   "  role_record.rolbypassrls AS bypasses_rls,",
+  "  role_record.rolinherit AS inherits_roles,",
   "  has_database_privilege(current_user, 'oxenn_workspace', 'CREATE') AS can_create_in_database,",
   "  has_database_privilege(current_user, 'oxenn_platform_admin', 'CONNECT') AS can_connect_platform_admin,",
   "  has_schema_privilege(current_user, 'public', 'CREATE') AS can_create_in_public,",
   "  EXISTS (",
   "    SELECT 1 FROM pg_class AS relation",
   "    JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace",
-  "    WHERE namespace.nspname = 'public'",
-  "      AND relation.relname IN ('entities', 'entity_relationships', 'kg_entities', 'kg_relationships')",
+  "    WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema')",
+  "      AND namespace.nspname NOT LIKE 'pg_toast%'",
+  "      AND namespace.nspname NOT LIKE 'pg_temp_%'",
+  "      AND relation.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')",
   "      AND relation.relowner = role_record.oid",
-  "  ) AS owns_protected_table,",
+  "  ) AS owns_any_application_relation,",
+  "  EXISTS (",
+  "    SELECT 1 FROM pg_namespace AS namespace",
+  "    WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema')",
+  "      AND namespace.nspname NOT LIKE 'pg_toast%'",
+  "      AND namespace.nspname NOT LIKE 'pg_temp_%'",
+  "      AND namespace.nspowner = role_record.oid",
+  "  ) AS owns_application_schema,",
+  "  EXISTS (",
+  "    SELECT 1 FROM pg_database AS database_record",
+  "    WHERE database_record.datdba = role_record.oid",
+  "  ) AS owns_database,
   "  ARRAY(",
   "    SELECT member_role.rolname::text",
   "    FROM pg_roles AS member_role",
@@ -550,7 +564,10 @@ export function assertAuditorIdentity(row: Record<string, unknown>): void {
     asBoolean(row.can_create_in_database) ||
     asBoolean(row.can_connect_platform_admin) ||
     asBoolean(row.can_create_in_public) ||
-    asBoolean(row.owns_protected_table)
+    asBoolean(row.inherits_roles) ||
+    asBoolean(row.owns_any_application_relation) ||
+    asBoolean(row.owns_application_schema) ||
+    asBoolean(row.owns_database)
   ) {
     throw new Error(
       "Auditor identity failed its read-only least-privilege contract; expected the dedicated BYPASSRLS auditor role in a read-only transaction.",
