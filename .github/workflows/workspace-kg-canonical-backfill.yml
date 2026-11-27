@@ -1,0 +1,136 @@
+name: Workspace KG Canonical Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      database_target:
+        description: "Choose the isolated rehearsal or production Workspace database environment."
+        type: choice
+        required: true
+        default: rehearsal
+        options:
+          - rehearsal
+          - production
+      confirm_backfill:
+        description: "Confirm that the tenant-scoped canonical entity Backfill should write to oxenn_workspace."
+        type: boolean
+        required: true
+        default: false
+      confirm_production:
+        description: "Additional confirmation required when the selected environment is production."
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oxenn-workspace-kg-canonical-backfill
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Validate explicit Backfill request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main and explicit target confirmation
+        shell: bash
+        env:
+          REQUESTED_REF: \${{ github.ref }}
+          DATABASE_TARGET: \${{ inputs.database_target }}
+          CONFIRM_BACKFILL: \${{ inputs.confirm_backfill }}
+          CONFIRM_PRODUCTION: \${{ inputs.confirm_production }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$REQUESTED_REF" != "refs/heads/main" ]]; then
+            echo "::error::Workspace KG Backfill may only be dispatched from main."
+            exit 1
+          fi
+
+          if [[ "$CONFIRM_BACKFILL" != "true" ]]; then
+            echo "::error::Set confirm_backfill to true to authorize the tenant-scoped Workspace KG Backfill."
+            exit 1
+          fi
+
+          case "$DATABASE_TARGET" in
+            rehearsal) ;;
+            production)
+              if [[ "$CONFIRM_PRODUCTION" != "true" ]]; then
+                echo "::error::Set confirm_production to true for a production Backfill."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Unsupported database target."
+              exit 1
+              ;;
+          esac
+
+          echo "Explicit Backfill request validated for $DATABASE_TARGET."
+
+  backfill:
+    name: Audit and apply tenant-scoped Workspace KG Backfill
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: \${{ inputs.database_target == 'production' && 'production-database-migrations' || 'database-migration-rehearsal' }}
+    steps:
+      - name: Check out the approved main revision
+        uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          persist-credentials: false
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run global read-only Knowledge Graph audit
+        env:
+          OXENN_WORKSPACE_AUDIT_DATABASE_URL: \${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+        run: pnpm db:kg-integrity audit
+
+      - name: Apply idempotent tenant-scoped canonical Backfill
+        env:
+          OXENN_WORKSPACE_AUDIT_DATABASE_URL: \${{ secrets.OXENN_WORKSPACE_AUDIT_DATABASE_URL }}
+          OXENN_WORKSPACE_MIGRATION_DATABASE_URL: \${{ secrets.OXENN_WORKSPACE_MIGRATION_DATABASE_URL }}
+        run: pnpm db:kg-integrity backfill --apply --confirm-database oxenn_workspace
+
+      - name: Record verified Backfill result
+        if: success()
+        env:
+          DATABASE_TARGET: \${{ inputs.database_target }}
+          RUN_REF: \${{ github.ref }}
+          RUN_SHA: \${{ github.sha }}
+        run: |
+          {
+            echo "## Workspace Knowledge Graph Backfill"
+            echo
+            printf -- '- Target environment: %s\n' "$DATABASE_TARGET"
+            printf -- '- Dispatch ref: %s\n' "$RUN_REF"
+            printf -- '- Checked-out revision: %s\n' "$RUN_SHA"
+            echo "- Backfill: completed with per-tenant row-count reconciliation and a final global audit"
+            echo "- Scope: oxenn_workspace only; Platform Admin was not accessed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record failure warning
+        if: failure()
+        run: |
+          {
+            echo "## Workspace Knowledge Graph Backfill did not complete"
+            echo
+            echo "Inspect the failed step and reconcile already committed tenant transactions before retrying. The operation is idempotent, but a failed run must not be reported as complete."
+            echo "Do not bypass the auditor, alter migration history, or grant BYPASSRLS to the Workspace migrator."
+          } >> "$GITHUB_STEP_SUMMARY"
