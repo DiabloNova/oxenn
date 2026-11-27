@@ -164,6 +164,9 @@ describe("KG migration integrity connection contracts", () => {
 
   it("requires the Backfill identity to remain under forced RLS and not bypass it", () => {
     expect(() => assertMigratorIdentity(migratorIdentity())).not.toThrow();
+    // The existing migrator has database/schema DDL grants for Drizzle, but it
+    // must not gain the distinct BYPASSRLS role attribute.
+    expect(() => assertMigratorIdentity(migratorIdentity({ can_create_in_database: true }))).not.toThrow();
     expect(() => assertMigratorIdentity(migratorIdentity({ bypasses_rls: true }))).toThrow(/BYPASSRLS/);
     expect(() => assertMigratorIdentity(migratorIdentity({ role_memberships: ["app_owner"] }))).toThrow(/inherit/);
     expect(() => assertMigratorIdentity(migratorIdentity({ can_create_database: true }))).toThrow(/BYPASSRLS/);
