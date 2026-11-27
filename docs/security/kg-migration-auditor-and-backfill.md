@@ -83,7 +83,7 @@ The auditor URL and migrator URL must target the same direct PostgreSQL host, po
 ## Migration ordering
 
 1. Run the global `audit` before Workspace migrations. This checks the existing `entity_relationships` integrity targeted by migration 0017, the KG source/target endpoint integrity targeted by migration 0019, RLS, and role boundaries. Before migration 0018, canonical-resolution columns are reported as unavailable; that is expected.
-2. Migration 0017's existing preflight checks EntityRelationship endpoint ownership and duplicate active relationships. The dedicated auditor runs the same global checks without tenant RLS filtering. The migration's composite foreign keys and partial unique index remain authoritative and PostgreSQL validates them before they can be accepted.
+2. Migration 0017 contains a preflight query that executes under the migration role's RLS context; do not treat that block as a global view because it may not see other tenants. The dedicated auditor performs the global endpoint and duplicate checks before migration. Migration 0017's composite foreign keys and partial unique index remain authoritative, and PostgreSQL validates them before they can be accepted.
 3. Keep migration 0018 schema-only. It adds canonical-resolution columns, indexes, foreign keys, and checks. It must not execute a global canonical-entity `UPDATE`.
 4. Let migration 0019 install the tenant-composite KG endpoint foreign keys. PostgreSQL validates existing rows when adding these constraints and aborts the migration on a missing or cross-tenant endpoint. Do not rely on an RLS-filtered `DO` block to count global rows.
 5. After migrations 0017, 0018, and 0019 have been applied, run `backfill` without `--apply` and inspect the aggregate dry-run.
