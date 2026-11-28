@@ -86,7 +86,7 @@ jobs:
       name: ${{ inputs.database_target == 'production' && 'production-database-migrations' || 'database-migration-rehearsal' }}
     steps:
       - name: Check out the approved main revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
@@ -95,7 +95,7 @@ jobs:
         run: corepack enable pnpm
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
