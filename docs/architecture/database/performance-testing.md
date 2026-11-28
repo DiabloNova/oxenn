@@ -12,7 +12,7 @@ Oxenn has a manual and pull-request-triggered performance smoke workflow that ru
 
 ## Safety boundary
 
-The benchmark refuses to run unless DATABASE_URL resolves to localhost or 127.0.0.1, port 5432, and the database name isolation_test_db. It does not print the connection string. A remote host, different database name, or different port fails before a connection is opened. The workflow provisions its own pgvector/pg16 service and uses no repository or Neon secrets.
+The benchmark refuses to run unless DATABASE_URL explicitly identifies localhost or 127.0.0.1, port 5432, and the database name isolation_test_db with a postgres user and password. Connection-string query parameters and fragments are rejected, as are conflicting PGHOST, PGPORT, PGDATABASE, PGHOSTADDR, PGSERVICE, and PGSERVICEFILE overrides. The validated host, port, database, user, password and ssl=false values are passed individually to pg; the original connection string is never passed to Pool, so parser query overrides and environment fallbacks cannot redirect the connection. The URL is never printed. The workflow provisions its own pgvector/pg16 service and uses no repository or Neon secrets.
 
 ## Running it
 

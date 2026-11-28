@@ -6,7 +6,10 @@ export interface LatencySummary {
   maxMs: number;
 }
 
-export function assertEphemeralDatabaseUrl(connectionString: string): URL {
+export function assertEphemeralDatabaseUrl(
+  connectionString: string,
+  environment: Record<string, string | undefined> = process.env
+): URL {
   let url: URL;
   try {
     url = new URL(connectionString);
@@ -14,14 +17,42 @@ export function assertEphemeralDatabaseUrl(connectionString: string): URL {
     throw new Error("Database performance smoke requires a valid local PostgreSQL URL.");
   }
 
+  let username: string;
+  let password: string;
+  try {
+    username = decodeURIComponent(url.username);
+    password = decodeURIComponent(url.password);
+  } catch {
+    throw new Error("Database performance smoke requires valid local credentials.");
+  }
+
   const supportedProtocol = url.protocol === "postgres:" || url.protocol === "postgresql:";
   const localHost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
   const expectedDatabase = url.pathname === "/isolation_test_db";
-  const expectedPort = !url.port || url.port === "5432";
+  const expectedPort = url.port === "5432";
+  const expectedUser = username === "postgres";
+  const hasCredentials = password.length > 0;
+  const hasConnectionOverrides = url.search.length > 0 || url.hash.length > 0;
+  const safeEnvironment =
+    (!environment.PGHOST || environment.PGHOST === "localhost" || environment.PGHOST === "127.0.0.1") &&
+    (!environment.PGPORT || environment.PGPORT === "5432") &&
+    (!environment.PGDATABASE || environment.PGDATABASE === "isolation_test_db") &&
+    (!environment.PGHOSTADDR || environment.PGHOSTADDR === "127.0.0.1") &&
+    !environment.PGSERVICE &&
+    !environment.PGSERVICEFILE;
 
-  if (!supportedProtocol || !localHost || !expectedDatabase || !expectedPort) {
+  if (
+    !supportedProtocol ||
+    !localHost ||
+    !expectedDatabase ||
+    !expectedPort ||
+    !expectedUser ||
+    !hasCredentials ||
+    hasConnectionOverrides ||
+    !safeEnvironment
+  ) {
     throw new Error(
-      "Refusing to benchmark a non-ephemeral database; only localhost:5432/isolation_test_db is allowed."
+      "Refusing to benchmark a non-ephemeral database; only an explicit localhost:5432/isolation_test_db target is allowed."
     );
   }
 

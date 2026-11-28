@@ -28,6 +28,30 @@ describe("database performance smoke safety", () => {
     ).toThrow("Refusing to benchmark a non-ephemeral database");
   });
 
+  it("rejects connection-string and environment overrides that could redirect pg", () => {
+    const localUrl = "postgresql://postgres:postgres@localhost:5432/isolation_test_db";
+    expect(() =>
+      assertEphemeralDatabaseUrl(localUrl + "?host=remote.example&port=5433")
+    ).toThrow("Refusing to benchmark a non-ephemeral database");
+    expect(() =>
+      assertEphemeralDatabaseUrl(localUrl, { PGHOST: "remote.example" })
+    ).toThrow("Refusing to benchmark a non-ephemeral database");
+    expect(() =>
+      assertEphemeralDatabaseUrl(localUrl, { PGPORT: "5433" })
+    ).toThrow("Refusing to benchmark a non-ephemeral database");
+    expect(() =>
+      assertEphemeralDatabaseUrl(localUrl, { PGDATABASE: "production" })
+    ).toThrow("Refusing to benchmark a non-ephemeral database");
+    expect(() =>
+      assertEphemeralDatabaseUrl(localUrl, { PGSERVICE: "production" })
+    ).toThrow("Refusing to benchmark a non-ephemeral database");
+    expect(() =>
+      assertEphemeralDatabaseUrl(
+        "postgresql://postgres:postgres@localhost/isolation_test_db"
+      )
+    ).toThrow("Refusing to benchmark a non-ephemeral database");
+  });
+
   it("summarizes p50 and p95 without mutating the input samples", () => {
     const samples = [5, 1, 4, 2, 3];
     expect(summarizeLatencySamples(samples)).toEqual({

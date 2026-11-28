@@ -36,10 +36,17 @@ export async function runDatabasePerformanceSmoke(): Promise<Record<string, unkn
   if (!connectionString) {
     throw new Error("DATABASE_URL is required for the local performance smoke.");
   }
-  assertEphemeralDatabaseUrl(connectionString);
+  const target = assertEphemeralDatabaseUrl(connectionString);
 
+  // Pass every connection target field explicitly; never let pg parse query overrides
+  // or fall back to PGHOST/PGPORT/PGDATABASE from the runner environment.
   const pool = new Pool({
-    connectionString,
+    host: target.hostname,
+    port: 5432,
+    database: "isolation_test_db",
+    user: decodeURIComponent(target.username),
+    password: decodeURIComponent(target.password),
+    ssl: false,
     max: POOL_MAX,
     connectionTimeoutMillis: 5_000,
     idleTimeoutMillis: 10_000,
