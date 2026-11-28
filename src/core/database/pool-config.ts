@@ -31,7 +31,7 @@ export function resolvePoolMax(
 }
 
 
-export interface WorkspacePoolEnvironment {
+export interface WorkspacePoolEnvironment extends Record<string, string | undefined> {
   DATABASE_POOL_MAX?: string;
   AUTHENTICATOR_POOL_MAX?: string;
 }
