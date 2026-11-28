@@ -82,6 +82,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Database Architecture  This directory contains technical specifications and decisions regarding the PostgreSQL persistence layer.  ## Available Documents - [Migration Strategy](./migration-strategy.md) - [Reconciliation Report](./reconciliation-report.md) - [Tenant Context Spec](./tenant-context-spec.md) `
   },
   {
+    slug: "connection-pooling",
+    titleEn: "PostgreSQL connection pool budgeting",
+    titleFa: "PostgreSQL connection pool budgeting",
+    category: "architecture",
+    categoryFa: "Architecture",
+    snippet: `# PostgreSQL connection pool budgeting  Oxenn creates process-local PostgreSQL pools. A pool maximum applies to one Node.js process; it is not a deployment-wide or Neon-project-wide limit. Every application replica (and every separately running worker process) creates its own pool instances.  ## Workspace pools  \`PostgresClient\` owns two separate pools:  - \`DATABASE_POOL_MAX\` controls the ordinary Workspace pool. Its default remains \`20\` to preserve current behavior. - \`AUTHENTICATOR_POOL_MAX\` c`
+  },
+  {
     slug: "migration-strategy",
     titleEn: "Relational Database Migration Strategy",
     titleFa: "Relational Database Migration Strategy",
