@@ -145,6 +145,11 @@ jobs:
             exit 1
           fi
 
+          # This merge is intentionally confined to the ephemeral Actions worktree.
+          # Configure identity locally because --no-commit still needs a committer to
+          # prepare the merge state on some Git versions.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git merge --no-edit --no-ff --no-commit "$fetched_sha"
           git diff --cached --check
 
