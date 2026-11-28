@@ -22,6 +22,7 @@
     "db:migrate": "pnpm run env:check migrate && pnpm exec tsx src/core/database/migrator.ts",
     "db:push": "pnpm exec tsx scripts/database/db-push.ts",
     "test:isolation": "pnpm exec tsx tests/isolation/suite.ts",
+    "db:benchmark": "pnpm exec tsx scripts/database/performance-smoke.ts",
     "docs:matrix": "pnpm exec tsx scripts/database/build-reference-matrix.ts",
     "docs": "pnpm run docs:matrix",
     "db:verify-rls-migrations": "pnpm exec tsx scripts/database/verify-rls-migrations.ts",

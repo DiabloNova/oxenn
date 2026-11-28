@@ -90,6 +90,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Relational Database Migration Strategy  This specification details the canonical schema modeling, migration execution, and deployment strategy for the AI Visibility Intelligence relational schema.  ---  ## 1. Migration Tech Stack  We utilize **Drizzle ORM** paired with **Drizzle Kit** for schema modeling, SQL generation, schema diffing, and programmatic migration execution.  \`\`\`  [Canonical Drizzle Schema] (database/schema/index.ts)          │          ▼  (pnpm run db:generate / drizzle-kit ge`
   },
   {
+    slug: "performance-testing",
+    titleEn: "Database performance smoke testing",
+    titleFa: "Database performance smoke testing",
+    category: "architecture",
+    categoryFa: "Architecture",
+    snippet: `# Database performance smoke testing  Oxenn has a manual and pull-request-triggered performance smoke workflow that runs against a disposable PostgreSQL service inside GitHub Actions. It does not connect to Neon, Production, or any configured application database.  ## What it runs  1. The repository's existing tenant-isolation suite runs first against the local PostgreSQL service. 2. The benchmark creates a uniquely named temporary schema and a synthetic 10,000-row dataset. 3. It measures indexe`
+  },
+  {
     slug: "reconciliation-report",
     titleEn: "Database Reconciliation Report & Implementation Plan",
     titleFa: "Database Reconciliation Report & Implementation Plan",
