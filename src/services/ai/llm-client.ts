@@ -99,7 +99,14 @@ export class MockLLMClient implements ILLMClient {
 
 // 3. Dynamic Service Resolution
 export function getLLMClient(): ILLMClient {
-  if (process.env.NODE_ENV === 'test' || !process.env.GOOGLE_AI_API_KEY) {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (process.env.NODE_ENV === 'test') {
+    return new MockLLMClient();
+  }
+  if (process.env.NODE_ENV === 'production' && !apiKey) {
+    throw new Error('AI provider configuration error: GOOGLE_AI_API_KEY is required in production.');
+  }
+  if (!apiKey) {
     return new MockLLMClient();
   }
   return new GeminiLLMClient();

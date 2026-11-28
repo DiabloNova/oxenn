@@ -127,6 +127,20 @@
       "when": 1795500000000,
       "tag": "0017_entity_brand_associations",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795601355000,
+      "tag": "0018_kg_entity_canonical_resolution",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795601356000,
+      "tag": "0019_kg_relationship_tenant_integrity",
+      "breakpoints": true
     }
   ]
 }

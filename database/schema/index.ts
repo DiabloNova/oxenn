@@ -1192,19 +1192,35 @@ export const kgEntities = pgTable("kg_entities", {
   name: text("name").notNull(),
   type: text("type").notNull(),
   properties: jsonb("properties").notNull().default({}),
+  canonicalEntityId: uuid("canonical_entity_id"),
+  resolutionStatus: text("resolution_status").notNull().default("unresolved"),
+  resolutionMethod: text("resolution_method"),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  sourceChunkIds: jsonb("source_chunk_ids").notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(defaultNow),
 }, (table) => [
   index("idx_kg_entities_tenant").on(table.tenantId),
   index("idx_kg_entities_name").on(table.name),
+  uniqueIndex("idx_kg_entities_id_tenant_id_fk").on(table.id, table.tenantId),
+  index("idx_kg_entities_canonical_entity").on(table.tenantId, table.canonicalEntityId),
+  foreignKey({
+    name: "kg_entities_canonical_entity_id_tenant_id_fkey",
+    columns: [table.canonicalEntityId, table.tenantId],
+    foreignColumns: [entities.id, entities.organizationId]
+  }).onDelete("no action"),
+  check("kg_entities_resolution_status_check", sql`resolution_status IN ('matched', 'unresolved', 'ambiguous')`),
+  check("kg_entities_resolution_consistency_check", sql`(resolution_status = 'matched') = (canonical_entity_id IS NOT NULL)`),
+  check("kg_entities_matched_method_check", sql`resolution_status <> 'matched' OR resolution_method IS NOT NULL`),
+  check("kg_entities_source_chunk_ids_array_check", sql`jsonb_typeof(source_chunk_ids) = 'array'`),
   ...tenantPolicy("tenant_id")
 ]);
 
 export const kgRelationships = pgTable("kg_relationships", {
   id: uuid("id").primaryKey().default(defaultUuid),
   tenantId: uuid("tenant_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  sourceEntityId: uuid("source_entity_id").notNull().references(() => kgEntities.id, { onDelete: "cascade" }),
-  targetEntityId: uuid("target_entity_id").notNull().references(() => kgEntities.id, { onDelete: "cascade" }),
+  sourceEntityId: uuid("source_entity_id").notNull(),
+  targetEntityId: uuid("target_entity_id").notNull(),
   relationshipType: text("relationship_type").notNull(),
   properties: jsonb("properties").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(defaultNow),
@@ -1213,6 +1229,18 @@ export const kgRelationships = pgTable("kg_relationships", {
   index("idx_kg_relationships_tenant").on(table.tenantId),
   index("idx_kg_relationships_source").on(table.sourceEntityId),
   index("idx_kg_relationships_target").on(table.targetEntityId),
+  index("idx_kg_relationships_source_tenant").on(table.sourceEntityId, table.tenantId),
+  index("idx_kg_relationships_target_tenant").on(table.targetEntityId, table.tenantId),
+  foreignKey({
+    name: "kg_relationships_source_entity_id_tenant_id_fkey",
+    columns: [table.sourceEntityId, table.tenantId],
+    foreignColumns: [kgEntities.id, kgEntities.tenantId]
+  }).onDelete("cascade"),
+  foreignKey({
+    name: "kg_relationships_target_entity_id_tenant_id_fkey",
+    columns: [table.targetEntityId, table.tenantId],
+    foreignColumns: [kgEntities.id, kgEntities.tenantId]
+  }).onDelete("cascade"),
   ...tenantPolicy("tenant_id")
 ]);
 

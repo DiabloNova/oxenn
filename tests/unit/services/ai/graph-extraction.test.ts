@@ -1,7 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { extractGraphEntities } from '@/services/ai/graph-extraction';
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('Graph Extraction Service', () => {
+  it('fails closed in production when the real provider is not configured', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('GOOGLE_AI_API_KEY', '');
+    await expect(extractGraphEntities('Apple makes products')).rejects.toThrow(/GOOGLE_AI_API_KEY is required in production/);
+  });
+
   it('extracts entities and relationships from Optimus AI text', async () => {
     const text1 = "سیستم هوشمند اپتیموس ای آی (Optimus AI) از هوش مصنوعی گوگل استفاده می‌کند.";
     const graph1 = await extractGraphEntities(text1);
