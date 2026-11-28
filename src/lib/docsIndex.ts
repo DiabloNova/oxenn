@@ -82,6 +82,14 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Database Architecture  This directory contains technical specifications and decisions regarding the PostgreSQL persistence layer.  ## Available Documents - [Migration Strategy](./migration-strategy.md) - [Reconciliation Report](./reconciliation-report.md) - [Tenant Context Spec](./tenant-context-spec.md) `
   },
   {
+    slug: "data-lifecycle",
+    titleEn: "Database data lifecycle and retention",
+    titleFa: "Database data lifecycle and retention",
+    category: "architecture",
+    categoryFa: "Architecture",
+    snippet: `# Database data lifecycle and retention  Oxenn's database currently contains several different data classes. They must not share one blanket retention rule: operational leases, expiring cache entries, product evidence, vector data, and security audit records have different correctness and compliance requirements.  ## Current schema findings  | Data class | Current evidence | Safe conclusion | |---|---|---| | Crawl cache | crawl_cache has expires_at; its current unique index is on tenant_id, cach`
+  },
+  {
     slug: "migration-strategy",
     titleEn: "Relational Database Migration Strategy",
     titleFa: "Relational Database Migration Strategy",
