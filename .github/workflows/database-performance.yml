@@ -1,0 +1,79 @@
+name: Database Performance Smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/database-performance.yml"
+      - "scripts/database/**"
+      - "tests/unit/scripts/database/**"
+      - "package.json"
+      - "docs/architecture/database/performance-testing.md"
+      - "src/lib/docsIndex.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  database-performance:
+    name: Ephemeral PostgreSQL performance smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: isolation_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d isolation_test_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tenant isolation suite against disposable PostgreSQL
+        run: pnpm run test:isolation
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
+          MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
+
+      - name: Run report-only database performance smoke
+        run: pnpm run db:benchmark
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/isolation_test_db
+          PERFORMANCE_OUTPUT_PATH: artifacts/database-performance.json
+
+      - name: Add performance report to job summary
+        if: always()
+        run: |
+          if [ -f artifacts/database-performance.json ]; then
+            echo "## Database performance smoke" >> "$GITHUB_STEP_SUMMARY"
+            cat artifacts/database-performance.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload performance report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: database-performance-report
+          path: artifacts/database-performance.json
+          retention-days: 14
+          if-no-files-found: ignore
