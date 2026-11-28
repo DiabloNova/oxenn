@@ -30,6 +30,8 @@ function normalizeSqlForFingerprint(sql: string): string {
     .replace(/--[^\r\n]*/g, " ")
     .replace(/\b\d+(?:\.\d+)?\b/g, "?")
     .replace(/\b(?:true|false)\b/gi, "?")
+    .replace(/\s*(::|->>|->|#>>|#>|<=|>=|<>|!=|=|<|>|\|\||&&|@>|<@)\s*/g, "$1")
+    .replace(/\s*([(),;.])\s*/g, "$1")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
