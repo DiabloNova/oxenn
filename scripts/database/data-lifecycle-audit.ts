@@ -42,7 +42,7 @@ const INDEX_INVENTORY_SQL = [
   "    SELECT pg_get_indexdef(usi.indexrelid, key_position, true)",
   "    FROM generate_series(1, index_metadata.indnkeyatts) AS key_position",
   "    ORDER BY key_position",
-  "  ) AS index_columns",
+  "  ) AS index_columns,",
   "  usi.idx_scan::bigint AS index_scans,",
   "  usi.idx_tup_read::bigint AS tuples_read,",
   "  usi.idx_tup_fetch::bigint AS tuples_fetched,",
