@@ -81,8 +81,8 @@ export class PostgresClient {
    */
   public async connectSystemClient(purpose: string): Promise<PoolClient> {
     let client: PoolClient;
+    const acquisitionStartedAt = performance.now();
     try {
-      const acquisitionStartedAt = performance.now();
       client = await this.authenticatorPool.connect();
       recordDatabasePoolAcquire({
         poolName: "authenticator",
@@ -91,8 +91,19 @@ export class PostgresClient {
         totalCount: this.authenticatorPool.totalCount,
         idleCount: this.authenticatorPool.idleCount,
         waitingCount: this.authenticatorPool.waitingCount,
+        outcome: "success",
       });
     } catch (err) {
+      recordDatabasePoolAcquire({
+        poolName: "authenticator",
+        waitMs: performance.now() - acquisitionStartedAt,
+        traceId: TenantContextManager.getContext()?.requestId ?? undefined,
+        totalCount: this.authenticatorPool.totalCount,
+        idleCount: this.authenticatorPool.idleCount,
+        waitingCount: this.authenticatorPool.waitingCount,
+        outcome: "error",
+        errorCode: (err as { code?: string }).code,
+      });
       const msg = err instanceof Error ? err.message : String(err);
       throw new DatabaseUnavailableError(sanitizeErrorMessage(msg, process.env.AUTHENTICATOR_DATABASE_URL || process.env.DATABASE_URL));
     }
@@ -135,8 +146,8 @@ export class PostgresClient {
 
   public async connectClient(): Promise<PoolClient> {
     let client: PoolClient;
+    const acquisitionStartedAt = performance.now();
     try {
-      const acquisitionStartedAt = performance.now();
       client = await this.pool.connect();
       recordDatabasePoolAcquire({
         poolName: "workspace",
@@ -145,8 +156,19 @@ export class PostgresClient {
         totalCount: this.pool.totalCount,
         idleCount: this.pool.idleCount,
         waitingCount: this.pool.waitingCount,
+        outcome: "success",
       });
     } catch (err) {
+      recordDatabasePoolAcquire({
+        poolName: "workspace",
+        waitMs: performance.now() - acquisitionStartedAt,
+        traceId: TenantContextManager.getContext()?.requestId ?? undefined,
+        totalCount: this.pool.totalCount,
+        idleCount: this.pool.idleCount,
+        waitingCount: this.pool.waitingCount,
+        outcome: "error",
+        errorCode: (err as { code?: string }).code,
+      });
       const msg = err instanceof Error ? err.message : String(err);
       throw new DatabaseUnavailableError(sanitizeErrorMessage(msg, process.env.DATABASE_URL));
     }

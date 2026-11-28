@@ -18,12 +18,12 @@ Set `DATABASE_QUERY_TELEMETRY_ENABLED=true` only in an environment whose log ret
 - `traceId`: validated request ID when one exists
 - `errorCode`: safe PostgreSQL error code only, when available
 
-`oxenn.database.pool.acquire` contains pool name, acquisition wait time, `totalCount`, `idleCount`, `waitingCount`, and request ID when available. Pool wait is reported separately for explicit client leases (`connectClient` and `connectSystemClient`). The direct `Pool.query` path retains node-postgres semantics, so its reported duration includes any internal acquisition wait as well as query execution; it does not fabricate a separate wait measurement.
+`oxenn.database.pool.acquire` contains pool name, acquisition wait time, `totalCount`, `idleCount`, `waitingCount`, `outcome` (`success` or `error`), an optional safe PostgreSQL error code, and request ID when available. Failed acquisition attempts are recorded too, so connection timeouts remain visible without exposing error messages. Pool wait is reported separately for explicit client leases (`connectClient` and `connectSystemClient`). The direct `Pool.query` path retains node-postgres semantics, so its reported duration includes any internal acquisition wait as well as query execution; it does not fabricate a separate wait measurement.
 
 ## Privacy properties
 
 - Raw SQL and parameter arrays are never emitted.
-- SQL string/numeric/boolean literals, comments and whitespace are normalized before fingerprinting. Only the hash is logged.
+- SQL string/numeric/boolean literals and dollar-quoted strings are tokenized alongside line and nested block comments before fingerprinting; operator and punctuation spacing is canonicalized while quoted-identifier case is preserved. Only the hash is logged.
 - Error messages and stack traces are not copied into telemetry; only a validated short PostgreSQL code may be included.
 - Connection strings, credentials and tenant identifiers are not part of either event schema.
 - The direct `Pool.query` path and both leased-client wrappers are observed exactly once; the existing tenant-context checks, result values, thrown errors and client-release behavior are preserved.

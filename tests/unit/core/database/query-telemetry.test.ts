@@ -21,6 +21,24 @@ describe("database query telemetry", () => {
     expect(first).toBe(second);
   });
 
+  it("tokenizes comments and literals together when comments contain apostrophes", () => {
+    const first = createQueryFingerprint("SELECT /* don't */ 'active' FROM users WHERE id = 42 -- don't leak");
+    const second = createQueryFingerprint("select /* shouldn't */ 'pending' from users where id=900");
+    expect(first).toBe(second);
+  });
+
+  it("normalizes dollar-quoted strings and nested block comments", () => {
+    const first = createQueryFingerprint("SELECT /* outer /* inner */ done */ $$secret$$ FROM users");
+    const second = createQueryFingerprint("select /* other */ $tag$private$tag$ from users");
+    expect(first).toBe(second);
+  });
+
+  it("preserves case-sensitive quoted identifiers", () => {
+    expect(createQueryFingerprint('SELECT "User" FROM users')).not.toBe(
+      createQueryFingerprint('SELECT "user" FROM users')
+    );
+  });
+
   it("does not emit telemetry when disabled", async () => {
     vi.stubEnv("DATABASE_QUERY_TELEMETRY_ENABLED", "false");
     const debug = vi.spyOn(console, "debug").mockImplementation(() => undefined);
@@ -107,6 +125,7 @@ describe("database query telemetry", () => {
       totalCount: 4,
       idleCount: 1,
       waitingCount: 2,
+      outcome: "success",
     });
     const event = JSON.parse(debug.mock.calls[0][0] as string) as Record<string, unknown>;
     expect(event).toMatchObject({
@@ -116,8 +135,33 @@ describe("database query telemetry", () => {
       totalCount: 4,
       idleCount: 1,
       waitingCount: 2,
+      outcome: "success",
       traceId: "req-456",
     });
     expect(event).not.toHaveProperty("connectionString");
+  });
+
+  it("records failed pool acquisition waits without exposing error text", () => {
+    vi.stubEnv("DATABASE_QUERY_TELEMETRY_ENABLED", "true");
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+    recordDatabasePoolAcquire({
+      poolName: "workspace",
+      waitMs: 2000,
+      traceId: "req-timeout",
+      totalCount: 20,
+      idleCount: 0,
+      waitingCount: 3,
+      outcome: "error",
+      errorCode: "ETIMEDOUT",
+    });
+    const event = JSON.parse(debug.mock.calls[0][0] as string) as Record<string, unknown>;
+    expect(event).toMatchObject({
+      event: "oxenn.database.pool.acquire",
+      outcome: "error",
+      errorCode: "ETIMEDOUT",
+      waitMs: 2000,
+      waitingCount: 3,
+    });
+    expect(JSON.stringify(event)).not.toContain("connection timeout details");
   });
 });
