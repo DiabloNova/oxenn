@@ -4,6 +4,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { performance } from "node:perf_hooks";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 import {
   ITenantRepository,
@@ -16,6 +17,7 @@ import { Tenant, AdminUser, FeatureFlag, AuditRecord, AIProviderConfiguration } 
 import { UnitOfWork } from "../uow";
 import { TenantContextManager, isQueryTenantScoped, TenantContextViolationException } from "../../../../../core/database/tenant-context";
 import { sanitizeErrorMessage } from "../../../../../core/utils/error-sanitizer";
+import { observeDatabaseQuery, recordDatabasePoolAcquire } from "../../../../../core/database/query-telemetry";
 
 export class OptimisticLockingError extends Error {
   constructor(entityName: string, expectedVersion: number, actualVersion: number) {
@@ -80,7 +82,16 @@ export class PostgresClient {
   public async connectSystemClient(purpose: string): Promise<PoolClient> {
     let client: PoolClient;
     try {
+      const acquisitionStartedAt = performance.now();
       client = await this.authenticatorPool.connect();
+      recordDatabasePoolAcquire({
+        poolName: "authenticator",
+        waitMs: performance.now() - acquisitionStartedAt,
+        traceId: TenantContextManager.getContext()?.requestId ?? undefined,
+        totalCount: this.authenticatorPool.totalCount,
+        idleCount: this.authenticatorPool.idleCount,
+        waitingCount: this.authenticatorPool.waitingCount,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       throw new DatabaseUnavailableError(sanitizeErrorMessage(msg, process.env.AUTHENTICATOR_DATABASE_URL || process.env.DATABASE_URL));
@@ -94,7 +105,10 @@ export class PostgresClient {
           "Tenant Context Violation: System client used outside of system mode."
         );
       }
-      return client.query(sql, params);
+      return observeDatabaseQuery(
+        { poolName: "authenticator", sql, traceId: TenantContextManager.getContext()?.requestId ?? undefined },
+        () => client.query(sql, params)
+      );
     };
     wrappedClient.release = () => {
       if (typeof client.release === "function") {
@@ -122,7 +136,16 @@ export class PostgresClient {
   public async connectClient(): Promise<PoolClient> {
     let client: PoolClient;
     try {
+      const acquisitionStartedAt = performance.now();
       client = await this.pool.connect();
+      recordDatabasePoolAcquire({
+        poolName: "workspace",
+        waitMs: performance.now() - acquisitionStartedAt,
+        traceId: TenantContextManager.getContext()?.requestId ?? undefined,
+        totalCount: this.pool.totalCount,
+        idleCount: this.pool.idleCount,
+        waitingCount: this.pool.waitingCount,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       throw new DatabaseUnavailableError(sanitizeErrorMessage(msg, process.env.DATABASE_URL));
@@ -140,7 +163,10 @@ export class PostgresClient {
           );
         }
       }
-      return client.query(sql, params);
+      return observeDatabaseQuery(
+        { poolName: "workspace", sql, traceId: TenantContextManager.getContext()?.requestId ?? undefined },
+        () => client.query(sql, params)
+      );
     };
     wrappedClient.release = (err?: Error | boolean) => {
       if (typeof client.release === "function") {
@@ -221,9 +247,11 @@ export class PostgresClient {
       return activeDbClient.query(sql, params);
     }
 
-    console.debug(`[Postgres SQL] Executing Parameterised Query: "${sql}" with values: [${params.join(", ")}]`);
     try {
-      return await this.pool.query(sql, params);
+      return await observeDatabaseQuery(
+        { poolName: "workspace", sql, traceId: TenantContextManager.getContext()?.requestId ?? undefined },
+        () => this.pool.query(sql, params)
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("ECONNREFUSED") || msg.includes("Database connection failed") || (err as { code?: string }).code === "ECONNREFUSED") {
