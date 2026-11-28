@@ -15,7 +15,9 @@ Oxenn's database currently contains several different data classes. They must no
 | Security audit | audit_records stores actor email, IP address, user agent and before/after payloads; platform_admin_audit_events is a separate audit stream | Do not purge or rewrite audit evidence without an approved legal/compliance retention schedule |
 | Platform-admin transient state | sessions, OIDC transactions and auth rate limits have expires_at columns and expiry indexes | These are natural expired-only cleanup candidates, but no cleanup job is introduced here |
 
-The workspace crawl_cache expiry column currently has no dedicated index. A future cleanup process should not repeatedly scan a growing cache table; first measure the table and query plans, then review a tenant-safe index such as (expires_at) or (tenant_id, expires_at) against actual access patterns.
+The first ephemeral workspace audit found expires_at columns in api_keys, auth_rate_limits, crawl_cache, email_verification_tokens, organization_invitations, password_reset_tokens and sessions. Among those workspace tables, only auth_rate_limits currently has a direct expires_at index key. In particular, crawl_cache has no dedicated expiry index, and its inspected read path treats expired entries as misses without physically removing them.
+
+This is schema/index metadata from the migrated ephemeral database, not evidence of Production row volume or query latency. The absence of an expires_at index does not prove point lookups are slow: token and cache-key lookups may use separate unique indexes. It matters primarily for future bulk expiry sweeps. Before adding an index, measure actual row volume and query plans, then review a tenant-safe key such as (expires_at) or (tenant_id, expires_at) against the intended cleanup query. Do not add indexes to every expires_at column automatically.
 
 ## Read-only lifecycle inventory
 
