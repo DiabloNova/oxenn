@@ -82,20 +82,20 @@ export const DOCS_INDEX: DocMeta[] = [
     snippet: `# Database Architecture  This directory contains technical specifications and decisions regarding the PostgreSQL persistence layer.  ## Available Documents - [Migration Strategy](./migration-strategy.md) - [Reconciliation Report](./reconciliation-report.md) - [Tenant Context Spec](./tenant-context-spec.md) `
   },
   {
-    slug: "query-telemetry",
-    titleEn: "Privacy-safe database query telemetry",
-    titleFa: "Privacy-safe database query telemetry",
-    category: "architecture",
-    categoryFa: "Architecture",
-    snippet: `# Privacy-safe database query telemetry  Oxenn's PostgreSQL client can emit structured query and pool-acquisition telemetry without logging SQL text, bind parameters, connection strings, tenant IDs, or error messages. Telemetry is disabled by default.  ## Enablement  Set \`DATABASE_QUERY_TELEMETRY_ENABLED=true\` only in an environment whose log retention and access controls have been reviewed. The \`.env.example\` default is \`false\`. Disabling the flag stops telemetry emission while leaving query ex`
-  },
-  {
     slug: "migration-strategy",
     titleEn: "Relational Database Migration Strategy",
     titleFa: "Relational Database Migration Strategy",
     category: "architecture",
     categoryFa: "Architecture",
     snippet: `# Relational Database Migration Strategy  This specification details the canonical schema modeling, migration execution, and deployment strategy for the AI Visibility Intelligence relational schema.  ---  ## 1. Migration Tech Stack  We utilize **Drizzle ORM** paired with **Drizzle Kit** for schema modeling, SQL generation, schema diffing, and programmatic migration execution.  \`\`\`  [Canonical Drizzle Schema] (database/schema/index.ts)          │          ▼  (pnpm run db:generate / drizzle-kit ge`
+  },
+  {
+    slug: "query-telemetry",
+    titleEn: "Privacy-safe database query telemetry",
+    titleFa: "Privacy-safe database query telemetry",
+    category: "architecture",
+    categoryFa: "Architecture",
+    snippet: `# Privacy-safe database query telemetry  Oxenn's PostgreSQL client can emit structured query and pool-acquisition telemetry without logging SQL text, bind parameters, connection strings, tenant IDs, or error messages. Telemetry is disabled by default.  ## Enablement  Set \`DATABASE_QUERY_TELEMETRY_ENABLED=true\` only in an environment whose log retention and access controls have been reviewed. The \`.env.example\` default is \`false\`. Disabling the flag stops telemetry emission while leaving query ex`
   },
   {
     slug: "reconciliation-report",
