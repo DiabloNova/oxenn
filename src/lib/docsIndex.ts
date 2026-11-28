@@ -87,7 +87,7 @@ export const DOCS_INDEX: DocMeta[] = [
     titleFa: "PostgreSQL connection pool budgeting",
     category: "architecture",
     categoryFa: "Architecture",
-    snippet: `# PostgreSQL connection pool budgeting  Oxenn creates process-local PostgreSQL pools. A pool maximum applies to one Node.js process; it is not a deployment-wide or Neon-project-wide limit. Every application replica (and every separately running worker process) creates its own pool instances.  ## Workspace pools  \`PostgresClient\` owns two separate pools:  - \`DATABASE_POOL_MAX\` controls the ordinary Workspace pool. Its default remains \`20\` to preserve current behavior. - \`AUTHENTICATOR_POOL_MAX\` c`
+    snippet: `# PostgreSQL connection pool budgeting  Oxenn creates process-local PostgreSQL pools. A pool maximum applies to one Node.js process; it is not a deployment-wide or Neon-project-wide limit. Every application replica (and every separately running worker process) creates its own pool instances.  ## Workspace and worker pools  The Workspace runtime and crawl worker can create up to three independent pools: the ordinary Workspace pool and crawl dispatcher pool target \`DATABASE_URL\`; the authenticator`
   },
   {
     slug: "migration-strategy",

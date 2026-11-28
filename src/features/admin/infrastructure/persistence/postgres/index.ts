@@ -16,7 +16,7 @@ import { Tenant, AdminUser, FeatureFlag, AuditRecord, AIProviderConfiguration } 
 import { UnitOfWork } from "../uow";
 import { TenantContextManager, isQueryTenantScoped, TenantContextViolationException } from "../../../../../core/database/tenant-context";
 import { sanitizeErrorMessage } from "../../../../../core/utils/error-sanitizer";
-import { resolvePoolMax } from "../../../../../core/database/pool-config";
+import { validateWorkspacePoolConfiguration } from "../../../../../core/database/pool-config";
 
 export class OptimisticLockingError extends Error {
   constructor(entityName: string, expectedVersion: number, actualVersion: number) {
@@ -48,9 +48,10 @@ export class PostgresClient {
     if (!connectionString) {
       throw new Error("DATABASE_URL is required");
     }
+    const poolConfiguration = validateWorkspacePoolConfiguration(process.env);
     this.pool = new Pool({
       connectionString,
-      max: resolvePoolMax(process.env.DATABASE_POOL_MAX, 20, "DATABASE_POOL_MAX"),
+      max: poolConfiguration.databasePoolMax,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000
     });
@@ -58,7 +59,7 @@ export class PostgresClient {
     const authenticatorConnectionString = process.env.AUTHENTICATOR_DATABASE_URL || connectionString;
     this.authenticatorPool = new Pool({
       connectionString: authenticatorConnectionString,
-      max: resolvePoolMax(process.env.AUTHENTICATOR_POOL_MAX, 20, "AUTHENTICATOR_POOL_MAX"),
+      max: poolConfiguration.authenticatorPoolMax,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000
     });

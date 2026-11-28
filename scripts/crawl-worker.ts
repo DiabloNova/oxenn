@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { resolvePoolMax } from "../src/core/database/pool-config";
 import { TenantContextManager } from "../src/core/database/tenant-context";
 import { CrawlOrchestrator } from "../src/features/acquisition/application/orchestrator";
 import {
@@ -144,7 +145,10 @@ export class CrawlWorker {
 }
 
 async function main(): Promise<void> {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: resolvePoolMax(process.env.CRAWL_WORKER_POOL_MAX, 10, "CRAWL_WORKER_POOL_MAX"),
+  });
   const worker = new CrawlWorker({ pool });
   const shutdown = (): void => worker.stop();
   process.once("SIGTERM", shutdown);

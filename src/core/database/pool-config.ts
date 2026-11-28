@@ -29,3 +29,23 @@ export function resolvePoolMax(
 
   return parsed;
 }
+
+
+export interface WorkspacePoolEnvironment {
+  DATABASE_POOL_MAX?: string;
+  AUTHENTICATOR_POOL_MAX?: string;
+}
+
+export interface WorkspacePoolConfiguration {
+  databasePoolMax: number;
+  authenticatorPoolMax: number;
+}
+
+export function validateWorkspacePoolConfiguration(
+  environment: WorkspacePoolEnvironment
+): WorkspacePoolConfiguration {
+  return {
+    databasePoolMax: resolvePoolMax(environment.DATABASE_POOL_MAX, 20, "DATABASE_POOL_MAX"),
+    authenticatorPoolMax: resolvePoolMax(environment.AUTHENTICATOR_POOL_MAX, 20, "AUTHENTICATOR_POOL_MAX"),
+  };
+}
