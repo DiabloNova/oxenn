@@ -25,7 +25,7 @@ jobs:
     steps:
       # Always use the trusted default-branch version. Never check out or execute PR code here.
       - name: Check out trusted main branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           persist-credentials: false
